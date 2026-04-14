@@ -1,0 +1,7 @@
+id,policy_demand,policy_supply,policy_cdctc,policy_tax,employer_subsidy,wage_floor,years,phase_in_years
+baseline,baseline,baseline,baseline,baseline,none,none,2026:2055,
+universal,universal,baseline,baseline,baseline,none,none,2026:2055,5
+means_tested,means_tested,baseline,baseline,baseline,none,none,2026:2055,5
+arpa_cdctc,baseline,baseline,arpa,baseline,none,none,2026:2055,5
+wage_subsidy,baseline,baseline,baseline,baseline,employer_tax_credit,none,2026:2055,5
+child_ubi_1k,baseline,baseline,baseline,child_ubi_1k,none,none,2026:2055,5

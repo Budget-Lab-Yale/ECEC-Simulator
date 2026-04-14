@@ -1,0 +1,7 @@
+---
+# none.yaml
+#
+# No wage floor policy (baseline/default).
+# Market-clearing wages apply without constraint.
+
+enabled: false

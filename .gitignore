@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.claude/settings.local.json
+config/api_keys
+nul
+cache/
+config/demand/
+config/supply/
+cache/price_models/price_qrf_models.rds
+slurm/scratch/
+slurm/logs/

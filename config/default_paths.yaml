@@ -1,0 +1,13 @@
+---
+
+roots:
+  input: '/gpfs/gibbs/project/sarin/shared'
+  output: '/gpfs/gibbs/project/sarin/shared/model_data/ECEC-Simulator'
+
+dependencies:
+  NSECE: '/raw_data/NSECE/v1'
+  ACS: '/raw_data/ACS/v1/2023'
+  Macro-Projections: '/model_data/Macro-Projections/v3/2026031112/baseline'
+  Tax-Simulator: '/model_data/Tax-Simulator/v1/202512180813/baseline_ex_cdctc'
+  Tax-Simulator-Full-MTR: '/model_data/Tax-Simulator/v1/202601210826/baseline'
+  Tax-Data: '/model_data/Tax-Data/v1/2025060311/baseline'

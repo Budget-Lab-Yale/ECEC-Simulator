@@ -1,0 +1,11 @@
+# Employer Tax Credit: 25% payroll subsidy
+# Government reimburses providers 25% of actual payroll costs
+# Percentage-based: subsidy scales with equilibrium wages
+
+enabled: true
+type: percentage    # 'percentage' (new) vs 'dollar' (existing default)
+rate: 0.25          # 25% of worker wages
+
+# All market sectors including Unpaid Center-Based
+# 1 = Unpaid Center-Based, 2 = Low-Priced CB, 3 = High-Priced CB, 4 = Paid Home-Based
+covered_sectors: [1, 2, 3, 4]

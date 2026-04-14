@@ -1,0 +1,8 @@
+id,policy_demand,policy_supply,policy_cdctc,policy_tax,employer_subsidy,demand,supply,wage_floor,years,phase_in_years
+baseline,baseline,baseline,baseline,baseline,none,model_b,default,none,2026:2026,
+murray_kaine,murray_kaine,baseline,baseline,baseline,none,model_b,default,none,2026:2026,
+bbba,bbba,baseline,baseline,baseline,none,model_b,default,none,2026:2026,
+center_10pct_discount,center_10pct_discount,baseline,baseline,baseline,none,model_b,default,none,2026:2026,
+arpa_cdctc,baseline,baseline,arpa,baseline,none,model_b,default,none,2026:2026,
+wage_subsidy,baseline,baseline,baseline,baseline,wage_25pct,model_b,default,none,2026:2026,
+child_ubi_1k,baseline,baseline,baseline,child_ubi_1k,none,model_b,default,none,2026:2026,
