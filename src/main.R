@@ -79,7 +79,10 @@ library(tidyverse)
 library(data.table)
 library(yaml)
 library(Hmisc)
-library(sampleSelection)
+# sampleSelection is only needed for the Heckman earnings imputation in ACS
+# processing (1b). Runs that reuse estimation data via -C skip processing, so
+# load it softly to avoid a hard dependency when the package is unavailable.
+if (requireNamespace('sampleSelection', quietly = TRUE)) library(sampleSelection)
 library(ranger)
 library(openxlsx)
 
@@ -87,7 +90,7 @@ library(openxlsx)
 source('./src/misc/config.R')
 walk(
   .x = list.files('./src', pattern = '\\.R$', recursive = T),
-  .f = ~ if (.x != 'main.R' & .x != 'misc/config.R' & .x != '4_output/report_figures.R') source(file.path('./src/', .x))
+  .f = ~ if (.x != 'main.R' & .x != 'misc/config.R' & .x != '4_output/report_figures.R' & .x != '4_output/report_figures_child_ubi.R') source(file.path('./src/', .x))
 )
 
 

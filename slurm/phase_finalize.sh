@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ecec-finalize
 #SBATCH --partition=day
-#SBATCH --account=sarin
+#SBATCH --account=pi_nrs36
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=16G
 #SBATCH --time=1:00:00
@@ -19,7 +19,7 @@ SCRATCH_DIR="$2"
 module load R/4.4.1-foss-2022b
 export R_LIBS_USER=~/R/libs
 
-cd /gpfs/gibbs/project/sarin/hre2/repositories/ECEC-Simulator
+cd /nfs/roberts/project/pi_nrs36/hre2/repositories/ECEC-Simulator
 
 echo "=== ECEC Finalize Phase ==="
 echo "Runscript: ${RUNSCRIPT}"

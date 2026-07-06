@@ -1,0 +1,5 @@
+id,policy_demand,policy_supply,policy_cdctc,policy_tax,employer_subsidy,wage_floor,years,phase_in_years
+baseline,baseline,baseline,baseline,baseline,none,none,2026:2055,
+child_ubi_1k,baseline,baseline,baseline,child_ubi_1k,none,none,2026:2055,5
+child_ubi_10k,baseline,baseline,baseline,child_ubi_10k,none,none,2026:2055,5
+child_ubi_20k,baseline,baseline,baseline,child_ubi_20k,none,none,2026:2055,5
