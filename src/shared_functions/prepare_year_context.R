@@ -171,14 +171,19 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     }
   }
 
-  # Row counts must match between parent_units and demand_params row_ids.
-  # If aging created or dropped rows without updating demand_params,
-  # the alpha matching in get_demand_prob_matrix would silently fail.
+  # Parent units must be covered by the calibrated alpha row_ids. When the
+  # simulation sample is smaller than the calibration sample (sim_sample <
+  # calib_sample), parent_units is a strict subset of the calibrated units,
+  # so pu_df may have fewer rows than row_ids -- allow that. The keyed alpha
+  # match in run_scenario (match_alpha_to_parent_units) loudly errors on any
+  # parent unit lacking a matching alpha row, so a silent mismatch cannot
+  # occur; here we only guard against aging creating MORE rows than exist in
+  # the calibrated alpha.
   for (i in seq_along(PARENT_UNIT_NAMES)) {
     pu_name <- PARENT_UNIT_NAMES[i]
     pu_df <- parent_units_list[[pu_name]]
     if (!is.null(pu_df) && nrow(pu_df) > 0 && !is.null(demand_params[[pu_name]]$row_ids)) {
-      stopifnot(nrow(pu_df) == nrow(demand_params[[pu_name]]$row_ids))
+      stopifnot(nrow(pu_df) <= nrow(demand_params[[pu_name]]$row_ids))
     }
   }
 

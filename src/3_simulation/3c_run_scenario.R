@@ -1897,7 +1897,12 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
             expanded_total_w1 <- sum(df_expanded$child_weight.1)
             stopifnot(abs(original_total_w1 - expanded_total_w1) / max(original_total_w1, 1) < 1e-6)
 
-            if ('child_weight.2' %in% names(df_expanded)) {
+            # Only check child_weight.2 for 2-child families. For 1-child (c1)
+            # families the child_weight.2 column exists but is entirely NA (no
+            # second child), so sum() would be NA and the check would spuriously
+            # fail. This mirrors get_total_demand, which only touches
+            # child_weight.2 when n_children == 2.
+            if (n_children == 2 && 'child_weight.2' %in% names(df_expanded)) {
               original_total_w2 <- sum(df_expand$child_weight.2)
               expanded_total_w2 <- sum(df_expanded$child_weight.2)
               stopifnot(abs(original_total_w2 - expanded_total_w2) / max(original_total_w2, 1) < 1e-6)
