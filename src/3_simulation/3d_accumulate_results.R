@@ -898,12 +898,20 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
                                               policy_tax_file = 'baseline',
                                               employer_subsidy_rate = c(0, 0, 0, 0),
                                               demand_params = NULL,
-                                              cpi_growth_factor = 1.0) {
+                                              cpi_growth_factor = 1.0,
+                                              policy_result = NULL) {
 
   #----------------------------------------------------------------------------
   # Computes MECHANICAL fiscal effect: the policy cost if behavior stayed at
   # baseline choices. Applies policy subsidy/tax rules to baseline allocations
   # and reports subsidy/tax deltas in billions.
+  #
+  # For quantity-limited (rationed) policies, Option A applies: each baseline
+  # record inherits the SAME offer draws as the policy run (joined from the
+  # policy result by household and epsilon draw), and receives the mechanical
+  # subsidy only if it holds an offer for the sector of its baseline choice.
+  # Mechanical take-up therefore does not equal the slot count by design
+  # (windfall-to-lottery-winners interpretation).
   #
   # Params:
   #   - baseline_result (list): Baseline simulation result with $converged,
@@ -916,9 +924,12 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
   #   - employer_subsidy_rate (num vec): Employer subsidy rate per sector, length 4
   #   - demand_params (list): Demand model parameters for policy components
   #   - cpi_growth_factor (dbl): CPI growth factor for price inflation
+  #   - policy_result (list or NULL): Converged policy scenario result; required
+  #       for rationed policies (source of the offer draws)
   #
-  # Returns: (df) Tibble with mechanical subsidy/tax deltas in billions,
-  #     or empty tibble if not converged
+  # Returns: (df) Tibble with mechanical subsidy/tax deltas in billions (plus
+  #     mechanical_program_takeup_s2/s3/s4 for rationed policies), or empty
+  #     tibble if not converged
   #----------------------------------------------------------------------------
 
   if (!baseline_result$converged || is.null(baseline_result$parent_units)) {
@@ -929,14 +940,27 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
   P_baseline <- baseline_result$prices
 
   # Load policy functions using unified loaders
-  policy_do_demand <- load_demand_policy(policy_demand_file)
+  policy_demand_obj <- load_demand_policy(policy_demand_file)
+  policy_do_demand <- policy_demand_obj$do_demand_policy
   supply_policy <- load_supply_policy(policy_supply_file)
   policy_supply_subsidy <- supply_policy$supply_subsidy
   policy_do_cdctc <- load_cdctc_policy(policy_cdctc_file)
   policy_do_tax <- load_policy('policy_tax', policy_tax_file, 'do_tax_policy')
 
+  # Rationed policies need the policy run's offer draws (Option A)
+  rationed <- !is.null(policy_demand_obj$rationing)
+  if (rationed) {
+    if (is.null(policy_result) || !isTRUE(policy_result$converged) ||
+        is.null(policy_result$parent_units)) {
+      cat('  Mechanical effect skipped: rationed policy requires a converged policy result for offer draws.\n')
+      return(tibble())
+    }
+  }
+  rationed_sectors <- if (rationed) which((policy_result$program_slots %||% rep(0, 4)) > 0) else integer(0)
+
   fiscal_list <- list()
   tax_change_list <- list()
+  mech_takeup <- rep(0, 4)
 
   for (i in seq_along(PARENT_UNIT_NAMES)) {
     pu_name <- PARENT_UNIT_NAMES[i]
@@ -956,20 +980,76 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
     pu_clean <- policy_do_tax(pu_clean, n_children = n_children, year = year)
 
     catalog <- get_choice_catalog(n_children)
-    pc <- compute_policy_components(pu_clean, P_baseline, n_children, demand_params,
-                                     policy_do_demand, policy_do_cdctc, cpi_growth_factor)
-    pu_with_policy <- bind_cols(pu_clean, pc$components)
+    mfc_n_choices <- if (n_children == 1) N_CHOICES_1_CHILD else N_CHOICES_2_CHILD
+
+    has_choice <- 'choice' %in% names(baseline_pu)
+
+    if (rationed && has_choice) {
+
+      # Rationed route (Option A): offer draws joined record-for-record from
+      # the policy run; subsidy/CDCTC extracted from the offer-appropriate
+      # variant at each record's baseline choice
+      policy_pu <- policy_result$parent_units[[pu_name]]
+      offers_df <- get_policy_offer_draws(baseline_pu, policy_pu, n_children, rationed_sectors)
+
+      baseline_choices <- baseline_pu$choice
+      rat_vals <- extract_offer_conditional_values(
+        pu_clean, P_baseline, n_children, demand_params,
+        policy_demand_obj, policy_do_cdctc, cpi_growth_factor,
+        choices = baseline_choices, offers_df = offers_df,
+        rationed_sectors = rationed_sectors
+      )
+
+      mfc_policy_subsidy <- rat_vals$subsidy
+      mfc_policy_cdctc <- rat_vals$cdctc
+      policy_taxes_at_choice <- rat_vals$taxes
+
+      # Mechanical take-up: baseline-choice enrollment in an offered sector
+      j1 <- catalog$child1_market_sector_id
+      j1_k0 <- j1[baseline_choices]
+      j2_k0 <- if (n_children == 2) catalog$child2_market_sector_id[baseline_choices] else NULL
+      for (j in rationed_sectors) {
+        rows1 <- !is.na(j1_k0) & j1_k0 == j & rat_vals$offered1
+        if (any(rows1)) {
+          mech_takeup[j] <- mech_takeup[j] + sum(baseline_pu$child_weight.1[rows1], na.rm = TRUE)
+        }
+        if (n_children == 2) {
+          rows2 <- !is.na(j2_k0) & j2_k0 == j & rat_vals$offered2
+          if (any(rows2)) {
+            mech_takeup[j] <- mech_takeup[j] + sum(baseline_pu$child_weight.2[rows2], na.rm = TRUE)
+          }
+        }
+      }
+
+      subsidy_available <- TRUE
+
+    } else if (has_choice) {
+
+      #------------------------------------------------------------------------
+      # Unrationed route: single component set, extract at baseline choice
+      #------------------------------------------------------------------------
+
+      pc <- compute_policy_components(pu_clean, P_baseline, n_children, demand_params,
+                                       policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+      pu_with_policy <- bind_cols(pu_clean, pc$components)
+
+      subsidy_available <- all(paste0('subsidy.', 1:mfc_n_choices) %in% names(pu_with_policy))
+      if (subsidy_available) {
+        mfc_policy_subsidy <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'subsidy', mfc_n_choices)
+        mfc_policy_cdctc <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'cdctc', mfc_n_choices)
+      }
+      baseline_choices <- baseline_pu$choice
+      policy_taxes_at_choice <- extract_selected_values(pu_with_policy, baseline_choices, 'taxes', nrow(catalog))
+
+    } else {
+      subsidy_available <- FALSE
+    }
 
     # Aggregate mechanical fiscal cost
-    mfc_n_choices <- if (n_children == 1) N_CHOICES_1_CHILD else N_CHOICES_2_CHILD
-    fiscal_list[[pu_name]] <- if (!'choice' %in% names(baseline_pu) ||
-                                  !all(paste0('subsidy.', 1:mfc_n_choices) %in% names(pu_with_policy))) {
+    fiscal_list[[pu_name]] <- if (!has_choice || !subsidy_available) {
       tibble(demand_subsidy = 0, supply_subsidy = 0, employer_subsidy = 0,
              cdctc_cost = 0, n_children_weighted = 0)
     } else {
-      mfc_policy_subsidy <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'subsidy', mfc_n_choices)
-      mfc_policy_cdctc <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'cdctc', mfc_n_choices)
-
       mfc_combined <- baseline_pu %>%
         mutate(
           parent_unit_weight = (per_weight1 + coalesce(per_weight2, per_weight1)) / 2,
@@ -1001,17 +1081,19 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
     }
 
     # Mechanical tax change: policy taxes - baseline taxes at baseline choice
-    baseline_choices <- baseline_pu$choice
-    emp_for_choice <- catalog$employment_choice[baseline_choices]
-    baseline_taxes_at_choice <- case_when(
-      emp_for_choice == 'none' ~ baseline_taxes_by_emp$none,
-      emp_for_choice == 'pt'   ~ baseline_taxes_by_emp$pt,
-      emp_for_choice == 'ft'   ~ baseline_taxes_by_emp$ft
-    )
-    policy_taxes_at_choice <- extract_selected_values(pu_with_policy, baseline_choices, 'taxes', nrow(catalog))
+    if (has_choice) {
+      emp_for_choice <- catalog$employment_choice[baseline_choices]
+      baseline_taxes_at_choice <- case_when(
+        emp_for_choice == 'none' ~ baseline_taxes_by_emp$none,
+        emp_for_choice == 'pt'   ~ baseline_taxes_by_emp$pt,
+        emp_for_choice == 'ft'   ~ baseline_taxes_by_emp$ft
+      )
 
-    parent_unit_weight <- (baseline_pu$per_weight1 + coalesce(baseline_pu$per_weight2, baseline_pu$per_weight1)) / 2
-    tax_change_list[[pu_name]] <- sum((policy_taxes_at_choice - baseline_taxes_at_choice) * parent_unit_weight, na.rm = TRUE)
+      parent_unit_weight <- (baseline_pu$per_weight1 + coalesce(baseline_pu$per_weight2, baseline_pu$per_weight1)) / 2
+      tax_change_list[[pu_name]] <- sum((policy_taxes_at_choice - baseline_taxes_at_choice) * parent_unit_weight, na.rm = TRUE)
+    } else {
+      tax_change_list[[pu_name]] <- 0
+    }
   }
 
   # Combine
@@ -1044,6 +1126,12 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
       # Tax change from tax policy (can be non-zero if policy differs from baseline)
       # Negative = tax cut (revenue loss), Positive = tax increase (revenue gain)
       mechanical_tax_change = total_mechanical_tax_change / 1e9,
+
+      # Rationed programs: mechanical take-up by sector (weighted children at
+      # baseline choices holding policy-run offers; != slot count by design)
+      mechanical_program_takeup_s2 = if (rationed) mech_takeup[2] else NA_real_,
+      mechanical_program_takeup_s3 = if (rationed) mech_takeup[3] else NA_real_,
+      mechanical_program_takeup_s4 = if (rationed) mech_takeup[4] else NA_real_,
 
       year = year,
       .before = everything()
@@ -1098,13 +1186,19 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
   P_policy <- policy_result$prices
 
   # Load policy functions using unified loaders
-  policy_do_demand <- load_demand_policy(policy_demand_file)
+  policy_demand_obj <- load_demand_policy(policy_demand_file)
+  policy_do_demand <- policy_demand_obj$do_demand_policy
   policy_do_cdctc <- load_cdctc_policy(policy_cdctc_file)
   policy_do_tax <- load_policy('policy_tax', policy_tax_file, 'do_tax_policy')
 
   # Load baseline policy functions for baseline-wide NI computation
-  baseline_do_demand <- load_demand_policy('baseline')
+  baseline_do_demand <- load_demand_policy('baseline')$do_demand_policy
   baseline_do_cdctc <- load_cdctc_policy('baseline')
+
+  # Rationed policies (Option A): evaluate policy rules conditional on the
+  # policy run's offer draws, matched record-for-record
+  rationed <- !is.null(policy_demand_obj$rationing)
+  rationed_sectors <- if (rationed) which((policy_result$program_slots %||% rep(0, 4)) > 0) else integer(0)
 
   # Collect family-level data from all parent unit types first
   # Then aggregate across all families together
@@ -1131,26 +1225,52 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
     # Welfare version: same policy rules, but evaluated at policy equilibrium prices
     pu_for_welfare <- pu_for_mechanical
 
-    # Mechanical effect: policy rules at baseline prices
-    pc_mech <- compute_policy_components(pu_for_mechanical, P_baseline, n_children, demand_params,
-                                          policy_do_demand, policy_do_cdctc, cpi_growth_factor)
-    pu_with_mechanical <- bind_cols(pu_for_mechanical, pc_mech$components)
+    # Policy-rules evaluations (mechanical at baseline prices, welfare at
+    # policy prices). Rationed policies extract offer-conditional scalars
+    # directly at baseline choices instead of building wide component sets.
+    rationed_vals_mech <- NULL
+    rationed_vals_welfare <- NULL
+    pu_with_mechanical <- NULL
+    pu_with_welfare <- NULL
 
-    # Baseline-wide: baseline rules at baseline prices (for welfare EV at k1)
-    pc_baseline <- compute_policy_components(pu_for_baseline_wide, P_baseline, n_children, demand_params,
-                                              baseline_do_demand, baseline_do_cdctc, cpi_growth_factor)
-    pu_with_baseline_wide <- bind_cols(pu_for_baseline_wide, pc_baseline$components)
+    if (rationed && 'choice' %in% names(baseline_pu)) {
+      offers_df <- get_policy_offer_draws(baseline_pu, policy_pu, n_children, rationed_sectors)
 
-    # Welfare: policy rules at policy equilibrium prices
-    pc_welfare <- compute_policy_components(pu_for_welfare, P_policy, n_children, demand_params,
-                                             policy_do_demand, policy_do_cdctc, cpi_growth_factor)
-    pu_with_welfare <- bind_cols(pu_for_welfare, pc_welfare$components)
+      # Mechanical: policy rules at baseline prices
+      rationed_vals_mech <- extract_offer_conditional_values(
+        pu_for_mechanical, P_baseline, n_children, demand_params,
+        policy_demand_obj, policy_do_cdctc, cpi_growth_factor,
+        choices = baseline_pu$choice, offers_df = offers_df,
+        rationed_sectors = rationed_sectors
+      )
+
+      # Welfare (k0 term): policy rules at policy equilibrium prices
+      rationed_vals_welfare <- extract_offer_conditional_values(
+        pu_for_welfare, P_policy, n_children, demand_params,
+        policy_demand_obj, policy_do_cdctc, cpi_growth_factor,
+        choices = baseline_pu$choice, offers_df = offers_df,
+        rationed_sectors = rationed_sectors
+      )
+    } else if (!rationed) {
+      # Mechanical effect: policy rules at baseline prices
+      pc_mech <- compute_policy_components(pu_for_mechanical, P_baseline, n_children, demand_params,
+                                            policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+      pu_with_mechanical <- bind_cols(pu_for_mechanical, pc_mech$components)
+
+      # Welfare: policy rules at policy equilibrium prices
+      pc_welfare <- compute_policy_components(pu_for_welfare, P_policy, n_children, demand_params,
+                                               policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+      pu_with_welfare <- bind_cols(pu_for_welfare, pc_welfare$components)
+    }
+
+    # Baseline-wide net income at the policy choice (k1) is extracted per record
+    # via a chunked helper (below) rather than materialising the full baseline
+    # component tibble here, which dominated peak memory at production scale.
 
     # Get family-level data (not aggregated yet)
     family_data_list[[pu_name]] <- {
       flm_mechanical_pu <- pu_with_mechanical
       flm_welfare_pu <- pu_with_welfare
-      flm_baseline_wide_pu <- pu_with_baseline_wide
       flm_n_choices <- if (n_children == 1) N_CHOICES_1_CHILD else N_CHOICES_2_CHILD
 
       if (!'net_income' %in% names(baseline_pu) ||
@@ -1159,9 +1279,12 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
         tibble()
       } else {
         flm_net_income_cols <- paste0('net_income.', 1:flm_n_choices)
-        if (!all(flm_net_income_cols %in% names(flm_mechanical_pu)) ||
-            !all(flm_net_income_cols %in% names(flm_welfare_pu)) ||
-            !all(flm_net_income_cols %in% names(flm_baseline_wide_pu))) {
+        flm_rationed_ok <- rationed && !is.null(rationed_vals_mech) && !is.null(rationed_vals_welfare)
+        flm_unrationed_ok <- !rationed &&
+          !is.null(flm_mechanical_pu) && !is.null(flm_welfare_pu) &&
+          all(flm_net_income_cols %in% names(flm_mechanical_pu)) &&
+          all(flm_net_income_cols %in% names(flm_welfare_pu))
+        if (!(flm_rationed_ok || flm_unrationed_ok)) {
           tibble()
         } else {
           flm_gross_ecec_cost_cols <- paste0('gross_ecec_cost.', 1:flm_n_choices)
@@ -1194,22 +1317,28 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
               policy_employment_choice = employment_choice
             )
 
-          flm_mechanical_ni <- extract_selected_values(
-            flm_mechanical_pu, baseline_pu$choice, 'net_income', flm_n_choices
-          )
+          flm_mechanical_ni <- if (rationed) {
+            rationed_vals_mech$net_income
+          } else {
+            extract_selected_values(flm_mechanical_pu, baseline_pu$choice, 'net_income', flm_n_choices)
+          }
 
-          flm_welfare_ni_at_k0 <- extract_selected_values(
-            flm_welfare_pu, baseline_pu$choice, 'net_income', flm_n_choices
-          )
+          flm_welfare_ni_at_k0 <- if (rationed) {
+            rationed_vals_welfare$net_income
+          } else {
+            extract_selected_values(flm_welfare_pu, baseline_pu$choice, 'net_income', flm_n_choices)
+          }
 
           flm_policy_choice_aligned <- baseline_pu %>%
             select(all_of(flm_join_keys)) %>%
             inner_join(policy_pu %>% select(all_of(flm_join_keys), choice), by = flm_join_keys) %>%
             pull(choice)
 
-          flm_baseline_ni_at_k1 <- extract_selected_values(
-            flm_baseline_wide_pu, flm_policy_choice_aligned, 'net_income', flm_n_choices
-          )
+          flm_baseline_ni_at_k1 <- extract_policy_values_at_choice(
+            pu_for_baseline_wide, P_baseline, n_children, demand_params,
+            baseline_do_demand, baseline_do_cdctc, cpi_growth_factor,
+            choices = flm_policy_choice_aligned
+          )$net_income
 
           flm_mechanical_cols <- baseline_pu %>%
             select(all_of(flm_join_keys)) %>%
@@ -1222,19 +1351,25 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
               baseline_ni_at_k1 = flm_baseline_ni_at_k1
             )
 
-          flm_mech_gross <- if (all(flm_gross_ecec_cost_cols %in% names(flm_mechanical_pu))) {
+          flm_mech_gross <- if (rationed) {
+            rationed_vals_mech$gross_ecec_cost
+          } else if (all(flm_gross_ecec_cost_cols %in% names(flm_mechanical_pu))) {
             extract_selected_values(flm_mechanical_pu, baseline_pu$choice, 'gross_ecec_cost', flm_n_choices)
           } else {
             rep(NA_real_, nrow(baseline_pu))
           }
 
-          flm_mech_subsidy <- if (all(flm_subsidy_cols %in% names(flm_mechanical_pu))) {
+          flm_mech_subsidy <- if (rationed) {
+            rationed_vals_mech$subsidy
+          } else if (all(flm_subsidy_cols %in% names(flm_mechanical_pu))) {
             extract_selected_values(flm_mechanical_pu, baseline_pu$choice, 'subsidy', flm_n_choices)
           } else {
             rep(NA_real_, nrow(baseline_pu))
           }
 
-          flm_mech_cdctc <- if (all(flm_cdctc_cols %in% names(flm_mechanical_pu))) {
+          flm_mech_cdctc <- if (rationed) {
+            rationed_vals_mech$cdctc
+          } else if (all(flm_cdctc_cols %in% names(flm_mechanical_pu))) {
             extract_selected_values(flm_mechanical_pu, baseline_pu$choice, 'cdctc', flm_n_choices)
           } else {
             rep(NA_real_, nrow(baseline_pu))
@@ -1712,9 +1847,15 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
   P_baseline <- baseline_result$prices
 
   # Load policy functions for mechanical effect computation
-  policy_do_demand <- load_demand_policy(policy_demand_file)
+  policy_demand_obj <- load_demand_policy(policy_demand_file)
+  policy_do_demand <- policy_demand_obj$do_demand_policy
   policy_do_cdctc <- load_cdctc_policy(policy_cdctc_file)
   policy_do_tax <- load_policy('policy_tax', policy_tax_file, 'do_tax_policy')
+
+  # Rationed policies (Option A): evaluate policy rules conditional on the
+  # policy run's offer draws
+  rationed <- !is.null(policy_demand_obj$rationing)
+  rationed_sectors <- if (rationed) which((policy_result$program_slots %||% rep(0, 4)) > 0) else integer(0)
 
   # Collect parent unit-level deltas
   pu_deltas_list <- list()
@@ -1731,9 +1872,22 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
     catalog <- get_choice_catalog(n_children)
     pu_for_mechanical <- policy_do_tax(pu_for_mechanical, n_children = n_children, year = year)
 
-    pc <- compute_policy_components(pu_for_mechanical, P_baseline, n_children, demand_params,
-                                     policy_do_demand, policy_do_cdctc, cpi_growth_factor)
-    mechanical_pu <- bind_cols(pu_for_mechanical, pc$components)
+    pov_rationed_vals <- NULL
+    mechanical_pu <- NULL
+    if (rationed && 'choice' %in% names(baseline_pu)) {
+      # Rationed: offer-conditional scalars at baseline choices (Option A)
+      offers_df <- get_policy_offer_draws(baseline_pu, policy_pu, n_children, rationed_sectors)
+      pov_rationed_vals <- extract_offer_conditional_values(
+        pu_for_mechanical, P_baseline, n_children, demand_params,
+        policy_demand_obj, policy_do_cdctc, cpi_growth_factor,
+        choices = baseline_pu$choice, offers_df = offers_df,
+        rationed_sectors = rationed_sectors
+      )
+    } else if (!rationed) {
+      pc <- compute_policy_components(pu_for_mechanical, P_baseline, n_children, demand_params,
+                                       policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+      mechanical_pu <- bind_cols(pu_for_mechanical, pc$components)
+    }
 
     # Compute parent unit-level deltas
     pu_deltas_list[[pu_name]] <- {
@@ -1741,9 +1895,14 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
       pov_n_choices <- nrow(pov_catalog)
 
       pov_required_scalar <- c('gross_ecec_cost', 'subsidy', 'cdctc', 'taxes', 'agi', 'choice')
+      pov_mech_ok <- if (rationed) {
+        !is.null(pov_rationed_vals)
+      } else {
+        !is.null(mechanical_pu) && paste0('gross_ecec_cost.', 1) %in% names(mechanical_pu)
+      }
       if (!all(pov_required_scalar %in% names(baseline_pu)) ||
           !all(pov_required_scalar %in% names(policy_pu)) ||
-          !paste0('gross_ecec_cost.', 1) %in% names(mechanical_pu)) {
+          !pov_mech_ok) {
         tibble()
       } else {
         pov_baseline_net_ecec <- baseline_pu$gross_ecec_cost - baseline_pu$subsidy - baseline_pu$cdctc
@@ -1755,10 +1914,17 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
         pov_policy_taxes <- policy_pu$taxes
 
         pov_baseline_choices <- baseline_pu$choice
-        pov_mech_gross_ecec <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'gross_ecec_cost', pov_n_choices)
-        pov_mech_subsidy <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'subsidy', pov_n_choices)
-        pov_mech_cdctc <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'cdctc', pov_n_choices)
-        pov_mech_taxes <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'taxes', pov_n_choices)
+        if (rationed) {
+          pov_mech_gross_ecec <- pov_rationed_vals$gross_ecec_cost
+          pov_mech_subsidy <- pov_rationed_vals$subsidy
+          pov_mech_cdctc <- pov_rationed_vals$cdctc
+          pov_mech_taxes <- pov_rationed_vals$taxes
+        } else {
+          pov_mech_gross_ecec <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'gross_ecec_cost', pov_n_choices)
+          pov_mech_subsidy <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'subsidy', pov_n_choices)
+          pov_mech_cdctc <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'cdctc', pov_n_choices)
+          pov_mech_taxes <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'taxes', pov_n_choices)
+        }
 
         pov_mech_net_ecec <- pov_mech_gross_ecec - pov_mech_subsidy - pov_mech_cdctc
 

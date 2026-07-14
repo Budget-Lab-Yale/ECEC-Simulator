@@ -1,0 +1,3 @@
+id,policy_demand,policy_supply,policy_cdctc,policy_tax,employer_subsidy,wage_floor,years,phase_in_years
+baseline,baseline,baseline,baseline,baseline,none,none,2026:2030,
+ny_2k_ramp,ny_2k_ramp,baseline,baseline,baseline,none,none,2026:2030,

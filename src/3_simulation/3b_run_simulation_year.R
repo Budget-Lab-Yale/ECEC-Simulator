@@ -124,29 +124,16 @@ run_simulation_year <- function(sim_ctx, year) {
 
   target_emp_rates <- NULL
   if (employment_targeting_enabled) {
-    # Targets are group-specific primary-caregiver employment rates:
-    #   target_g(year) = emp_rate_g(2019) * overall_emp_growth(year vs 2019)
-    # Note: RF probabilities (p_employment.pt, p_employment.ft) are from 2019
-    # calibration and don't change by simulation year, so we can compute baseline
-    # rates from any year's parent_units data.
-    demand_base_year <- as.integer(sim_ctx$base_demand_params$year %||% 2019)
-
-    if (is.null(sim_ctx$baseline_emp_rates_2019)) {
-      sim_ctx$baseline_emp_rates_2019 <- compute_baseline_employment_rates(parent_units_list)
-    }
-
-    growth_factor <- get_employment_rate_growth_factor(
-      macro_projections = sim_ctx$macro_projections,
-      base_year = demand_base_year,
-      target_year = year
+    # Baseline 2019 rates are cached in sim_ctx (invariant across years)
+    targeting <- compute_target_employment_rates(
+      parent_units_list   = parent_units_list,
+      macro_projections   = sim_ctx$macro_projections,
+      demand_base_year    = as.integer(sim_ctx$base_demand_params$year %||% 2019),
+      year                = year,
+      baseline_rates_2019 = sim_ctx$baseline_emp_rates_2019
     )
-
-    target_emp_rates <- pmin(sim_ctx$baseline_emp_rates_2019 * growth_factor, 0.999999)
-
-    cat('  Employment targeting:\n')
-    for (g in EMPLOYMENT_TARGETING_GROUPS) {
-      cat(sprintf('    %s: target=%.4f\n', g, target_emp_rates[g]))
-    }
+    target_emp_rates <- targeting$targets
+    sim_ctx$baseline_emp_rates_2019 <- targeting$baseline_rates_2019
   } else {
     cat('  Employment targeting: DISABLED\n')
   }
@@ -173,53 +160,16 @@ run_simulation_year <- function(sim_ctx, year) {
   if (baseline_result$converged) {
     sim_ctx$prev_baseline_prices <- baseline_result$prices
 
-    # Write employment targeting diagnostics to CSV
-    if (employment_targeting_enabled &&
-        !is.null(baseline_result$employment_shifts) && !is.null(target_emp_rates)) {
-      do_demand_policy <- load_demand_policy(baseline_info$equilibrium$policy_demand)
-      do_cdctc_policy <- load_cdctc_policy(baseline_info$policy_cdctc %||% 'baseline')
-
-      # Create output directory if needed
-      eq_output_dir <- file.path(baseline_info$paths$output, 'models', 'equilibrium')
-      dir.create(eq_output_dir, showWarnings = FALSE, recursive = TRUE)
-
-      # Compute achieved employment rates at final solution
-      achieved_rates <- setNames(rep(NA_real_, length(EMPLOYMENT_TARGETING_GROUPS)), EMPLOYMENT_TARGETING_GROUPS)
-
-      for (g in EMPLOYMENT_TARGETING_GROUPS) {
-        achieved_rates[g] <- compute_group_employment_rate(
-          P = baseline_result$prices,
-          group = g,
-          parent_units_list = parent_units_list,
-          demand_params = demand_params,
-          employment_shifts = baseline_result$employment_shifts,
-          policy_demand = do_demand_policy,
-          policy_cdctc = do_cdctc_policy,
-          cpi_growth_factor = supply_params$cpi_factor
-        )
-      }
-
-      # Build diagnostics dataframe
-      diag_df <- tibble(
-        year = year,
-        group = EMPLOYMENT_TARGETING_GROUPS,
-        target_rate = target_emp_rates[EMPLOYMENT_TARGETING_GROUPS],
-        achieved_rate = achieved_rates[EMPLOYMENT_TARGETING_GROUPS],
-        delta_shift = baseline_result$employment_shifts[EMPLOYMENT_TARGETING_GROUPS],
-        rate_gap = achieved_rates[EMPLOYMENT_TARGETING_GROUPS] - target_emp_rates[EMPLOYMENT_TARGETING_GROUPS]
-      )
-
-      # Write CSV
-      output_file <- file.path(eq_output_dir, paste0('employment_targeting_', year, '.csv'))
-      fwrite(diag_df, output_file, na = 'NA')
-
-      # Print summary
-      cat('  Employment targeting diagnostics:\n')
-      for (g in EMPLOYMENT_TARGETING_GROUPS) {
-        cat(sprintf('    %s: target=%.4f, achieved=%.4f, delta=%.4f\n',
-                    g, target_emp_rates[g], achieved_rates[g], baseline_result$employment_shifts[g]))
-      }
-    }
+    # Write employment targeting diagnostics (no-op unless targeting enabled)
+    write_employment_targeting_diagnostics(
+      baseline_result   = baseline_result,
+      parent_units_list = parent_units_list,
+      demand_params     = demand_params,
+      supply_params     = supply_params,
+      baseline_info     = baseline_info,
+      target_emp_rates  = target_emp_rates,
+      year              = year
+    )
   }
 
   # Aggregate summaries
@@ -250,207 +200,39 @@ run_simulation_year <- function(sim_ctx, year) {
   for (scenario_id in counterfactual_ids) {
     gc()
 
-    {
-      cat('\n  --- Counterfactual:', scenario_id, '---\n')
+    # Full counterfactual execution (mechanical effect, equilibrium, and all
+    # aggregation) is shared with the SLURM path via run_counterfactual_standalone
+    cf_summaries <- run_counterfactual_standalone(
+      scenario_id              = scenario_id,
+      scenario_info            = sim_ctx$counterfactual_infos[[scenario_id]],
+      year                     = year,
+      supply_params            = supply_params,
+      demand_params            = demand_params,
+      parent_units_list        = parent_units_list,
+      baseline_result          = baseline_result,
+      baseline_summaries       = baseline_year_summaries,
+      aged_spm                 = aged_spm,
+      aged_spm_parent_earnings = aged_spm_parent_earnings,
+      tax_sim_path             = tax_sim_path,
+      n_draws_per_record       = n_draws_per_record,
+      year_seed                = year_seed,
+      years_to_run             = sim_ctx$years_to_run,
+      pu_spm_xwalk             = sim_ctx$sim_base_hh$pu_spm_xwalk,
+      baseline_info            = sim_ctx$baseline_info,
+      macro_projections        = sim_ctx$macro_projections,
+      target_employment_rates  = target_emp_rates,
+      baseline_employment_shifts = baseline_result$employment_shifts,
+      run_fiscal_npv           = exists('fiscal_npv') && fiscal_npv,
+      initial_prices           = sim_ctx$prev_counterfactual_prices[[scenario_id]]
+    )
 
-      scenario_info <- sim_ctx$counterfactual_infos[[scenario_id]]
-      first_year <- min(sim_ctx$years_to_run)
-      is_first_year <- (year == first_year)
-
-      # Distributional impact runs at first year of full phase-in (or year 1 if no phase-in)
-      dist_idx <- which(scenario_info$phase_in >= 1.0)[1]
-      distributional_year <- sim_ctx$years_to_run[dist_idx]
-      is_distributional_year <- (year == distributional_year)
-
-      run_fiscal_npv <- exists('fiscal_npv') && fiscal_npv
-      baseline_year_result <- sim_ctx$baseline_results[[as.character(year)]]
-
-      # Compute MECHANICAL effect first (policy cost with no behavioral response)
-      if (baseline_result$converged) {
-        # Compute employer subsidy rate for mechanical effect
-        # Rate = L_req %*% subsidy ($/hour of care by sector)
-        if (isTRUE(scenario_info$employer_subsidy_config$enabled)) {
-          config <- scenario_info$employer_subsidy_config
-          if (config$type == 'percentage') {
-            # Percentage-based: use baseline wages to compute dollar equivalent
-            dollar_equiv <- baseline_result$w * config$rate
-            employer_subsidy_rate <- as.vector(supply_params$L_req %*% dollar_equiv)
-          } else {
-            # Dollar-based: adjust for inflation
-            subsidy_base_year <- config$base_year %||% 2019
-            subsidy_growth_factor <- get_hourly_wage_growth_factor(sim_ctx$macro_projections, subsidy_base_year, year)
-            adjusted_subsidy <- config$subsidy * subsidy_growth_factor
-            employer_subsidy_rate <- as.vector(supply_params$L_req %*% adjusted_subsidy)
-          }
-          # Zero out uncovered sectors
-          covered <- config$covered_sectors %||% seq_along(employer_subsidy_rate)
-          employer_subsidy_rate[!seq_along(employer_subsidy_rate) %in% covered] <- 0
-        } else {
-          employer_subsidy_rate <- c(0, 0, 0, 0)
-        }
-
-        mechanical_effect <- compute_mechanical_fiscal_effect(
-          baseline_result       = baseline_result,
-          policy_demand_file    = scenario_info$equilibrium$policy_demand,
-          policy_supply_file    = scenario_info$equilibrium$policy_supply,
-          year                  = year,
-          policy_cdctc_file     = scenario_info$policy_cdctc %||% 'baseline',
-          policy_tax_file       = scenario_info$policy_tax %||% 'baseline',
-          employer_subsidy_rate = employer_subsidy_rate,
-          demand_params         = demand_params,
-          cpi_growth_factor     = supply_params$cpi_factor
-        )
-
-        accumulate(scenario_id, list(mechanical_fiscal = mechanical_effect))
-      }
-
-      # Run full equilibrium for counterfactual
-      initial_prices_cf <- sim_ctx$prev_counterfactual_prices[[scenario_id]]
-      if (baseline_result$converged &&
-          !is.null(baseline_result$prices) &&
-          isTRUE(all.equal(initial_prices_cf, INITIAL_PRICES))) {
-        # Warm-start counterfactual from baseline equilibrium in the same year
-        initial_prices_cf <- baseline_result$prices
-      }
-
-      result <- run_scenario(
-        scenario_info      = scenario_info,
-        supply_params      = supply_params,
-        demand_params      = demand_params,
-        parent_units_list  = parent_units_list,
-        year               = year,
-        initial_prices     = initial_prices_cf,
-        n_draws_per_record = n_draws_per_record,
-        year_seed          = year_seed,
-        macro_projections  = sim_ctx$macro_projections,
-        target_employment_rates = target_emp_rates,
-        baseline_employment_shifts = baseline_result$employment_shifts
-      )
-
-      # Update warm start for next year
-      if (result$converged) {
-        sim_ctx$prev_counterfactual_prices[[scenario_id]] <- result$prices
-      }
-
-      # Aggregate scenario results
-      scenario_allocation <- aggregate_year_allocation(result, year)
-      scenario_employment <- aggregate_year_employment(result, year)
-      scenario_fiscal <- aggregate_year_fiscal_cost(result, year)
-
-      accumulate(scenario_id, list(
-        allocation = scenario_allocation,
-        employment = scenario_employment,
-        fiscal_cost = scenario_fiscal
-      ))
-
-      # Compute child earnings impact (first year only, requires --fiscal-npv flag)
-      if (run_fiscal_npv && is_first_year && result$converged && !is.null(baseline_year_result)) {
-        child_earnings_micro <- calculate_child_earnings(
-          baseline_result   = baseline_year_result,
-          policy_result     = result,
-          year              = year,
-          tax_data_path     = sim_ctx$baseline_info$paths$`Tax-Data`,
-          macro_projections = sim_ctx$macro_projections
-        )
-
-        if (nrow(child_earnings_micro) > 0) {
-          child_earnings_agg <- aggregate_child_earnings(child_earnings_micro)
-
-          accumulate(scenario_id, list(
-            child_earnings_overall       = child_earnings_agg$overall,
-            child_earnings_by_quintile   = child_earnings_agg$by_quintile,
-            child_earnings_by_transition = child_earnings_agg$by_transition,
-            child_earnings_by_age        = child_earnings_agg$by_age_group
-          ))
-
-          # Calculate fiscal NPV using raw fiscal data (not phase-in adjusted)
-          baseline_fiscal <- aggregate_year_fiscal_cost(baseline_year_result, year)
-          policy_fiscal <- aggregate_year_fiscal_cost(result, year)
-
-          baseline_fiscal_by_age <- aggregate_year_fiscal_cost_by_age(baseline_year_result, year)
-          policy_fiscal_by_age <- aggregate_year_fiscal_cost_by_age(result, year)
-
-          child_fiscal_npv <- calculate_child_fiscal_npv(
-            child_earnings_micro    = child_earnings_micro,
-            baseline_fiscal         = baseline_fiscal,
-            policy_fiscal           = policy_fiscal,
-            baseline_fiscal_by_age  = baseline_fiscal_by_age,
-            policy_fiscal_by_age    = policy_fiscal_by_age,
-            year                    = year,
-            tax_data_path           = sim_ctx$baseline_info$paths$`Tax-Data`,
-            macro_projections       = sim_ctx$macro_projections,
-            tax_sim_full_mtr_path   = sim_ctx$baseline_info$paths$`Tax-Simulator-Full-MTR`
-          )
-
-          accumulate(scenario_id, list(
-            fiscal_npv = child_fiscal_npv$summary,
-            fiscal_npv_by_quintile = child_fiscal_npv$by_quintile
-          ))
-        }
-      }
-
-      # Compute distributional impact (at full phase-in year)
-      if (is_distributional_year && result$converged && !is.null(baseline_year_result)) {
-        distributional_impact <- aggregate_year_distributional_impact(
-          baseline_result    = baseline_year_result,
-          policy_result      = result,
-          policy_demand_file = scenario_info$equilibrium$policy_demand,
-          policy_supply_file = scenario_info$equilibrium$policy_supply,
-          policy_cdctc_file  = scenario_info$policy_cdctc %||% 'baseline',
-          policy_tax_file    = scenario_info$policy_tax %||% 'baseline',
-          year               = year,
-          tax_sim_path       = tax_sim_path,
-          demand_params      = demand_params,
-          cpi_growth_factor  = supply_params$cpi_factor
-        )
-
-        # Deflate dollar amounts to year-1 dollars using CPI-U
-        if (distributional_year != first_year) {
-          cpi_deflator <- get_cpi_growth_factor(sim_ctx$macro_projections, first_year, distributional_year)
-          distributional_impact <- distributional_impact %>%
-            mutate(
-              avg_baseline_net_income = avg_baseline_net_income / cpi_deflator,
-              avg_mechanical_income_change = avg_mechanical_income_change / cpi_deflator,
-              avg_welfare_income_change = avg_welfare_income_change / cpi_deflator,
-              avg_total_income_change = avg_total_income_change / cpi_deflator
-            )
-        }
-
-        accumulate(scenario_id, list(distributional = distributional_impact))
-      }
-
-      # Compute poverty impact (first year only)
-      if (is_first_year && result$converged && !is.null(baseline_year_result)) {
-        if (!is.null(aged_spm) && !is.null(sim_ctx$sim_base_hh$pu_spm_xwalk)) {
-          poverty_impact <- aggregate_year_poverty_impact(
-            baseline_result        = baseline_year_result,
-            policy_result          = result,
-            policy_demand_file     = scenario_info$equilibrium$policy_demand,
-            policy_cdctc_file      = scenario_info$policy_cdctc %||% 'baseline',
-            policy_tax_file        = scenario_info$policy_tax %||% 'baseline',
-            year                   = year,
-            aged_spm               = aged_spm,
-            pu_spm_xwalk           = sim_ctx$sim_base_hh$pu_spm_xwalk,
-            spm_parent_earnings    = aged_spm_parent_earnings,
-            demand_params          = demand_params,
-            cpi_growth_factor      = supply_params$cpi_factor
-          )
-
-          if (nrow(poverty_impact) > 0) {
-            accumulate(scenario_id, list(poverty = poverty_impact))
-          }
-        }
-      }
-
-      if (result$converged && !is.null(baseline_year_result)) {
-        write_price_deltas(
-          baseline_result = baseline_year_result,
-          result          = result,
-          year            = year,
-          scenario_info   = scenario_info
-        )
-      }
+    # Update warm start for next year
+    if (isTRUE(cf_summaries$converged) && !is.null(cf_summaries$prices)) {
+      sim_ctx$prev_counterfactual_prices[[scenario_id]] <- cf_summaries$prices
     }
+
+    # Accumulate all tibble-valued summaries (skips converged/prices scalars)
+    accumulate(scenario_id, cf_summaries[sapply(cf_summaries, is.data.frame)])
   }
 
   return(sim_ctx)

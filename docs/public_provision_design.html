@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incorporating Public Provision into the ECEC-Simulator — Design Notes</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #5a5f66;
+    --rule: #e2e4e8;
+    --accent: #1f5fa8;
+    --accent-soft: #eef4fb;
+    --warn: #9a4a00;
+    --warn-soft: #fbf2e7;
+    --good: #1f6b3a;
+    --good-soft: #eef6f0;
+    --code-bg: #f5f6f8;
+    --max: 820px;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: #fbfbfc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.62;
+  }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 56px 28px 96px; }
+  header.doc {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 22px;
+    margin-bottom: 8px;
+  }
+  .kicker {
+    font-size: 12.5px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: 30px;
+    line-height: 1.2;
+    margin: 0 0 12px;
+    letter-spacing: -.01em;
+  }
+  .lede { color: var(--muted); font-size: 16px; margin: 0; }
+  .meta { color: var(--muted); font-size: 13.5px; margin-top: 14px; }
+
+  h2 {
+    font-size: 22px;
+    margin: 46px 0 6px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    letter-spacing: -.01em;
+  }
+  h2 .num {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-right: 10px;
+  }
+  h3 { font-size: 17.5px; margin: 28px 0 4px; }
+  p { margin: 12px 0; }
+  ul, ol { margin: 12px 0; padding-left: 24px; }
+  li { margin: 7px 0; }
+  strong { font-weight: 650; }
+
+  code {
+    font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1px 5px;
+    white-space: nowrap;
+  }
+  .nowrap { white-space: nowrap; }
+
+  /* Table of contents */
+  nav.toc {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 30px 0 8px;
+  }
+  nav.toc h4 {
+    margin: 0 0 10px;
+    font-size: 12.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  nav.toc ol { margin: 0; padding-left: 20px; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); text-decoration: underline; }
+
+  /* Callouts */
+  .callout {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 22px 0;
+    border: 1px solid var(--rule);
+  }
+  .callout .label {
+    font-size: 12px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout p:first-of-type { margin-top: 0; }
+  .rec { background: var(--good-soft); border-color: #cfe6d6; }
+  .rec .label { color: var(--good); }
+  .warn { background: var(--warn-soft); border-color: #efd9bd; }
+  .warn .label { color: var(--warn); }
+  .note { background: var(--accent-soft); border-color: #cfe0f2; }
+  .note .label { color: var(--accent); }
+
+  /* Option cards */
+  .opt {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin: 14px 0;
+    background: #fff;
+  }
+  .opt h4 { margin: 0 0 4px; font-size: 16px; }
+  .opt p { margin: 4px 0; font-size: 15.5px; }
+  .opt .tradeoff { color: var(--muted); font-size: 14.5px; }
+
+  table.decisions {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 15.5px;
+  }
+  table.decisions th, table.decisions td {
+    text-align: left;
+    vertical-align: top;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  table.decisions th { font-size: 12.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  table.decisions td:first-child { font-weight: 650; white-space: nowrap; }
+
+  .eq {
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+
+  footer.doc {
+    margin-top: 60px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    .wrap { padding: 36px 18px 72px; }
+    h1 { font-size: 25px; }
+    code { white-space: normal; }
+  }
+  @media print {
+    body { background: #fff; font-size: 11.5pt; }
+    .wrap { max-width: none; padding: 0; }
+    h2 { page-break-after: avoid; }
+    .opt, .callout { page-break-inside: avoid; }
+    nav.toc { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <p class="kicker">ECEC-Simulator · Design Note</p>
+  <h1>Incorporating Public Provision (3K/4K-style programs) into the Equilibrium Model</h1>
+  <p class="lede">A design discussion on representing capacity-constrained public childcare slots without re-running the data-processing, imputation, or calibration pipeline.</p>
+  <p class="meta">Working notes for internal discussion · For colleagues familiar with the model architecture</p>
+</header>
+
+<nav class="toc">
+  <h4>Contents</h4>
+  <ol>
+    <li><a href="#problem">The problem &amp; the proposed approach</a></li>
+    <li><a href="#constraint">The binding constraint: a fixed, calibrated choice set</a></li>
+    <li><a href="#mapping">Recommended mapping: the perfectly-elastic free sector, made explicit</a></li>
+    <li><a href="#reframe">The one reframing that matters: ration in expectation, lottery afterward</a></li>
+    <li><a href="#missing">What the plan underweights (checklist)</a></li>
+    <li><a href="#alternatives">Alternative representations (A–D)</a></li>
+    <li><a href="#decisions">Decisions that drive the design</a></li>
+  </ol>
+</nav>
+
+<section id="problem">
+  <h2><span class="num">1</span>The problem &amp; the proposed approach</h2>
+  <p>
+    Today the model admits sectors with either <em>perfectly-elastic</em> supply (e.g. unpaid care, priced at 0 to families) or <em>finitely-elastic</em> supply (the three paid sectors, which clear through the equilibrium solver). We want to add <strong>public provision</strong> — a 4K/3K-style program like New York City's — capturing the fact that public slots are <em>capacity-constrained</em> and <em>administratively priced</em>.
+  </p>
+  <p>The proposed sketch:</p>
+  <ul>
+    <li>Three new per-sector policy parameters: <strong>(a)</strong> number of public slots, <strong>(b)</strong> price paid to providers per slot, <strong>(c)</strong> out-of-pocket (OOP) cost to families per slot (often free; possibly means-tested).</li>
+    <li>First compute each family's choice probabilities <em>assuming they can get a public slot</em>.</li>
+    <li>If demand exceeds the number of slots, randomly assign children to slots, then recompute choice probabilities for the remaining children at market prices.</li>
+  </ul>
+  <p>
+    The core instinct is sound and maps onto the existing structure better than one might expect. Below: the constraint that dictates the design, the cleanest mapping, one reframing the plan needs, a checklist of substantive gaps, and the alternatives worth weighing.
+  </p>
+</section>
+
+<section id="constraint">
+  <h2><span class="num">2</span>The binding constraint: a fixed, calibrated choice set</h2>
+  <p>
+    "Don't touch calibration" dictates almost everything. The α (preference heterogeneity) matrices are calibrated as <code>n × (K−1)</code> over a <em>fixed</em> choice set (45 columns for <code>c1</code>, 675 for <code>c2plus</code>). Choice probabilities are <code>p = exp(α + V) / Z</code>, with α backed out at calibration so observed/imputed choices are reproduced exactly.
+  </p>
+  <div class="callout warn">
+    <p class="label">Consequence</p>
+    <p>You <strong>cannot add a genuinely new "public" alternative</strong> to the catalog — a new column needs its own α, which means re-calibrating. Public provision must therefore be expressed as a <strong>price/cost transformation of an alternative that already exists</strong>, not as a new alternative.</p>
+  </div>
+  <p>
+    This is workable, because the three parameters (slots, provider price, OOP cost) <em>are</em> a price-and-quantity intervention. The only real question is <strong>which existing alternative public care "is."</strong>
+  </p>
+</section>
+
+<section id="mapping">
+  <h2><span class="num">3</span>Recommended mapping: the perfectly-elastic free sector, made explicit</h2>
+  <p>
+    Consider how the model already treats <strong>Unpaid Center-Based</strong> (sector 1):
+  </p>
+  <ul>
+    <li>Its price to families is fixed at 0 — the optimizer only solves <code>P[2:4]</code> (<code>INITIAL_PRICES &lt;- c(0,1,1,1)</code>).</li>
+    <li>It <strong>still consumes labor</strong>: <code>compute_supply_residuals()</code> builds <code>L_by_sector &lt;- L_req * Qd</code> over <em>all four</em> market sectors, and wages are <code>w = w0 · (L/L0)^(1/e)</code>. So free-center demand already draws on the shared teacher pool and already pushes wages up.</li>
+    <li>Its supply participation constraint is simply <strong>not enforced</strong>: <code>delta_gap_paid &lt;- delta_gap[2:4]</code>. Providers nominally "receive 0," cost is positive, and the model just doesn't target their residual. That <em>is</em> "perfectly elastic supply at price 0" — an implicit, uncapped, fully-subsidized sector.</li>
+  </ul>
+  <div class="callout rec">
+    <p class="label">Recommendation</p>
+    <p>Treat public provision as a <strong>capacity-capped, government-funded version of the free center sector</strong> — finite capacity <strong>(a)</strong>, a real provider payment <strong>(b)</strong>, and an OOP price <strong>(c)</strong> — rather than inventing a new alternative. Public 3K/4K is essentially the existing free-center sector made honest about its capacity and its cost.</p>
+  </div>
+  <p><strong>Why this fits:</strong></p>
+  <ul>
+    <li>Zero change to the choice set or α.</li>
+    <li>Labor-market crowd-out onto private providers is <em>already partly wired in</em> — public demand flows into <code>L</code>, raising <code>w</code>, raising private unit costs and prices. You'd add only the provider payment (b) and the cap.</li>
+    <li>The "free to families" preference is already calibrated into that column.</li>
+  </ul>
+  <p>
+    <strong>The cost:</strong> public care becomes a perfect preference-substitute for whatever you map it onto (no distinct "public vs. private" taste). If you need that distinction, see option C in §6.
+  </p>
+</section>
+
+<section id="reframe">
+  <h2><span class="num">4</span>The one reframing that matters: ration in expectation, lottery afterward</h2>
+  <div class="callout warn">
+    <p class="label">Problem with literal random assignment</p>
+    <p>Step 3 ("randomly assign children to slots") will <strong>break the equilibrium solver</strong> if taken literally. L-BFGS-B evaluates demand <code>Qd(P)</code> dozens of times and assumes a deterministic, roughly smooth objective. Random draws inside that loop make the objective jitter and it won't converge.</p>
+  </div>
+  <p>
+    The model already has the exact pattern needed: <strong>smooth softmax for equilibrium, discrete random draws after</strong> (the existing Gumbel-ε expansion → argmax collapse). Public rationing should follow the same two-stage split:
+  </p>
+  <h3>Stage 1 — inside the equilibrium solve (smooth)</h3>
+  <p>
+    Compute each family's probability of <em>wanting</em> a public slot, <code>p_i(public)</code>; aggregate to expected slot demand; apply an <strong>access probability</strong>:
+  </p>
+  <div class="eq">D = Σ w_i · p_i(public)      π = min(1, capacity / D)</div>
+  <p>
+    Families face an expected budget set: public OOP price <code>c</code> with probability <code>π</code>, market price with probability <code>1 − π</code>. This is deterministic given <code>D</code>, so the solver stays smooth. Rationed-out demand spills into the market sectors automatically, and private prices fall accordingly — a genuine spillover benefit even for non-recipients.
+  </p>
+  <h3>Stage 2 — in the post-equilibrium Gumbel / discrete step</h3>
+  <p>
+    Run the actual lottery: draw which children get the <code>a</code> slots, fix their access, let the rest face market prices, then perform the existing argmax collapse.
+  </p>
+  <div class="callout note">
+    <p class="label">Why this is the same idea, relocated</p>
+    <p>This is the proposed plan with rationing folded into the smooth demand the way Gumbel shocks already are. It is also the standard "price-controlled good with excess demand clears on an access/queue probability" equilibrium — so the instinct is correct; it just needs to live in the right stage.</p>
+  </div>
+  <p>
+    One wrinkle: <code>π = min(1, capacity/D)</code> has a kink at <code>D = capacity</code>. L-BFGS-B usually tolerates it; if convergence suffers, smooth it (a soft/congestion-price version of <code>π</code> — see option D).
+  </p>
+</section>
+
+<section id="missing">
+  <h2><span class="num">5</span>What the plan underweights (checklist)</h2>
+
+  <h3>5.1 — Labor-market crowd-out is the substantive heart of this</h3>
+  <p>
+    NYC's 3K expansion bid up early-ed wages and pulled staff out of private centers. The single most important decision is: <strong>does the public program pay the market wage <code>w</code>, or does its administered provider price (b) imply a wage that differs from the private market?</strong> If public pays above market, it pulls labor and raises <code>w</code> for everyone, raising private prices — a cost channel that can dwarf the mechanical transfer. If you map public onto sector 1, the <em>quantity</em> side is already in <code>L</code>; you'd decide whether (b) feeds the wage equation or sits outside it. Make this an explicit switch: partial-equilibrium "separate labor pool" vs. full-GE "competes for the same teachers."
+  </p>
+
+  <h3>5.2 — Slots are children × an hours bundle, and pre-K hours don't map cleanly</h3>
+  <p>
+    Capacity is in slots; the model thinks in annual hours (<code>ft = 40×50</code>, <code>pt = 10×50</code>). Public pre-K is typically a school-day/school-year schedule (~6.5 hrs, ~40 weeks) — neither ft nor pt. You must pick which hours bundle a slot corresponds to, and reckon with <strong>wraparound care</strong>: a family using public AM may still buy private PM care, which the one-arrangement-per-child structure can't represent without treating it as its own bundle.
+  </p>
+
+  <h3>5.3 — Per-child rationing in 2+ child families</h3>
+  <p>
+    A <code>c2plus</code> family might win one slot but not two, giving asymmetric per-child budget sets. The per-child cost matrices (<code>child1_cost_matrix</code>, <code>child2_cost_matrix</code>) already allow overriding one child's price while the other faces market prices — but the lottery and the recompute must be per child, not per family.
+  </p>
+
+  <h3>5.4 — A new fiscal line, plus interactions</h3>
+  <p>
+    Public cost <code>= slots_used × (b − c)</code> — a channel that doesn't exist today (current fiscal = demand + supply + employer subsidies + CDCTC − tax revenue). The <code>3d</code> accumulation layer is structured to add a line. Two interaction traps:
+  </p>
+  <ul>
+    <li>A free slot should zero out <strong>CDCTC</strong> and demand subsidies for that choice — order the public OOP override <em>before</em> the subsidy/CDCTC stage in <code>compute_policy_components()</code>, and the existing pipeline handles the rest.</li>
+    <li>Much of the spending is an <strong>inframarginal transfer</strong> to families already buying center care (fiscal cost, distributional/poverty gain, little behavioral change), while the policy-relevant margin is families switching from parental/informal care. The logit plus the existing mechanical/behavioral decomposition captures this split for free — a real strength of doing it this way.</li>
+  </ul>
+
+  <h3>5.5 — Take-up will be overstated</h3>
+  <p>
+    A free, high-quality option in a logit pulls a lot of families. Real take-up is throttled by information, application hassle, and schedule mismatch that a money price <code>c</code> doesn't capture. Consider a take-up parameter or an additive "hassle cost" on the public option — there is precedent in the <code>takeup</code> parameter of the ARPA CDCTC policy.
+  </p>
+
+  <h3>5.6 — The rationing rule isn't necessarily random</h3>
+  <p>
+    NYC uses geographic/sibling/income priorities, and a means-tested <code>c</code> changes <em>who applies</em>. Random-among-applicants is a fine default (and is what a pure lottery does), but make the rationing rule a configurable parameter (random / income-prioritized / etc.) rather than hard-coding random.
+  </p>
+
+  <h3>5.7 — Baseline anchoring</h3>
+  <p>
+    If you reinterpret an existing free-center column as "public," the <strong>baseline</strong> capacity must reproduce currently-observed free-center usage, so the counterfactual is cleanly "added slots" rather than "discovering" slots that were already there.
+  </p>
+</section>
+
+<section id="alternatives">
+  <h2><span class="num">6</span>Alternative representations</h2>
+
+  <div class="opt">
+    <h4>A — Price override on an existing sector (the original plan, refined)</h4>
+    <p>Public = a subset of families face OOP <code>c</code> on a center choice, provider gets <code>b</code>, rationed via expected-<code>π</code> then lottery.</p>
+    <p class="tradeoff">Minimal calibration impact; public is a preference-clone of the host sector.</p>
+  </div>
+
+  <div class="opt">
+    <h4>B — Capacity-capped free sector (reinterpret Unpaid Center-Based) · recommended default</h4>
+    <p>Treat the existing free-center column as the public sector; add a capacity cap and a provider payment.</p>
+    <p class="tradeoff">Best fit to the existing structure and labor market; requires baseline re-anchoring.</p>
+  </div>
+
+  <div class="opt">
+    <h4>C — New column with a <em>borrowed</em> α</h4>
+    <p>If public genuinely needs distinct preferences (e.g. a quality premium over private), add a public column <em>at simulation time</em> with α set from a comparable sector ± an assumed quality shifter.</p>
+    <p class="tradeoff">Bends "no calibration change" slightly — you assert an α rather than estimate one — but it's the only way to get distinct public preferences without re-running calibration.</p>
+  </div>
+
+  <div class="opt">
+    <h4>D — Congestion / shadow-price equilibrium</h4>
+    <p>Mathematically equivalent to A/B, but solve for an implicit access price that clears <code>demand = capacity</code>.</p>
+    <p class="tradeoff">Smoother for the optimizer than the <code>min()</code> kink.</p>
+  </div>
+</section>
+
+<section id="decisions">
+  <h2><span class="num">7</span>Decisions that drive the design</h2>
+  <p>Three choices determine essentially everything downstream:</p>
+  <table class="decisions">
+    <thead>
+      <tr><th>Decision</th><th>Options</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Host alternative</td>
+        <td>Reinterpret the free-center sector (B), override a paid center sector (A), or borrow an α for a new column (C)?</td>
+      </tr>
+      <tr>
+        <td>Labor-market scope</td>
+        <td>Does public hiring compete for the same teachers and move <code>w</code> (full GE), or draw from a separate pool (partial)? <strong>The biggest substantive call.</strong></td>
+      </tr>
+      <tr>
+        <td>Slot lever</td>
+        <td>Is capacity <code>a</code> purely exogenous, or do you also want a supply-side phase-in (you can't build classrooms instantly — <code>phase_in_years</code> already exists in the runscript)?</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Once these three are settled, the implementation is reasonably localized: a public-price override and the expected-rationing step slot into <code>compute_policy_components()</code> / <code>run_scenario()</code>, the actual lottery rides on the existing Gumbel/discrete stage, and a new fiscal/accumulation line goes into <code>3d</code>.
+  </p>
+</section>
+
+<footer class="doc">
+  <p>Design note for discussion — not a specification. References to functions and constants point to the current <code>src/</code> implementation (<code>3c_run_scenario.R</code>, <code>compute_policy_components.R</code>, <code>3d_accumulate_results.R</code>, <code>constants.R</code>).</p>
+</footer>
+
+</div>
+</body>
+</html>

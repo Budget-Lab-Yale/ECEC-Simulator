@@ -181,6 +181,14 @@ PARENT_UNIT_N_CHILDREN <- c(1, 2)
 # Child category labels (for reporting/display)
 PARENT_UNIT_CHILD_CATEGORY <- c('1', '2+')
 
+# Row-chunk size for the rationed offer-conditional decompositions
+# (extract_offer_conditional_values). Base matrices are n_rows x n_choices
+# (675 for 2+ children) and dominate peak memory at production scale, so the
+# mechanical / distributional / poverty decompositions evaluate rows in chunks
+# of this size and concatenate. Chunking is numerically identical to a single
+# pass (all operations are row-local); only peak memory changes.
+MFC_CHUNK_ROWS <- 20000L
+
 
 
 #------------------------------------------------------------------------------

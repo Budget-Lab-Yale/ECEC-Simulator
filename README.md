@@ -101,7 +101,7 @@ slurm/                        # SLURM parallel execution scripts
 
 ### Equilibrium
 
-Solves for market-clearing prices across four care sectors (unpaid center-based, low-priced center-based, high-priced center-based, paid home-based) using L-BFGS-B with warm-start from the previous year. Demand is multinomial logit over (employment, care type, care hours) choices; supply is constant elasticity labor supply.
+Solves for market-clearing prices across four care sectors (unpaid center-based, low-priced center-based, high-priced center-based, paid home-based) using L-BFGS-B with warm-start from the previous year. Demand is multinomial logit over (employment, care type, care hours) choices; supply is constant elasticity labor supply. For quantity-limited policies, sector offer rates are additional equilibrium objects solved by a nested root-find at each price evaluation (state-conditional choice probabilities don't depend on the offer rates, so the inner solve operates on precomputed per-state aggregates).
 
 ### Parent Unit Types
 
@@ -133,6 +133,39 @@ The simulator supports five independent policy channels, all specified per-scena
 | Employer subsidies | `config/employer_subsidy/` | YAML config | Percentage or dollar wage subsidies to providers |
 
 See existing policy files for function signatures and examples.
+
+### Quantity-Limited (Rationed) Demand Policies
+
+Demand policies can limit program slots by paid sector (e.g., New York's 2K
+program). Offers are drawn **per eligible child, per rationed sector** as
+independent Bernoulli lotteries; the equilibrium solves sector offer rates
+(nested inside each price evaluation) so that expected take-up — counted in
+weighted children — equals the slot count, or the offer rate hits 1 with slack
+when the program is undersubscribed.
+
+A rationed policy file (see `config/policy_demand/ny_2k_style.R`) additionally
+defines:
+
+- `rationing$slots` — length-4 slot counts by market sector (sector 1 must be
+  0), or a `function(year)` for a slot schedule (program ramps should use this
+  rather than the runscript `phase_in_years` column, to avoid double-counting)
+- `is_child_program_eligible(parent_units_df, child_idx)` — which units' child
+  can enter the lottery (must match the eligibility the subsidy function
+  applies internally)
+- `do_demand_policy(..., offered1, offered2)` — offer-conditional subsidies
+
+Existing (unrationed) policies need no changes. Post-equilibrium, the discrete
+stage draws actual offers per record from a dedicated RNG stream (epsilon
+draws stay aligned with the baseline) and persists them as `offer_child*.j`
+columns. The mechanical effect uses **Option A**: baseline records inherit the
+policy run's offer draws, so mechanical take-up intentionally differs from the
+slot count (windfall to lottery-winning inframarginal users; see
+`docs/mechanical_effect_rationed_programs.html`). Per-scenario diagnostics
+land in `models/equilibrium/rationing_<year>.csv` (slots, offer rates,
+expected/realized/mechanical take-up) and in the solver results file.
+
+Rationed policies are supported for counterfactual scenarios only (not the
+baseline).
 
 ## Runscripts
 

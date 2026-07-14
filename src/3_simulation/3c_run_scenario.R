@@ -45,11 +45,16 @@ extract_selected_values <- function(df, choices, column_prefix, n_choices) {
 
 compute_group_employment_rate <- function(P, group, parent_units_list, demand_params,
                                           employment_shifts, policy_demand, policy_cdctc,
-                                          cpi_growth_factor) {
+                                          cpi_growth_factor,
+                                          demand_policy = NULL, offer_rates = NULL) {
 
   #----------------------------------------------------------------------------
   # Computes weighted employment rate for a single demographic group at given
   # prices P and employment shifts.
+  #
+  # Offer-aware: for rationed policies, pass the loaded demand_policy object
+  # and equilibrium offer_rates; the rate is then computed from the offer-
+  # mixture probability matrix (linear aggregates are exact functions of it).
   #
   # Params:
   #   - P (num vec): Price vector (length 4, one per market sector)
@@ -60,9 +65,18 @@ compute_group_employment_rate <- function(P, group, parent_units_list, demand_pa
   #   - policy_demand (fn): Demand policy function
   #   - policy_cdctc (fn): CDCTC policy function
   #   - cpi_growth_factor (dbl): CPI growth factor for price scaling
+  #   - demand_policy (list or NULL): Loaded demand policy object; required
+  #       (with offer_rates) for rationed policies
+  #   - offer_rates (num vec or NULL): Length-4 equilibrium offer rates
   #
   # Returns: (dbl) Weighted employment rate for the group (scalar)
   #----------------------------------------------------------------------------
+
+  rationed <- !is.null(demand_policy) && !is.null(demand_policy$rationing)
+  if (rationed && is.null(offer_rates)) {
+    stop('compute_group_employment_rate: rationed policy requires offer_rates ',
+         '(pass the equilibrium result offer rates).')
+  }
 
   total_emp_weighted <- 0
   total_weight <- 0
@@ -81,7 +95,25 @@ compute_group_employment_rate <- function(P, group, parent_units_list, demand_pa
     pu_group <- pu_df[group_mask, , drop = FALSE]
 
     # Get probability matrix with employment shifts applied
-    p_matrix <- get_demand_prob_matrix(
+    # (offer-mixture probabilities for rationed policies)
+    p_matrix <- if (rationed) {
+      get_rationed_prob_matrix(
+        P = P,
+        parent_units_df = pu_group,
+        n_children = n_children,
+        demand_params = demand_params,
+        pu_name = pu_name,
+        demand_policy = demand_policy,
+        policy_cdctc = policy_cdctc,
+        cpi_growth_factor = cpi_growth_factor,
+        employment_shifts = employment_shifts,
+        offer_rates = offer_rates,
+        # Non-rationed sectors have offer rate exactly 0; rationed sectors are
+        # strictly positive (interior root or r = 1 corner)
+        rationed_sectors = which(offer_rates > 0)
+      )
+    } else {
+      get_demand_prob_matrix(
       P = P,
       parent_units_df = pu_group,
       n_children = n_children,
@@ -92,6 +124,7 @@ compute_group_employment_rate <- function(P, group, parent_units_list, demand_pa
       cpi_growth_factor = cpi_growth_factor,
       employment_shifts = employment_shifts
     )
+    }
 
     # Get working choice mask
     working_mask <- get_working_choice_mask(n_children)
@@ -354,12 +387,8 @@ get_demand_prob_matrix <- function(P, parent_units_df, n_children, demand_params
   # Returns: (matrix) n_units x n_choices probability matrix
   #----------------------------------------------------------------------------
 
-  n_choices <- if (n_children == 1) N_CHOICES_1_CHILD else N_CHOICES_2_CHILD
-
   # Extract type-specific demand parameters
   type_params <- demand_params[[pu_name]]
-  beta <- type_params$beta
-  rho <- type_params$rho
 
   # Validate alpha is available (required for alpha-based model)
   if (is.null(type_params$alpha)) {
@@ -369,145 +398,17 @@ get_demand_prob_matrix <- function(P, parent_units_df, n_children, demand_params
 
   # ALPHA-BASED MODEL: p = exp(alpha + V) / Z
   # This applies to both baseline and counterfactual scenarios
-
-  pc <- compute_policy_components(parent_units_df, P, n_children, demand_params,
-                                   policy_demand, policy_cdctc, cpi_growth_factor)
-  base <- pc$base
-
-  if (any(!is.finite(base$agi_matrix)) ||
-      any(!is.finite(base$taxes_matrix)) ||
-      any(!is.finite(base$gross_ecec_cost_matrix))) {
-    stop('get_demand_prob_matrix: non-finite values in base matrices (', pu_name, ').')
-  }
-  if (any(!is.finite(pc$subsidy_matrix))) {
-    stop('get_demand_prob_matrix: non-finite subsidy_matrix (', pu_name, ').')
-  }
-  if (any(!is.finite(pc$cdctc_matrix))) {
-    stop('get_demand_prob_matrix: non-finite cdctc_matrix (', pu_name, ').')
-  }
-
-  Y_policy <- base$agi_matrix - base$taxes_matrix
-  C_policy <- base$gross_ecec_cost_matrix - pc$subsidy_matrix - pc$cdctc_matrix
-  NI_policy <- Y_policy - C_policy
-
-  if (any(!is.finite(NI_policy))) {
-    stop('get_demand_prob_matrix: non-finite NI_policy (Y - C) (', pu_name, ').')
-  }
-
-  # Compute V = beta * u(NI) in REAL 2019 dollars.
-  # beta/rho are calibrated on 2019-dollar net income; without deflation,
-  # nominal income growth would mechanically change behavior over time.
-  cpi_factor_2019 <- parent_units_df[['cpi_factor_2019']]
-  if (is.null(cpi_factor_2019)) {
-    cpi_factor_2019 <- 1.0
-  } else {
-    cpi_factor_2019 <- unique(cpi_factor_2019)
-    if (length(cpi_factor_2019) != 1 || !is.finite(cpi_factor_2019) || cpi_factor_2019 <= 0) {
-      stop('get_demand_prob_matrix: invalid cpi_factor_2019 (must be a single positive finite value) for ', pu_name, '.')
-    }
-  }
-
-  NI_real_2019 <- NI_policy / cpi_factor_2019
-  V_matrix <- compute_V_crra(NI_real_2019, beta, rho)
-
-  if (any(!is.finite(V_matrix))) {
-    stop('get_demand_prob_matrix: non-finite V_matrix from CRRA utility (', pu_name, ').')
-  }
-
-  # Apply employment shifts if provided (for employment targeting)
-  # Adds group-specific delta to working choices for each demographic group
-  if (!is.null(employment_shifts) && any(employment_shifts != 0)) {
-    working_mask <- get_working_choice_mask(n_children)
-    pc_group <- parent_units_df$pc_group
-
-    for (g in names(employment_shifts)) {
-      if (employment_shifts[g] != 0) {
-        group_rows <- which(pc_group == g)
-        if (length(group_rows) > 0) {
-          V_matrix[group_rows, working_mask] <- V_matrix[group_rows, working_mask] + employment_shifts[g]
-        }
-      }
-    }
-  }
+  um <- compute_policy_utility_matrix(
+    P, parent_units_df, n_children, demand_params, pu_name,
+    policy_demand, policy_cdctc, cpi_growth_factor,
+    employment_shifts = employment_shifts
+  )
 
   # Match alpha matrix rows to parent_units_df rows by row_ids
-  {
-    alpha <- type_params$alpha
-    row_ids <- type_params$row_ids
-    n_rows <- nrow(parent_units_df)
-
-    # Extract keys from parent_units_df
-    has_pseudofamily <- 'pseudofamily_id' %in% names(parent_units_df)
-
-    if (has_pseudofamily) {
-      pu_keys <- parent_units_df %>%
-        select(hh_id, parent_unit_id, pseudofamily_id) %>%
-        mutate(row_idx = row_number())
-    } else {
-      # For types without pseudofamily_id, use default value of 1
-      pu_keys <- parent_units_df %>%
-        select(hh_id, parent_unit_id) %>%
-        mutate(pseudofamily_id = 1L, row_idx = row_number())
-    }
-
-    # Convert row_ids to tibble for joining
-    row_ids_tbl <- tibble(row_ids) %>%
-      mutate(alpha_idx = row_number())
-
-    # Handle case where row_ids may not have pseudofamily_id
-    if (!('pseudofamily_id' %in% names(row_ids_tbl))) {
-      row_ids_tbl$pseudofamily_id <- 1L
-    }
-
-    # Ensure type consistency for join keys (coerce to character)
-    pu_keys <- pu_keys %>%
-      mutate(
-        hh_id = as.character(hh_id),
-        parent_unit_id = as.character(parent_unit_id),
-        pseudofamily_id = as.character(pseudofamily_id)
-      )
-    row_ids_tbl <- row_ids_tbl %>%
-      mutate(
-        hh_id = as.character(hh_id),
-        parent_unit_id = as.character(parent_unit_id),
-        pseudofamily_id = as.character(pseudofamily_id)
-      )
-
-    # Validate key uniqueness to avoid many-to-many joins (silent row expansion)
-    dup_alpha <- row_ids_tbl %>%
-      count(hh_id, parent_unit_id, pseudofamily_id) %>%
-      filter(n > 1)
-    if (nrow(dup_alpha) > 0) {
-      stop('match_alpha_to_parent_units: alpha row_ids contain duplicate keys. ',
-           'This would create an ambiguous match.')
-    }
-    dup_pu <- pu_keys %>%
-      count(hh_id, parent_unit_id, pseudofamily_id) %>%
-      filter(n > 1)
-    if (nrow(dup_pu) > 0) {
-      stop('match_alpha_to_parent_units: parent_units_df contains duplicate keys. ',
-           'This indicates duplicated rows for (hh_id, parent_unit_id, pseudofamily_id).')
-    }
-
-    # Match: find alpha_idx for each parent_units_df row
-    matched <- pu_keys %>%
-      left_join(row_ids_tbl, by = c('hh_id', 'parent_unit_id', 'pseudofamily_id'))
-
-    # Check for unmatched rows (should not happen if data is consistent)
-    n_unmatched <- sum(is.na(matched$alpha_idx))
-    if (n_unmatched > 0) {
-      stop(sprintf(
-        'match_alpha_to_parent_units: %d of %d rows have no matching alpha. ',
-        n_unmatched, n_rows
-      ), 'Check that calibration data covers all simulation households.')
-    }
-
-    # Reorder alpha matrix to match parent_units_df row ordering
-    alpha_matrix <- alpha[matched$alpha_idx, , drop = FALSE]
-  }
+  alpha_matrix <- match_alpha_to_parent_units(parent_units_df, type_params, pu_name)
 
   # Compute probabilities: p = exp(alpha + V) / Z
-  compute_probs_from_alpha(alpha_matrix, V_matrix)
+  compute_probs_from_alpha(alpha_matrix, um$V)
 }
 
 
@@ -848,49 +749,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
 
 
-  get_sector_hours_matrices <- function(n_children) {
-
-    #--------------------------------------------------------------------------
-    # Returns cached matrices mapping choices to sector-hours (H1, H2) for
-    # demand aggregation. Caches result in .choice_cache environment.
-    #
-    # Params:
-    #   - n_children (int): Number of children (1 or 2)
-    #
-    # Returns: (list) H1 (and H2 if n_children == 2), each n_choices x 4
-    #--------------------------------------------------------------------------
-
-    cache_key <- paste0('sector_hours_', n_children)
-
-    if (exists(cache_key, envir = .choice_cache)) {
-      return(get(cache_key, envir = .choice_cache))
-    }
-
-    catalog <- get_choice_catalog(n_children)
-    n_choices <- nrow(catalog)
-
-    hours_annual <- HOURS_ANNUAL
-
-    H1 <- matrix(0, nrow = n_choices, ncol = 4)
-    for (k in 1:n_choices) {
-      sector <- catalog$child1_market_sector_id[k]
-      if (!is.na(sector)) H1[k, sector] <- hours_annual[catalog$child1_hours_choice[k]]
-    }
-
-    if (n_children == 1) {
-      result <- list(H1 = H1)
-    } else {
-      H2 <- matrix(0, nrow = n_choices, ncol = 4)
-      for (k in 1:n_choices) {
-        sector <- catalog$child2_market_sector_id[k]
-        if (!is.na(sector)) H2[k, sector] <- hours_annual[catalog$child2_hours_choice[k]]
-      }
-      result <- list(H1 = H1, H2 = H2)
-    }
-
-    assign(cache_key, result, envir = .choice_cache)
-    return(result)
-  }
+  # NOTE: get_sector_hours_matrices() now lives in shared_functions/ (it is
+  # also used by the rationing offer-state machinery)
 
 
 
@@ -1145,7 +1005,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
                                     policy_supply = identity,
                                     policy_demand = NULL, policy_cdctc = NULL,
                                     target_employment_rates = NULL,
-                                    baseline_employment_shifts = NULL) {
+                                    baseline_employment_shifts = NULL,
+                                    rationing_ctx = NULL) {
 
     #--------------------------------------------------------------------------
     # Objective for L-BFGS-B equilibrium solver: sum of squared supply-demand
@@ -1163,6 +1024,9 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
     #   - policy_cdctc (fn): CDCTC policy function (or NULL)
     #   - target_employment_rates (num vec): Target rates by group (or NULL)
     #   - baseline_employment_shifts (num vec): Fixed shifts for policy runs
+    #   - rationing_ctx (list or NULL): Quantity-limited program context with
+    #       $demand_policy (loaded object), $slots (length-4), and $state (env
+    #       carrying the offer-rate warm start across evaluations)
     #
     # Returns: (dbl) Sum of squared delta gaps (scalar objective value)
     #--------------------------------------------------------------------------
@@ -1186,23 +1050,42 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
         }
       }
 
-      # Compute quantity demanded (sum over all 6 parent unit types)
-      Qd <- rep(0, 4)
-      for (i in seq_along(PARENT_UNIT_NAMES)) {
-        pu_name <- PARENT_UNIT_NAMES[i]
-        n_children <- PARENT_UNIT_N_CHILDREN[i]
-        if (nrow(parent_units_list[[pu_name]]) > 0) {
-          stage <- paste0('demand:', pu_name)
-          Qd_i <- get_total_demand(
-            P, parent_units_list[[pu_name]], n_children,
-            demand_params, pu_name, policy_demand, policy_cdctc,
-            cpi_growth_factor = supply_params$cpi_factor,
-            employment_shifts = employment_shifts
-          )
-          if (any(!is.finite(Qd_i)) || any(Qd_i < 0)) {
-            stop('Non-finite or negative Qd returned by get_total_demand().')
+      # Compute quantity demanded
+      if (!is.null(rationing_ctx)) {
+        # Quantity-limited program: mixture demand over offer states, with the
+        # offer rates solved (nested, warm-started) so expected take-up hits
+        # the slot constraint (or r = 1 with slack when undersubscribed)
+        stage <- 'demand:rationed'
+        rat <- solve_rationed_equilibrium_demand(
+          P, parent_units_list, demand_params,
+          demand_policy     = rationing_ctx$demand_policy,
+          policy_cdctc      = policy_cdctc,
+          cpi_growth_factor = supply_params$cpi_factor,
+          employment_shifts = employment_shifts,
+          slots             = rationing_ctx$slots,
+          r_start           = rationing_ctx$state$last_r
+        )
+        rationing_ctx$state$last_r <- rat$offer_rates
+        Qd <- rat$Qd
+      } else {
+        # Sum over all parent unit types
+        Qd <- rep(0, 4)
+        for (i in seq_along(PARENT_UNIT_NAMES)) {
+          pu_name <- PARENT_UNIT_NAMES[i]
+          n_children <- PARENT_UNIT_N_CHILDREN[i]
+          if (nrow(parent_units_list[[pu_name]]) > 0) {
+            stage <- paste0('demand:', pu_name)
+            Qd_i <- get_total_demand(
+              P, parent_units_list[[pu_name]], n_children,
+              demand_params, pu_name, policy_demand, policy_cdctc,
+              cpi_growth_factor = supply_params$cpi_factor,
+              employment_shifts = employment_shifts
+            )
+            if (any(!is.finite(Qd_i)) || any(Qd_i < 0)) {
+              stop('Non-finite or negative Qd returned by get_total_demand().')
+            }
+            Qd <- Qd + Qd_i
           }
-          Qd <- Qd + Qd_i
         }
       }
 
@@ -1246,7 +1129,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
   #============================================================================
 
   # Load policy functions (isolated environments to avoid global namespace pollution)
-  do_demand_policy <- load_demand_policy(scenario_info$equilibrium$policy_demand)
+  demand_policy    <- load_demand_policy(scenario_info$equilibrium$policy_demand)
+  do_demand_policy <- demand_policy$do_demand_policy
   supply_policy    <- load_supply_policy(scenario_info$equilibrium$policy_supply)
   do_supply_policy <- supply_policy$do_supply_policy
   supply_subsidy   <- supply_policy$supply_subsidy
@@ -1268,6 +1152,30 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       n_children = n_children_eff,
       year = year
     )
+  }
+
+  # Quantity-limited program setup (rationed demand policies)
+  rationing_ctx <- NULL
+  if (!is.null(demand_policy$rationing)) {
+    if (identical(scenario_info$id, 'baseline')) {
+      stop('Quantity-limited (rationed) demand policies are only supported for ',
+           'counterfactual scenarios, not the baseline.')
+    }
+    if (!is.null(target_employment_rates) && is.null(baseline_employment_shifts)) {
+      stop('Rationed demand policies require fixed baseline employment shifts; ',
+           'employment targeting cannot be re-solved under a rationed policy.')
+    }
+
+    rationing_slots <- get_rationing_slots(demand_policy$rationing, year)
+    rationing_ctx <- list(
+      demand_policy = demand_policy,
+      slots         = rationing_slots,
+      state         = new.env(parent = emptyenv())  # offer-rate warm start
+    )
+    rationing_ctx$state$last_r <- NULL
+
+    cat('  Rationed program slots by sector: [',
+        paste(format(round(rationing_slots), big.mark = ',', scientific = FALSE), collapse = ', '), ']\n')
   }
 
   # Apply wage floor config
@@ -1361,7 +1269,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       policy_demand     = do_demand_policy,
       policy_cdctc      = do_cdctc_policy,
       target_employment_rates = target_employment_rates,
-      baseline_employment_shifts = baseline_employment_shifts
+      baseline_employment_shifts = baseline_employment_shifts,
+      rationing_ctx     = rationing_ctx
     )
 
     # Check both optimizer convergence AND residual gap quality
@@ -1383,8 +1292,10 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
     Qd_candidate <- NULL
     supply_candidate <- NULL
 
-    # Track employment shifts for return value
+    # Track employment shifts and rationing outcomes for return value
     final_employment_shifts <- NULL
+    final_offer_rates <- NULL
+    final_program_takeup <- NULL
 
     if (converged_optimizer || objective_near_zero) {
       # Prepend 0 for unpaid sector
@@ -1401,15 +1312,30 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
       # Compute demand at candidate prices WITH employment shifts
       # (This must match what the optimizer was doing)
-      Qd_candidate <- rep(0, 4)
-      for (i in seq_along(PARENT_UNIT_NAMES)) {
-        pu_name <- PARENT_UNIT_NAMES[i]
-        n_children <- PARENT_UNIT_N_CHILDREN[i]
-        if (nrow(parent_units_list[[pu_name]]) > 0) {
-          Qd_candidate <- Qd_candidate + get_total_demand(P_candidate, parent_units_list[[pu_name]], n_children,
-                                                          demand_params, pu_name, do_demand_policy, do_cdctc_policy,
-                                                          cpi_growth_factor = supply_params$cpi_factor,
-                                                          employment_shifts = final_employment_shifts)
+      if (!is.null(rationing_ctx)) {
+        rat_final <- solve_rationed_equilibrium_demand(
+          P_candidate, parent_units_list, demand_params,
+          demand_policy     = rationing_ctx$demand_policy,
+          policy_cdctc      = do_cdctc_policy,
+          cpi_growth_factor = supply_params$cpi_factor,
+          employment_shifts = final_employment_shifts,
+          slots             = rationing_ctx$slots,
+          r_start           = rationing_ctx$state$last_r
+        )
+        final_offer_rates <- rat_final$offer_rates
+        final_program_takeup <- rat_final$takeup
+        Qd_candidate <- rat_final$Qd
+      } else {
+        Qd_candidate <- rep(0, 4)
+        for (i in seq_along(PARENT_UNIT_NAMES)) {
+          pu_name <- PARENT_UNIT_NAMES[i]
+          n_children <- PARENT_UNIT_N_CHILDREN[i]
+          if (nrow(parent_units_list[[pu_name]]) > 0) {
+            Qd_candidate <- Qd_candidate + get_total_demand(P_candidate, parent_units_list[[pu_name]], n_children,
+                                                            demand_params, pu_name, do_demand_policy, do_cdctc_policy,
+                                                            cpi_growth_factor = supply_params$cpi_factor,
+                                                            employment_shifts = final_employment_shifts)
+          }
         }
       }
 
@@ -1437,10 +1363,28 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
       # Update parent units with equilibrium utilities (including employment shifts)
       # (collapse_to_discrete() will take argmax downstream)
+      rationed_pu_data <- if (!is.null(rationing_ctx)) list() else NULL
       for (i in seq_along(PARENT_UNIT_NAMES)) {
         pu_name <- PARENT_UNIT_NAMES[i]
         n_children <- PARENT_UNIT_N_CHILDREN[i]
         if (nrow(parent_units_list[[pu_name]]) > 0) {
+
+          if (!is.null(rationing_ctx)) {
+            # Rationed policy: precompute offer-variant utilities and
+            # components on the unexpanded units. The discrete stage draws
+            # offers per record and assembles state-conditional utilities
+            # from these variants (see collapse_rationed_choices)
+            parent_units_clean <- parent_units_list[[pu_name]] %>%
+              select(-matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|net_income|Y|C|V|p)\\.[0-9]+$'))
+
+            rationed_pu_data[[pu_name]] <- prepare_rationed_pu_variants(
+              parent_units_clean, P_eq, n_children, pu_name, demand_params,
+              rationing_ctx$demand_policy, do_cdctc_policy, supply_params$cpi_factor,
+              final_employment_shifts
+            )
+            parent_units_list[[pu_name]] <- parent_units_clean
+
+          } else {
 
           # Compute demand using alpha-based structural model
           {
@@ -1483,101 +1427,21 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
             # Net income: NI = Y - C
             NI_policy <- Y_policy - C_policy
 
-            # Compute V = beta * u(NI) in REAL 2019 dollars
-            cpi_factor_2019 <- parent_units_list[[pu_name]][['cpi_factor_2019']]
-            if (is.null(cpi_factor_2019)) {
-              cpi_factor_2019 <- 1.0
-            } else {
-              cpi_factor_2019 <- unique(cpi_factor_2019)
-              if (length(cpi_factor_2019) != 1 || !is.finite(cpi_factor_2019) || cpi_factor_2019 <= 0) {
-                stop('get_demand: invalid cpi_factor_2019 (must be a single positive finite value) for ', pu_name, '.')
-              }
-            }
-
-            NI_real_2019 <- NI_policy / cpi_factor_2019
-            V_utility <- compute_V_crra(NI_real_2019, beta, rho)
-
-            # Apply employment shifts if provided (for employment targeting)
-            if (!is.null(final_employment_shifts) && any(final_employment_shifts != 0)) {
-              working_mask <- get_working_choice_mask(n_children)
-              pc_group <- parent_units_list[[pu_name]]$pc_group
-
-              for (g in names(final_employment_shifts)) {
-                if (final_employment_shifts[g] != 0) {
-                  group_rows <- which(pc_group == g)
-                  if (length(group_rows) > 0) {
-                    V_utility[group_rows, working_mask] <- V_utility[group_rows, working_mask] + final_employment_shifts[g]
-                  }
-                }
-              }
-            }
+            # Compute V = beta * u(NI) in real 2019 dollars, with employment shifts
+            V_utility <- compute_utility_from_net_income(
+              NI_policy         = NI_policy,
+              parent_units_df   = parent_units_list[[pu_name]],
+              beta              = beta,
+              rho               = rho,
+              n_children        = n_children,
+              pu_name           = pu_name,
+              employment_shifts = final_employment_shifts
+            )
 
             # Match alpha matrix rows to parent_units_df rows
-            {
-              alpha <- type_params$alpha
-              row_ids <- type_params$row_ids
-              n_rows <- nrow(parent_units_list[[pu_name]])
-
-              has_pseudofamily <- 'pseudofamily_id' %in% names(parent_units_list[[pu_name]])
-
-              if (has_pseudofamily) {
-                pu_keys <- parent_units_list[[pu_name]] %>%
-                  select(hh_id, parent_unit_id, pseudofamily_id) %>%
-                  mutate(row_idx = row_number())
-              } else {
-                pu_keys <- parent_units_list[[pu_name]] %>%
-                  select(hh_id, parent_unit_id) %>%
-                  mutate(pseudofamily_id = 1L, row_idx = row_number())
-              }
-
-              row_ids_tbl <- tibble(row_ids) %>%
-                mutate(alpha_idx = row_number())
-
-              if (!('pseudofamily_id' %in% names(row_ids_tbl))) {
-                row_ids_tbl$pseudofamily_id <- 1L
-              }
-
-              pu_keys <- pu_keys %>%
-                mutate(
-                  hh_id = as.character(hh_id),
-                  parent_unit_id = as.character(parent_unit_id),
-                  pseudofamily_id = as.character(pseudofamily_id)
-                )
-              row_ids_tbl <- row_ids_tbl %>%
-                mutate(
-                  hh_id = as.character(hh_id),
-                  parent_unit_id = as.character(parent_unit_id),
-                  pseudofamily_id = as.character(pseudofamily_id)
-                )
-
-              dup_alpha <- row_ids_tbl %>%
-                count(hh_id, parent_unit_id, pseudofamily_id) %>%
-                filter(n > 1)
-              if (nrow(dup_alpha) > 0) {
-                stop('match_alpha_to_parent_units: alpha row_ids contain duplicate keys. ',
-                     'This would create an ambiguous match.')
-              }
-              dup_pu <- pu_keys %>%
-                count(hh_id, parent_unit_id, pseudofamily_id) %>%
-                filter(n > 1)
-              if (nrow(dup_pu) > 0) {
-                stop('match_alpha_to_parent_units: parent_units_df contains duplicate keys. ',
-                     'This indicates duplicated rows for (hh_id, parent_unit_id, pseudofamily_id).')
-              }
-
-              matched <- pu_keys %>%
-                left_join(row_ids_tbl, by = c('hh_id', 'parent_unit_id', 'pseudofamily_id'))
-
-              n_unmatched <- sum(is.na(matched$alpha_idx))
-              if (n_unmatched > 0) {
-                stop(sprintf(
-                  'match_alpha_to_parent_units: %d of %d rows have no matching alpha. ',
-                  n_unmatched, n_rows
-                ), 'Check that calibration data covers all simulation households.')
-              }
-
-              alpha_matrix <- alpha[matched$alpha_idx, , drop = FALSE]
-            }
+            alpha_matrix <- match_alpha_to_parent_units(
+              parent_units_list[[pu_name]], type_params, pu_name
+            )
 
             # Compute probabilities: p = exp(alpha + V) / Z
             p_matrix <- compute_probs_from_alpha(alpha_matrix, V_utility)
@@ -1605,6 +1469,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
             names(V_df) <- paste0('V.', 1:n_choices)
 
             parent_units_list[[pu_name]] <- bind_cols(df_with_policy, V_df, p_df)
+          }
+
           }
         }
       }
@@ -1645,7 +1511,10 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       value        = optim_result$value,
       optim_result = optim_result,
       employment_shifts = final_employment_shifts,
-      target_employment_rates = target_employment_rates
+      target_employment_rates = target_employment_rates,
+      offer_rates    = final_offer_rates,
+      program_takeup = final_program_takeup,
+      program_slots  = if (!is.null(rationing_ctx)) rationing_ctx$slots else NULL
     )
 
     # Write solver diagnostics
@@ -1782,6 +1651,31 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
           labor_names[i_sec], format(round(supply_params$L[i_sec]), big.mark = ','),
           format(round(result_list$L[i_sec]), big.mark = ',')))
 
+      # Rationed program diagnostics
+      if (!is.null(rationing_ctx)) {
+        cat('--------------------------------------------------------------------------------\n')
+        cat('RATIONED PROGRAM (quantity-limited demand policy)\n')
+        cat('--------------------------------------------------------------------------------\n')
+        if (is.null(result_list$offer_rates)) {
+          cat('Offer rates not available (solver did not converge)\n')
+        } else {
+          cat(sprintf('%-30s %14s %12s %14s %14s\n',
+                      'Category', 'Slots', 'Offer rate', 'E[take-up]', 'Slack'))
+          cat(strrep('-', 90), '\n')
+          for (i_sec in 1:4) {
+            if (rationing_ctx$slots[i_sec] <= 0) next
+            cat(sprintf('%-30s %14s %12.4f %14s %14s\n',
+                        category_names[i_sec],
+                        format(round(rationing_ctx$slots[i_sec]), big.mark = ',', scientific = FALSE),
+                        result_list$offer_rates[i_sec],
+                        format(round(result_list$program_takeup[i_sec]), big.mark = ',', scientific = FALSE),
+                        format(round(rationing_ctx$slots[i_sec] - result_list$program_takeup[i_sec]), big.mark = ',', scientific = FALSE)))
+          }
+          cat('NOTE: offer rate = 1 with positive slack indicates an undersubscribed program.\n')
+        }
+        cat('\n')
+      }
+
       # Solution quality
       cat('--------------------------------------------------------------------------------\n')
       cat('SOLUTION QUALITY\n')
@@ -1914,7 +1808,22 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
         }
 
         # Collapse wide-format choice data to discrete scalar values
-        {
+        if (!is.null(rationing_ctx)) {
+          # Rationed: draw program offers per expanded record (dedicated RNG
+          # stream keeps epsilon draws aligned with the baseline), argmax the
+          # state-conditional utilities, and extract offer-appropriate scalars
+          offer_seed <- if (!is.null(year_seed)) year_seed + 100 + i else NULL
+          result$parent_units[[pu_name]] <- collapse_rationed_choices(
+            df_expanded        = result$parent_units[[pu_name]],
+            pu_variants        = rationed_pu_data[[pu_name]],
+            n_children         = n_children,
+            offer_rates        = final_offer_rates,
+            rationed_sectors   = which(rationing_ctx$slots > 0),
+            n_draws_per_record = n_draws_per_record,
+            offer_seed         = offer_seed
+          )
+          rationed_pu_data[[pu_name]] <- NULL
+        } else {
           parent_units_df <- result$parent_units[[pu_name]]
           n_choices <- if (n_children == 1) N_CHOICES_1_CHILD else N_CHOICES_2_CHILD
 
@@ -2002,6 +1911,32 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
         # Compact heap between parent unit types to reduce fragmentation
         gc()
       }
+    }
+
+    # Report realized program take-up from the drawn lotteries (Monte Carlo
+    # noise means this approximates the slot count in expectation only)
+    if (!is.null(rationing_ctx)) {
+      realized_takeup <- rep(0, 4)
+      for (pu_name in PARENT_UNIT_NAMES) {
+        pu_df <- result$parent_units[[pu_name]]
+        if (is.null(pu_df) || nrow(pu_df) == 0) next
+        for (child_idx in 1:2) {
+          slot_col <- paste0('program_slot_used.', child_idx)
+          type_col <- paste0('ecec_type.', child_idx)
+          w_col <- paste0('child_weight.', child_idx)
+          if (!all(c(slot_col, type_col, w_col) %in% names(pu_df))) next
+          used <- pu_df[[slot_col]] == 1
+          if (!any(used)) next
+          sec <- match(pu_df[[type_col]][used], MARKET_SECTORS)
+          w <- pu_df[[w_col]][used]
+          for (j in unique(sec[!is.na(sec)])) {
+            realized_takeup[j] <- realized_takeup[j] + sum(w[sec == j & !is.na(sec)], na.rm = TRUE)
+          }
+        }
+      }
+      result$program_takeup_realized <- realized_takeup
+      cat('  Rationed program realized take-up (weighted children): [',
+          paste(format(round(realized_takeup), big.mark = ',', scientific = FALSE), collapse = ', '), ']\n')
     }
 
     # Write supply parameters with equilibrium prices
