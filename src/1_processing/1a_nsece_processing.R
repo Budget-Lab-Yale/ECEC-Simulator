@@ -671,7 +671,12 @@ run_nsece_processing <- function() {
     # Enrollment ecec_choice must only contain known categories or NA.
     # If the recode logic in the provider classification has a gap, an
     # unexpected value could slip through and break downstream RF training.
+    # 'K-8' is a legitimate enrollment category here (school-age children
+    # whose primary arrangement is school; produced by the provider
+    # classification and ranked first in category_priority) even though it
+    # is not one of the 8 model care choices.
     valid_ecec_choices <- c(
+      'K-8',
       'High-Priced Center-Based', 'Low-Priced Center-Based',
       'Unpaid Center-Based', 'Paid Home-Based', 'Unpaid Home-Based',
       'Other Paid', 'Other Unpaid', 'Parent Only', NA_character_
@@ -690,10 +695,20 @@ run_nsece_processing <- function() {
       nrow()
     stopifnot(n_pu_keys == nrow(parent_units))
 
-    # Every child should have a parent_unit_id after the join.
-    # If the parent_unit assignment logic missed some children, they'd
-    # have NA parent_unit_id and silently drop from all downstream analysis.
-    stopifnot(!any(is.na(children$parent_unit_id)))
+    # Most children should have a parent_unit_id after the join. A modest NA
+    # share is expected: some children have no assignable parent unit in the
+    # household roster (e.g. grandparent-headed households) and drop from
+    # parent-unit-based analysis by design (~4% in the reference 2019 data).
+    # A large NA share indicates the parent_unit assignment logic broke.
+    n_na_pu <- sum(is.na(children$parent_unit_id))
+    na_pu_share <- n_na_pu / nrow(children)
+    cat('  Children without an assignable parent unit: ', n_na_pu, ' of ',
+        nrow(children), ' (', round(100 * na_pu_share, 1), '%)\n', sep = '')
+    if (na_pu_share > 0.10) {
+      stop('run_nsece_processing: ', round(100 * na_pu_share, 1), '% of children ',
+           'have NA parent_unit_id (expected ~4%). The parent_unit assignment ',
+           'join has likely broken; inspect the household roster processing.')
+    }
 
     # Return as list
     list(
