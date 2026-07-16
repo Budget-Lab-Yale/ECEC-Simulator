@@ -500,6 +500,7 @@ run_acs_processing <- function() {
         HHWT,
         HHINCOME,
         REGION,
+        any_of('STATEFIP'),
         PERNUM, PERWT,
         AGE, SEX, MARST, RACE, HISPAN, EDUC,
         RELATE,
@@ -540,6 +541,10 @@ run_acs_processing <- function() {
         income    = first(HHINCOME),
         # IPUMS REGION is a 2-digit division code (11-42). First digit is region.
         region    = first(REGION) %/% 10L,
+        # State FIPS code for state-level analysis (docs/state_level_analysis.md).
+        # NA when the raw pull predates STATEFIP; state runs then fail loudly
+        # at simulation init.
+        statefip  = if ('STATEFIP' %in% names(acs)) first(STATEFIP) else NA_integer_,
         n_members = n(),
         .groups   = 'drop'
       )

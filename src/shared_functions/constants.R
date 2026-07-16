@@ -192,6 +192,32 @@ MFC_CHUNK_ROWS <- 20000L
 
 
 #------------------------------------------------------------------------------
+# State-Level Analysis
+#
+# See docs/state_level_analysis.md. Runscripts specify states as USPS postal
+# abbreviations; IPUMS ACS uses numeric FIPS codes (STATEFIP), so we crosswalk
+# here. 50 states + DC.
+#------------------------------------------------------------------------------
+
+STATE_POSTAL_TO_FIPS <- c(
+  AL =  1, AK =  2, AZ =  4, AR =  5, CA =  6, CO =  8, CT =  9, DE = 10,
+  DC = 11, FL = 12, GA = 13, HI = 15, ID = 16, IL = 17, IN = 18, IA = 19,
+  KS = 20, KY = 21, LA = 22, ME = 23, MD = 24, MA = 25, MI = 26, MN = 27,
+  MS = 28, MO = 29, MT = 30, NE = 31, NV = 32, NH = 33, NJ = 34, NM = 35,
+  NY = 36, NC = 37, ND = 38, OH = 39, OK = 40, OR = 41, PA = 42, RI = 44,
+  SC = 45, SD = 46, TN = 47, TX = 48, UT = 49, VT = 50, VA = 51, WA = 53,
+  WV = 54, WI = 55, WY = 56
+)
+
+# Convergence settings for the state demand-target contraction
+# (adjust_alpha_for_state): delta_t += log(H_target / H_model), iterated until
+# the max abs log-gap falls below tolerance
+STATE_DEMAND_CONTRACTION_TOL      <- 1e-8
+STATE_DEMAND_CONTRACTION_MAX_ITER <- 500L
+
+
+
+#------------------------------------------------------------------------------
 # Simulation Variable Columns
 #
 # Column names added by add_simulation_variables().

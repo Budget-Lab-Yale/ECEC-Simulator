@@ -134,8 +134,21 @@ initialize_simulation <- function() {
   }
 
 
+  # State-level run? (run_states set in main.R from the runscript; see
+  # docs/state_level_analysis.md). State runs defer sub-sampling to the
+  # per-state contexts below: filter to state first, then subsample.
+  is_state_run <- exists('run_states') && !is.null(run_states)
+  if (is_state_run) {
+    if (!'statefip' %in% names(sim_base_hh$households) ||
+        all(is.na(sim_base_hh$households$statefip))) {
+      stop('State-level run requested but the households table has no statefip ',
+           'values. The interface predates state support; regenerate it ',
+           '(re-run ACS processing with STATEFIP in the raw pull).')
+    }
+  }
+
   # Sub-sample households for simulation if sim_sample < calib_sample
-  if (sim_sample < calib_sample) {
+  if (sim_sample < calib_sample && !is_state_run) {
     sampling_fraction <- sim_sample / calib_sample
     weight_inflation  <- calib_sample / sim_sample
 
@@ -150,72 +163,15 @@ initialize_simulation <- function() {
     cat('  Households: ', length(sampled_hh_ids), ' of ',
         nrow(sim_base_hh$households), '\n', sep = '')
 
-    # Filter all tables to sampled households and inflate weights
-    sim_base_hh$households <- sim_base_hh$households %>%
-      filter(hh_id %in% sampled_hh_ids) %>%
-      mutate(hh_weight = hh_weight * weight_inflation)
-
-    for (tbl_name in c('household_members', 'parent_units', 'children',
-                        'tax_units', 'enrollment', 'enrollment_joint')) {
-      if (!is.null(sim_base_hh[[tbl_name]]) && 'hh_id' %in% names(sim_base_hh[[tbl_name]])) {
-        sim_base_hh[[tbl_name]] <- sim_base_hh[[tbl_name]] %>%
-          filter(hh_id %in% sampled_hh_ids)
-      }
-    }
-
-    # Inflate all survey weights to maintain population-level aggregates
-    # (hh_weight already inflated above; these are the per-person/child weights
-    # used by the equilibrium solver and output aggregation)
-    sim_base_hh$household_members <- sim_base_hh$household_members %>%
-      mutate(per_weight = per_weight * weight_inflation)
-
-    sim_base_hh$parent_units <- sim_base_hh$parent_units %>%
-      mutate(
-        per_weight1 = per_weight1 * weight_inflation,
-        per_weight2 = per_weight2 * weight_inflation
-      )
-
-    sim_base_hh$children <- sim_base_hh$children %>%
-      mutate(child_weight = child_weight * weight_inflation)
-
-    sim_base_hh$tax_units <- sim_base_hh$tax_units %>%
-      mutate(tax_unit_weight = tax_unit_weight * weight_inflation)
-
-    # SPM tables: filter by hh_id via pu_spm_xwalk
-    if (!is.null(sim_base_hh$pu_spm_xwalk)) {
-      sim_base_hh$pu_spm_xwalk <- sim_base_hh$pu_spm_xwalk %>%
-        filter(hh_id %in% sampled_hh_ids)
-
-      if (!is.null(sim_base_hh$spm_units)) {
-        kept_spm_ids <- unique(sim_base_hh$pu_spm_xwalk$spm_unit_id)
-        sim_base_hh$spm_units <- sim_base_hh$spm_units %>%
-          filter(spm_unit_id %in% kept_spm_ids) %>%
-          mutate(
-            spm_weight = spm_weight * weight_inflation,
-            n_members_weighted = n_members_weighted * weight_inflation,
-            n_children_weighted = n_children_weighted * weight_inflation
-          )
-      }
-
-      if (!is.null(sim_base_hh$spm_parent_earnings)) {
-        sim_base_hh$spm_parent_earnings <- sim_base_hh$spm_parent_earnings %>%
-          filter(hh_id %in% sampled_hh_ids)
-      }
-    }
+    sim_base_hh <- filter_sim_base_hh(sim_base_hh, sampled_hh_ids, weight_inflation)
 
     cat('  Parent units after sampling: ', nrow(sim_base_hh$parent_units), '\n', sep = '')
   }
 
 
-  # Load supply model parameters from estimation output
-  {
-    supply_params_path <- file.path(output_root, 'estimation', 'supply', 'supply_2019.yaml')
-
-    if (!file.exists(supply_params_path)) {
-      stop(paste0('Supply params file not found: ', supply_params_path, '\n',
-                  'Run NSECE processing first, or use -C to specify a calibration interface.'))
-    }
-
+  # Parses a supply params yaml (estimation output or a state override, which
+  # share the same schema) into the base_supply_params list format
+  parse_supply_params_yaml <- function(supply_params_path) {
     supply_yaml_data <- read_yaml(supply_params_path)
 
     sector_keys <- c('unpaid_center_based', 'low_price_center_based',
@@ -225,7 +181,7 @@ initialize_simulation <- function() {
         supply_yaml_data$labor_requirements[[s]]$ba)
     }))
 
-    base_supply_params <- list(
+    list(
       L_req   = L_req,
       w       = c(supply_yaml_data$wages$no_ba, supply_yaml_data$wages$ba),
       L       = c(supply_yaml_data$labor_supply$no_ba, supply_yaml_data$labor_supply$ba),
@@ -237,6 +193,18 @@ initialize_simulation <- function() {
         supply_yaml_data$per_unit_residual$paid_home_based
       )
     )
+  }
+
+  # Load supply model parameters from estimation output
+  {
+    supply_params_path <- file.path(output_root, 'estimation', 'supply', 'supply_2019.yaml')
+
+    if (!file.exists(supply_params_path)) {
+      stop(paste0('Supply params file not found: ', supply_params_path, '\n',
+                  'Run NSECE processing first, or use -C to specify a calibration interface.'))
+    }
+
+    base_supply_params <- parse_supply_params_yaml(supply_params_path)
   }
 
 
@@ -311,13 +279,18 @@ initialize_simulation <- function() {
 
     calibration_year <- demand_yaml_data$year %||% 2019
 
-    # Load alpha matrices for each parent unit type
+    # Load alpha matrices for each parent unit type. State runs keep the full
+    # rds contents (p0, child_weights) for the state demand contraction.
+    alpha_data_by_type <- list()
     for (pu_type in c('c1', 'c2plus')) {
       alpha_path <- file.path(estimation_dir, paste0('alpha_', pu_type, '_', calibration_year, '.rds'))
       if (file.exists(alpha_path)) {
         alpha_data <- readRDS(alpha_path)
         base_demand_params[[pu_type]]$alpha <- alpha_data$alpha
         base_demand_params[[pu_type]]$row_ids <- alpha_data$row_ids
+        if (is_state_run) {
+          alpha_data_by_type[[pu_type]] <- alpha_data
+        }
       }
     }
 
@@ -371,17 +344,154 @@ initialize_simulation <- function() {
     list(price_qrf_models = price_qrf_models)
   }
 
-  cached_price_wedge <- compute_price_wedge_cache(
-    parent_units = sim_base_hh$parent_units,
-    children     = sim_base_hh$children,
-    households   = sim_base_hh$households,
-    qrf_models   = price_models$price_qrf_models
-  )
-
-  # Optionally disable price wedge heterogeneity (set all wedges to 1.0)
-  if (exists('disable_price_wedge') && isTRUE(disable_price_wedge)) {
+  wedge_disabled <- exists('disable_price_wedge') && isTRUE(disable_price_wedge)
+  if (wedge_disabled) {
     cat('--no-price-wedge flag set: disabling price heterogeneity (all wedges = 1.0)\n')
-    cached_price_wedge <- NULL
+  }
+
+  cached_price_wedge <- NULL
+  if (!is_state_run && !wedge_disabled) {
+    cached_price_wedge <- compute_price_wedge_cache(
+      parent_units = sim_base_hh$parent_units,
+      children     = sim_base_hh$children,
+      households   = sim_base_hh$households,
+      qrf_models   = price_models$price_qrf_models
+    )
+  }
+
+  #-----------------------------
+  # Build per-state contexts
+  #-----------------------------
+  # For state-level runs (docs/state_level_analysis.md), each state gets its
+  # own context: households filtered to the state (then sub-sampled), alphas
+  # re-anchored to state demand targets when a target CSV exists, supply
+  # params from a state yaml when present, a state epop file when present,
+  # and per-state warm-start prices / employment-rate caches.
+
+  state_contexts <- NULL
+  if (is_state_run) {
+    state_contexts <- list()
+    state_metadata <- list()
+
+    empty_prices <- setNames(
+      lapply(counterfactual_ids, function(x) INITIAL_PRICES),
+      counterfactual_ids
+    )
+
+    for (st in names(run_states)) {
+      fips <- run_states[[st]]
+      cat('\nBuilding state context:', st, '(FIPS', fips, ')\n')
+
+      state_hh_ids <- sim_base_hh$households %>%
+        filter(statefip == fips) %>%
+        pull(hh_id)
+
+      if (length(state_hh_ids) == 0) {
+        stop('No households found for state ', st, ' (FIPS ', fips, ').')
+      }
+
+      st_base_hh <- filter_sim_base_hh(sim_base_hh, state_hh_ids)
+      cat('  Households: ', length(state_hh_ids),
+          ' | Parent units: ', nrow(st_base_hh$parent_units), '\n', sep = '')
+
+      # Subsample within the state (filter first, then sample)
+      if (sim_sample < calib_sample) {
+        sampling_fraction <- sim_sample / calib_sample
+        set.seed(random_seed_base + 1000 + fips)
+        st_sampled_ids <- st_base_hh$households %>%
+          slice_sample(prop = sampling_fraction) %>%
+          pull(hh_id)
+        st_base_hh <- filter_sim_base_hh(st_base_hh, st_sampled_ids,
+                                         calib_sample / sim_sample)
+        cat('  Sub-sampled to ', length(st_sampled_ids), ' households (',
+            sim_sample, '% of ACS)\n', sep = '')
+      }
+
+      # Demand: re-anchor alphas to state targets when a target CSV exists;
+      # otherwise subset the national alphas to the state's rows unchanged
+      st_demand_params <- base_demand_params
+      demand_targets_path <- file.path('config', 'state', 'demand', paste0(st, '.csv'))
+      demand_adjustment <- NULL
+      if (file.exists(demand_targets_path)) {
+        demand_adjustment <- adjust_alpha_for_state(
+          alpha_data_by_type = alpha_data_by_type,
+          state_hh_ids       = state_hh_ids,
+          targets_csv_path   = demand_targets_path,
+          state_postal       = st
+        )
+        for (pu_type in names(demand_adjustment$alpha_by_type)) {
+          st_demand_params[[pu_type]]$alpha <- demand_adjustment$alpha_by_type[[pu_type]]
+          st_demand_params[[pu_type]]$row_ids <- demand_adjustment$row_ids_by_type[[pu_type]]
+        }
+      } else {
+        cat('  No demand target file (', demand_targets_path,
+            '): using national alphas, filter only\n', sep = '')
+        for (pu_type in names(alpha_data_by_type)) {
+          ad <- alpha_data_by_type[[pu_type]]
+          in_state <- ad$row_ids$hh_id %in% state_hh_ids
+          st_demand_params[[pu_type]]$alpha <- ad$alpha[in_state, , drop = FALSE]
+          st_demand_params[[pu_type]]$row_ids <- ad$row_ids[in_state, , drop = FALSE]
+        }
+      }
+
+      # Supply: state yaml override when present, else NSECE-derived params
+      supply_override_path <- file.path('config', 'state', 'supply', paste0(st, '.yaml'))
+      if (file.exists(supply_override_path)) {
+        cat('  Supply params: state override (', supply_override_path, ')\n', sep = '')
+        st_supply_params <- parse_supply_params_yaml(supply_override_path)
+        supply_source <- supply_override_path
+      } else {
+        st_supply_params <- base_supply_params
+        supply_source <- 'nsece'
+      }
+
+      # Employment growth: state epop file when present, else national CBO
+      epop_override_path <- file.path('config', 'state', 'employment', paste0(st, '.csv'))
+      st_epop_path <- if (file.exists(epop_override_path)) epop_override_path else NULL
+      if (!is.null(st_epop_path)) {
+        cat('  Employment growth: state epop file (', st_epop_path, ')\n', sep = '')
+      }
+
+      st_price_wedge <- NULL
+      if (!wedge_disabled) {
+        st_price_wedge <- compute_price_wedge_cache(
+          parent_units = st_base_hh$parent_units,
+          children     = st_base_hh$children,
+          households   = st_base_hh$households,
+          qrf_models   = price_models$price_qrf_models
+        )
+      }
+
+      state_contexts[[st]] <- list(
+        postal                     = st,
+        fips                       = fips,
+        sim_base_hh                = st_base_hh,
+        base_supply_params         = st_supply_params,
+        base_demand_params         = st_demand_params,
+        cached_price_wedge         = st_price_wedge,
+        epop_path                  = st_epop_path,
+        prev_baseline_prices       = INITIAL_PRICES,
+        prev_counterfactual_prices = empty_prices,
+        baseline_emp_rates_2019    = NULL
+      )
+
+      state_metadata[[st]] <- list(
+        fips             = fips,
+        n_households     = nrow(st_base_hh$households),
+        demand_adjusted  = !is.null(demand_adjustment),
+        demand_deltas    = if (!is.null(demand_adjustment)) as.list(demand_adjustment$deltas) else NULL,
+        supply_source    = supply_source,
+        epop_source      = st_epop_path %||% 'national'
+      )
+    }
+
+    # Record state-run provenance in run metadata
+    metadata_dir <- file.path(output_root, 'metadata')
+    dir.create(metadata_dir, showWarnings = FALSE, recursive = TRUE)
+    write_yaml(state_metadata, file.path(metadata_dir, 'state_analysis.yaml'))
+
+    # The national tables are no longer needed once contexts are built
+    sim_base_hh <- NULL
   }
 
   # Return simulation context
@@ -404,6 +514,7 @@ initialize_simulation <- function() {
       counterfactual_ids
     ),
     price_models             = price_models,
-    cached_price_wedge       = cached_price_wedge
+    cached_price_wedge       = cached_price_wedge,
+    state_contexts           = state_contexts
   )
 }

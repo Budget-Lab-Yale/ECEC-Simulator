@@ -47,6 +47,68 @@ get_gdp_per_capita_growth_factor <- function(macro_projections, base_year, targe
 run_simulation_year <- function(sim_ctx, year) {
 
   #----------------------------------------------------------------------------
+  # Runs one simulation year. National runs execute the year directly; state
+  # runs (sim_ctx$state_contexts set, see docs/state_level_analysis.md) loop
+  # over states, running the full year per state on that state's filtered
+  # data, parameters, and warm-start prices. Accumulated summaries are
+  # stamped with a state column inside accumulate().
+  #
+  # Params:
+  #   - sim_ctx (list): Simulation context from initialize_simulation()
+  #   - year (int): Simulation year
+  #
+  # Returns: (list) updated simulation context
+  #----------------------------------------------------------------------------
+
+  if (is.null(sim_ctx$state_contexts)) {
+    return(run_simulation_year_core(sim_ctx, year))
+  }
+
+  for (st in names(sim_ctx$state_contexts)) {
+    st_ctx <- sim_ctx$state_contexts[[st]]
+
+    cat('\n########## STATE:', st, '##########\n')
+
+    # Build a per-state view of the context: same scenarios/projections, the
+    # state's data, params, and caches swapped in
+    view <- sim_ctx
+    view$state_contexts             <- NULL
+    view$current_state              <- st
+    view$current_epop_path          <- st_ctx$epop_path
+    view$sim_base_hh                <- st_ctx$sim_base_hh
+    view$base_supply_params         <- st_ctx$base_supply_params
+    view$base_demand_params         <- st_ctx$base_demand_params
+    view$cached_price_wedge         <- st_ctx$cached_price_wedge
+    view$prev_baseline_prices       <- st_ctx$prev_baseline_prices
+    view$prev_counterfactual_prices <- st_ctx$prev_counterfactual_prices
+    view$baseline_emp_rates_2019    <- st_ctx$baseline_emp_rates_2019
+    view$baseline_results           <- list()
+
+    # Redirect scenario output to a per-state subdirectory
+    view$baseline_info$paths$output <- file.path(view$baseline_info$paths$output, 'states', st)
+    for (sid in names(view$counterfactual_infos)) {
+      view$counterfactual_infos[[sid]]$paths$output <-
+        file.path(view$counterfactual_infos[[sid]]$paths$output, 'states', st)
+    }
+
+    view <- run_simulation_year_core(view, year)
+
+    # Carry the state's accumulated summaries forward and stash per-state
+    # warm starts / caches back into the state context
+    sim_ctx$summary_accumulators <- view$summary_accumulators
+    sim_ctx$state_contexts[[st]]$prev_baseline_prices       <- view$prev_baseline_prices
+    sim_ctx$state_contexts[[st]]$prev_counterfactual_prices <- view$prev_counterfactual_prices
+    sim_ctx$state_contexts[[st]]$baseline_emp_rates_2019    <- view$baseline_emp_rates_2019
+  }
+
+  return(sim_ctx)
+}
+
+
+
+run_simulation_year_core <- function(sim_ctx, year) {
+
+  #----------------------------------------------------------------------------
   # Run all scenarios (baseline + counterfactuals) for a single simulation
   # year. Ages microdata, prepares parent units, solves equilibrium for each
   # scenario, and accumulates year-level results into summary accumulators.
@@ -63,7 +125,8 @@ run_simulation_year <- function(sim_ctx, year) {
 
     #--------------------------------------------------------------------------
     # Append summary tibbles to the sim_ctx accumulators for a given scenario.
-    # Uses <<- to modify the parent environment sim_ctx in place.
+    # Uses <<- to modify the parent environment sim_ctx in place. State-level
+    # runs stamp each appended row with the current state.
     #
     # Params:
     #   - scenario_id (chr): scenario identifier (e.g., 'baseline')
@@ -73,9 +136,14 @@ run_simulation_year <- function(sim_ctx, year) {
     #--------------------------------------------------------------------------
 
     for (field in names(summaries)) {
+      new_rows <- summaries[[field]]
+      if (!is.null(sim_ctx$current_state) && is.data.frame(new_rows) && nrow(new_rows) > 0) {
+        new_rows <- new_rows %>%
+          mutate(state = sim_ctx$current_state, .before = 1)
+      }
       sim_ctx$summary_accumulators[[scenario_id]][[field]] <<- bind_rows(
         sim_ctx$summary_accumulators[[scenario_id]][[field]],
-        summaries[[field]]
+        new_rows
       )
     }
   }
@@ -130,7 +198,8 @@ run_simulation_year <- function(sim_ctx, year) {
       macro_projections   = sim_ctx$macro_projections,
       demand_base_year    = as.integer(sim_ctx$base_demand_params$year %||% 2019),
       year                = year,
-      baseline_rates_2019 = sim_ctx$baseline_emp_rates_2019
+      baseline_rates_2019 = sim_ctx$baseline_emp_rates_2019,
+      epop_path           = sim_ctx$current_epop_path
     )
     target_emp_rates <- targeting$targets
     sim_ctx$baseline_emp_rates_2019 <- targeting$baseline_rates_2019

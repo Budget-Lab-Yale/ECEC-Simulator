@@ -356,6 +356,59 @@ get_estimation_info <- function() {
 
 
 
+get_run_states <- function(runscript) {
+
+  #----------------------------------------------------------------------------
+  # Parses the optional run-level 'state' column from the runscript (see
+  # docs/state_level_analysis.md). Must be called after shared_functions are
+  # sourced (uses STATE_POSTAL_TO_FIPS from constants.R).
+  #
+  # Params:
+  #   - runscript (df): Parsed runscript tibble
+  #
+  # Returns: (named int vec or NULL) FIPS codes named by postal abbreviation
+  #   for state-level runs; NULL for national runs (column absent, blank, or
+  #   'all')
+  #----------------------------------------------------------------------------
+
+  if (!'state' %in% names(runscript)) {
+    return(NULL)
+  }
+
+  raw <- unique(replace(runscript$state, is.na(runscript$state), ''))
+
+  # state is a run-level setting: all rows must agree
+  if (length(raw) > 1) {
+    stop('Runscript state column must be identical on every row (found: ',
+         paste(raw, collapse = ', '), ')')
+  }
+
+  if (raw == '' || tolower(raw) == 'all') {
+    return(NULL)
+  }
+
+  postal <- raw %>%
+    strsplit(';') %>%
+    unlist() %>%
+    trimws() %>%
+    toupper()
+
+  unknown <- setdiff(postal, names(STATE_POSTAL_TO_FIPS))
+  if (length(unknown) > 0) {
+    stop('Unknown state abbreviation(s) in runscript: ',
+         paste(unknown, collapse = ', '),
+         '. Use USPS postal codes (50 states + DC).')
+  }
+  if (any(duplicated(postal))) {
+    stop('Duplicate state(s) in runscript: ',
+         paste(postal[duplicated(postal)], collapse = ', '))
+  }
+
+  STATE_POSTAL_TO_FIPS[postal]
+}
+
+
+
 get_scenario_info <- function(scenario_id) {
 
   #----------------------------------------------------------------------------
@@ -385,8 +438,13 @@ get_scenario_info <- function(scenario_id) {
   scenario_info$paths = default_paths$dependencies %>%
     map(.f = ~ file.path(default_paths$roots$input, .x))
 
-  # Create output paths (under simulation/ subdirectory)
+  # Create output paths (under simulation/ subdirectory). State-level
+  # finalize (see finalize_simulation) redirects output to a per-state
+  # subdirectory via the finalize_state_subdir global.
   scenario_info$paths$output = file.path(output_root, 'simulation', scenario_id)
+  if (exists('finalize_state_subdir') && !is.null(finalize_state_subdir)) {
+    scenario_info$paths$output = file.path(scenario_info$paths$output, finalize_state_subdir)
+  }
   dir.create(scenario_info$paths$output, recursive = T, showWarnings = F)
   dir.create(file.path(scenario_info$paths$output, 'data'), showWarnings = F)
   dir.create(file.path(scenario_info$paths$output, 'models'), showWarnings = F)

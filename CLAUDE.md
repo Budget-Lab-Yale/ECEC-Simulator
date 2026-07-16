@@ -72,8 +72,10 @@ src/
     ├── load_supply_policy.R           # Supply policy loader
     ├── add_simulation_variables.R     # Simulation context column management
     ├── prepare_year_context.R         # Year-level data preparation (shared by 3b + slurm)
+    ├── filter_sim_base_hh.R           # Household filter/subsample cascade (shared by 3a paths)
+    ├── adjust_alpha_for_state.R       # State demand re-anchoring contraction (state-level runs)
     ├── get_hourly_wage_growth_factor.R          # Hourly wage growth projection
-    ├── get_employment_rate_growth_factor.R      # Employment rate growth projection
+    ├── get_employment_rate_growth_factor.R      # Employment rate growth projection (epop_path override for state runs)
     └── get_cpi_growth_factor.R                  # CPI growth projection
 
 config/
@@ -85,6 +87,7 @@ config/
 ├── policy_tax/               # Tax policies (CTC-like credits)
 ├── employer_subsidy/         # Employer wage subsidy configs (YAML)
 ├── wage_floor/               # Wage floor configs (YAML)
+├── state/                    # State-level analysis inputs (demand/, supply/, employment/ per <ST>)
 ├── demand/                   # Calibrated demand parameters (timestamped)
 └── supply/                   # Calibrated supply parameters (timestamped)
 
@@ -95,6 +98,15 @@ docs/                         # Documentation & memos
 
 
 ## Key Architectural Patterns
+
+### State-Level Analysis
+Optional runscript `state` column (USPS postal codes, semicolon-separated) runs
+the simulation per state: processing/calibration stay national; simulation init
+builds per-state contexts (household filter, alpha re-anchoring via
+`adjust_alpha_for_state()` when `config/state/demand/<ST>.csv` exists, supply
+yaml / epop CSV overrides); years loop over states; summaries carry a `state`
+column and finalize writes per-state output under
+`simulation/{scenario}/states/<ST>/`. See `docs/state_level_analysis.md`.
 
 ### Parent Unit Classification
 Parent units are split 2 ways by number of children:

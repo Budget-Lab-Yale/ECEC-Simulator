@@ -1505,9 +1505,16 @@ run_calibration <- function() {
       }
       row_ids <- calibration_df[, ..row_id_cols]
 
-      # Build alpha data structure
+      # Build alpha data structure. p0 (base-year choice probabilities) and
+      # child weights are stored alongside alpha for state-level analysis:
+      # the state demand contraction (adjust_alpha_for_state) re-anchors
+      # alpha to state hour aggregates and needs both without rebuilding
+      # base-year utility or re-deriving weights.
+      weight_cols <- intersect(c('child_weight.1', 'child_weight.2'), names(calibration_df))
       alpha_data[[pu_type]] <- list(
         alpha = alpha_matrix,
+        p0 = d$p_observed,
+        child_weights = as.data.frame(calibration_df[, ..weight_cols]),
         row_ids = as.data.frame(row_ids),
         calibration_year = year,
         beta = beta,

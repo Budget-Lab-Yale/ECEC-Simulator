@@ -38,7 +38,7 @@ restore_globals_from_config <- function(run_config) {
   #----------------------------------------------------------------------------
 
   for (nm in c('time_stamp', 'output_root', 'runscript_id', 'runscript',
-               'default_paths', 'random_seed_base', 'seed_offset')) {
+               'default_paths', 'random_seed_base', 'seed_offset', 'run_states')) {
     assign(nm, run_config[[nm]], envir = .GlobalEnv)
   }
 }
@@ -83,7 +83,8 @@ slurm_setup_simulation <- function(scratch_dir) {
     seed_offset          = seed_offset,
     sim_sample           = sim_sample,
     fiscal_npv           = if (exists('fiscal_npv')) fiscal_npv else FALSE,
-    disable_employment_targeting = exists('disable_employment_targeting') && isTRUE(disable_employment_targeting)
+    disable_employment_targeting = exists('disable_employment_targeting') && isTRUE(disable_employment_targeting),
+    state_contexts       = sim_ctx$state_contexts
   )
 
   # Save run config (globals needed by year workers and finalize)
@@ -100,7 +101,8 @@ slurm_setup_simulation <- function(scratch_dir) {
     random_seed_base   = random_seed_base,
     seed_offset        = seed_offset,
     fiscal_npv         = if (exists('fiscal_npv')) fiscal_npv else FALSE,
-    acs_base_year      = acs_base_year
+    acs_base_year      = acs_base_year,
+    run_states         = if (exists('run_states')) run_states else NULL
   )
 
   # Create scratch directory structure
@@ -237,6 +239,99 @@ slurm_finalize <- function(scratch_dir) {
 run_year_standalone <- function(year, ctx, scratch_dir = NULL) {
 
   #----------------------------------------------------------------------------
+  # Processes a single simulation year. National runs execute the year
+  # directly; state runs (ctx$state_contexts set, see
+  # docs/state_level_analysis.md) loop over states within the year, stamping
+  # every summary tibble with a state column and writing per-state scenario
+  # output under <scenario>/states/<ST>/. Tibble fields are stacked across
+  # states (combine_year_results binds them as usual); scalar fields
+  # (converged, prices) become per-state named lists.
+  #
+  # Params:
+  #   - year (int): Simulation year to process
+  #   - ctx (list): Immutable parallel context
+  #   - scratch_dir (chr): Path to scratch directory (NULL = keep in memory)
+  #
+  # Returns: (list) With elements: year, baseline, counterfactuals
+  #----------------------------------------------------------------------------
+
+  if (is.null(ctx$state_contexts)) {
+    return(run_year_standalone_core(year, ctx, scratch_dir))
+  }
+
+  # Stamp a state column onto every data.frame element of a summaries list
+  stamp_state <- function(summaries, st) {
+    for (field in names(summaries)) {
+      if (is.data.frame(summaries[[field]]) && nrow(summaries[[field]]) > 0) {
+        summaries[[field]] <- summaries[[field]] %>%
+          mutate(state = st, .before = 1)
+      }
+    }
+    summaries
+  }
+
+  combined <- list(year = year, baseline = list(), counterfactuals = list())
+
+  for (st in names(ctx$state_contexts)) {
+    st_ctx <- ctx$state_contexts[[st]]
+
+    cat('\n########## STATE:', st, '##########\n')
+
+    # Per-state view of the context: same scenarios/projections, the state's
+    # data, params, and caches swapped in; scenario output redirected to a
+    # per-state subdirectory
+    view <- ctx
+    view$state_contexts     <- NULL
+    view$current_epop_path  <- st_ctx$epop_path
+    view$sim_base_hh        <- st_ctx$sim_base_hh
+    view$base_supply_params <- st_ctx$base_supply_params
+    view$base_demand_params <- st_ctx$base_demand_params
+    view$cached_price_wedge <- st_ctx$cached_price_wedge
+
+    view$baseline_info$paths$output <- file.path(view$baseline_info$paths$output, 'states', st)
+    for (sid in names(view$counterfactual_infos)) {
+      view$counterfactual_infos[[sid]]$paths$output <-
+        file.path(view$counterfactual_infos[[sid]]$paths$output, 'states', st)
+    }
+
+    r <- run_year_standalone_core(year, view, scratch_dir)
+
+    # Merge: tibble fields stack across states (with state column); scalar
+    # fields (converged, prices) become per-state named lists
+    r$baseline <- stamp_state(r$baseline, st)
+    for (field in names(r$baseline)) {
+      if (is.data.frame(r$baseline[[field]])) {
+        combined$baseline[[field]] <- bind_rows(combined$baseline[[field]], r$baseline[[field]])
+      } else {
+        combined$baseline[[field]][[st]] <- r$baseline[[field]]
+      }
+    }
+
+    for (sid in names(r$counterfactuals)) {
+      cf <- stamp_state(r$counterfactuals[[sid]], st)
+      for (field in names(cf)) {
+        if (is.data.frame(cf[[field]])) {
+          combined$counterfactuals[[sid]][[field]] <- bind_rows(
+            combined$counterfactuals[[sid]][[field]], cf[[field]]
+          )
+        } else {
+          combined$counterfactuals[[sid]][[field]][[st]] <- cf[[field]]
+        }
+      }
+    }
+
+    rm(view, r)
+    gc()
+  }
+
+  combined
+}
+
+
+
+run_year_standalone_core <- function(year, ctx, scratch_dir = NULL) {
+
+  #----------------------------------------------------------------------------
   # Processes a single simulation year as a pure function for parallel
   # execution. Runs baseline and all counterfactual scenarios for one year,
   # returning results without mutating ctx.
@@ -305,7 +400,8 @@ run_year_standalone <- function(year, ctx, scratch_dir = NULL) {
       parent_units_list = parent_units_list,
       macro_projections = ctx$macro_projections,
       demand_base_year  = as.integer(demand_params$year %||% 2019),
-      year              = year
+      year              = year,
+      epop_path         = ctx$current_epop_path
     )
     target_emp_rates <- targeting$targets
   } else {

@@ -93,6 +93,14 @@ walk(
   .f = ~ if (.x != 'main.R' & .x != 'misc/config.R' & .x != '4_output/report_figures.R' & .x != '4_output/report_figures_child_ubi.R') source(file.path('./src/', .x))
 )
 
+# Resolve state-level analysis setting (NULL = national run). Parsed here
+# (not in config.R) because it needs STATE_POSTAL_TO_FIPS from constants.R.
+# See docs/state_level_analysis.md.
+run_states <- get_run_states(runscript)
+if (!is.null(run_states)) {
+  cat('State-level run:', paste(names(run_states), collapse = ', '), '\n')
+}
+
 
 #------------------------------------------------------------------------------
 # SLURM PHASE ROUTING

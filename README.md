@@ -189,8 +189,39 @@ means_tested,means_tested,baseline,baseline,baseline,none,none,2026:2055,5
 | `wage_floor` | Wage floor config (without `.yaml`) |
 | `years` | Year range, colon-separated (e.g., `2026:2055`) |
 | `phase_in_years` | Optional linear ramp from 0% to 100% over N years |
+| `state` | Optional state-level analysis: USPS postal code(s), semicolon-separated (e.g., `NY` or `NY;CA`). Absent/blank/`all` = national run |
 
 Not all columns are required. Simpler runscripts (e.g., `speed_test.csv`) can omit columns that have defaults.
+
+## State-Level Analysis
+
+Setting the `state` runscript column runs the simulation per state instead of
+nationally (see `docs/state_level_analysis.md` for the full design):
+
+- Processing and calibration run unchanged at the national level; households
+  are filtered to the state at simulation initialization (before any
+  `--sim-sample` subsampling).
+- **Demand**: if `config/state/demand/<ST>.csv` exists (base-year 2019 annual
+  hours by care type, 7 non-parental types), the calibrated alpha matrices
+  are re-anchored via a per-care-type contraction so state base-year
+  aggregates match; otherwise the state uses national alphas, filter only.
+- **Supply**: `config/state/supply/<ST>.yaml` (same schema as
+  `estimation/supply/supply_2019.yaml`) replaces the NSECE-derived parameters
+  when present.
+- **Employment growth**: `config/state/employment/<ST>.csv` (same schema as
+  `resources/epop/epop_projections.csv`) replaces the national CBO epop
+  projections when present; base-year employment rates always come from the
+  state-filtered data.
+- Multiple states run as independent equilibria (a within-year loop); all
+  summary tibbles gain a `state` column and per-state output is written under
+  `simulation/{scenario_id}/states/<ST>/`. Run provenance (deltas, supply and
+  epop sources) is recorded in `metadata/state_analysis.yaml`.
+
+State runs require an interface generated after state support was added
+(`STATEFIP` in the ACS pull and `p0`/weights stored with the alpha matrices);
+older interfaces fail loudly at initialization. Known v1 limitations (state
+income taxes, national wage/CPI growth factors) are documented in the design
+doc.
 
 ## Output Structure
 

@@ -1,5 +1,5 @@
 get_employment_rate_growth_factor <- function(macro_projections, base_year, target_year,
-                                             column = NULL) {
+                                             column = NULL, epop_path = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates employment rate growth factors by sex x age bin from base_year
@@ -13,6 +13,9 @@ get_employment_rate_growth_factor <- function(macro_projections, base_year, targ
   #   - base_year (int): Base year (e.g., 2019 for NSECE)
   #   - target_year (int): Target year to project to
   #   - column (chr): Unused, for backwards compatibility
+  #   - epop_path (chr or NULL): Optional override for the epop projections
+  #       CSV (state-level runs pass config/state/employment/<ST>.csv; NULL
+  #       uses the national CBO file)
   #
   # Returns:
   #   Named numeric vector with 8 growth factors:
@@ -28,8 +31,8 @@ get_employment_rate_growth_factor <- function(macro_projections, base_year, targ
     return(setNames(rep(1.0, 8), group_names))
   }
 
-  # Load epop projections
-  epop_path <- 'resources/epop/epop_projections.csv'
+  # Load epop projections (national CBO file unless a state override is given)
+  epop_path <- epop_path %||% 'resources/epop/epop_projections.csv'
   if (!file.exists(epop_path)) {
     warning('get_employment_rate_growth_factor: epop projections not found at ', epop_path,
             '. Returning 1.0 for all groups.')
