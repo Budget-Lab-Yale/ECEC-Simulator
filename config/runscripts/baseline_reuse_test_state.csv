@@ -1,0 +1,3 @@
+id,policy_demand,policy_supply,policy_cdctc,policy_tax,employer_subsidy,wage_floor,years,phase_in_years,state
+baseline,baseline,baseline,baseline,baseline,none,none,2026:2027,,CA;TX
+child_ubi_1k,baseline,baseline,baseline,child_ubi_1k,none,none,2026:2027,,CA;TX

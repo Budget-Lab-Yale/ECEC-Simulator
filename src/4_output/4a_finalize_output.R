@@ -9,6 +9,60 @@
 finalize_simulation <- function(sim_ctx) {
 
   #----------------------------------------------------------------------------
+  # Finalizes output. National runs write directly; state-level runs (state
+  # column present in the accumulated summaries, see
+  # docs/state_level_analysis.md) finalize each state independently: the
+  # accumulators are filtered to one state at a time and the unchanged
+  # single-run finalize body writes to <scenario>/states/<ST>/ via the
+  # finalize_state_subdir hook in get_scenario_info().
+  #
+  # Params:
+  #   - sim_ctx (list): simulation context with accumulated summaries
+  #
+  # Returns: nothing (side effects only)
+  #----------------------------------------------------------------------------
+
+  # Collect states present in any accumulated summary tibble
+  states <- sort(unique(unlist(lapply(sim_ctx$summary_accumulators, function(acc) {
+    unlist(lapply(acc, function(field) {
+      if (is.data.frame(field) && 'state' %in% names(field)) unique(field$state) else NULL
+    }))
+  }))))
+
+  if (length(states) == 0) {
+    return(finalize_simulation_core(sim_ctx))
+  }
+
+  on.exit(assign('finalize_state_subdir', NULL, envir = .GlobalEnv), add = TRUE)
+
+  for (st in states) {
+    cat('\n########## FINALIZE STATE:', st, '##########\n')
+
+    # Filter every accumulator field to this state (dropping the state
+    # column so the single-run finalize body sees its usual shape)
+    ctx_st <- sim_ctx
+    ctx_st$summary_accumulators <- lapply(sim_ctx$summary_accumulators, function(acc) {
+      lapply(acc, function(field) {
+        if (is.data.frame(field) && 'state' %in% names(field)) {
+          field %>% filter(state == st) %>% select(-state)
+        } else {
+          field
+        }
+      })
+    })
+
+    assign('finalize_state_subdir', file.path('states', st), envir = .GlobalEnv)
+    finalize_simulation_core(ctx_st)
+  }
+
+  invisible(NULL)
+}
+
+
+
+finalize_simulation_core <- function(sim_ctx) {
+
+  #----------------------------------------------------------------------------
   # Writes all output files, computes deltas, and generates Excel reports.
   #
   # Params:
