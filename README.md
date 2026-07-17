@@ -236,7 +236,7 @@ doc.
 ```
 {output_root}/{timestamp}/
 ├── metadata/
-│   ├── run_info.txt            # Command line args and runtime parameters
+│   ├── run_info.txt            # Command line args, runtime parameters, data dependency paths
 │   └── runscript.csv           # Copy of the runscript used
 ├── estimation/                 # Processed data, models, calibrated params
 └── simulation/

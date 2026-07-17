@@ -621,6 +621,19 @@ save_run_metadata <- function() {
   )
   arg_lines <- paste('  ', names(arg_fields), ':', sapply(arg_fields, as.character))
 
+  # Resolve data dependency paths (from config/default_paths.yaml) so every
+  # run records exactly which upstream data vintages it consumed
+  dependency_lines <- c(
+    paste('  ', 'input root', ':', default_paths$roots$input),
+    paste('  ', 'output root', ':', default_paths$roots$output),
+    sapply(names(default_paths$dependencies), function(dep) {
+      full_path <- file.path(default_paths$roots$input,
+                             default_paths$dependencies[[dep]]) %>%
+        gsub('//', '/', .)
+      paste('  ', dep, ':', full_path)
+    })
+  )
+
   run_info <- c(
     'ECEC Simulator Run Metadata',
     paste(rep('=', 50), collapse = ''),
@@ -634,7 +647,11 @@ save_run_metadata <- function() {
     '',
     'Raw Command Line (if non-interactive):',
     paste(rep('-', 30), collapse = ''),
-    paste(' ', paste(commandArgs(trailingOnly = TRUE), collapse = ' '))
+    paste(' ', paste(commandArgs(trailingOnly = TRUE), collapse = ' ')),
+    '',
+    'Data Dependencies (from config/default_paths.yaml):',
+    paste(rep('-', 30), collapse = ''),
+    dependency_lines
   )
 
   # Write run info
