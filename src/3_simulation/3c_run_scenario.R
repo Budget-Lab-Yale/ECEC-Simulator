@@ -666,11 +666,23 @@ compute_base_matrices <- function(parent_units_df, catalog, P, n_children,
 
   # Price wedges must actually vary across households (catches vector recycling bug:
   # if ifelse() or similar returns a scalar, tcrossprod broadcasts it identically
-  # to all rows, making every household pay the same price)
-  if (n_units > 1) {
-    stopifnot(sd(price_wedge.center_low) > 0)
-    stopifnot(sd(price_wedge.center_high) > 0)
-    stopifnot(sd(price_wedge.home) > 0)
+  # to all rows, making every household pay the same price). Only asserted for
+  # non-trivial unit counts: employment-targeting group solves call this on
+  # small demographic subgroups (a few units in small-state/sample runs), where
+  # identical wedges are legitimate -- e.g. pseudofamily splits of one household
+  if (n_units > 30) {
+    for (wedge_name in c('center_low', 'center_high', 'home')) {
+      w <- get(paste0('price_wedge.', wedge_name))
+      if (!isTRUE(sd(w) > 0)) {
+        stop('compute_base_matrices: price_wedge.', wedge_name,
+             ' does not vary across households.\n',
+             '  n_units=', n_units, ', n_children=', n_children,
+             ', n_NA=', sum(is.na(w)),
+             ', n_unique=', length(unique(w)),
+             ', range=[', paste(signif(suppressWarnings(range(w, na.rm = TRUE)), 6),
+                                collapse = ', '), ']')
+      }
+    }
   }
 
   # AGI must differ across employment choices (if agi.none == agi.ft for everyone,
