@@ -109,6 +109,8 @@ run_simulation_year <- function(sim_ctx, year) {
   aged_spm                 <- yc$aged_spm
   aged_spm_parent_earnings <- yc$aged_spm_parent_earnings
   median_income_lookup     <- yc$median_income_lookup
+  cpi_chain_factor_2019    <- yc$cpi_chain_factor_2019
+  cpi_chain_factor_2026    <- yc$cpi_chain_factor_2026
 
   # Free yc after extracting all fields
   rm(yc)
@@ -155,26 +157,59 @@ run_simulation_year <- function(sim_ctx, year) {
   # Run baseline
   #--------------
 
-  cat('\n  --- Baseline ---\n')
+  use_baseline_interface <- exists('baseline_interface') && !is.null(baseline_interface)
 
-  baseline_result <- run_scenario(
-    scenario_info      = baseline_info,
-    supply_params      = supply_params,
-    demand_params      = demand_params,
-    parent_units_list  = parent_units_list,
-    year               = year,
-    initial_prices     = sim_ctx$prev_baseline_prices,
-    n_draws_per_record = n_draws_per_record,
-    year_seed          = year_seed,
-    macro_projections  = sim_ctx$macro_projections,
-    target_employment_rates = target_emp_rates
-  )
+  if (use_baseline_interface) {
+    cat('\n  --- Baseline (reusing interface', baseline_interface, ') ---\n')
+
+    baseline_result <- load_baseline_year_result(
+      baseline_interface    = baseline_interface,
+      year                  = year,
+      parent_units_list     = parent_units_list,
+      median_income_lookup  = median_income_lookup,
+      cpi_factor_2019       = supply_params$cpi_factor,
+      cpi_chain_factor_2019 = cpi_chain_factor_2019,
+      cpi_chain_factor_2026 = cpi_chain_factor_2026,
+      n_draws_per_record    = n_draws_per_record
+    )
+
+    # Copy the source run's small baseline diagnostics for provenance
+    src_baseline_dir <- file.path(default_paths$roots$output, baseline_interface,
+                                  'simulation', 'baseline')
+    for (rel in c(file.path('supply', paste0('supply_', year, '.yaml')),
+                  file.path('models', 'equilibrium',
+                            paste0('employment_targeting_', year, '.csv')))) {
+      src_file <- file.path(src_baseline_dir, rel)
+      if (file.exists(src_file)) {
+        dest_file <- file.path(baseline_info$paths$output, rel)
+        dir.create(dirname(dest_file), showWarnings = FALSE, recursive = TRUE)
+        file.copy(src_file, dest_file, overwrite = TRUE)
+      }
+    }
+  } else {
+    cat('\n  --- Baseline ---\n')
+
+    baseline_result <- run_scenario(
+      scenario_info      = baseline_info,
+      supply_params      = supply_params,
+      demand_params      = demand_params,
+      parent_units_list  = parent_units_list,
+      year               = year,
+      initial_prices     = sim_ctx$prev_baseline_prices,
+      n_draws_per_record = n_draws_per_record,
+      year_seed          = year_seed,
+      macro_projections  = sim_ctx$macro_projections,
+      target_employment_rates = target_emp_rates
+    )
+  }
 
   if (baseline_result$converged) {
     sim_ctx$prev_baseline_prices <- baseline_result$prices
 
-    # Write employment targeting diagnostics to CSV
-    if (employment_targeting_enabled &&
+    # Write employment targeting diagnostics to CSV (skipped when the baseline
+    # was loaded from an interface -- diagnostics were copied from the source run)
+    if (!use_baseline_interface &&
+        employment_targeting_enabled &&
         !is.null(baseline_result$employment_shifts) && !is.null(target_emp_rates)) {
       do_demand_policy <- load_demand_policy(baseline_info$equilibrium$policy_demand)
       do_cdctc_policy <- load_cdctc_policy(baseline_info$policy_cdctc %||% 'baseline')

@@ -45,6 +45,7 @@ if (interactive()) {
   nsece_interface          <- NULL
   acs_interface            <- NULL
   calibration_interface    <- NULL
+  baseline_interface       <- NULL  # Set to reuse converged baseline results from prior run
   use_cached_etrs          <- F
   use_cached_donors        <- F  # Set to TRUE to use cached donor pool
   calib_sample             <- 100

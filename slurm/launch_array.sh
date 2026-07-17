@@ -18,6 +18,7 @@
 #   -N, --nsece         NSECE interface timestamp
 #   -A, --acs           ACS interface timestamp
 #   -C, --calibration   Calibration interface timestamp
+#   -b, --baseline      Baseline interface timestamp (reuse converged baseline results)
 #   -f, --fiscal-npv    Enable fiscal NPV calculations
 #   --mem               Memory per job (default: 32G)
 #   --time              Time limit per job (default: 4:00:00)
@@ -56,6 +57,8 @@ while [[ $# -gt 0 ]]; do
       R_FLAGS="${R_FLAGS} -A $2"; shift 2 ;;
     -C|--calibration)
       R_FLAGS="${R_FLAGS} -C $2"; shift 2 ;;
+    -b|--baseline)
+      R_FLAGS="${R_FLAGS} -b $2"; shift 2 ;;
     -f|--fiscal-npv)
       R_FLAGS="${R_FLAGS} -f"; shift ;;
     -o|--overwrite-param-defaults)
