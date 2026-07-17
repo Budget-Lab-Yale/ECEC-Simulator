@@ -235,6 +235,8 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     aged_spm                 = aged_spm,
     aged_spm_parent_earnings = aged_spm_parent_earnings,
     median_income_lookup     = median_income_lookup,
-    year_seed                = year_seed
+    year_seed                = year_seed,
+    cpi_chain_factor_2019    = cpi_chain_factor_2019,
+    cpi_chain_factor_2026    = cpi_chain_factor_2026
   )
 }

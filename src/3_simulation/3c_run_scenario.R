@@ -1241,7 +1241,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
     supply_dir %>%
       file.path(paste0('supply_', year, '.yaml')) %>%
-      write_yaml(yaml_data, .)
+      write_yaml(yaml_data, ., precision = 15)
   }
 
   # Solve for equilibrium prices using optimization
@@ -1974,9 +1974,18 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
         sectors
       )
 
+      # Equilibrium wages (needed by --baseline-interface reuse when a
+      # counterfactual applies a percentage employer subsidy)
+      if (!is.null(result$w)) {
+        yaml_data$equilibrium_wages <- list(no_ba = result$w[1], ba = result$w[2])
+      }
+
+      # Full precision so --baseline-interface reuse reproduces the run
+      # (default 8-digit rounding perturbs warm starts and boundary
+      # classifications like SPM poverty)
       supply_dir %>%
         file.path(paste0('supply_', year, '.yaml')) %>%
-        write_yaml(yaml_data, .)
+        write_yaml(yaml_data, ., precision = 15)
     }
 
     # Write simulation results to disk
@@ -1984,6 +1993,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       output_dir <- file.path(scenario_info$paths$output, 'data')
       dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
+      stripped_parent_units <- list()
       for (pu_name in PARENT_UNIT_NAMES) {
         pu_df <- result$parent_units[[pu_name]]
         if (!is.null(pu_df) && nrow(pu_df) > 0) {
@@ -1996,6 +2006,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
                 select(-all_of(cols_to_remove))
             }
           }
+          stripped_parent_units[[pu_name]] <- pu_df
 
           fwrite(
             pu_df,
@@ -2003,6 +2014,16 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
             na = 'NA'
           )
         }
+      }
+
+      # Baseline also gets an exact binary copy for --baseline-interface reuse:
+      # CSV doubles do not round-trip exactly (~1e-11 errors), which flips
+      # boundary classifications like SPM poverty in downstream comparisons
+      if (scenario_info$id == 'baseline' && length(stripped_parent_units) > 0) {
+        saveRDS(
+          stripped_parent_units,
+          file.path(output_dir, paste0('parent_units_', year, '.rds'))
+        )
       }
     }
   } else {

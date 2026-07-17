@@ -37,6 +37,7 @@ Rscript src/main.R --help
 | `--nsece-interface` | `-N` | Reuse NSECE data from prior run |
 | `--acs-interface` | `-A` | Reuse ACS data from prior run |
 | `--calibration-interface` | `-C` | Reuse all estimation data (NSECE + ACS + calibration) from prior run |
+| `--baseline-interface` | `-b` | Reuse converged baseline results from prior run (skips baseline equilibrium solves) |
 | `--use-cached-etrs` | `-c` | Use cached effective tax rates |
 | `--use-cached-donors` | `-d` | Use cached donor pool instead of rebuilding |
 | `--calib-sample` | `-a` | ACS sample percentage for calibration, 1-100 (default: 100) |
@@ -58,6 +59,13 @@ Rscript src/main.R --help
 | `--help` | `-h` | Show help and exit |
 
 **Interface hierarchy**: Each level implies the ones below it: `-C` includes ACS + NSECE; `-A` includes NSECE; `-N` is standalone.
+
+**Baseline reuse** (`-b`): Because the baseline is policy-invariant, a completed run's converged baseline (equilibrium prices, employment shifts, collapsed choices) can be reused, roughly halving run time when iterating on counterfactual policies. Requirements — enforced by startup validation and per-year integrity assertions:
+- Identical baseline policies, `--calib-sample`/`--sim-sample`, `--seed`, and `-n` as the source run
+- Same estimation data — combine with `-C` pointing at the same run (e.g., `-r my_runs -C 202603111322 -b 202603111322`)
+- The source run must cover every year in the current runscript, and its baseline must have converged in each
+
+Percentage-type employer subsidies additionally need equilibrium wages in the source run's `supply_<year>.yaml`, which older runs predate.
 
 ## Project Structure
 

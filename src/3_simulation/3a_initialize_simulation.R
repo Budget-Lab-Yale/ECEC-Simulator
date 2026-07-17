@@ -84,6 +84,16 @@ initialize_simulation <- function() {
     map(get_scenario_info) %>%
     set_names(counterfactual_ids)
 
+  # Validate baseline interface compatibility before any simulation work
+  if (exists('baseline_interface') && !is.null(baseline_interface)) {
+    validate_baseline_interface(
+      baseline_interface   = baseline_interface,
+      years_to_run         = baseline_info$years,
+      counterfactual_infos = counterfactual_infos,
+      run_states           = if (exists('run_states')) run_states else NULL
+    )
+  }
+
 
   # Read simulation base year microdata
   {

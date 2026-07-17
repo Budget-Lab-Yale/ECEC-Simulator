@@ -24,6 +24,7 @@ parse_args <- function() {
   nsece_interface         <- NULL
   acs_interface           <- NULL
   calibration_interface   <- NULL
+  baseline_interface      <- NULL  # If set, reuse converged baseline results from prior run
   use_cached_etrs         <- FALSE
   use_cached_donors       <- FALSE # If TRUE, use cached donor pool; if FALSE, rebuild
   calib_sample            <- 100
@@ -75,6 +76,8 @@ parse_args <- function() {
       acs_interface <- consume_arg('--acs-interface')
     } else if (arg == '--calibration-interface' || arg == '-C') {
       calibration_interface <- consume_arg('--calibration-interface')
+    } else if (arg == '--baseline-interface' || arg == '-b') {
+      baseline_interface <- consume_arg('--baseline-interface')
     } else if (arg == '--base-year-interface' || arg == '-B') {
       consume_arg('--base-year-interface')  # Deprecated: consume and discard
       cat('Warning: --base-year-interface is deprecated and will be ignored.\n')
@@ -182,6 +185,7 @@ parse_args <- function() {
     nsece_interface         = nsece_interface,
     acs_interface           = acs_interface,
     calibration_interface   = calibration_interface,
+    baseline_interface      = baseline_interface,
     use_cached_etrs         = use_cached_etrs,
     use_cached_donors       = use_cached_donors,
     calib_sample            = calib_sample,
@@ -227,6 +231,11 @@ print_usage <- function() {
   cat('  --calibration-interface, -C Timestamp of calibration interface to reuse (optional)\n')
   cat('                              Reuses ACS data + calibration data + demand params\n')
   cat('                              Implies -A (no ACS processing). If -N not specified, loads NSECE too\n')
+  cat('  --baseline-interface, -b    Timestamp of a prior run whose converged BASELINE results\n')
+  cat('                              should be reused (skips the baseline equilibrium solve).\n')
+  cat('                              Requires identical baseline policies, samples, seed, and\n')
+  cat('                              draws per record; typically combined with -C <same run>.\n')
+  cat('                              Prior run must cover all years in the current runscript\n')
   cat('  --base-year-interface, -B   [Deprecated] Now ignored - base year data read from estimation\n')
   cat('                              Use --calibration-interface (-C) instead\n')
   cat('  --use-cached-etrs, -c       Use cached ETR lookup tables instead of Tax-Simulator data\n')
@@ -274,6 +283,7 @@ print_usage <- function() {
   cat('  Rscript src/main.R -r test -N 202509091920                  # Reuse NSECE only, run fresh ACS+calibration\n')
   cat('  Rscript src/main.R -r test -N 202509091920 -A 202509091920  # Reuse NSECE+ACS, run fresh calibration\n')
   cat('  Rscript src/main.R -r test -N 202509091920 -C 202509091920  # Reuse all with explicit NSECE\n')
+  cat('  Rscript src/main.R -r test -C 202509091920 -b 202509091920  # Also reuse converged baseline\n')
   cat('  Rscript src/main.R -r test -c  # Use cached ETRs\n')
   cat('  Rscript src/main.R -r test -d  # Use cached donor pool (must exist)\n')
   cat('  Rscript src/main.R -r test -a 10  # Use 10% of ACS for calibration\n')
@@ -591,10 +601,12 @@ save_run_metadata <- function() {
     nsece_interface          = null_or_val(nsece_interface),
     acs_interface            = null_or_val(acs_interface),
     calibration_interface    = null_or_val(calibration_interface),
+    baseline_interface       = null_or_val(exist_or_default('baseline_interface', NULL)),
     use_cached_etrs          = use_cached_etrs,
     use_cached_donors        = use_cached_donors,
     calib_sample             = calib_sample,
     sim_sample               = sim_sample,
+    n_draws_per_record       = exist_or_default('n_draws_per_record', 10),
     seed_offset              = exist_or_default('seed_offset', 0),
     acs_base_year            = '2019 (fixed for alpha matrix matching)',
     slurm_phase              = null_or_val(slurm_phase),
