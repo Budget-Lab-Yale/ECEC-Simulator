@@ -1,0 +1,4 @@
+id,policy_demand,policy_supply,policy_cdctc,policy_tax,employer_subsidy,wage_floor,years,phase_in_years
+baseline,baseline,baseline,baseline,baseline,none,none,2026:2035,
+universal,universal,baseline,baseline,baseline,none,none,2026:2035,5
+smooth_phaseout,smooth_phaseout,baseline,baseline,baseline,none,none,2026:2035,5
