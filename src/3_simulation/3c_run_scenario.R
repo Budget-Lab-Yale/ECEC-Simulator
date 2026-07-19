@@ -45,7 +45,7 @@ extract_selected_values <- function(df, choices, column_prefix, n_choices) {
 
 compute_group_employment_rate <- function(P, group, parent_units_list, demand_params,
                                           employment_shifts, policy_demand, policy_cdctc,
-                                          cpi_growth_factor) {
+                                          cpi_growth_factor, policy_transfer = NULL) {
 
   #----------------------------------------------------------------------------
   # Computes weighted employment rate for a single demographic group at given
@@ -90,7 +90,8 @@ compute_group_employment_rate <- function(P, group, parent_units_list, demand_pa
       policy_demand = policy_demand,
       policy_cdctc = policy_cdctc,
       cpi_growth_factor = cpi_growth_factor,
-      employment_shifts = employment_shifts
+      employment_shifts = employment_shifts,
+      policy_transfer = policy_transfer
     )
 
     # Get working choice mask
@@ -334,7 +335,8 @@ compute_V_crra <- function(consumption, beta, rho) {
 
 get_demand_prob_matrix <- function(P, parent_units_df, n_children, demand_params,
                                    pu_name = NULL, policy_demand = NULL, policy_cdctc = NULL,
-                                   cpi_growth_factor = 1.0, employment_shifts = NULL) {
+                                   cpi_growth_factor = 1.0, employment_shifts = NULL,
+                                   policy_transfer = NULL) {
 
   #----------------------------------------------------------------------------
   # Returns probability matrix using alpha-based model: p = exp(alpha + V) / Z.
@@ -371,7 +373,8 @@ get_demand_prob_matrix <- function(P, parent_units_df, n_children, demand_params
   # This applies to both baseline and counterfactual scenarios
 
   pc <- compute_policy_components(parent_units_df, P, n_children, demand_params,
-                                   policy_demand, policy_cdctc, cpi_growth_factor)
+                                   policy_demand, policy_cdctc, cpi_growth_factor,
+                                   policy_transfer = policy_transfer)
   base <- pc$base
 
   if (any(!is.finite(base$agi_matrix)) ||
@@ -385,8 +388,11 @@ get_demand_prob_matrix <- function(P, parent_units_df, n_children, demand_params
   if (any(!is.finite(pc$cdctc_matrix))) {
     stop('get_demand_prob_matrix: non-finite cdctc_matrix (', pu_name, ').')
   }
+  if (any(!is.finite(pc$transfer_matrix))) {
+    stop('get_demand_prob_matrix: non-finite transfer_matrix (', pu_name, ').')
+  }
 
-  Y_policy <- base$agi_matrix - base$taxes_matrix
+  Y_policy <- base$agi_matrix - base$taxes_matrix + pc$transfer_matrix
   C_policy <- base$gross_ecec_cost_matrix - pc$subsidy_matrix - pc$cdctc_matrix
   NI_policy <- Y_policy - C_policy
 
@@ -718,11 +724,13 @@ compute_base_matrices <- function(parent_units_df, catalog, P, n_children,
 
 
 build_final_components <- function(agi_matrix, taxes_matrix, gross_ecec_cost_matrix,
-                                    subsidy_matrix, cdctc_matrix) {
+                                    subsidy_matrix, cdctc_matrix,
+                                    transfer_matrix = NULL) {
 
   #----------------------------------------------------------------------------
-  # Combines base matrices with subsidies/CDCTC to produce final .k columns.
-  # Computes net_income, Y (pre-care income), and C (out-of-pocket cost).
+  # Combines base matrices with subsidies/CDCTC/transfers to produce final .k
+  # columns. Computes net_income, Y (pre-care income), and C (out-of-pocket
+  # cost).
   #
   # Params:
   #   - agi_matrix (matrix): n_units x n_choices AGI matrix
@@ -730,26 +738,34 @@ build_final_components <- function(agi_matrix, taxes_matrix, gross_ecec_cost_mat
   #   - gross_ecec_cost_matrix (matrix): n_units x n_choices gross ECEC cost
   #   - subsidy_matrix (matrix): n_units x n_choices subsidy amounts
   #   - cdctc_matrix (matrix): n_units x n_choices CDCTC credit amounts
+  #   - transfer_matrix (matrix): n_units x n_choices choice-dependent cash
+  #       transfers (NULL = zeros). Enters income (Y), NOT care cost (C)
   #
   # Returns: (df) Tibble with agi.k, taxes.k, gross_ecec_cost.k, subsidy.k,
-  #   cdctc.k, net_income.k, Y.k, C.k columns for each choice k
+  #   cdctc.k, transfer.k, net_income.k, Y.k, C.k columns for each choice k
   #----------------------------------------------------------------------------
 
   n_choices <- ncol(agi_matrix)
 
+  if (is.null(transfer_matrix)) {
+    transfer_matrix <- matrix(0, nrow = nrow(agi_matrix), ncol = n_choices)
+  }
+
   #--------------------------
-  # Calculate net_income (with CDCTC)
+  # Calculate net_income (with CDCTC and transfers)
   #--------------------------
 
-  # net_income = agi - taxes - gross_ecec_cost + subsidy + cdctc
-  net_income_matrix <- agi_matrix - taxes_matrix - gross_ecec_cost_matrix + subsidy_matrix + cdctc_matrix
+  # net_income = agi - taxes - gross_ecec_cost + subsidy + cdctc + transfer
+  net_income_matrix <- agi_matrix - taxes_matrix - gross_ecec_cost_matrix +
+    subsidy_matrix + cdctc_matrix + transfer_matrix
 
   #--------------------------
   # Two-parameter model: Y (pre-care income) and C (out-of-pocket cost)
   #--------------------------
 
-  # Y = agi - taxes (disposable income BEFORE care costs)
-  Y_matrix <- agi_matrix - taxes_matrix
+  # Y = agi - taxes + transfer (disposable income BEFORE care costs;
+  # transfers are cash income, so they belong here and never offset C)
+  Y_matrix <- agi_matrix - taxes_matrix + transfer_matrix
 
   # C = gross_ecec_cost - subsidy - cdctc (out-of-pocket care cost)
   # CDCTC reduces out-of-pocket cost (flows through price channel)
@@ -768,6 +784,7 @@ build_final_components <- function(agi_matrix, taxes_matrix, gross_ecec_cost_mat
   colnames(gross_ecec_cost_matrix) <- paste0('gross_ecec_cost.', 1:n_choices)
   colnames(subsidy_matrix) <- paste0('subsidy.', 1:n_choices)
   colnames(cdctc_matrix) <- paste0('cdctc.', 1:n_choices)
+  colnames(transfer_matrix) <- paste0('transfer.', 1:n_choices)
   colnames(net_income_matrix) <- paste0('net_income.', 1:n_choices)
   colnames(Y_matrix) <- paste0('Y.', 1:n_choices)
   colnames(C_matrix) <- paste0('C.', 1:n_choices)
@@ -778,6 +795,7 @@ build_final_components <- function(agi_matrix, taxes_matrix, gross_ecec_cost_mat
     as_tibble(gross_ecec_cost_matrix),
     as_tibble(subsidy_matrix),
     as_tibble(cdctc_matrix),
+    as_tibble(transfer_matrix),
     as_tibble(net_income_matrix),
     as_tibble(Y_matrix),
     as_tibble(C_matrix)
@@ -926,7 +944,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
 
 
-  build_emp0_cache <- function(P_prices, fn_demand, fn_cdctc) {
+  build_emp0_cache <- function(P_prices, fn_demand, fn_cdctc, fn_transfer = NULL) {
 
     #--------------------------------------------------------------------------
     # Builds cache of baseline employment probabilities by demographic group.
@@ -960,7 +978,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
         policy_demand = fn_demand,
         policy_cdctc = fn_cdctc,
         cpi_growth_factor = supply_params$cpi_factor,
-        employment_shifts = NULL
+        employment_shifts = NULL,
+        policy_transfer = fn_transfer
       )
 
       working_mask_emp <- get_working_choice_mask(n_children_emp)
@@ -984,7 +1003,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
 
 
-  solve_employment_shifts <- function(P_prices, fn_demand, fn_cdctc) {
+  solve_employment_shifts <- function(P_prices, fn_demand, fn_cdctc, fn_transfer = NULL) {
 
     #--------------------------------------------------------------------------
     # Solves employment shifts for all demographic groups at given prices.
@@ -999,7 +1018,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
     #--------------------------------------------------------------------------
 
     shifts <- setNames(rep(0, length(EMPLOYMENT_TARGETING_GROUPS)), EMPLOYMENT_TARGETING_GROUPS)
-    emp0_cache <- build_emp0_cache(P_prices, fn_demand, fn_cdctc)
+    emp0_cache <- build_emp0_cache(P_prices, fn_demand, fn_cdctc, fn_transfer)
     for (g in EMPLOYMENT_TARGETING_GROUPS) {
       if (is.na(target_employment_rates[g]) || target_employment_rates[g] <= 0) next
       shifts[g] <- solve_group_employment_shift(
@@ -1102,7 +1121,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
   get_total_demand <- function(P, parent_units_df, n_children, demand_params = NULL,
                                pu_name = NULL, policy_demand = NULL, policy_cdctc = NULL,
-                               cpi_growth_factor = 1.0, employment_shifts = NULL) {
+                               cpi_growth_factor = 1.0, employment_shifts = NULL,
+                               policy_transfer = NULL) {
 
     #--------------------------------------------------------------------------
     # Aggregates demand by market sector using Qd = colSums(W * (p %*% H)).
@@ -1130,7 +1150,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
     p_matrix <- get_demand_prob_matrix(P, parent_units_df, n_children, demand_params,
                                        pu_name, policy_demand, policy_cdctc,
                                        cpi_growth_factor = cpi_growth_factor,
-                                       employment_shifts = employment_shifts)
+                                       employment_shifts = employment_shifts,
+                                       policy_transfer = policy_transfer)
 
     # Child 1: probability * hours, weighted by child_weight.1, summed by sector
     W1 <- parent_units_df[['child_weight.1']]
@@ -1156,6 +1177,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
   equilibrium_objective <- function(P3, year = NA_integer_, supply_params, demand_params, parent_units_list,
                                     policy_supply = identity,
                                     policy_demand = NULL, policy_cdctc = NULL,
+                                    policy_transfer = NULL,
                                     target_employment_rates = NULL,
                                     baseline_employment_shifts = NULL) {
 
@@ -1194,7 +1216,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
           employment_shifts <- baseline_employment_shifts
         } else {
           stage <- 'employment_targeting'
-          employment_shifts <- solve_employment_shifts(P, policy_demand, policy_cdctc)
+          employment_shifts <- solve_employment_shifts(P, policy_demand, policy_cdctc, policy_transfer)
         }
       }
 
@@ -1209,7 +1231,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
             P, parent_units_list[[pu_name]], n_children,
             demand_params, pu_name, policy_demand, policy_cdctc,
             cpi_growth_factor = supply_params$cpi_factor,
-            employment_shifts = employment_shifts
+            employment_shifts = employment_shifts,
+            policy_transfer = policy_transfer
           )
           if (any(!is.finite(Qd_i)) || any(Qd_i < 0)) {
             stop('Non-finite or negative Qd returned by get_total_demand().')
@@ -1264,6 +1287,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
   supply_subsidy   <- supply_policy$supply_subsidy
   do_cdctc_policy  <- load_cdctc_policy(scenario_info$policy_cdctc %||% 'baseline')
   do_tax_policy    <- load_policy('policy_tax', scenario_info$policy_tax %||% 'baseline', 'do_tax_policy')
+  do_transfer_policy <- load_transfer_policy(scenario_info$policy_transfer)
 
   for (i in seq_along(PARENT_UNIT_NAMES)) {
     pu_name <- PARENT_UNIT_NAMES[i]
@@ -1372,6 +1396,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       policy_supply     = do_supply_policy,
       policy_demand     = do_demand_policy,
       policy_cdctc      = do_cdctc_policy,
+      policy_transfer   = do_transfer_policy,
       target_employment_rates = target_employment_rates,
       baseline_employment_shifts = baseline_employment_shifts
     )
@@ -1407,7 +1432,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
         if (!is.null(baseline_employment_shifts)) {
           final_employment_shifts <- baseline_employment_shifts
         } else {
-          final_employment_shifts <- solve_employment_shifts(P_candidate, do_demand_policy, do_cdctc_policy)
+          final_employment_shifts <- solve_employment_shifts(P_candidate, do_demand_policy, do_cdctc_policy,
+                                                             do_transfer_policy)
         }
       }
 
@@ -1421,7 +1447,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
           Qd_candidate <- Qd_candidate + get_total_demand(P_candidate, parent_units_list[[pu_name]], n_children,
                                                           demand_params, pu_name, do_demand_policy, do_cdctc_policy,
                                                           cpi_growth_factor = supply_params$cpi_factor,
-                                                          employment_shifts = final_employment_shifts)
+                                                          employment_shifts = final_employment_shifts,
+                                                          policy_transfer = do_transfer_policy)
         }
       }
 
@@ -1461,10 +1488,11 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
 
             # Remove any existing component columns to avoid duplicates
             parent_units_clean <- parent_units_list[[pu_name]] %>%
-              select(-matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|net_income|Y|C|V|p)\\.[0-9]+$'))
+              select(-matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|transfer|net_income|Y|C|V|p)\\.[0-9]+$'))
 
             pc <- compute_policy_components(parent_units_clean, P_eq, n_children, demand_params,
-                                             do_demand_policy, do_cdctc_policy, supply_params$cpi_factor)
+                                             do_demand_policy, do_cdctc_policy, supply_params$cpi_factor,
+                                             policy_transfer = do_transfer_policy)
             df_with_policy <- bind_cols(parent_units_clean, pc$components)
 
             n_choices <- if (n_children == 1) N_CHOICES_1_CHILD else N_CHOICES_2_CHILD
@@ -1969,15 +1997,16 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
           gross_ecec_cost <- extract_selected_values(parent_units_df, choices, 'gross_ecec_cost', n_choices)
           subsidy <- extract_selected_values(parent_units_df, choices, 'subsidy', n_choices)
           cdctc <- extract_selected_values(parent_units_df, choices, 'cdctc', n_choices)
+          transfer <- extract_selected_values(parent_units_df, choices, 'transfer', n_choices)
           net_income <- extract_selected_values(parent_units_df, choices, 'net_income', n_choices)
 
           # -- Assertions: extraction correctness ----
           # Accounting identity must survive extraction (catches extracting
           # from the wrong column prefix, or choices indexing the wrong row)
-          stopifnot(all(abs(net_income - (agi - taxes - gross_ecec_cost + subsidy + cdctc)) < 1e-4))
+          stopifnot(all(abs(net_income - (agi - taxes - gross_ecec_cost + subsidy + cdctc + transfer)) < 1e-4))
 
           # Step 4: Identify columns to keep (non-wide columns)
-          wide_prefixes <- c('u', 'p', 'V', 'epsilon', 'agi', 'taxes', 'gross_ecec_cost', 'subsidy', 'cdctc', 'net_income', 'Y', 'C')
+          wide_prefixes <- c('u', 'p', 'V', 'epsilon', 'agi', 'taxes', 'gross_ecec_cost', 'subsidy', 'cdctc', 'transfer', 'net_income', 'Y', 'C')
           wide_pattern <- paste0('^(', paste(wide_prefixes, collapse = '|'), ')\\.\\d+$')
 
           cols_to_keep <- names(parent_units_df)[!grepl(wide_pattern, names(parent_units_df))]
@@ -1992,6 +2021,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
               gross_ecec_cost   = gross_ecec_cost,
               subsidy           = subsidy,
               cdctc             = cdctc,
+              transfer          = transfer,
               net_income        = net_income,
               employment_choice = decoded$employment_choice,
               ecec_type.1       = decoded$ecec_type.1,

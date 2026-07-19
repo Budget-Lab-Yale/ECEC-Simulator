@@ -1,10 +1,11 @@
 compute_policy_components <- function(parent_units_df, P, n_children, demand_params,
                                        policy_demand, policy_cdctc,
-                                       cpi_growth_factor = 1.0) {
+                                       cpi_growth_factor = 1.0,
+                                       policy_transfer = NULL) {
 
   #----------------------------------------------------------------------------
   # Runs the full policy pipeline: base matrices -> demand subsidy -> CDCTC ->
-  # final components.
+  # choice-dependent transfers -> final components.
   #
   # Params:
   #   - parent_units_df (df): Parent units (must have price_wedge.* columns)
@@ -14,8 +15,12 @@ compute_policy_components <- function(parent_units_df, P, n_children, demand_par
   #   - policy_demand (fn): Demand policy function
   #   - policy_cdctc (fn): CDCTC policy function
   #   - cpi_growth_factor (dbl): CPI adjustment factor
+  #   - policy_transfer (fn): Transfer policy function (NULL = no transfers).
+  #       Transfers are cash that may depend on the care choice; they enter
+  #       income (Y) rather than out-of-pocket care cost (C)
   #
-  # Returns: (list) base, subsidy_matrix, cdctc_matrix, components
+  # Returns: (list) base, subsidy_matrix, cdctc_matrix, transfer_matrix,
+  #   components
   #----------------------------------------------------------------------------
 
   catalog <- get_choice_catalog(n_children)
@@ -65,6 +70,17 @@ compute_policy_components <- function(parent_units_df, P, n_children, demand_par
     earnings2_matrix = base$earnings2_matrix
   )
 
+  # Choice-dependent cash transfers (zero matrix when no transfer policy)
+  transfer_matrix <- if (is.null(policy_transfer)) {
+    matrix(0, nrow = nrow(parent_units_df), ncol = nrow(catalog))
+  } else {
+    policy_transfer(
+      parent_units_df = parent_units_df,
+      catalog = catalog,
+      n_children = n_children
+    )
+  }
+
   # -- Assertions: policy outputs have correct shape ----
   # Policy functions receive and return matrices. If a policy accidentally returns
   # a vector (length n_units) instead of a matrix (n_units x n_choices), R will
@@ -73,6 +89,7 @@ compute_policy_components <- function(parent_units_df, P, n_children, demand_par
   n_choices <- nrow(catalog)
   stopifnot(identical(dim(subsidy_matrix), c(n_units, n_choices)))
   stopifnot(identical(dim(cdctc_matrix), c(n_units, n_choices)))
+  stopifnot(identical(dim(transfer_matrix), c(n_units, n_choices)))
 
   # If a policy is active (non-zero subsidies exist), they should vary across
   # households (catches the ifelse() scalar-broadcast bug)
@@ -89,13 +106,15 @@ compute_policy_components <- function(parent_units_df, P, n_children, demand_par
     taxes_matrix = base$taxes_matrix,
     gross_ecec_cost_matrix = base$gross_ecec_cost_matrix,
     subsidy_matrix = subsidy_matrix,
-    cdctc_matrix = cdctc_matrix
+    cdctc_matrix = cdctc_matrix,
+    transfer_matrix = transfer_matrix
   )
 
   list(
     base = base,
     subsidy_matrix = subsidy_matrix,
     cdctc_matrix = cdctc_matrix,
+    transfer_matrix = transfer_matrix,
     components = components
   )
 }

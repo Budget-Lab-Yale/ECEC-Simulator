@@ -1,0 +1,69 @@
+#------------------------------------------------------------------------------
+# nonenrolled_10k.R - Transfer Policy
+#
+# $10,000 (2026) cash transfer per child under 5 NOT enrolled in formal
+# center- or home-based care, indexed to chained CPI after 2026.
+#
+# "Enrolled" = the child's chosen arrangement is one of the four market
+# sectors (Unpaid/Low-Priced/High-Priced Center-Based, Paid Home-Based).
+# Children in Other Paid, informal unpaid care, or Parent Only receive the
+# transfer. No work requirement: the transfer is unconditional on employment.
+#
+# For 3+ child pseudofamilies, the two child slots represent a pair of the
+# family's m children; scaling by n_children_original / n_children makes
+# aggregate transfers exact (each child appears in m-1 of the C(m,2)
+# pseudofamilies; family weights are divided by C(m,2) in the split).
+#------------------------------------------------------------------------------
+
+
+
+do_transfer_policy <- function(parent_units_df, catalog, n_children) {
+
+  #----------------------------------------------------------------------------
+  # $10,000 per non-enrolled child under 5, chained-CPI-indexed (2026 base).
+  #
+  # Params:
+  #   - parent_units_df (tibble): Parent unit data with cpi_chain_factor_* and
+  #       n_children_original columns
+  #   - catalog (tibble): Choice catalog from get_choice_catalog()
+  #   - n_children (int): Number of children (1 or 2)
+  #
+  # Returns:
+  #   matrix (n_units x n_choices) of transfer amounts
+  #----------------------------------------------------------------------------
+
+  transfer_per_child_2026 <- 10000
+
+  # Index the nominal transfer with chained CPI, using 2026 as base year
+  # (same convention as the child_ubi_* tax policies)
+  extract_single_positive <- function(x, default_value) {
+    if (is.null(x)) return(default_value)
+    x_unique <- unique(x)
+    x_unique <- x_unique[is.finite(x_unique) & x_unique > 0]
+    if (length(x_unique) != 1) return(default_value)
+    x_unique[1]
+  }
+
+  cpi_chain_factor_2019 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2019']], 1.0)
+  cpi_chain_factor_2026 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2026']], cpi_chain_factor_2019)
+  inflation_factor <- cpi_chain_factor_2019 / cpi_chain_factor_2026
+  if (!is.finite(inflation_factor) || inflation_factor <= 0) inflation_factor <- 1.0
+
+  transfer_per_child <- round(transfer_per_child_2026 * inflation_factor)
+
+  # Enrollment by choice: a child slot is enrolled iff its arrangement is a
+  # market sector (non-NA market_sector_id; Parent Only / Other Paid /
+  # informal unpaid arrangements have NA)
+  n_nonenrolled_by_choice <- as.numeric(is.na(catalog$child1_market_sector_id))
+  if (n_children == 2) {
+    n_nonenrolled_by_choice <- n_nonenrolled_by_choice +
+      as.numeric(is.na(catalog$child2_market_sector_id))
+  }
+
+  # Pseudofamily scaling: preserves aggregate per-child transfers for 3+
+  # child families (reduces to 1 for families with <= 2 children under 5)
+  pseudo_scale <- parent_units_df$n_children_original / n_children
+
+  # Transfer matrix: per-unit scale x per-choice non-enrolled count
+  tcrossprod(pseudo_scale * transfer_per_child, n_nonenrolled_by_choice)
+}

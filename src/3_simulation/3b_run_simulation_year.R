@@ -331,6 +331,7 @@ run_simulation_year <- function(sim_ctx, year) {
           year                  = year,
           policy_cdctc_file     = scenario_info$policy_cdctc %||% 'baseline',
           policy_tax_file       = scenario_info$policy_tax %||% 'baseline',
+          policy_transfer_file  = scenario_info$policy_transfer %||% 'baseline',
           employer_subsidy_rate = employer_subsidy_rate,
           demand_params         = demand_params,
           cpi_growth_factor     = supply_params$cpi_factor
@@ -433,6 +434,7 @@ run_simulation_year <- function(sim_ctx, year) {
           policy_supply_file = scenario_info$equilibrium$policy_supply,
           policy_cdctc_file  = scenario_info$policy_cdctc %||% 'baseline',
           policy_tax_file    = scenario_info$policy_tax %||% 'baseline',
+          policy_transfer_file = scenario_info$policy_transfer %||% 'baseline',
           year               = year,
           tax_sim_path       = tax_sim_path,
           demand_params      = demand_params,
@@ -463,6 +465,7 @@ run_simulation_year <- function(sim_ctx, year) {
             policy_demand_file     = scenario_info$equilibrium$policy_demand,
             policy_cdctc_file      = scenario_info$policy_cdctc %||% 'baseline',
             policy_tax_file        = scenario_info$policy_tax %||% 'baseline',
+            policy_transfer_file   = scenario_info$policy_transfer %||% 'baseline',
             year                   = year,
             aged_spm               = aged_spm,
             pu_spm_xwalk           = sim_ctx$sim_base_hh$pu_spm_xwalk,
