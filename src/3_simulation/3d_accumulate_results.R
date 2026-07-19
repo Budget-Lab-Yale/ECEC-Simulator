@@ -153,8 +153,8 @@ strip_collapsed_scalars <- function(df) {
   #----------------------------------------------------------------------------
 
   df %>%
-    select(-matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|net_income|Y|C)$'),
-           -matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|net_income|Y|C)\\.[0-9]+$'),
+    select(-matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|transfer|net_income|Y|C)$'),
+           -matches('^(agi|taxes|gross_ecec_cost|subsidy|cdctc|transfer|net_income|Y|C)\\.[0-9]+$'),
            -matches('^ecec_type\\.[0-9]+$'),
            -matches('^ecec_hours\\.[0-9]+$'),
            -employment_choice)
@@ -660,14 +660,15 @@ aggregate_year_fiscal_cost <- function(result, year) {
   }
 
   validate_cols(combined, c('demand_subsidy', 'supply_subsidy', 'employer_subsidy',
-                            'cdctc_cost', 'tax_revenue', 'n_parent_units_weighted',
+                            'cdctc_cost', 'transfer_cost', 'tax_revenue',
+                            'n_parent_units_weighted',
                             'n_children_weighted'), 'Fiscal aggregation')
 
   # -- Assertions: fiscal cost completeness ----
-  # All five cost components must be present in the aggregation. This catches
+  # All six cost components must be present in the aggregation. This catches
   # the Feb 2025 bug where employer_subsidy was missing from the formula.
   fiscal_cols <- c('demand_subsidy', 'supply_subsidy', 'employer_subsidy',
-                   'cdctc_cost', 'tax_revenue')
+                   'cdctc_cost', 'transfer_cost', 'tax_revenue')
   stopifnot(all(fiscal_cols %in% names(combined)))
 
   combined %>%
@@ -676,6 +677,7 @@ aggregate_year_fiscal_cost <- function(result, year) {
       total_supply_subsidy_raw = sum(supply_subsidy),
       total_employer_subsidy_raw = sum(employer_subsidy),
       total_cdctc_cost_raw = sum(cdctc_cost),
+      total_transfer_cost_raw = sum(transfer_cost),
       total_tax_revenue_raw = sum(tax_revenue),
       n_parent_units_weighted = sum(n_parent_units_weighted),
       n_children_weighted = sum(n_children_weighted),
@@ -687,6 +689,7 @@ aggregate_year_fiscal_cost <- function(result, year) {
       total_supply_subsidy = total_supply_subsidy_raw / 1e9,
       total_employer_subsidy = total_employer_subsidy_raw / 1e9,
       total_cdctc_cost = total_cdctc_cost_raw / 1e9,
+      total_transfer_cost = total_transfer_cost_raw / 1e9,
       total_tax_revenue = total_tax_revenue_raw / 1e9,
 
       # Per-family metrics (using parent unit weight)
@@ -694,6 +697,7 @@ aggregate_year_fiscal_cost <- function(result, year) {
       supply_subsidy_per_family = total_supply_subsidy_raw / n_parent_units_weighted,
       employer_subsidy_per_family = total_employer_subsidy_raw / n_parent_units_weighted,
       cdctc_cost_per_family = total_cdctc_cost_raw / n_parent_units_weighted,
+      transfer_cost_per_family = total_transfer_cost_raw / n_parent_units_weighted,
       tax_revenue_per_family = total_tax_revenue_raw / n_parent_units_weighted,
 
       # Per-child metrics (for reference)
@@ -701,13 +705,14 @@ aggregate_year_fiscal_cost <- function(result, year) {
       supply_subsidy_per_child = total_supply_subsidy_raw / n_children_weighted,
       employer_subsidy_per_child = total_employer_subsidy_raw / n_children_weighted,
       cdctc_cost_per_child = total_cdctc_cost_raw / n_children_weighted,
+      transfer_cost_per_child = total_transfer_cost_raw / n_children_weighted,
       tax_revenue_per_child = total_tax_revenue_raw / n_children_weighted,
 
       year = year,
       .before = everything()
     ) %>%
     select(-total_demand_subsidy_raw, -total_supply_subsidy_raw, -total_employer_subsidy_raw,
-           -total_cdctc_cost_raw, -total_tax_revenue_raw)
+           -total_cdctc_cost_raw, -total_transfer_cost_raw, -total_tax_revenue_raw)
 }
 
 
@@ -728,7 +733,8 @@ aggregate_year_fiscal_cost_by_age <- function(result, year) {
   #----------------------------------------------------------------------------
 
   empty_by_age <- tibble(child_age = 0:4, demand_subsidy = 0, supply_subsidy = 0,
-                         employer_subsidy = 0, cdctc_cost = 0, tax_revenue = 0)
+                         employer_subsidy = 0, cdctc_cost = 0, transfer_cost = 0,
+                         tax_revenue = 0)
 
   if (!result$converged || is.null(result$parent_units)) {
     return(empty_by_age)
@@ -754,6 +760,7 @@ aggregate_year_fiscal_cost_by_age <- function(result, year) {
         taxes_revenue = taxes + compute_employer_payroll_tax(pu_df)
       )
     if (!'cdctc' %in% names(pu_df)) pu_df$cdctc <- 0
+    if (!'transfer' %in% names(pu_df)) pu_df$transfer <- 0
 
     # Build child-level rows for each child
     for (cidx in 1:n_children) {
@@ -768,11 +775,13 @@ aggregate_year_fiscal_cost_by_age <- function(result, year) {
           demand_subsidy = subsidy * cost_share * parent_unit_weight,
           tax_revenue = taxes_revenue * cost_share * parent_unit_weight,
           cdctc_cost = cdctc * cost_share * parent_unit_weight,
+          transfer_cost = transfer * cost_share * parent_unit_weight,
           c_hours = HOURS_ANNUAL[.data[[ecec_hours_col]]],
           supply_subsidy = c_hours * ifelse(is.na(sector_id), 0, supply_subsidy[sector_id]) * parent_unit_weight,
           employer_subsidy = c_hours * ifelse(is.na(sector_id), 0, employer_subsidy_rate[sector_id]) * parent_unit_weight
         ) %>%
-        select(child_age, demand_subsidy, supply_subsidy, employer_subsidy, cdctc_cost, tax_revenue)
+        select(child_age, demand_subsidy, supply_subsidy, employer_subsidy, cdctc_cost,
+               transfer_cost, tax_revenue)
 
       child_rows[[paste0(pu_name, '_c', cidx)]] <- child_row
     }
@@ -786,17 +795,19 @@ aggregate_year_fiscal_cost_by_age <- function(result, year) {
   # If they diverge, one path is missing a component or weighting differently.
   # (This is the class of bug from Feb 2025 — employer_subsidy was missing here)
   stopifnot(all(c('demand_subsidy', 'supply_subsidy', 'employer_subsidy',
-                   'cdctc_cost', 'tax_revenue') %in% names(all_children)))
+                   'cdctc_cost', 'transfer_cost', 'tax_revenue') %in% names(all_children)))
 
   # Aggregate by child_age and ensure all ages 0-4 are present
   result_by_age <- all_children %>%
     group_by(child_age) %>%
-    summarise(across(c(demand_subsidy, supply_subsidy, employer_subsidy, cdctc_cost, tax_revenue),
+    summarise(across(c(demand_subsidy, supply_subsidy, employer_subsidy, cdctc_cost,
+                       transfer_cost, tax_revenue),
                      ~ sum(., na.rm = TRUE)), .groups = 'drop')
 
   tibble(child_age = 0:4) %>%
     left_join(result_by_age, by = 'child_age') %>%
-    mutate(across(c(demand_subsidy, supply_subsidy, employer_subsidy, cdctc_cost, tax_revenue),
+    mutate(across(c(demand_subsidy, supply_subsidy, employer_subsidy, cdctc_cost,
+                    transfer_cost, tax_revenue),
                   ~ coalesce(., 0)))
 }
 
@@ -823,7 +834,8 @@ aggregate_fiscal_cost <- function(parent_units_df, n_children, supply_subsidy = 
   if (!'subsidy' %in% names(parent_units_df)) {
     return(tibble(sector = character(), hours_choice = character(),
                   demand_subsidy = numeric(), supply_subsidy = numeric(),
-                  employer_subsidy = numeric(), cdctc_cost = numeric(), tax_revenue = numeric(),
+                  employer_subsidy = numeric(), cdctc_cost = numeric(),
+                  transfer_cost = numeric(), tax_revenue = numeric(),
                   n_children_weighted = numeric(), n_parent_units_weighted = numeric()))
   }
 
@@ -862,9 +874,11 @@ aggregate_fiscal_cost <- function(parent_units_df, n_children, supply_subsidy = 
     )
 
   if (!'cdctc' %in% names(fiscal_data)) fiscal_data$cdctc <- 0
+  # transfer column absent in results from runs predating the transfer channel
+  if (!'transfer' %in% names(fiscal_data)) fiscal_data$transfer <- 0
 
   validate_cols(fiscal_data, c('subsidy', 'taxes', 'taxes_revenue', 'cdctc',
-                               'parent_unit_weight', 'total_supply_subsidy',
+                               'transfer', 'parent_unit_weight', 'total_supply_subsidy',
                                'total_employer_subsidy', 'total_child_weight',
                                'ecec_hours.1'), 'Fiscal aggregation')
 
@@ -881,6 +895,7 @@ aggregate_fiscal_cost <- function(parent_units_df, n_children, supply_subsidy = 
       supply_subsidy = sum(total_supply_subsidy * parent_unit_weight),
       employer_subsidy = sum(total_employer_subsidy * parent_unit_weight),
       cdctc_cost = sum(cdctc * parent_unit_weight),
+      transfer_cost = sum(transfer * parent_unit_weight),
       tax_revenue = sum(taxes_revenue * parent_unit_weight),
       n_parent_units_weighted = sum(parent_unit_weight),
       n_children_weighted = sum(total_child_weight),
@@ -896,6 +911,7 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
                                               policy_supply_file, year,
                                               policy_cdctc_file = 'baseline',
                                               policy_tax_file = 'baseline',
+                                              policy_transfer_file = 'baseline',
                                               employer_subsidy_rate = c(0, 0, 0, 0),
                                               demand_params = NULL,
                                               cpi_growth_factor = 1.0,
@@ -946,6 +962,7 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
   policy_supply_subsidy <- supply_policy$supply_subsidy
   policy_do_cdctc <- load_cdctc_policy(policy_cdctc_file)
   policy_do_tax <- load_policy('policy_tax', policy_tax_file, 'do_tax_policy')
+  policy_do_transfer <- load_transfer_policy(policy_transfer_file)
 
   # Rationed policies need the policy run's offer draws (Option A)
   rationed <- !is.null(policy_demand_obj$rationing)
@@ -1002,6 +1019,9 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
 
       mfc_policy_subsidy <- rat_vals$subsidy
       mfc_policy_cdctc <- rat_vals$cdctc
+      # Transfer policies are blocked for rationed scenarios (run_scenario
+      # guard), so the mechanical transfer is exactly zero here
+      mfc_policy_transfer <- rep(0, nrow(baseline_pu))
       policy_taxes_at_choice <- rat_vals$taxes
 
       # Mechanical take-up: baseline-choice enrollment in an offered sector
@@ -1030,13 +1050,15 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
       #------------------------------------------------------------------------
 
       pc <- compute_policy_components(pu_clean, P_baseline, n_children, demand_params,
-                                       policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+                                       policy_do_demand, policy_do_cdctc, cpi_growth_factor,
+                                       policy_transfer = policy_do_transfer)
       pu_with_policy <- bind_cols(pu_clean, pc$components)
 
       subsidy_available <- all(paste0('subsidy.', 1:mfc_n_choices) %in% names(pu_with_policy))
       if (subsidy_available) {
         mfc_policy_subsidy <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'subsidy', mfc_n_choices)
         mfc_policy_cdctc <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'cdctc', mfc_n_choices)
+        mfc_policy_transfer <- extract_selected_values(pu_with_policy, baseline_pu$choice, 'transfer', mfc_n_choices)
       }
       baseline_choices <- baseline_pu$choice
       policy_taxes_at_choice <- extract_selected_values(pu_with_policy, baseline_choices, 'taxes', nrow(catalog))
@@ -1048,14 +1070,15 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
     # Aggregate mechanical fiscal cost
     fiscal_list[[pu_name]] <- if (!has_choice || !subsidy_available) {
       tibble(demand_subsidy = 0, supply_subsidy = 0, employer_subsidy = 0,
-             cdctc_cost = 0, n_children_weighted = 0)
+             cdctc_cost = 0, transfer_cost = 0, n_children_weighted = 0)
     } else {
       mfc_combined <- baseline_pu %>%
         mutate(
           parent_unit_weight = (per_weight1 + coalesce(per_weight2, per_weight1)) / 2,
           total_child_weight = child_weight.1 + coalesce(child_weight.2, 0),
           policy_subsidy = mfc_policy_subsidy,
-          policy_cdctc = mfc_policy_cdctc
+          policy_cdctc = mfc_policy_cdctc,
+          policy_transfer = mfc_policy_transfer
         )
 
       mfc_combined <- compute_child_subsidies(mfc_combined, 1, policy_supply_subsidy, employer_subsidy_rate)
@@ -1074,6 +1097,7 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
           supply_subsidy = sum(total_supply_subsidy * parent_unit_weight, na.rm = TRUE),
           employer_subsidy = sum(total_employer_subsidy * parent_unit_weight, na.rm = TRUE),
           cdctc_cost = sum(policy_cdctc * parent_unit_weight, na.rm = TRUE),
+          transfer_cost = sum(policy_transfer * parent_unit_weight, na.rm = TRUE),
           n_parent_units_weighted = sum(parent_unit_weight, na.rm = TRUE),
           n_children_weighted = sum(total_child_weight, na.rm = TRUE),
           .groups = 'drop'
@@ -1113,6 +1137,7 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
       mechanical_supply_subsidy_raw = sum(supply_subsidy),
       mechanical_employer_subsidy_raw = sum(employer_subsidy, na.rm = TRUE),
       mechanical_cdctc_cost_raw = sum(cdctc_cost, na.rm = TRUE),
+      mechanical_transfer_cost_raw = sum(transfer_cost, na.rm = TRUE),
       n_children_weighted = sum(n_children_weighted),
       .groups = 'drop'
     ) %>%
@@ -1122,6 +1147,7 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
       mechanical_supply_subsidy = mechanical_supply_subsidy_raw / 1e9,
       mechanical_employer_subsidy = mechanical_employer_subsidy_raw / 1e9,
       mechanical_cdctc_cost = mechanical_cdctc_cost_raw / 1e9,
+      mechanical_transfer_cost = mechanical_transfer_cost_raw / 1e9,
 
       # Tax change from tax policy (can be non-zero if policy differs from baseline)
       # Negative = tax cut (revenue loss), Positive = tax increase (revenue gain)
@@ -1137,7 +1163,8 @@ compute_mechanical_fiscal_effect <- function(baseline_result, policy_demand_file
       .before = everything()
     ) %>%
     select(-mechanical_demand_subsidy_raw, -mechanical_supply_subsidy_raw,
-           -mechanical_employer_subsidy_raw, -mechanical_cdctc_cost_raw)
+           -mechanical_employer_subsidy_raw, -mechanical_cdctc_cost_raw,
+           -mechanical_transfer_cost_raw)
 }
 
 
@@ -1146,6 +1173,7 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
                                                   policy_demand_file, policy_supply_file,
                                                   policy_cdctc_file = 'baseline',
                                                   policy_tax_file = 'baseline',
+                                                  policy_transfer_file = 'baseline',
                                                   year, tax_sim_path = NULL,
                                                   demand_params = NULL,
                                                   cpi_growth_factor = 1.0) {
@@ -1190,6 +1218,7 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
   policy_do_demand <- policy_demand_obj$do_demand_policy
   policy_do_cdctc <- load_cdctc_policy(policy_cdctc_file)
   policy_do_tax <- load_policy('policy_tax', policy_tax_file, 'do_tax_policy')
+  policy_do_transfer <- load_transfer_policy(policy_transfer_file)
 
   # Load baseline policy functions for baseline-wide NI computation
   baseline_do_demand <- load_demand_policy('baseline')$do_demand_policy
@@ -1254,12 +1283,14 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
     } else if (!rationed) {
       # Mechanical effect: policy rules at baseline prices
       pc_mech <- compute_policy_components(pu_for_mechanical, P_baseline, n_children, demand_params,
-                                            policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+                                            policy_do_demand, policy_do_cdctc, cpi_growth_factor,
+                                            policy_transfer = policy_do_transfer)
       pu_with_mechanical <- bind_cols(pu_for_mechanical, pc_mech$components)
 
       # Welfare: policy rules at policy equilibrium prices
       pc_welfare <- compute_policy_components(pu_for_welfare, P_policy, n_children, demand_params,
-                                               policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+                                               policy_do_demand, policy_do_cdctc, cpi_growth_factor,
+                                               policy_transfer = policy_do_transfer)
       pu_with_welfare <- bind_cols(pu_for_welfare, pc_welfare$components)
     }
 
@@ -1801,6 +1832,7 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
                                            policy_demand_file,
                                            policy_cdctc_file = 'baseline',
                                            policy_tax_file = 'baseline',
+                                           policy_transfer_file = 'baseline',
                                            year,
                                            aged_spm, pu_spm_xwalk,
                                            spm_parent_earnings = NULL,
@@ -1851,6 +1883,7 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
   policy_do_demand <- policy_demand_obj$do_demand_policy
   policy_do_cdctc <- load_cdctc_policy(policy_cdctc_file)
   policy_do_tax <- load_policy('policy_tax', policy_tax_file, 'do_tax_policy')
+  policy_do_transfer <- load_transfer_policy(policy_transfer_file)
 
   # Rationed policies (Option A): evaluate policy rules conditional on the
   # policy run's offer draws
@@ -1885,7 +1918,8 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
       )
     } else if (!rationed) {
       pc <- compute_policy_components(pu_for_mechanical, P_baseline, n_children, demand_params,
-                                       policy_do_demand, policy_do_cdctc, cpi_growth_factor)
+                                       policy_do_demand, policy_do_cdctc, cpi_growth_factor,
+                                       policy_transfer = policy_do_transfer)
       mechanical_pu <- bind_cols(pu_for_mechanical, pc$components)
     }
 
@@ -1908,10 +1942,13 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
         pov_baseline_net_ecec <- baseline_pu$gross_ecec_cost - baseline_pu$subsidy - baseline_pu$cdctc
         pov_baseline_earnings <- baseline_pu$agi
         pov_baseline_taxes <- baseline_pu$taxes
+        # transfer column absent in results from runs predating the transfer channel
+        pov_baseline_transfer <- if ('transfer' %in% names(baseline_pu)) baseline_pu$transfer else 0
 
         pov_policy_net_ecec <- policy_pu$gross_ecec_cost - policy_pu$subsidy - policy_pu$cdctc
         pov_policy_earnings <- policy_pu$agi
         pov_policy_taxes <- policy_pu$taxes
+        pov_policy_transfer <- if ('transfer' %in% names(policy_pu)) policy_pu$transfer else 0
 
         pov_baseline_choices <- baseline_pu$choice
         if (rationed) {
@@ -1919,11 +1956,15 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
           pov_mech_subsidy <- pov_rationed_vals$subsidy
           pov_mech_cdctc <- pov_rationed_vals$cdctc
           pov_mech_taxes <- pov_rationed_vals$taxes
+          # Transfer policies are blocked for rationed scenarios (run_scenario
+          # guard), so the mechanical transfer is exactly zero here
+          pov_mech_transfer <- rep(0, length(pov_baseline_choices))
         } else {
           pov_mech_gross_ecec <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'gross_ecec_cost', pov_n_choices)
           pov_mech_subsidy <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'subsidy', pov_n_choices)
           pov_mech_cdctc <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'cdctc', pov_n_choices)
           pov_mech_taxes <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'taxes', pov_n_choices)
+          pov_mech_transfer <- extract_selected_values(mechanical_pu, pov_baseline_choices, 'transfer', pov_n_choices)
         }
 
         pov_mech_net_ecec <- pov_mech_gross_ecec - pov_mech_subsidy - pov_mech_cdctc
@@ -1931,10 +1972,14 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
         pov_mechanical_delta_childcare <- pov_baseline_net_ecec - pov_mech_net_ecec
         pov_mechanical_delta_earnings <- 0
         pov_mechanical_delta_taxes <- pov_mech_taxes - pov_baseline_taxes
+        # Transfers flow through the income channel (resources), never through
+        # the SPM childcare-expense channel
+        pov_mechanical_delta_transfer <- pov_mech_transfer - pov_baseline_transfer
 
         pov_total_delta_childcare <- pov_baseline_net_ecec - pov_policy_net_ecec
         pov_total_delta_earnings <- pov_policy_earnings - pov_baseline_earnings
         pov_total_delta_taxes <- pov_policy_taxes - pov_baseline_taxes
+        pov_total_delta_transfer <- pov_policy_transfer - pov_baseline_transfer
 
         pov_cap_cols <- paste0('min_parent_earnings.', c('none', 'pt', 'ft'))
         pov_has_cap_cols <- all(pov_cap_cols %in% names(baseline_pu)) && all(pov_cap_cols %in% names(policy_pu))
@@ -1963,9 +2008,11 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
           mechanical_delta_childcare = pov_mechanical_delta_childcare,
           mechanical_delta_earnings = pov_mechanical_delta_earnings,
           mechanical_delta_taxes = pov_mechanical_delta_taxes,
+          mechanical_delta_transfer = pov_mechanical_delta_transfer,
           total_delta_childcare = pov_total_delta_childcare,
           total_delta_earnings = pov_total_delta_earnings,
           total_delta_taxes = pov_total_delta_taxes,
+          total_delta_transfer = pov_total_delta_transfer,
           baseline_cap_earnings = pov_baseline_cap_earnings,
           policy_cap_earnings = pov_policy_cap_earnings
         )
@@ -2003,9 +2050,11 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
           mechanical_delta_childcare = sum(mechanical_delta_childcare),
           mechanical_delta_earnings = sum(mechanical_delta_earnings),
           mechanical_delta_taxes = sum(mechanical_delta_taxes),
+          mechanical_delta_transfer = sum(mechanical_delta_transfer),
           total_delta_childcare = sum(total_delta_childcare),
           total_delta_earnings = sum(total_delta_earnings),
           total_delta_taxes = sum(total_delta_taxes),
+          total_delta_transfer = sum(total_delta_transfer),
           baseline_min_earnings = {
             x <- baseline_cap_earnings
             if (all(is.na(x))) NA_real_ else min(x, na.rm = TRUE)
@@ -2126,9 +2175,11 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
         mechanical_delta_childcare = replace_na(mechanical_delta_childcare, 0),
         mechanical_delta_earnings = replace_na(mechanical_delta_earnings, 0),
         mechanical_delta_taxes = replace_na(mechanical_delta_taxes, 0),
+        mechanical_delta_transfer = replace_na(mechanical_delta_transfer, 0),
         total_delta_childcare = replace_na(total_delta_childcare, 0),
         total_delta_earnings = replace_na(total_delta_earnings, 0),
         total_delta_taxes = replace_na(total_delta_taxes, 0),
+        total_delta_transfer = replace_na(total_delta_transfer, 0),
         baseline_min_earnings = coalesce(baseline_min_earnings, min_adult_earnings),
         policy_min_earnings = coalesce(computed_policy_cap, policy_min_earnings, min_adult_earnings)
       )
@@ -2151,7 +2202,8 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
         mechanical_total_work_exp = mechanical_childcare_exp + spm_work_exp,
         mechanical_capped_exp = pmin(mechanical_total_work_exp, mechanical_cap),
         mechanical_exp_change = spm_capped_exp - mechanical_capped_exp,
-        mechanical_delta_resources = mechanical_exp_change - mechanical_delta_taxes,
+        mechanical_delta_resources = mechanical_exp_change - mechanical_delta_taxes +
+          mechanical_delta_transfer,
         mechanical_resources = spm_resources + mechanical_delta_resources,
         is_poor_mechanical = (mechanical_resources < spm_threshold),
 
@@ -2160,7 +2212,8 @@ aggregate_year_poverty_impact <- function(baseline_result, policy_result,
         total_total_work_exp = total_childcare_exp + spm_work_exp,
         total_capped_exp = pmin(total_total_work_exp, total_cap),
         total_exp_change = spm_capped_exp - total_capped_exp,
-        total_delta_resources = total_exp_change + total_delta_earnings - total_delta_taxes,
+        total_delta_resources = total_exp_change + total_delta_earnings - total_delta_taxes +
+          total_delta_transfer,
         total_resources = spm_resources + total_delta_resources,
         is_poor_total = (total_resources < spm_threshold),
 
@@ -2890,9 +2943,10 @@ calculate_child_fiscal_npv <- function(child_earnings_micro,
       supply_subsidy_delta = supply_subsidy.policy - supply_subsidy.baseline,
       employer_subsidy_delta = employer_subsidy.policy - employer_subsidy.baseline,
       cdctc_delta = cdctc_cost.policy - cdctc_cost.baseline,
+      transfer_delta = coalesce(transfer_cost.policy, 0) - coalesce(transfer_cost.baseline, 0),
       tax_delta = tax_revenue.policy - tax_revenue.baseline,
       net_cost = demand_subsidy_delta + supply_subsidy_delta + employer_subsidy_delta +
-                 cdctc_delta - tax_delta,
+                 cdctc_delta + transfer_delta - tax_delta,
       net_cost_2025 = net_cost / cpiu_simulation_year
     )
 

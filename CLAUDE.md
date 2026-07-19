@@ -85,6 +85,7 @@ config/
 ├── policy_supply/            # Supply-side policies
 ├── cdctc/                    # Child & Dependent Care Tax Credit policies
 ├── policy_tax/               # Tax policies (CTC-like credits)
+├── policy_transfer/          # Choice-dependent cash transfer policies
 ├── employer_subsidy/         # Employer wage subsidy configs (YAML)
 ├── wage_floor/               # Wage floor configs (YAML)
 ├── state/                    # State-level analysis inputs (demand/, supply/, employment/ per <ST>)
@@ -123,6 +124,7 @@ Policies are pluggable R functions. See existing files for full signatures:
 - Supply: `config/policy_supply/*.R` — `do_supply_policy(P)` returns supplier-received prices
 - CDCTC: `config/cdctc/*.R` — `do_cdctc_policy()` returns CDCTC credit matrix
 - Tax: `config/policy_tax/*.R` — `do_tax_policy()` modifies total_tax columns by employment status
+- Transfer: `config/policy_transfer/*.R` — `do_transfer_policy()` returns choice-dependent cash transfer matrix (n_units x n_choices); enters income (Y), not care cost (C)
 - Employer subsidy: `config/employer_subsidy/*.yaml` — percentage or dollar wage subsidies
 
 ### Equilibrium Solving

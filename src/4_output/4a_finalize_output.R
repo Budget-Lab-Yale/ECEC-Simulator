@@ -274,6 +274,9 @@ finalize_simulation_core <- function(sim_ctx) {
 
     if (!'total_employer_subsidy' %in% names(sf)) sf$total_employer_subsidy <- 0
     if (!'total_employer_subsidy' %in% names(bf)) bf$total_employer_subsidy <- 0
+    # transfer column absent in summaries from runs predating the transfer channel
+    if (!'total_transfer_cost' %in% names(sf)) sf$total_transfer_cost <- 0
+    if (!'total_transfer_cost' %in% names(bf)) bf$total_transfer_cost <- 0
 
     d <- sf %>%
       left_join(
@@ -282,6 +285,7 @@ finalize_simulation_core <- function(sim_ctx) {
           total_supply_subsidy_baseline = total_supply_subsidy,
           total_employer_subsidy_baseline = total_employer_subsidy,
           total_cdctc_cost_baseline = total_cdctc_cost,
+          total_transfer_cost_baseline = total_transfer_cost,
           total_tax_revenue_baseline = total_tax_revenue),
         by = 'year'
       )
@@ -290,20 +294,24 @@ finalize_simulation_core <- function(sim_ctx) {
       d <- d %>%
         left_join(
           mf %>% select(year, mechanical_demand_subsidy, mechanical_supply_subsidy,
-            any_of('mechanical_employer_subsidy'), mechanical_cdctc_cost, mechanical_tax_change),
+            any_of('mechanical_employer_subsidy'), mechanical_cdctc_cost,
+            any_of('mechanical_transfer_cost'), mechanical_tax_change),
           by = 'year'
         )
+      # Older mechanical summaries lack the transfer column: transfers were zero
+      if (!'mechanical_transfer_cost' %in% names(d)) d$mechanical_transfer_cost <- 0
     } else {
       d <- d %>%
         mutate(mechanical_demand_subsidy = NA_real_, mechanical_supply_subsidy = NA_real_,
                mechanical_employer_subsidy = NA_real_, mechanical_cdctc_cost = NA_real_,
-               mechanical_tax_change = NA_real_)
+               mechanical_transfer_cost = NA_real_, mechanical_tax_change = NA_real_)
     }
     if (!'mechanical_employer_subsidy' %in% names(d)) d$mechanical_employer_subsidy <- NA_real_
 
     # Validate required columns
     req_cols <- c('total_demand_subsidy_baseline', 'total_supply_subsidy_baseline',
-      'total_employer_subsidy_baseline', 'total_cdctc_cost_baseline', 'total_tax_revenue_baseline')
+      'total_employer_subsidy_baseline', 'total_cdctc_cost_baseline',
+      'total_transfer_cost_baseline', 'total_tax_revenue_baseline')
     cols_missing <- setdiff(req_cols, names(d))
     if (length(cols_missing) > 0) {
       stop(paste0('Budget deltas missing required baseline columns: ', paste(cols_missing, collapse = ', ')))
@@ -329,17 +337,21 @@ finalize_simulation_core <- function(sim_ctx) {
         full_supply_subsidy = total_supply_subsidy - total_supply_subsidy_baseline,
         full_employer_subsidy = total_employer_subsidy - total_employer_subsidy_baseline,
         full_cdctc_cost = total_cdctc_cost - total_cdctc_cost_baseline,
+        full_transfer_cost = total_transfer_cost - total_transfer_cost_baseline,
         full_tax_change = total_tax_revenue - total_tax_revenue_baseline,
         full_budget_effect = full_tax_change - full_demand_subsidy - full_supply_subsidy
-          - full_employer_subsidy - full_cdctc_cost,
+          - full_employer_subsidy - full_cdctc_cost - full_transfer_cost,
         mechanical_cdctc_cost = mechanical_cdctc_cost - total_cdctc_cost_baseline,
+        mechanical_transfer_cost = mechanical_transfer_cost - total_transfer_cost_baseline,
         mechanical_budget_effect = if_else(!is.na(mechanical_demand_subsidy),
           mechanical_tax_change - mechanical_demand_subsidy - mechanical_supply_subsidy -
-            mechanical_employer_subsidy - mechanical_cdctc_cost, NA_real_),
+            mechanical_employer_subsidy - mechanical_cdctc_cost - mechanical_transfer_cost,
+          NA_real_),
         full_behavioral_demand_subsidy = full_demand_subsidy - mechanical_demand_subsidy,
         full_behavioral_supply_subsidy = full_supply_subsidy - mechanical_supply_subsidy,
         full_behavioral_employer_subsidy = full_employer_subsidy - mechanical_employer_subsidy,
         full_behavioral_cdctc_cost = full_cdctc_cost - mechanical_cdctc_cost,
+        full_behavioral_transfer_cost = full_transfer_cost - mechanical_transfer_cost,
         full_behavioral_tax_change = full_tax_change - mechanical_tax_change,
         full_behavioral_budget_effect = if_else(!is.na(mechanical_budget_effect),
           full_budget_effect - mechanical_budget_effect, NA_real_),
@@ -352,6 +364,8 @@ finalize_simulation_core <- function(sim_ctx) {
           phase_in_factor * full_behavioral_employer_subsidy, NA_real_),
         behavioral_cdctc_cost = if_else(!is.na(full_behavioral_cdctc_cost),
           phase_in_factor * full_behavioral_cdctc_cost, NA_real_),
+        behavioral_transfer_cost = if_else(!is.na(full_behavioral_transfer_cost),
+          phase_in_factor * full_behavioral_transfer_cost, NA_real_),
         behavioral_tax_change = if_else(!is.na(full_behavioral_tax_change),
           phase_in_factor * full_behavioral_tax_change, NA_real_),
         behavioral_budget_effect = if_else(!is.na(full_behavioral_budget_effect),
@@ -367,21 +381,25 @@ finalize_simulation_core <- function(sim_ctx) {
           mechanical_employer_subsidy + behavioral_employer_subsidy, full_employer_subsidy),
         total_cdctc_cost = if_else(!is.na(mechanical_cdctc_cost),
           mechanical_cdctc_cost + behavioral_cdctc_cost, full_cdctc_cost),
+        total_transfer_cost = if_else(!is.na(mechanical_transfer_cost),
+          mechanical_transfer_cost + behavioral_transfer_cost, full_transfer_cost),
         total_tax_change = if_else(!is.na(mechanical_tax_change),
           mechanical_tax_change + behavioral_tax_change, full_tax_change)
       ) %>%
       {
         if (detailed) {
           select(., year, total_demand_subsidy, total_supply_subsidy, total_employer_subsidy,
-            total_cdctc_cost, total_tax_change, total_budget_effect,
+            total_cdctc_cost, total_transfer_cost, total_tax_change, total_budget_effect,
             mechanical_demand_subsidy, mechanical_supply_subsidy, mechanical_employer_subsidy,
-            mechanical_cdctc_cost, mechanical_tax_change, mechanical_budget_effect,
+            mechanical_cdctc_cost, mechanical_transfer_cost, mechanical_tax_change,
+            mechanical_budget_effect,
             behavioral_demand_subsidy, behavioral_supply_subsidy, behavioral_employer_subsidy,
-            behavioral_cdctc_cost, behavioral_tax_change, behavioral_budget_effect,
+            behavioral_cdctc_cost, behavioral_transfer_cost, behavioral_tax_change,
+            behavioral_budget_effect,
             n_children_weighted)
         } else {
           select(., year, total_demand_subsidy, total_supply_subsidy, total_employer_subsidy,
-            total_cdctc_cost, total_tax_change, total_budget_effect,
+            total_cdctc_cost, total_transfer_cost, total_tax_change, total_budget_effect,
             mechanical_budget_effect, behavioral_budget_effect)
         }
       }
@@ -681,7 +699,8 @@ finalize_simulation_core <- function(sim_ctx) {
       write_cell(sheet_name, 'Budget Summary (Levels)', 1, 1, styles$title)
       data <- convert_to_fiscal_year(data)
       header_row <- c('Fiscal Year', 'Demand Subsidy ($B)', 'Supply Subsidy ($B)', 'Employer Subsidy ($B)',
-                      'Tax Revenue ($B)', 'Subsidy/Child', 'Supply Sub/Child', 'Employer Sub/Child', 'Tax/Child')
+                      'Transfers ($B)', 'Tax Revenue ($B)', 'Subsidy/Child', 'Supply Sub/Child',
+                      'Employer Sub/Child', 'Transfer/Child', 'Tax/Child')
       writeData(wb, sheet_name, t(header_row), startRow = 3, startCol = 1, colNames = FALSE)
       addStyle(wb, sheet_name, styles$header, rows = 3, cols = 1:length(header_row), gridExpand = TRUE)
       current_row <- 4
@@ -692,22 +711,26 @@ finalize_simulation_core <- function(sim_ctx) {
         prev_year <- rd$fiscal_year
         emp_sub <- if ('total_employer_subsidy' %in% names(rd)) rd$total_employer_subsidy else 0
         emp_sub_pc <- if ('employer_subsidy_per_child' %in% names(rd)) rd$employer_subsidy_per_child else 0
+        transfer <- if ('total_transfer_cost' %in% names(rd)) rd$total_transfer_cost else 0
+        transfer_pc <- if ('transfer_cost_per_child' %in% names(rd)) rd$transfer_cost_per_child else 0
         col_specs <- list(
           list(rd$fiscal_year, 1, styles$data),
           list(rd$total_demand_subsidy, 2, styles$currency),
           list(rd$total_supply_subsidy, 3, styles$currency),
           list(emp_sub, 4, styles$currency),
-          list(rd$total_tax_revenue, 5, styles$currency),
-          list(round(rd$demand_subsidy_per_child, -1), 6, styles$currency),
-          list(round(rd$supply_subsidy_per_child, -1), 7, styles$currency),
-          list(round(emp_sub_pc, -1), 8, styles$currency),
-          list(round(rd$tax_revenue_per_child, -1), 9, styles$currency)
+          list(transfer, 5, styles$currency),
+          list(rd$total_tax_revenue, 6, styles$currency),
+          list(round(rd$demand_subsidy_per_child, -1), 7, styles$currency),
+          list(round(rd$supply_subsidy_per_child, -1), 8, styles$currency),
+          list(round(emp_sub_pc, -1), 9, styles$currency),
+          list(round(transfer_pc, -1), 10, styles$currency),
+          list(round(rd$tax_revenue_per_child, -1), 11, styles$currency)
         )
         for (cs in col_specs) write_cell(sheet_name, cs[[1]], current_row, cs[[2]], cs[[3]])
         current_row <- current_row + 1
       }
       setColWidths(wb, sheet_name, cols = 1, widths = 12)
-      setColWidths(wb, sheet_name, cols = 2:9, widths = 18)
+      setColWidths(wb, sheet_name, cols = 2:11, widths = 18)
     }
 
     .write_budget_sheet_deltas <- function(data, sheet_name) {
@@ -727,7 +750,7 @@ finalize_simulation_core <- function(sim_ctx) {
       addWorksheet(wb, sheet_name)
       write_cell(sheet_name, 'Budget Impact (Change from Baseline)', 1, 1, styles$title)
       data <- convert_to_fiscal_year(data)
-      header_row <- c('Fiscal Year', 'Demand Subsidy', 'Supply Subsidy', 'Employer Subsidy', 'CDCTC Cost', 'Tax Change', 'Net Budget Effect')
+      header_row <- c('Fiscal Year', 'Demand Subsidy', 'Supply Subsidy', 'Employer Subsidy', 'CDCTC Cost', 'Transfers', 'Tax Change', 'Net Budget Effect')
       writeData(wb, sheet_name, t(header_row), startRow = 3, startCol = 1, colNames = FALSE)
       addStyle(wb, sheet_name, styles$header, rows = 3, cols = 1:length(header_row), gridExpand = TRUE)
       current_row <- 4
@@ -735,20 +758,22 @@ finalize_simulation_core <- function(sim_ctx) {
         rd <- data[i, ]
         emp_sub <- if ('total_employer_subsidy' %in% names(rd)) rd$total_employer_subsidy else 0
         cdctc <- if ('total_cdctc_cost' %in% names(rd)) rd$total_cdctc_cost else 0
+        transfer <- if ('total_transfer_cost' %in% names(rd)) rd$total_transfer_cost else 0
         col_specs <- list(
           list(rd$fiscal_year, 1, styles$data),
           list(rd$total_demand_subsidy, 2, styles$currency),
           list(rd$total_supply_subsidy, 3, styles$currency),
           list(emp_sub, 4, styles$currency),
           list(cdctc, 5, styles$currency),
-          list(rd$total_tax_change, 6, styles$currency),
-          list(rd$total_budget_effect, 7, styles$currency)
+          list(transfer, 6, styles$currency),
+          list(rd$total_tax_change, 7, styles$currency),
+          list(rd$total_budget_effect, 8, styles$currency)
         )
         for (cs in col_specs) write_cell(sheet_name, cs[[1]], current_row, cs[[2]], cs[[3]])
         current_row <- current_row + 1
       }
       setColWidths(wb, sheet_name, cols = 1, widths = 12)
-      setColWidths(wb, sheet_name, cols = 2:7, widths = 16)
+      setColWidths(wb, sheet_name, cols = 2:8, widths = 16)
       if ('mechanical_budget_effect' %in% names(data)) {
         current_row <- current_row + 2
         write_cell(sheet_name, 'Decomposition: Mechanical vs Behavioral', current_row, 1, styles$title)

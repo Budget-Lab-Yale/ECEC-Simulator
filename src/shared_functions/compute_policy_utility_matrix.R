@@ -4,7 +4,8 @@ compute_policy_utility_matrix <- function(P, parent_units_df, n_children, demand
                                           employment_shifts = NULL,
                                           offered1 = FALSE, offered2 = FALSE,
                                           base = NULL,
-                                          keep_components = FALSE) {
+                                          keep_components = FALSE,
+                                          policy_transfer = NULL) {
 
   #----------------------------------------------------------------------------
   # Runs the policy pipeline and computes the deterministic utility matrix
@@ -32,6 +33,8 @@ compute_policy_utility_matrix <- function(P, parent_units_df, n_children, demand
   #       the same P (offer-independent; reuse across offer variants)
   #   - keep_components (logical): If TRUE, include the pc pipeline result
   #       (subsidy/cdctc matrices) in the return value
+  #   - policy_transfer (fn): Transfer policy function (NULL = no transfers);
+  #       choice-dependent cash entering income (Y), not care cost (C)
   #
   # Returns: (list) with elements:
   #   - V (matrix): n_units x n_choices utility matrix
@@ -47,7 +50,8 @@ compute_policy_utility_matrix <- function(P, parent_units_df, n_children, demand
   pc <- compute_policy_components(parent_units_df, P, n_children, demand_params,
                                    policy_demand, policy_cdctc, cpi_growth_factor,
                                    offered1 = offered1, offered2 = offered2,
-                                   base = base, build_components = FALSE)
+                                   base = base, build_components = FALSE,
+                                   policy_transfer = policy_transfer)
   base <- pc$base
 
   if (any(!is.finite(base$agi_matrix)) ||
@@ -61,8 +65,11 @@ compute_policy_utility_matrix <- function(P, parent_units_df, n_children, demand
   if (any(!is.finite(pc$cdctc_matrix))) {
     stop('compute_policy_utility_matrix: non-finite cdctc_matrix (', pu_name, ').')
   }
+  if (any(!is.finite(pc$transfer_matrix))) {
+    stop('compute_policy_utility_matrix: non-finite transfer_matrix (', pu_name, ').')
+  }
 
-  Y_policy <- base$agi_matrix - base$taxes_matrix
+  Y_policy <- base$agi_matrix - base$taxes_matrix + pc$transfer_matrix
   C_policy <- base$gross_ecec_cost_matrix - pc$subsidy_matrix - pc$cdctc_matrix
   NI_policy <- Y_policy - C_policy
 

@@ -137,6 +137,7 @@ validate_baseline_interface <- function(baseline_interface, years_to_run,
     policy_supply    = 'baseline',
     policy_cdctc     = 'baseline',
     policy_tax       = 'baseline',
+    policy_transfer  = 'baseline',
     employer_subsidy = 'none',
     wage_floor       = 'none'
   )

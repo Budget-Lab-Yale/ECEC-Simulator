@@ -86,6 +86,7 @@ config/
 ├── policy_supply/            # Supply-side policies
 ├── cdctc/                    # Child & Dependent Care Tax Credit policies
 ├── policy_tax/               # Tax policies (CTC-like credits)
+├── policy_transfer/          # Choice-dependent cash transfer policies
 ├── employer_subsidy/         # Employer wage subsidy configs (YAML)
 ├── wage_floor/               # Wage floor configs (YAML)
 ├── demand/                   # Calibrated demand parameters (timestamped)
@@ -130,7 +131,7 @@ Results decompose policy impacts into mechanical (pure generosity change at base
 
 ## Policy Channels
 
-The simulator supports five independent policy channels, all specified per-scenario in the runscript CSV:
+The simulator supports six independent policy channels, all specified per-scenario in the runscript CSV:
 
 | Channel | Config directory | Function | Description |
 |---------|-----------------|----------|-------------|
@@ -138,6 +139,7 @@ The simulator supports five independent policy channels, all specified per-scena
 | CDCTC | `config/cdctc/` | `do_cdctc_policy()` | Child & Dependent Care Tax Credit |
 | Supply | `config/policy_supply/` | `do_supply_policy()` | Transforms market prices to supplier-received prices |
 | Tax credits | `config/policy_tax/` | `do_tax_policy()` | CTC-like credits that modify total tax by employment status |
+| Transfers | `config/policy_transfer/` | `do_transfer_policy()` | Choice-dependent cash transfers (n_units x n_choices); enter income, not care costs, with their own budget line |
 | Employer subsidies | `config/employer_subsidy/` | YAML config | Percentage or dollar wage subsidies to providers |
 
 See existing policy files for function signatures and examples.
@@ -193,6 +195,7 @@ means_tested,means_tested,baseline,baseline,baseline,none,none,2026:2055,5
 | `policy_supply` | Supply policy file |
 | `policy_cdctc` | CDCTC policy file |
 | `policy_tax` | Tax policy file |
+| `policy_transfer` | Transfer policy file (optional; default `baseline` = none) |
 | `employer_subsidy` | Employer subsidy config (without `.yaml`) |
 | `wage_floor` | Wage floor config (without `.yaml`) |
 | `years` | Year range, colon-separated (e.g., `2026:2055`) |
