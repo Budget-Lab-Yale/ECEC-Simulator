@@ -529,6 +529,7 @@ run_acs_processing <- function() {
         RELATE,
         SPLOC, MOMLOC, POPLOC, MOMLOC2, POPLOC2,
         UHRSWORK, WKSWORK1, INCWAGE, INCBUS00,
+        census_serialno,
         tax_unit_id = tax_unit_id_corrected,
         tax_unit_id_legacy = TAXID,
         agi = ADJGINC,
@@ -541,8 +542,10 @@ run_acs_processing <- function() {
     # -- Assertions: crosswalk join quality ----
 
     # Sanity on the reconstructed join key (catches integer64 mishandling)
-    stopifnot(min(acs$census_serialno, na.rm = TRUE) >= 1)
-    stopifnot(max(acs$census_serialno, na.rm = TRUE) <= 2e6)
+    stopifnot('census_serialno' %in% names(acs))
+    stopifnot(is.finite(min(acs$census_serialno)))
+    stopifnot(min(acs$census_serialno) >= 1)
+    stopifnot(max(acs$census_serialno) <= 2e6)
 
     # Every person in the ECEC universe must match a corrected record
     n_unmatched <- sum(is.na(acs$tax_unit_id))
