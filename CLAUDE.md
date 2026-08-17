@@ -57,6 +57,7 @@ src/
     ├── compute_probs_from_alpha.R    # Choice probability computation from alpha matrices
     ├── compute_policy_components.R   # Policy component computation for fiscal analysis
     ├── prepare_donor_pool.R           # Tax donor pool preparation + AGI binning helpers
+    ├── reconstruct_tax_unit_agi.R     # Corrected-tax-unit AGI from legacy fragments
     ├── compute_price_wedge_cache.R   # Price wedge cache computation
     ├── load_policy.R                  # Base policy loader (isolated environments)
     ├── load_cdctc_policy.R            # CDCTC policy loader

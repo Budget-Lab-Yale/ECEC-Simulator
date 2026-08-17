@@ -7,6 +7,7 @@ roots:
 dependencies:
   NSECE: '/raw_data/NSECE/v1'
   ACS: '/raw_data/ACS/v1/2023'
+  Census-ACS-SPM: '/raw_data/Census-ACS-SPM/v1/2019'
   Macro-Projections: '/model_data/Macro-Projections/v3/2026071916/baseline'
   Tax-Simulator: '/model_data/Tax-Simulator/v1/202512180813/baseline_ex_cdctc'
   Tax-Simulator-Full-MTR: '/model_data/Tax-Simulator/v1/202601210826/baseline'

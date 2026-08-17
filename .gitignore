@@ -24,3 +24,6 @@ config/policy_transfer/nonenrolled_b3.R
 config/runscripts/report8.csv
 config/runscripts/report_thresh85.csv
 src/4_output/report_figures_thresh85.R
+
+# Macro team's TAXID audit materials (contains 1.1GB corrected Census .dta)
+docs/taxid_audit_20260817/
