@@ -249,7 +249,9 @@ validate_baseline_interface <- function(baseline_interface, years_to_run,
 load_baseline_year_result <- function(baseline_interface, year, parent_units_list,
                                       median_income_lookup, cpi_factor_2019,
                                       cpi_chain_factor_2019, cpi_chain_factor_2026,
-                                      n_draws_per_record) {
+                                      n_draws_per_record,
+                                      wage_growth_factor_2019 = 1.0,
+                                      wage_growth_factor_2026 = 1.0) {
 
   #----------------------------------------------------------------------------
   # Loads one year of converged baseline results from a prior run, returning
@@ -267,6 +269,8 @@ load_baseline_year_result <- function(baseline_interface, year, parent_units_lis
   #   - cpi_chain_factor_2019 (dbl): Chained CPI growth factor 2019 -> year
   #   - cpi_chain_factor_2026 (dbl): Chained CPI growth factor 2019 -> 2026
   #   - n_draws_per_record (int): Epsilon draws per record in the current run
+  #   - wage_growth_factor_2019 (dbl): Nominal hourly wage growth factor 2019 -> year
+  #   - wage_growth_factor_2026 (dbl): Nominal hourly wage growth factor 2019 -> 2026
   #
   # Returns: (list) Synthetic baseline result with $converged, $prices, $w,
   #   $employment_shifts, $parent_units, $supply_subsidy
@@ -368,7 +372,9 @@ load_baseline_year_result <- function(baseline_interface, year, parent_units_lis
     median_income_lookup,
     cpi_factor_2019       = cpi_factor_2019,
     cpi_chain_factor_2019 = cpi_chain_factor_2019,
-    cpi_chain_factor_2026 = cpi_chain_factor_2026
+    cpi_chain_factor_2026 = cpi_chain_factor_2026,
+    wage_growth_factor_2019 = wage_growth_factor_2019,
+    wage_growth_factor_2026 = wage_growth_factor_2026
   )
 
   #-----------------------------------------

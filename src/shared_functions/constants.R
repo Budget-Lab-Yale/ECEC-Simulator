@@ -194,7 +194,9 @@ SIMULATION_VARIABLE_COLS <- c(
   'median_income',
   'cpi_factor_2019',
   'cpi_chain_factor_2019',
-  'cpi_chain_factor_2026'
+  'cpi_chain_factor_2026',
+  'wage_growth_factor_2019',
+  'wage_growth_factor_2026'
 )
 
 

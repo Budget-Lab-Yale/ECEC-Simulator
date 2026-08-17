@@ -87,6 +87,11 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
   }
   cpi_chain_factor_2026 <- get_chained_cpi_growth_factor(macro_projections, 2019, 2026)
 
+  # Nominal wage growth factors for wage-indexed transfer/UBI policies
+  # (same gdp_wages / agg_hours_index series that updates care worker wages)
+  wage_growth_factor_2019 <- supply_params$nominal_wage_factor
+  wage_growth_factor_2026 <- get_hourly_wage_growth_factor(macro_projections, 2019, 2026)
+
   demand_params <- base_demand_params
 
   # Tax parameters
@@ -221,7 +226,9 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     median_income_lookup,
     cpi_factor_2019 = supply_params$cpi_factor,
     cpi_chain_factor_2019 = cpi_chain_factor_2019,
-    cpi_chain_factor_2026 = cpi_chain_factor_2026
+    cpi_chain_factor_2026 = cpi_chain_factor_2026,
+    wage_growth_factor_2019 = wage_growth_factor_2019,
+    wage_growth_factor_2026 = wage_growth_factor_2026
   )
 
   year_seed <- year * 1000 + seed_offset
@@ -237,6 +244,8 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     median_income_lookup     = median_income_lookup,
     year_seed                = year_seed,
     cpi_chain_factor_2019    = cpi_chain_factor_2019,
-    cpi_chain_factor_2026    = cpi_chain_factor_2026
+    cpi_chain_factor_2026    = cpi_chain_factor_2026,
+    wage_growth_factor_2019  = wage_growth_factor_2019,
+    wage_growth_factor_2026  = wage_growth_factor_2026
   )
 }

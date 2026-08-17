@@ -13,7 +13,9 @@
 add_simulation_variables <- function(parent_units_list, median_income_lookup,
                                      cpi_factor_2019 = 1.0,
                                      cpi_chain_factor_2019 = 1.0,
-                                     cpi_chain_factor_2026 = 1.0) {
+                                     cpi_chain_factor_2026 = 1.0,
+                                     wage_growth_factor_2019 = 1.0,
+                                     wage_growth_factor_2026 = 1.0) {
 
   #----------------------------------------------------------------------------
   # Adds simulation context variables to all parent unit dataframes.
@@ -31,6 +33,11 @@ add_simulation_variables <- function(parent_units_list, median_income_lookup,
   #       Used only for ARPA CDCTC inflation indexing.
   #   - cpi_chain_factor_2026 (dbl): Chained CPI growth factor from 2019 to 2026.
   #       Used as the base-year denominator for ARPA CDCTC and child UBI indexing.
+  #   - wage_growth_factor_2019 (dbl): Nominal hourly wage growth factor
+  #       (gdp_wages / agg_hours_index) from 2019 to the simulation year.
+  #       Used for wage-indexing of transfer and child UBI amounts.
+  #   - wage_growth_factor_2026 (dbl): Nominal hourly wage growth factor from
+  #       2019 to 2026. Base-year denominator for wage-indexed policies.
   #
   # Returns: list with same structure, dataframes augmented with context columns
   #----------------------------------------------------------------------------
@@ -64,7 +71,9 @@ add_simulation_variables <- function(parent_units_list, median_income_lookup,
           median_income = !!medians,
           cpi_factor_2019 = !!cpi_factor_2019,
           cpi_chain_factor_2019 = !!cpi_chain_factor_2019,
-          cpi_chain_factor_2026 = !!cpi_chain_factor_2026
+          cpi_chain_factor_2026 = !!cpi_chain_factor_2026,
+          wage_growth_factor_2019 = !!wage_growth_factor_2019,
+          wage_growth_factor_2026 = !!wage_growth_factor_2026
         )
     }
   }

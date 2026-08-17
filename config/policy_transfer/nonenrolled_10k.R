@@ -2,7 +2,7 @@
 # nonenrolled_10k.R - Transfer Policy
 #
 # $10,000 (2026) cash transfer per child under 5 NOT enrolled in formal
-# center- or home-based care, indexed to chained CPI after 2026.
+# center- or home-based care, indexed to nominal wage growth after 2026.
 #
 # "Enrolled" = the child's chosen arrangement is one of the four market
 # sectors (Unpaid/Low-Priced/High-Priced Center-Based, Paid Home-Based).
@@ -20,10 +20,10 @@
 do_transfer_policy <- function(parent_units_df, catalog, n_children) {
 
   #----------------------------------------------------------------------------
-  # $10,000 per non-enrolled child under 5, chained-CPI-indexed (2026 base).
+  # $10,000 per non-enrolled child under 5, wage-growth-indexed (2026 base).
   #
   # Params:
-  #   - parent_units_df (tibble): Parent unit data with cpi_chain_factor_* and
+  #   - parent_units_df (tibble): Parent unit data with wage_growth_factor_* and
   #       n_children_original columns
   #   - catalog (tibble): Choice catalog from get_choice_catalog()
   #   - n_children (int): Number of children (1 or 2)
@@ -34,8 +34,9 @@ do_transfer_policy <- function(parent_units_df, catalog, n_children) {
 
   transfer_per_child_2026 <- 10000
 
-  # Index the nominal transfer with chained CPI, using 2026 as base year
-  # (same convention as the child_ubi_* tax policies)
+  # Index the nominal transfer with economy-wide hourly wage growth
+  # (gdp_wages / agg_hours_index), using 2026 as base year
+  # (same series that updates baseline care worker wages)
   extract_single_positive <- function(x, default_value) {
     if (is.null(x)) return(default_value)
     x_unique <- unique(x)
@@ -44,12 +45,12 @@ do_transfer_policy <- function(parent_units_df, catalog, n_children) {
     x_unique[1]
   }
 
-  cpi_chain_factor_2019 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2019']], 1.0)
-  cpi_chain_factor_2026 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2026']], cpi_chain_factor_2019)
-  inflation_factor <- cpi_chain_factor_2019 / cpi_chain_factor_2026
-  if (!is.finite(inflation_factor) || inflation_factor <= 0) inflation_factor <- 1.0
+  wage_growth_factor_2019 <- extract_single_positive(parent_units_df[['wage_growth_factor_2019']], 1.0)
+  wage_growth_factor_2026 <- extract_single_positive(parent_units_df[['wage_growth_factor_2026']], wage_growth_factor_2019)
+  indexing_factor <- wage_growth_factor_2019 / wage_growth_factor_2026
+  if (!is.finite(indexing_factor) || indexing_factor <= 0) indexing_factor <- 1.0
 
-  transfer_per_child <- round(transfer_per_child_2026 * inflation_factor)
+  transfer_per_child <- round(transfer_per_child_2026 * indexing_factor)
 
   # Enrollment by choice: a child slot is enrolled iff its arrangement is a
   # market sector (non-NA market_sector_id; Parent Only / Other Paid /

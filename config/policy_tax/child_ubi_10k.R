@@ -19,7 +19,8 @@ do_tax_policy <- function(parent_units_df, n_children, year) {
 
   credit_per_child_2026 <- 10000
 
-  # Index the nominal credit with chained CPI, using 2026 as base year.
+  # Index the nominal credit with economy-wide hourly wage growth
+  # (gdp_wages / agg_hours_index), using 2026 as base year.
   # Inflation factor in 2026 is exactly 1.
   extract_single_positive <- function(x, default_value) {
     if (is.null(x)) return(default_value)
@@ -29,12 +30,12 @@ do_tax_policy <- function(parent_units_df, n_children, year) {
     x_unique[1]
   }
 
-  cpi_chain_factor_2019 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2019']], 1.0)
-  cpi_chain_factor_2026 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2026']], cpi_chain_factor_2019)
-  inflation_factor <- cpi_chain_factor_2019 / cpi_chain_factor_2026
-  if (!is.finite(inflation_factor) || inflation_factor <= 0) inflation_factor <- 1.0
+  wage_growth_factor_2019 <- extract_single_positive(parent_units_df[['wage_growth_factor_2019']], 1.0)
+  wage_growth_factor_2026 <- extract_single_positive(parent_units_df[['wage_growth_factor_2026']], wage_growth_factor_2019)
+  indexing_factor <- wage_growth_factor_2019 / wage_growth_factor_2026
+  if (!is.finite(indexing_factor) || indexing_factor <= 0) indexing_factor <- 1.0
 
-  credit_per_child <- round(credit_per_child_2026 * inflation_factor)
+  credit_per_child <- round(credit_per_child_2026 * indexing_factor)
 
   # Use actual number of children for credit
 

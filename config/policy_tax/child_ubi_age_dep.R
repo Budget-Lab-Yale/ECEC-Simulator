@@ -34,13 +34,13 @@ do_tax_policy <- function(parent_units_df, n_children, year) {
     x_unique[1]
   }
 
-  cpi_chain_factor_2019 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2019']], 1.0)
-  cpi_chain_factor_2026 <- extract_single_positive(parent_units_df[['cpi_chain_factor_2026']], cpi_chain_factor_2019)
-  inflation_factor <- cpi_chain_factor_2019 / cpi_chain_factor_2026
-  if (!is.finite(inflation_factor) || inflation_factor <= 0) inflation_factor <- 1.0
+  wage_growth_factor_2019 <- extract_single_positive(parent_units_df[['wage_growth_factor_2019']], 1.0)
+  wage_growth_factor_2026 <- extract_single_positive(parent_units_df[['wage_growth_factor_2026']], wage_growth_factor_2019)
+  indexing_factor <- wage_growth_factor_2019 / wage_growth_factor_2026
+  if (!is.finite(indexing_factor) || indexing_factor <= 0) indexing_factor <- 1.0
 
-  credit_age_0_2 <- round(credit_2026_age_0_2 * inflation_factor)
-  credit_age_3_4 <- round(credit_2026_age_3_4 * inflation_factor)
+  credit_age_0_2 <- round(credit_2026_age_0_2 * indexing_factor)
+  credit_age_3_4 <- round(credit_2026_age_3_4 * indexing_factor)
 
   # Per-slot credit by child age (slots .1 and .2 hold the unit's children)
   slot_credit <- rep(0, nrow(parent_units_df))

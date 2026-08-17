@@ -111,6 +111,8 @@ run_simulation_year <- function(sim_ctx, year) {
   median_income_lookup     <- yc$median_income_lookup
   cpi_chain_factor_2019    <- yc$cpi_chain_factor_2019
   cpi_chain_factor_2026    <- yc$cpi_chain_factor_2026
+  wage_growth_factor_2019  <- yc$wage_growth_factor_2019 %||% 1.0
+  wage_growth_factor_2026  <- yc$wage_growth_factor_2026 %||% 1.0
 
   # Free yc after extracting all fields
   rm(yc)
@@ -170,7 +172,9 @@ run_simulation_year <- function(sim_ctx, year) {
       cpi_factor_2019       = supply_params$cpi_factor,
       cpi_chain_factor_2019 = cpi_chain_factor_2019,
       cpi_chain_factor_2026 = cpi_chain_factor_2026,
-      n_draws_per_record    = n_draws_per_record
+      n_draws_per_record    = n_draws_per_record,
+      wage_growth_factor_2019 = wage_growth_factor_2019,
+      wage_growth_factor_2026 = wage_growth_factor_2026
     )
 
     # Copy the source run's small baseline diagnostics for provenance
