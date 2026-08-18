@@ -177,19 +177,11 @@ run_simulation_year <- function(sim_ctx, year) {
       wage_growth_factor_2026 = wage_growth_factor_2026
     )
 
-    # Copy the source run's small baseline diagnostics for provenance
-    src_baseline_dir <- file.path(default_paths$roots$output, baseline_interface,
-                                  'simulation', 'baseline')
-    for (rel in c(file.path('supply', paste0('supply_', year, '.yaml')),
-                  file.path('models', 'equilibrium',
-                            paste0('employment_targeting_', year, '.csv')))) {
-      src_file <- file.path(src_baseline_dir, rel)
-      if (file.exists(src_file)) {
-        dest_file <- file.path(baseline_info$paths$output, rel)
-        dir.create(dirname(dest_file), showWarnings = FALSE, recursive = TRUE)
-        file.copy(src_file, dest_file, overwrite = TRUE)
-      }
-    }
+    # Port the source run's baseline outputs (record-level parent units,
+    # solver diagnostics, supply and targeting files) so this interface is
+    # self-contained and can serve as a future -b source
+    port_baseline_interface_files(baseline_interface, year,
+                                  baseline_info$paths$output)
   } else {
     cat('\n  --- Baseline ---\n')
 
