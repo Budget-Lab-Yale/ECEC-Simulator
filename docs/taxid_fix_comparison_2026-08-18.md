@@ -5,21 +5,19 @@ August 18, 2026
 Results of the repair and validation sequence proposed in
 `ecec_team_taxid_memo_2026-08-17.md`. Three full-sample `report_runs` arms
 (identical seeds, sample, Monte Carlo draws, and NSECE inputs) isolate the
-two fixes, and a fourth run rescores report8 under all fixes.
+two fixes.
 
 | Arm | Code | Commit | Interface |
 |---|---|---|---|
 | Legacy | `main` | `dbfae80` | `202608172056` |
 | ID fix | `taxid_082026` | `04e9951` | `202608172154` |
 | ID + EMTR fix | `taxid_082026_emtr` | `a612eb0` | `202608172156` |
-| Report8, all fixes | `taxid_082026_emtr` | `a612eb0` | `202608172158` |
 
-All arms: `report_runs`, 2026-2055, full sample, `-n 1 -f`, seed 0
-(report8 arm uses the `report8` runscript, `-n 1 -f`, 48G). The legacy arm
-reproduces the stored March 2026 production run (`202603111322`) to within
-0.005% on every scenario's FY2026-35 budget effect, so differences across
-arms are attributable to the fixes alone and comparisons against published
-March numbers are direct.
+All arms: `report_runs`, 2026-2055, full sample, `-n 1 -f`, seed 0. The
+legacy arm reproduces the stored March 2026 production run (`202603111322`)
+to within 0.005% on every scenario's FY2026-35 budget effect, so differences
+across arms are attributable to the fixes alone and comparisons against
+published March numbers are direct.
 
 ## The fixes
 
@@ -93,11 +91,47 @@ Combined, the work-incentive tax wedge for parents rises ~53%: caregiver
 earnings now stack on joint income (ID fix) and the marginal-rate lookup
 tracks the couple's combined wage position (EMTR fix). 39-46% of parent
 units see their wedge change by more than $100. Baseline equilibrium prices
-move by ~0.1% and the aggregate parental employment rate by -0.04pp
-(employment targeting holds group rates by construction; composition
-shifts).
+move by ~0.1%.
 
-## Policy scores, report_runs (total budget effect, $B)
+## Employment effects
+
+Following the report convention (`src/4_output/report_figures.R`): maternal
+employment rates from `totals/levels/parental_employment.csv` at the 2030
+snapshot year, part-time plus full-time; the policy effect is the scenario
+rate minus the same arm's baseline rate.
+
+**Baseline maternal employment, 2030 (%):**
+
+| | Legacy | ID fix | ID + EMTR |
+|---|---:|---:|---:|
+| Part-time | 10.67 | 10.19 | 9.95 |
+| Full-time | 62.12 | 62.54 | 62.82 |
+| Total | 72.79 | 72.73 | 72.77 |
+
+Employment targeting pins total employment by demographic group, so the
+total is stable by construction; within it, the fixes shift ~0.7pp of
+baseline maternal employment from part-time to full-time.
+
+**Policy effects on maternal employment, 2030 (percentage points vs own
+baseline; total, with PT + FT components):**
+
+| Scenario | Legacy | ID fix | ID + EMTR |
+|---|---:|---:|---:|
+| universal | +5.82 (2.51 pt, 3.31 ft) | +5.82 (2.36, 3.46) | +5.90 (2.24, 3.66) |
+| means_tested | +5.63 (2.63, 2.99) | +5.67 (2.48, 3.19) | +5.76 (2.36, 3.41) |
+| arpa_cdctc | +2.16 (0.32, 1.84) | +2.05 (0.39, 1.66) | +2.08 (0.36, 1.72) |
+| child_ubi_1k | -0.08 (-0.03, -0.06) | -0.04 (-0.02, -0.02) | -0.04 (-0.01, -0.03) |
+| wage_subsidy | +0.71 (0.02, 0.69) | +0.68 (0.04, 0.64) | +0.66 (0.03, 0.63) |
+
+The headline employment effects are robust to the fixes: total effects move
+by at most ~0.14pp on effects of 2-6pp (the largest relative change is
+arpa_cdctc, -0.07pp on +2.16pp). The composition shifts toward full-time
+for the big subsidy policies -- under corrected units more of the induced
+employment arrives as full-time work -- consistent with the wedge changes
+reshaping the relative payoff of PT vs FT while calibration re-targets the
+same elasticities.
+
+## Policy scores (total budget effect, $B)
 
 | Scenario | Legacy FY26-35 | ID fix | ID+EMTR | Legacy 30-yr | ID+EMTR 30-yr |
 |---|---:|---:|---:|---:|---:|
@@ -114,25 +148,6 @@ because nearly all married couples were previously classified as cohabiting
 in the credit calculation; employment-invariant cash (child UBI) and the
 supply-side wage subsidy are essentially unaffected.
 
-## Report8 rescored under all fixes (vs production 202608132032)
-
-| Scenario | Prod FY26-35 | Fixed | Prod 30-yr | Fixed |
-|---|---:|---:|---:|---:|
-| a1_universal | -777.88 | -758.66 (+2.5%) | -3,215.62 | -3,155.36 (+1.9%) |
-| a2_smooth | -776.12 | -754.35 (+2.8%) | -3,228.92 | -3,160.27 (+2.1%) |
-| b1_smooth_plus_10k | -2,071.91 | -2,066.04 (+0.3%) | -9,068.77 | -9,050.63 (+0.2%) |
-| b2_smooth_plus_5k | -1,297.63 | -1,285.13 (+1.0%) | -5,500.03 | -5,462.81 (+0.7%) |
-| b3_matched | -777.64 | -764.84 (+1.6%) | -3,181.87 | -3,139.34 (+1.3%) |
-| c1_child_ubi_10k | -2,065.41 | -2,065.05 (0.0%) | -8,934.76 | -8,933.91 (0.0%) |
-| c2_child_ubi_age_dep | -2,038.49 | -2,038.30 (0.0%) | -8,804.04 | -8,803.40 (0.0%) |
-| c3_ubi_matched | -777.87 | -777.76 (0.0%) | -3,365.26 | -3,365.03 (0.0%) |
-
-Note for the cost-matched arms: A2's phase-out rate, B3's transfer, and
-C3's UBI amount were tuned to match A1's FY26-35 score under legacy tax
-units. Under the fixes the matched arms drift apart (A1 -758.66 vs A2
--754.35, B3 -764.84, C3 -777.76); if the fixes are adopted for report8,
-the matching parameters need re-tuning.
-
 ## Infrastructure notes
 
 - `slurm/phase_{setup,year,finalize}.sh` hard-code `cd` to the primary repo
@@ -148,7 +163,6 @@ the matching parameters need re-tuning.
 
 ## Deferred / open items
 
-- Report8 cost-matching re-tune (above), if fixes adopted for report8.
 - `phase_*.sh` working-directory fix (separate PR).
 - The 4,194 married pairs the Census correction leaves split are preserved
   as-is per the memo; the residual 134 under-5 children matching neither
