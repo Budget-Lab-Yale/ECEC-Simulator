@@ -144,17 +144,18 @@ Policies are pluggable R functions. See existing files for full signatures:
 
 ### Running the Simulation
 ```bash
-Rscript src/main.R --runscript speed_test
-Rscript src/main.R -r speed_test -C 202601151200
+Rscript src/main.R --runscript policy_bc_smoke
+Rscript src/main.R -r policy_bc_smoke -C 202601151200
 ```
 
 ### Minimal Testing (Quick Verification)
 When doing a quick smoke test to verify code changes, use a 1% sample:
 ```bash
 # Run with 1% ACS sample (rebuilds donor pools fresh)
-Rscript src/main.R -r speed_test -a 1
+# NOTE: --sim-sample must accompany -a (sim_sample defaults to 100 and must be <= calib_sample)
+Rscript src/main.R -r policy_bc_smoke -a 1 --sim-sample 1
 ```
-This runs the full speed_test runscript with 1% of the ACS sample for fast verification.
+This runs the full policy_bc_smoke runscript with 1% of the ACS sample for fast verification.
 
 **IMPORTANT**: Never use `-d` (cached donors) or `-c` (cached ETRs) flags during testing after code changes. Cached files may be stale and cause confusing errors that have nothing to do with your changes. Always rebuild fresh during verification testing.
 
