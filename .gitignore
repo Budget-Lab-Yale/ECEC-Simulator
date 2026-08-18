@@ -11,19 +11,3 @@ config/supply/
 cache/price_models/price_qrf_models.rds
 slurm/scratch/
 slurm/logs/
-
-# Pending triage (2026-08-12): report8/thresh85 policy, runscript, and figures
-# files intentionally unpublished until selected for commit. Remove lines as
-# files get committed.
-config/policy_demand/universal_85.R
-config/policy_demand/means_tested_85.R
-config/policy_demand/smooth_phaseout_85.R
-config/policy_demand/smooth_phaseout_b3.R
-config/policy_tax/child_ubi_matched.R
-config/policy_transfer/nonenrolled_b3.R
-config/runscripts/report8.csv
-config/runscripts/report_thresh85.csv
-src/4_output/report_figures_thresh85.R
-
-# Macro team's TAXID audit materials (contains 1.1GB corrected Census .dta)
-docs/taxid_audit_20260817/
