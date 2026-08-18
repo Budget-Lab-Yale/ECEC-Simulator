@@ -1113,6 +1113,26 @@ run_calibration <- function() {
       control = list(maxit = 1000)
     )
 
+    # Restart Nelder-Mead from the terminus until no further improvement.
+    # The (beta, rho) objective is a long curved valley and a single NM run
+    # can report convergence with the simplex collapsed along the valley
+    # short of its bottom (observed: 1.2% income-target miss with
+    # convergence code 0 on corrected-tax-unit data; one restart reaches
+    # the optimum to machine precision).
+    for (nm_restart in 1:10) {
+      polished <- optim(
+        par = opt_result$par,
+        fn = objective_crra,
+        method = 'Nelder-Mead',
+        control = list(maxit = 5000, reltol = 1e-14)
+      )
+      if (polished$value < opt_result$value) {
+        opt_result <- polished
+      } else {
+        break
+      }
+    }
+
     beta <- opt_result$par[1]
     rho <- opt_result$par[2]
 

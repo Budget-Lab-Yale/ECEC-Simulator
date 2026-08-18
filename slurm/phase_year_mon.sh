@@ -18,7 +18,10 @@ export R_LIBS_USER=~/R/libs
 # Reduce R heap fragmentation: grow memory conservatively so GC compacts more often
 export R_GC_MEM_GROW=0
 
-cd /gpfs/gibbs/project/sarin/hre2/repositories/ECEC-Simulator
+# Project directory: exported by launch_array.sh so worktree/clone launches
+# run their own code; falls back to the primary repo for direct sbatch use.
+cd "${ECEC_PROJECT_DIR:-/nfs/roberts/project/pi_nrs36/hre2/repositories/ECEC-Simulator}"
+echo "Project dir: $(pwd)"
 
 echo "=== ECEC Year Phase (monitored) ==="
 echo "Runscript: ${RUNSCRIPT}"

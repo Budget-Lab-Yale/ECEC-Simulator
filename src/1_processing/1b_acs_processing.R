@@ -489,12 +489,36 @@ run_acs_processing <- function() {
     fread() %>%
     tibble()
 
+  # Corrected Census tax-unit crosswalk (April 2024 Census correction).
+  # The legacy IPUMS TAXID splits nearly all married couples into two
+  # separate tax units; see docs/ecec_team_taxid_memo_2026-08-17.md.
+  crosswalk_path <- file.path(estimation_info$paths[['Census-ACS-SPM']],
+                              'tax_unit_crosswalk_2019.csv')
+  if (!file.exists(crosswalk_path)) {
+    stop('Corrected Census tax-unit crosswalk not found: ', crosswalk_path, '\n',
+         'Build it with make_crosswalk.R in that directory (see its README.md).')
+  }
+
+  taxid_crosswalk <- crosswalk_path %>%
+    fread(integer64 = 'double') %>%
+    tibble() %>%
+    transmute(
+      census_serialno       = as.numeric(serialno),
+      PERNUM                = as.integer(sporder),
+      tax_unit_id_corrected = tax_unit,
+      agi_corrected         = agi
+    )
+
   # Filter to 2019 and build hierarchical tables
   processed_acs_2019 <- {
 
+    # Join keys: Census serialno = IPUMS CBSERIAL - 2019000000000,
+    #            Census sporder  = IPUMS PERNUM
     acs <- acs_raw %>%
       filter(YEAR == 2019) %>%
       filter(GQ == 1 | GQ == 2) %>%
+      mutate(census_serialno = as.numeric(CBSERIAL) - 2019000000000) %>%
+      left_join(taxid_crosswalk, by = c('census_serialno', 'PERNUM')) %>%
       select(
         hh_id = SERIAL,
         HHWT,
@@ -505,10 +529,53 @@ run_acs_processing <- function() {
         RELATE,
         SPLOC, MOMLOC, POPLOC, MOMLOC2, POPLOC2,
         UHRSWORK, WKSWORK1, INCWAGE, INCBUS00,
-        tax_unit_id = TAXID, agi = ADJGINC,
+        census_serialno,
+        tax_unit_id = tax_unit_id_corrected,
+        tax_unit_id_legacy = TAXID,
+        agi = ADJGINC,
+        agi_corrected,
         any_of(c('SPMFAMUNIT', 'SPMTOTRES', 'SPMTHRESH',
                  'SPMCHXPNS', 'SPMWKXPNS', 'SPMCAPXPNS'))
-      )
+      ) %>%
+      mutate(tax_unit_id_legacy = as.numeric(tax_unit_id_legacy))
+
+    # -- Assertions: crosswalk join quality ----
+
+    # Sanity on the reconstructed join key (catches integer64 mishandling)
+    stopifnot('census_serialno' %in% names(acs))
+    stopifnot(is.finite(min(acs$census_serialno)))
+    stopifnot(min(acs$census_serialno) >= 1)
+    stopifnot(max(acs$census_serialno) <= 2e6)
+
+    # Every person in the ECEC universe must match a corrected record
+    n_unmatched <- sum(is.na(acs$tax_unit_id))
+    if (n_unmatched > 0) {
+      stop('Corrected tax-unit crosswalk failed to match ', n_unmatched,
+           ' of ', nrow(acs), ' persons. Check crosswalk vintage and join keys.')
+    }
+
+    # The correction changes identifiers, not AGI: corrected person-level AGI
+    # must equal IPUMS ADJGINC within $0.50 for every person
+    max_agi_diff <- max(abs(acs$agi_corrected - acs$agi))
+    if (is.na(max_agi_diff) || max_agi_diff > 0.51) {
+      stop('Corrected AGI differs from ADJGINC by up to $', max_agi_diff,
+           '. Expected agreement within $0.50; check crosswalk contents.')
+    }
+
+    # Corrected IDs must not collide across households
+    n_collisions <- acs %>%
+      distinct(hh_id, tax_unit_id) %>%
+      count(tax_unit_id) %>%
+      filter(n > 1) %>%
+      nrow()
+    stopifnot(n_collisions == 0)
+
+    acs <- acs %>%
+      select(-census_serialno, -agi_corrected)
+
+    cat('  Corrected tax-unit crosswalk: matched', nrow(acs), 'persons;',
+        n_distinct(acs$tax_unit_id_legacy), 'legacy units ->',
+        n_distinct(acs$tax_unit_id), 'corrected units\n')
 
     # Subset to specified fraction of households if calib_sample < 100
     if (calib_sample < 100) {
@@ -557,7 +624,7 @@ run_acs_processing <- function() {
         age          = AGE,
         male         = as.integer(SEX == 1)
       ) %>%
-      select(hh_id, child_id, tax_unit_id, child_weight, age, male) %>%
+      select(hh_id, child_id, tax_unit_id, tax_unit_id_legacy, child_weight, age, male) %>%
       arrange(hh_id, child_id)
 
 
@@ -584,7 +651,7 @@ run_acs_processing <- function() {
         )
       ) %>%
       select(
-        hh_id, hhm_id, child_id, tax_unit_id, per_weight = PERWT,
+        hh_id, hhm_id, child_id, tax_unit_id, tax_unit_id_legacy, per_weight = PERWT,
         age = AGE, male, married,
         race = RACE, hispanic,
         educ = EDUC,
@@ -694,6 +761,10 @@ run_acs_processing <- function() {
     # Tax unit table
     #----------------
 
+    # AGI cannot be taken as first(agi): person-level AGI is attached to
+    # legacy tax-unit fragments (joint AGI on one spouse's record, zero on
+    # the other), so corrected-unit AGI is reconstructed from deduplicated
+    # fragments. See reconstruct_tax_unit_agi() for the full rule.
     tax_units <- acs %>%
       group_by(hh_id, tax_unit_id) %>%
       summarise(
@@ -704,10 +775,88 @@ run_acs_processing <- function() {
           T                 ~ 1
         ),
         n_dep_u13 = pmin(3, sum(AGE <= 12)),
-        agi       = first(agi),
         .groups = 'drop'
       ) %>%
+      left_join(
+        reconstruct_tax_unit_agi(acs),
+        by = c('hh_id', 'tax_unit_id')
+      ) %>%
+      select(hh_id, tax_unit_id, tax_unit_weight, filing_status, n_dep_u13,
+             agi, n_legacy_fragments, has_survivor_fragment) %>%
       arrange(hh_id, tax_unit_id)
+
+    stopifnot(!anyNA(tax_units$agi))
+
+
+    #-------------------------------------------
+    # Tax-unit correction diagnostics
+    #-------------------------------------------
+
+    # Reciprocal married spouse pairs: share assigned to one tax unit under
+    # the legacy vs corrected identifiers (headline check from the memos:
+    # ~0.13% legacy vs ~99.4% corrected in the full sample)
+    married_persons <- acs %>%
+      filter(MARST == 1, SPLOC > 0) %>%
+      select(hh_id, PERNUM, SPLOC, PERWT, tax_unit_id, tax_unit_id_legacy)
+
+    spouse_pairs <- married_persons %>%
+      inner_join(
+        married_persons %>%
+          rename(sp_PERNUM = PERNUM, sp_SPLOC = SPLOC, sp_PERWT = PERWT,
+                 sp_tax_unit_id = tax_unit_id,
+                 sp_tax_unit_id_legacy = tax_unit_id_legacy),
+        by = c('hh_id', 'SPLOC' = 'sp_PERNUM')
+      ) %>%
+      filter(sp_SPLOC == PERNUM, PERNUM < SPLOC) %>%
+      mutate(
+        pair_weight    = (PERWT + sp_PERWT) / 2,
+        legacy_same    = tax_unit_id_legacy == sp_tax_unit_id_legacy,
+        corrected_same = tax_unit_id == sp_tax_unit_id
+      )
+
+    # Married two-parent units sharing one corrected tax unit
+    married_pu <- parent_units %>%
+      filter(n_parents == 2, married1 == 1, married2 == 1) %>%
+      mutate(shared_tu = tax_unit_id1 == tax_unit_id2)
+
+    fragment_dist <- tax_units %>% count(n_legacy_fragments)
+
+    diagnostics <- c(
+      'Tax-unit correction diagnostics (corrected Census Tax_unit crosswalk)',
+      paste('Generated:', format(Sys.time())),
+      paste('Sample:', calib_sample, '% of ACS households'),
+      '',
+      paste('Persons in ECEC universe:', nrow(acs)),
+      paste('Distinct legacy tax units:', n_distinct(acs$tax_unit_id_legacy)),
+      paste('Distinct corrected tax units:', nrow(tax_units)),
+      '',
+      'Legacy fragments per corrected unit:',
+      paste0('  ', fragment_dist$n_legacy_fragments, ' fragment(s): ',
+             fragment_dist$n, ' units'),
+      paste('Corrected units without a survivor fragment:',
+            sum(!tax_units$has_survivor_fragment)),
+      '',
+      paste('Reciprocal married spouse pairs:', nrow(spouse_pairs)),
+      sprintf('  Legacy same-unit share:    %.5f unweighted; %.5f weighted',
+              mean(spouse_pairs$legacy_same),
+              weighted.mean(spouse_pairs$legacy_same, spouse_pairs$pair_weight)),
+      sprintf('  Corrected same-unit share: %.5f unweighted; %.5f weighted',
+              mean(spouse_pairs$corrected_same),
+              weighted.mean(spouse_pairs$corrected_same, spouse_pairs$pair_weight)),
+      '',
+      paste('Married two-parent units:', nrow(married_pu)),
+      sprintf('  Shared corrected tax unit: %.5f unweighted; %.5f weighted',
+              mean(married_pu$shared_tu),
+              weighted.mean(married_pu$shared_tu, married_pu$per_weight1))
+    )
+
+    writeLines(diagnostics,
+               file.path(estimation_info$paths$models,
+                         'taxid_correction_diagnostics.txt'))
+
+    cat('  Married spouse pairs sharing a tax unit: legacy',
+        sprintf('%.3f%%,', 100 * mean(spouse_pairs$legacy_same)),
+        'corrected', sprintf('%.3f%%\n', 100 * mean(spouse_pairs$corrected_same)))
 
     # Remove earnings info from household members table -- we only need it for parents
     household_members <- household_members %>%
@@ -1183,7 +1332,7 @@ run_acs_processing <- function() {
           p_enrollment.pt = replace_na(p_enrollment.pt, 0),
           p_enrollment.ft = replace_na(p_enrollment.ft, 0)
         ) %>%
-        select(-tax_unit_id, -age, -male)
+        select(-tax_unit_id, -tax_unit_id_legacy, -age, -male)
 
       # -- Assertions: RF imputation integrity ----
 

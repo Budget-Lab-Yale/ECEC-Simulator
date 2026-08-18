@@ -177,19 +177,11 @@ run_simulation_year <- function(sim_ctx, year) {
       wage_growth_factor_2026 = wage_growth_factor_2026
     )
 
-    # Copy the source run's small baseline diagnostics for provenance
-    src_baseline_dir <- file.path(default_paths$roots$output, baseline_interface,
-                                  'simulation', 'baseline')
-    for (rel in c(file.path('supply', paste0('supply_', year, '.yaml')),
-                  file.path('models', 'equilibrium',
-                            paste0('employment_targeting_', year, '.csv')))) {
-      src_file <- file.path(src_baseline_dir, rel)
-      if (file.exists(src_file)) {
-        dest_file <- file.path(baseline_info$paths$output, rel)
-        dir.create(dirname(dest_file), showWarnings = FALSE, recursive = TRUE)
-        file.copy(src_file, dest_file, overwrite = TRUE)
-      }
-    }
+    # Port the source run's baseline outputs (record-level parent units,
+    # solver diagnostics, supply and targeting files) so this interface is
+    # self-contained and can serve as a future -b source
+    port_baseline_interface_files(baseline_interface, year,
+                                  baseline_info$paths$output)
   } else {
     cat('\n  --- Baseline ---\n')
 
@@ -1271,8 +1263,19 @@ calculate_taxes_with_donors <- function(choices, donor_pool, wage_thresholds, ta
   #----------------------------------------------------------------------------
 
 
-  # Look up EMTR for parent 1 at counterfactual earnings
-  emtr1 <- lookup_emtr(donor_pool, wage_thresholds, choices$donor_id1, choices$earnings1)
+  # Look up EMTR for parent 1 at counterfactual earnings. The donor's EMTR
+  # schedule is a function of the tax unit's total wages, so when the two
+  # parents share a tax unit (baseline_agi2 is NA but earnings2 is present),
+  # the lookup level must be the unit's combined counterfactual wages --
+  # not one spouse's earnings alone. For single parents (earnings2 NA) and
+  # legacy split-unit couples (baseline_agi2 present), earnings1 is already
+  # the unit's total wages.
+  lookup_wages1 <- if_else(
+    is.na(choices$baseline_agi2),
+    choices$earnings1 + replace_na(choices$earnings2, 0),
+    choices$earnings1
+  )
+  emtr1 <- lookup_emtr(donor_pool, wage_thresholds, choices$donor_id1, lookup_wages1)
 
   # Look up EMTR for parent 2 at counterfactual earnings (where applicable)
   emtr2 <- lookup_emtr(donor_pool, wage_thresholds, choices$donor_id2, choices$earnings2)

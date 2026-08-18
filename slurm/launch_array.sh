@@ -134,6 +134,7 @@ mkdir -p "${PROJECT_DIR}/slurm/logs"
 
 # Phase 1: Setup
 SETUP_JOB=$(sbatch --parsable \
+  --export="ALL,ECEC_PROJECT_DIR=${PROJECT_DIR}" \
   --job-name="ecec-setup-${RUNSCRIPT}" \
   --partition="${PARTITION}" \
   --mem="${MEM}" \
@@ -144,6 +145,7 @@ echo "  Setup job:    ${SETUP_JOB}"
 
 # Phase 2: Year array (depends on setup)
 ARRAY_JOB=$(sbatch --parsable \
+  --export="ALL,ECEC_PROJECT_DIR=${PROJECT_DIR}" \
   --dependency="afterok:${SETUP_JOB}" \
   --array="1-${N_YEARS}" \
   --job-name="ecec-year-${RUNSCRIPT}" \
@@ -156,6 +158,7 @@ echo "  Year array:   ${ARRAY_JOB} (array 1-${N_YEARS})"
 
 # Phase 3: Finalize (depends on all year array tasks)
 FINALIZE_JOB=$(sbatch --parsable \
+  --export="ALL,ECEC_PROJECT_DIR=${PROJECT_DIR}" \
   --dependency="afterok:${ARRAY_JOB}" \
   --job-name="ecec-finalize-${RUNSCRIPT}" \
   --partition="${PARTITION}" \
