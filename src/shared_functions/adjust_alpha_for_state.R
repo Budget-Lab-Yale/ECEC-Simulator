@@ -13,11 +13,52 @@
 #------------------------------------------------------------------------------
 
 
+# STATE TARGET GROUPS. A state target file names a GROUP; a group covers one
+# or more of the model's care types. Every group is a singleton except centre
+# care, where the two price bands share one target.
+#
+# WHY. No state publishes the within-state price dispersion the low/high split
+# needs -- each state's published price falls wholly on one side of the
+# national boundary, so a state split would have to be invented from a
+# national share. State sources support the SUM. The contraction therefore
+# solves ONE delta for the pair. That constrains their combined hours and
+# leaves their modelled ratio untouched: a common additive utility shift
+# cancels out of the odds between them.
+STATE_TARGET_GROUPS <- list(
+  'Center-Based'        = c('Low-Priced Center-Based', 'High-Priced Center-Based'),
+  'Unpaid Center-Based' = 'Unpaid Center-Based',
+  'Paid Home-Based'     = 'Paid Home-Based',
+  'Other Paid'          = 'Other Paid',
+  'Other Unpaid'        = 'Other Unpaid',
+  'Unpaid Home-Based'   = 'Unpaid Home-Based')
+
+
+
+state_target_group_of <- function(ecec_type) {
+
+  #----------------------------------------------------------------------------
+  # Care type -> its target group. NA where no group covers it, incl.
+  # 'Parent Only', the numeraire.
+  #
+  # Params:
+  #   - ecec_type (chr vec)
+  #
+  # Returns: (chr vec) group name, NA where ungrouped
+  #----------------------------------------------------------------------------
+
+  lookup <- unlist(lapply(names(STATE_TARGET_GROUPS), function(g)
+    setNames(rep(g, length(STATE_TARGET_GROUPS[[g]])), STATE_TARGET_GROUPS[[g]])))
+  unname(lookup[ecec_type])
+}
+
+
+
 read_state_demand_targets <- function(targets_csv_path, state_postal) {
 
   #----------------------------------------------------------------------------
   # Reads and validates a state demand target CSV (2019 annual hours by care
-  # type). All 7 non-parental care types are required with positive hours.
+  # type). All 6 target GROUPS are required with positive hours. Centre care
+  # is one combined group -- a file naming a price band is rejected.
   #
   # Params:
   #   - targets_csv_path (chr): Path to config/state/demand/<ST>.csv
@@ -34,14 +75,24 @@ read_state_demand_targets <- function(targets_csv_path, state_postal) {
          ' must have columns: ', paste(required_cols, collapse = ', '))
   }
 
-  target_types <- setdiff(unique(CHILD_CARE_CHOICES$ecec_type), 'Parent Only')
+  target_types <- names(STATE_TARGET_GROUPS)
+
+  # A file naming a price band is a file that invented a split.
+  split_rows <- intersect(targets_df$ecec_type,
+                          STATE_TARGET_GROUPS[['Center-Based']])
+  if (length(split_rows) > 0) {
+    stop('State demand targets for ', state_postal, ' name ',
+         paste(split_rows, collapse = ' and '), '. State sources do not ',
+         'support a within-state centre price split -- give one combined ',
+         '"Center-Based" row instead. Both bands share one adjustment.')
+  }
 
   missing_types <- setdiff(target_types, targets_df$ecec_type)
   extra_types <- setdiff(targets_df$ecec_type, target_types)
   if (length(missing_types) > 0) {
-    stop('State demand targets for ', state_postal, ' missing care type(s): ',
+    stop('State demand targets for ', state_postal, ' missing target group(s): ',
          paste(missing_types, collapse = ', '),
-         '. All 7 non-parental care types are required (Parent Only is the numeraire).')
+         '. All 6 target groups are required (Parent Only is the numeraire).')
   }
   if (length(extra_types) > 0) {
     stop('State demand targets for ', state_postal, ' contain unknown care type(s): ',
@@ -74,7 +125,7 @@ build_choice_hours_map <- function(n_children, target_types) {
   #
   # Params:
   #   - n_children (int): Number of children (1 or 2)
-  #   - target_types (chr vec): The 7 targeted (non-parental) care types
+  #   - target_types (chr vec): The 6 target groups
   #
   # Returns: (list) with elements:
   #   - C1, C2 (matrix or NULL): Per-child hours contribution matrices
@@ -88,10 +139,12 @@ build_choice_hours_map <- function(n_children, target_types) {
 
   contribution_matrix <- function(type_col, hours_col) {
     hours <- unname(HOURS_ANNUAL[catalog[[hours_col]]])
+    grp <- state_target_group_of(catalog[[type_col]])
     C <- matrix(0, nrow = n_choices, ncol = n_types,
                 dimnames = list(NULL, target_types))
     for (t in target_types) {
-      rows_t <- which(catalog[[type_col]] == t)
+      # Both centre bands map to one group, so both add into that column.
+      rows_t <- which(!is.na(grp) & grp == t)
       C[rows_t, t] <- hours[rows_t]
     }
     C
@@ -106,12 +159,17 @@ build_choice_hours_map <- function(n_children, target_types) {
 
   # Utility shift by choice: deltas at each child's care type ('Parent Only'
   # and any non-targeted type contribute 0)
+  # Both centre bands look up the same group, so both take the same shift and
+  # their odds against each other do not move.
+  g1 <- state_target_group_of(catalog$child1_ecec_type)
+  g2 <- if (n_children == 2) state_target_group_of(catalog$child2_ecec_type) else NULL
+
   d_by_choice <- function(deltas) {
-    d1 <- deltas[match(catalog$child1_ecec_type, target_types)]
+    d1 <- deltas[match(g1, target_types)]
     d1[is.na(d1)] <- 0
     d <- d1
     if (n_children == 2) {
-      d2 <- deltas[match(catalog$child2_ecec_type, target_types)]
+      d2 <- deltas[match(g2, target_types)]
       d2[is.na(d2)] <- 0
       d <- d + d2
     }

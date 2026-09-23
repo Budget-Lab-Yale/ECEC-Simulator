@@ -205,7 +205,13 @@ STATE_POSTAL_TO_FIPS <- c(
 # (adjust_alpha_for_state): delta_t += log(H_target / H_model), iterated until
 # the max abs log-gap falls below tolerance
 STATE_DEMAND_CONTRACTION_TOL      <- 1e-8
-STATE_DEMAND_CONTRACTION_MAX_ITER <- 500L
+# 500 was enough while every care type had its own target. Grouping the two
+# centre bands under one shared delta leaves a slow common-level mode that the
+# Berry update walks down linearly: the synthetic six-target test converges in
+# 1,147 iterations. Each iteration is cheap, so the cap is generous rather than
+# tuned. A run that actually needs thousands is telling you something about the
+# targets, which is why it still fails loudly instead of returning.
+STATE_DEMAND_CONTRACTION_MAX_ITER <- 5000L
 
 
 

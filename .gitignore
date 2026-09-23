@@ -11,3 +11,21 @@ config/supply/
 cache/price_models/price_qrf_models.rds
 slurm/scratch/
 slurm/logs/
+
+# state_data local config
+state_data/config_local.yaml
+
+# LaTeX build artefacts. latexmk and the LaTeX Workshop extension write these
+# beside the .tex on every save. Patterns are global: nothing tracked matches
+# them today, and any future .tex is covered too.
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.synctex.gz
+*.toc

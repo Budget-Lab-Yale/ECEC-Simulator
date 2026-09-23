@@ -1,0 +1,747 @@
+geo,site,slots,operator,school,school_district,metres,address_match,decision
+KY,Irvington Elementary,32,Breckinridge County Board of Education,Irvington Elementary School,Breckinridge County,114,TRUE,counted: own district school
+KY,Ben Johnson Elementary,26,Breckinridge County Board of Education,Ben Johnson Elementary School,Breckinridge County,12,FALSE,counted: own district school
+KY,Custer Elementary,11,Breckinridge County Board of Education,Custer Elementary School,Breckinridge County,1,FALSE,counted: own district school
+KY,Hardinsburg Elementary,46,Breckinridge County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+KY,Crab Orchard Elementary,26,Lincoln County Board Of Education,Crab Orchard Elementary School,Lincoln County,29,TRUE,counted: own district school
+KY,Hustonville Elementary,31,Lincoln County Board Of Education,Hustonville Elementary School,Lincoln County,34,TRUE,counted: own district school
+KY,Stanford Elementary - Early Childhood Center,57,Lincoln County Board Of Education,Stanford Elementary School,Lincoln County,44,FALSE,counted: own district school
+KY,Waynesburg Elementary,29,Lincoln County Board Of Education,,,NA,FALSE,not counted: not at a pre-K school
+KY,Williamstown BOE Head Start/Preschool,75,Williamstown BOE Head Start,Williamstown Preschool Headstart,Williamstown Independent,767,TRUE,counted: own district school
+KY,Bourbon County Preschool Head Start Center,221,Bourbon County Board of Education,Bourbon County Preschool Headstart,Bourbon County,17,TRUE,counted: own district school
+KY,Boyd County Early Childhood Academy,160,Boyd County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+KY,ASHLAND HEAD START,120,Ashland Board of Education,Ashland Head Start,Ashland Independent,120,TRUE,counted: own district school
+KY,Graves County - Fancy Farm Elementary Center,3,MURRAY PUBLIC SCHOOLS,Fancy Farm Elementary School,Graves County,945,TRUE,not counted: school of another district
+KY,Graves County -  Central Preschool/ Head Start / EHS,20,MURRAY PUBLIC SCHOOLS,Graves County Central Elementary,Graves County,6491,TRUE,not counted: school of another district
+KY,Murray - Ruby Simpson Child Development Center,6,MURRAY PUBLIC SCHOOLS,,,NA,FALSE,not counted: not at a pre-K school
+KY,Marshall County - Jonathan Elementary Center,7,MURRAY PUBLIC SCHOOLS,Jonathan Elementary School,Marshall County,293,TRUE,not counted: school of another district
+KY,Marshall County - Benton Elementary Center,16,MURRAY PUBLIC SCHOOLS,Benton Elementary School,Marshall County,118,TRUE,not counted: school of another district
+KY,Graves County - Wingo Elementary Center,19,MURRAY PUBLIC SCHOOLS,Wingo Elementary School,Graves County,71,TRUE,not counted: school of another district
+KY,Fulton County Preschool/ Head Start,40,MURRAY PUBLIC SCHOOLS,Fulton County Elementary,Fulton County,156,TRUE,not counted: school of another district
+KY,Marshall County - Sharpe Elementary Center,6,MURRAY PUBLIC SCHOOLS,Sharpe Elementary School,Marshall County,25225,TRUE,not counted: school of another district
+KY,Marshall County - Calvert City Elementary,9,MURRAY PUBLIC SCHOOLS,Calvert City Elementary School,Marshall County,108,TRUE,not counted: school of another district
+KY,Ballard Preschool/Head Start,37,MURRAY PUBLIC SCHOOLS,Ballard Co. Preschool/Headstart Center,Ballard County,3,TRUE,not counted: school of another district
+KY,Murray - Alexander Hall Preschool/Head Start/ EHS,6,MURRAY PUBLIC SCHOOLS,,,NA,FALSE,not counted: not at a pre-K school
+KY,Marshall County - South Marshall Elementary Center,3,MURRAY PUBLIC SCHOOLS,South Marshall Elementary School,Marshall County,314,TRUE,not counted: school of another district
+KY,Murray - Willis Early Childhood Center,11,MURRAY PUBLIC SCHOOLS,,,NA,FALSE,not counted: not at a pre-K school
+KY,Graves County - Sedalia Elementary Center,4,MURRAY PUBLIC SCHOOLS,Sedalia Elementary School,Graves County,38,FALSE,not counted: school of another district
+KY,Graves County - Symsonia Elementary Center,5,MURRAY PUBLIC SCHOOLS,Symsonia Elementary School,Graves County,121,TRUE,not counted: school of another district
+KY,Carlisle County Preschool/ Head Start,19,MURRAY PUBLIC SCHOOLS,Carlisle County Elementary School,Carlisle County,3453,TRUE,not counted: school of another district
+KY,Marshall County - Central Elementary Center,2,MURRAY PUBLIC SCHOOLS,Central Elementary School,Marshall County,83,TRUE,not counted: school of another district
+KY,Mayfield Independent Preschool/Head Start,50,MURRAY PUBLIC SCHOOLS,Mayfield Elementary School,Mayfield Independent,254,TRUE,not counted: school of another district
+KY,Hickman County Preschool/ Head Start/ EHS,22,MURRAY PUBLIC SCHOOLS,Hickman County Elementary School,Hickman County,108,TRUE,not counted: school of another district
+KY,Graves County - Farmington Elementary Center,5,MURRAY PUBLIC SCHOOLS,Farmington Elementary School,Graves County,23287,TRUE,not counted: school of another district
+KY,Scholar House Head Start/Early Head Start Center,9,MURRAY PUBLIC SCHOOLS,,,NA,FALSE,not counted: not at a pre-K school
+KY,Murray - Judy Whitten Early Childhood Center,33,MURRAY PUBLIC SCHOOLS,,,NA,FALSE,not counted: not at a pre-K school
+KY,Paducah Head Start/Preschool,237,Paducah Independent School District,,,NA,FALSE,not counted: not at a pre-K school
+NJ,Quitman Street School,95,The Newark Public Schools,Early Childhood School - Central,Newark Public School District,37,TRUE,counted: own district school
+NJ,Chancellor Avenue Annex,93,The Newark Public Schools,Early Childhood School - South,Newark Public School District,14,TRUE,counted: own district school
+NJ,Thirteenth Avenue School,69,The Newark Public Schools,Thirteenth Avenue School,Newark Public School District,65,TRUE,counted: own district school
+NJ,McKinley Street School,84,The Newark Public Schools,McKInley,Newark Public School District,48,TRUE,counted: own district school
+NJ,Lafayette Street School- St. James Annex,107,The Newark Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+NJ,Camden Street School,70,The Newark Public Schools,Camden Street Elementary School,Newark Public School District,53,TRUE,counted: own district school
+NJ,Peshine Avenue Elementary School,53,The Newark Public Schools,B.R.I.C.K. Peshine Academy,Newark Public School District,46,TRUE,counted: own district school
+NJ,Luis Munoz Marin,89,The Newark Public Schools,Luis Mu?os Marin Elementary School,Newark Public School District,35,TRUE,counted: own district school
+NJ,Avon Avenue,83,The Newark Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+NJ,Sir Isaac Newton Elementary School,38,The Newark Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+NJ,Belmont Runyon School,79,The Newark Public Schools,Belmont Runyon Elementary School,Newark Public School District,71,TRUE,counted: own district school
+NJ,Speedway  Avenue Elementary,48,The Newark Public Schools,Early Childhood School - West,Newark Public School District,120,FALSE,counted: own district school
+NJ,Rafael Hernandez School,49,The Newark Public Schools,Rafael Hernandez School,Newark Public School District,45,TRUE,counted: own district school
+NJ,Louise A. Spencer Elementary School,43,The Newark Public Schools,Louise A Spencer / Miller Street School,Newark Public School District,57,TRUE,counted: own district school
+NY,Geneva Head Start,88,Geneva City School District Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+NY,Enfield,3,Ithaca City School District,ENFIELD SCHOOL,ITHACA CITY SCHOOL DISTRICT,84,TRUE,counted: own district school
+NY,Caroline,12,Ithaca City School District,CAROLINE ELEMENTARY SCHOOL,ITHACA CITY SCHOOL DISTRICT,135,TRUE,counted: own district school
+NY,Beverly J. Martin School,20,Ithaca City School District,BEVERLY J MARTIN ELEMENTARY SCHOOL,ITHACA CITY SCHOOL DISTRICT,27,TRUE,counted: own district school
+NY,Fall Creek,2,Ithaca City School District,FALL CREEK ELEMENTARY SCHOOL,ITHACA CITY SCHOOL DISTRICT,23,TRUE,counted: own district school
+NY,Belle Sherman,5,Ithaca City School District,BELLE SHERMAN SCHOOL,ITHACA CITY SCHOOL DISTRICT,9,TRUE,counted: own district school
+VA,Madison Elementary,24,Caroline County Public Schools,MADISON ELEM,CAROLINE CO PBLC SCHS,44,TRUE,counted: own district school
+VA,Bowling Green,34,Caroline County Public Schools,BOWLING GREEN ELEM,CAROLINE CO PBLC SCHS,1609,TRUE,counted: own district school
+VA,Lewis and Clark,37,Caroline County Public Schools,LEWIS & CLARK ELEM,CAROLINE CO PBLC SCHS,158,TRUE,counted: own district school
+VA,Taylor Center HS,64,Orange County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+VA,Locust Grove Head Start,51,Orange County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+VA,Gordon Barbour Head Start,18,Orange County Board of Education,GORDON-BARBOUR ELEM,ORANGE CO PBLC SCHS,954,TRUE,counted: own district school
+VA,Stafford Schools Rising Star Early Childhood Education Center at Melchers Complex,129,Stafford County School District,,,NA,FALSE,not counted: not at a pre-K school
+VA,Stafford Schools North Star Early Childhood Education Center,122,Stafford County School District,,,NA,FALSE,not counted: not at a pre-K school
+VA,Valley Elementary,11,"Augusta, County of School Board Office",VALLEY ELEM,BATH CO PBLC SCHS,3423,TRUE,not counted: school of another district
+VA,Highland Elementary,12,"Augusta, County of School Board Office",HIGHLAND ELEM,HIGHLAND CO PBLC SCHS,575,TRUE,not counted: school of another district
+VA,Dixon Education Center,45,"Augusta, County of School Board Office",,,NA,FALSE,not counted: not at a pre-K school
+VA,Wayne Hills Center,30,"Augusta, County of School Board Office",WAYNE HILLS CTR,WAYNESBORO CITY PBLC SCHS,49,TRUE,not counted: school of another district
+VA,Millboro Elementary,10,"Augusta, County of School Board Office",MILLBORO ELEM,BATH CO PBLC SCHS,48,TRUE,not counted: school of another district
+VA,Stone Spring Elementary HS,60,"Augusta, County of School Board Office",STONE SPRING ELEM,HARRISONBURG CITY PBLC SCHS,207,TRUE,not counted: school of another district
+VA,Blackwell Preschool Center,68,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,"Martin Luther King, Jr. Preschool Center",119,Richmond Public Schools,MARTIN LUTHER KING JR EARLY LEARNING CENTER,RICHMOND CITY PBLC SCHS,170,TRUE,counted: own district school
+VA,Oak Grove-Bellemeade Elementary,32,Richmond Public Schools,OAK GROVE/BELLEMEADE ELEM,RICHMOND CITY PBLC SCHS,86,FALSE,counted: own district school
+VA,Mary Scott Preschool Center,51,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Friends Association for Children,15,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Robert Taylor Childcare Center,16,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Fifth Street Baptist Church Child Development Center,32,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Oak Grove Child Care Center,35,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Oak Grove Child Care Center II,32,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Woodville Day Nursery,30,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Summer Hill Preschool Center,34,Richmond Public Schools,SUMMER HILL PRESCHOOL CENTER,RICHMOND CITY PBLC SCHS,44,TRUE,counted: own district school
+VA,Maymont Preschool Center,32,Richmond Public Schools,MAYMONT PRE-K CENTER,RICHMOND CITY PBLC SCHS,5,TRUE,counted: own district school
+VA,Westview Early Childhood Education Center,136,Petersburg City Public Schools,WESTVIEW EARLY CHILDHOOD ED. CTR.,PETERSBURG CITY PBLC SCHS,86,TRUE,counted: own district school
+VA,Augusta County Head Start,30,"Augusta, County of School Board Office",,,NA,FALSE,not counted: not at a pre-K school
+VA,Richmond Success Academy,17,Richmond Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Triangle Elementary,8,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,TRIANGLE ELEM,PRINCE WILLIAM CO PBLC SCHS,315,TRUE,counted: own district school
+VA,Dumfries Elementary,11,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,DUMFRIES ELEM,PRINCE WILLIAM CO PBLC SCHS,71,TRUE,counted: own district school
+VA,Gar-Field High School,35,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,GAR-FIELD HIGH,PRINCE WILLIAM CO PBLC SCHS,49,TRUE,counted: own district school
+VA,Potomac View Elementary,12,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,POTOMAC VIEW ELEM,PRINCE WILLIAM CO PBLC SCHS,33,TRUE,counted: own district school
+VA,Mullen Elementary,9,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,GEORGE P. MULLEN ELEM,PRINCE WILLIAM CO PBLC SCHS,75,TRUE,counted: own district school
+VA,West Gate Elementary,9,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,WEST GATE ELEM,PRINCE WILLIAM CO PBLC SCHS,60,TRUE,counted: own district school
+VA,Enterprise Elementary,4,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,ENTERPRISE ELEM,PRINCE WILLIAM CO PBLC SCHS,14,TRUE,counted: own district school
+VA,Sinclair Elementary,13,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,C.A. SINCLAIR ELEM,PRINCE WILLIAM CO PBLC SCHS,104,TRUE,counted: own district school
+VA,Yorkshire Elementary,35,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,YORKSHIRE ELEM,PRINCE WILLIAM CO PBLC SCHS,76,TRUE,counted: own district school
+VA,Kilby Elementary,13,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,R. DEAN KILBY ELEM,PRINCE WILLIAM CO PBLC SCHS,66,TRUE,counted: own district school
+VA,Neabsco Elementary,13,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,NEABSCO ELEM,PRINCE WILLIAM CO PBLC SCHS,15,TRUE,counted: own district school
+VA,Chris Yung Elementary,20,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,CHRIS YUNG ELEM,PRINCE WILLIAM CO PBLC SCHS,82,TRUE,counted: own district school
+VA,Loch Lomond Elementary,10,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,LOCH LOMOND ELEM,PRINCE WILLIAM CO PBLC SCHS,41,TRUE,counted: own district school
+VA,Minnieville Elementary,3,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,MINNIEVILLE ELEM,PRINCE WILLIAM CO PBLC SCHS,8,TRUE,counted: own district school
+VA,Jenkins Elementary,19,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,,,NA,FALSE,not counted: not at a pre-K school
+VA,Colgan High School,5,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,CHARLES J COLGAN SR HIGH,PRINCE WILLIAM CO PBLC SCHS,237,TRUE,counted: own district school
+VA,Ellis Elementary,10,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,SUELLA G. ELLIS ELEM,PRINCE WILLIAM CO PBLC SCHS,229,TRUE,counted: own district school
+VA,King Elementary,8,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,MARTIN LUTHER KING JR. ELEM,PRINCE WILLIAM CO PBLC SCHS,95,TRUE,counted: own district school
+VA,Rosa Parks Elementary,8,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,ROSA PARKS ELEM,PRINCE WILLIAM CO PBLC SCHS,12,TRUE,counted: own district school
+VA,Swans Creek Elementary,4,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,SWANS CREEK ELEM,PRINCE WILLIAM CO PBLC SCHS,14,FALSE,counted: own district school
+VA,Vaughan Elementary,11,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,ELIZABETH VAUGHAN ELEM,PRINCE WILLIAM CO PBLC SCHS,8,TRUE,counted: own district school
+VA,Marumsco Hills Elementary,13,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,MARUMSCO HILLS ELEM,PRINCE WILLIAM CO PBLC SCHS,10,TRUE,counted: own district school
+VA,Belmont Elementary,10,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,BELMONT ELEM,PRINCE WILLIAM CO PBLC SCHS,90,TRUE,counted: own district school
+VA,Covington Harper Elementary,5,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,COVINGTON-HARPER ELEMENTARY SCHOOL,PRINCE WILLIAM CO PBLC SCHS,64,TRUE,counted: own district school
+VA,Featherstone Elementary,9,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,FEATHERSTONE ELEM,PRINCE WILLIAM CO PBLC SCHS,34,TRUE,counted: own district school
+VA,Leesylvania Elementary,12,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,LEESYLVANIA ELEM,PRINCE WILLIAM CO PBLC SCHS,35,TRUE,counted: own district school
+VA,Williams Elementary,7,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,MARY WILLIAMS ELEM,PRINCE WILLIAM CO PBLC SCHS,226,TRUE,counted: own district school
+VA,Kerrydale Elementary,4,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,KERRYDALE ELEM,PRINCE WILLIAM CO PBLC SCHS,55,TRUE,counted: own district school
+VA,Innovation Elementary,12,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,,,NA,FALSE,not counted: not at a pre-K school
+VA,Bel Air Elementary,3,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,BEL AIR ELEM,PRINCE WILLIAM CO PBLC SCHS,4,TRUE,counted: own district school
+VA,Anteitam Elementary,3,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,ANTIETAM ELEM,PRINCE WILLIAM CO PBLC SCHS,25,TRUE,counted: own district school
+VA,Old Bridge Elementary,8,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,OLD BRIDGE ELEM,PRINCE WILLIAM CO PBLC SCHS,30,TRUE,counted: own district school
+VA,Flatwoods I,36,Lee County School District,FLATWOODS ELEM,LEE CO PBLC SCHS,61,TRUE,counted: own district school
+VA,Home Base Center,11,Lee County School District,,,NA,FALSE,not counted: not at a pre-K school
+VA,Dryden I,36,Lee County School District,DRYDEN ELEM,LEE CO PBLC SCHS,44,TRUE,counted: own district school
+VA,St. Charles,18,Lee County School District,,,NA,FALSE,not counted: not at a pre-K school
+VA,Rose Hill 1,36,Lee County School District,ROSE HILL ELEM,LEE CO PBLC SCHS,285,TRUE,counted: own district school
+VA,Elk Knob I,36,Lee County School District,ELK KNOB ELEM,LEE CO PBLC SCHS,4,TRUE,counted: own district school
+VA,Woodgrove High School,17,LOUDOUN COUNTY SCHOOL DISTRICT,WOODGROVE HIGH,LOUDOUN CO PBLC SCHS,91,TRUE,counted: own district school
+VA,Sugarland Elementary,15,LOUDOUN COUNTY SCHOOL DISTRICT,SUGARLAND ELEM,LOUDOUN CO PBLC SCHS,15,TRUE,counted: own district school
+VA,Dominion High School,17,LOUDOUN COUNTY SCHOOL DISTRICT,DOMINION HIGH,LOUDOUN CO PBLC SCHS,173,TRUE,counted: own district school
+VA,Tuscarora High School,17,LOUDOUN COUNTY SCHOOL DISTRICT,TUSCARORA HIGH,LOUDOUN CO PBLC SCHS,157,TRUE,counted: own district school
+VA,Rock Ridge HIgh School,17,LOUDOUN COUNTY SCHOOL DISTRICT,ROCK RIDGE HIGH,LOUDOUN CO PBLC SCHS,75,TRUE,counted: own district school
+VA,Guilford Elementary,17,LOUDOUN COUNTY SCHOOL DISTRICT,,,NA,FALSE,not counted: not at a pre-K school
+VA,King George Site,32,Fredericksburg City School District,,,NA,FALSE,not counted: not at a pre-K school
+VA,Fredericksburg site,105,Fredericksburg City School District,WALKER-GRANT CENTER,FREDERICKSBURG CITY PBLC SCHS,123,TRUE,counted: own district school
+VA,Duffield Head Start 1 & 2,30,Scott County Public Schools,DUFFIELD-PATTONSVILLE PRIMARY,SCOTT CO PBLC SCHS,77,FALSE,counted: own district school
+VA,Nickelsville Head Start,15,Scott County Public Schools,NICKELSVILLE ELEM,SCOTT CO PBLC SCHS,15,FALSE,counted: own district school
+VA,Weber City Head Start,15,Scott County Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Wilderness Elementary,10,Spotsylvania County School District,WILDERNESS ELEM,SPOTSYLVANIA CO PBLC SCHS,7,TRUE,counted: own district school
+VA,Courtland Elementary School,20,Spotsylvania County School District,COURTLAND ELEM,SPOTSYLVANIA CO PBLC SCHS,905,TRUE,counted: own district school
+VA,Spotswood Elementary School,18,Spotsylvania County School District,SPOTSWOOD ELEM,SPOTSYLVANIA CO PBLC SCHS,94,TRUE,counted: own district school
+VA,Harrison Road Elementary,16,Spotsylvania County School District,HARRISON ROAD ELEM,SPOTSYLVANIA CO PBLC SCHS,14,TRUE,counted: own district school
+VA,Battlefield Elementary School,8,Spotsylvania County School District,BATTLEFIELD ELEM,SPOTSYLVANIA CO PBLC SCHS,12,TRUE,counted: own district school
+VA,Shoemaker Head Start 1 & 2,30,Scott County Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+VA,Shoemaker 4 Head Start,15,Scott County Public Schools,SHOEMAKER ELEM,SCOTT CO PBLC SCHS,152,TRUE,counted: own district school
+VA,Ashland Elementary,9,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,ASHLAND ELEM,PRINCE WILLIAM CO PBLC SCHS,7,TRUE,counted: own district school
+VA,Dale City Elementary,5,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,DALE CITY ELEM,PRINCE WILLIAM CO PBLC SCHS,23,TRUE,counted: own district school
+VA,Gainesville High School,5,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,,,NA,FALSE,not counted: not at a pre-K school
+VA,Hylton High School,5,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,C.D. HYLTON HIGH,PRINCE WILLIAM CO PBLC SCHS,89,TRUE,counted: own district school
+VA,Kyle Wilson Elementary,5,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,KYLE R. WILSON ELEMENTARY SCHOOL,PRINCE WILLIAM CO PBLC SCHS,28,TRUE,counted: own district school
+VA,Patriot High School,4,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,PATRIOT HIGH,PRINCE WILLIAM CO PBLC SCHS,20,TRUE,counted: own district school
+VA,Pattie Elementary,7,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,JOHN F. PATTIE SR. ELEM,PRINCE WILLIAM CO PBLC SCHS,13,TRUE,counted: own district school
+VA,Penn Elementary,7,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,SONNIE PENN ELEM,PRINCE WILLIAM CO PBLC SCHS,22,TRUE,counted: own district school
+VA,Signal Hill Elementary,4,PRINCE WILLIAM COUNTY SCHOOL DISTRICT,SIGNAL HILL ELEM,PRINCE WILLIAM CO PBLC SCHS,26,TRUE,counted: own district school
+VA,Mechanicsville Elementary School,52,Hanover County School District,MECHANICSVILLE ELEM,HANOVER CO PBLC SCHS,41,TRUE,counted: own district school
+VA,Ashland Elementary School,53,Hanover County School District,,,NA,FALSE,not counted: not at a pre-K school
+VA,Riverview Elementary School,18,Spotsylvania County School District,RIVERVIEW ELEM,SPOTSYLVANIA CO PBLC SCHS,28,FALSE,counted: own district school
+VA,Bailey's Elementary for the Arts and Sciences,18,Fairfax County Public Schools,BAILEYS ELEM,FAIRFAX CO PBLC SCHS,59,TRUE,counted: own district school
+VA,Crestwood Elementary,18,Fairfax County Public Schools,CRESTWOOD ELEM,FAIRFAX CO PBLC SCHS,90,TRUE,counted: own district school
+VA,Glen Forest Elementary,18,Fairfax County Public Schools,GLEN FOREST ELEM,FAIRFAX CO PBLC SCHS,33,TRUE,counted: own district school
+VA,Graham Road Elementary,18,Fairfax County Public Schools,GRAHAM ROAD ELEM,FAIRFAX CO PBLC SCHS,34,FALSE,counted: own district school
+VA,London Towne Elementary,8,Fairfax County Public Schools,LONDON TOWNE ELEM,FAIRFAX CO PBLC SCHS,17,TRUE,counted: own district school
+VA,Lynbrook Elementary,18,Fairfax County Public Schools,LYNBROOK ELEM,FAIRFAX CO PBLC SCHS,52,TRUE,counted: own district school
+VA,Parklawn Elementary,18,Fairfax County Public Schools,PARKLAWN ELEM,FAIRFAX CO PBLC SCHS,19,TRUE,counted: own district school
+VA,Dogwood Elementary,18,Fairfax County Public Schools,DOGWOOD ELEM,FAIRFAX CO PBLC SCHS,56,TRUE,counted: own district school
+VA,Centre Ridge Elementary,18,Fairfax County Public Schools,CENTRE RIDGE ELEM,FAIRFAX CO PBLC SCHS,46,TRUE,counted: own district school
+VA,Hutchison Elementary,18,Fairfax County Public Schools,HUTCHISON ELEM,FAIRFAX CO PBLC SCHS,120,TRUE,counted: own district school
+VA,Mason Crest Elementary,18,Fairfax County Public Schools,MASON CREST ELEM,FAIRFAX CO PBLC SCHS,34,TRUE,counted: own district school
+VA,Hybla Valley Elementary,18,Fairfax County Public Schools,HYBLA VALLEY ELEM,FAIRFAX CO PBLC SCHS,80,TRUE,counted: own district school
+CA,Baldwin Academy,20,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Fairgrove Academy,35,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cedarlane,20,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Grandview Academy,16,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kwis Elementary,20,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Nelson Elementary,35,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Sparks Elementary,16,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Valinda Academy,16,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Wing Lane Elementary,20,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Workman Elementary,46,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lassalette Elementary,35,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Prairie Center,16,Yolo County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Esparto Center,16,Yolo County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Alyce Norman Center,112,Yolo County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Woodland Central Center,16,Yolo County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Montgomery Center,16,Yolo County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bell Gardens,17,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bella Vista,17,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Fremont,34,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Garfield,17,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Greenwood,34,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Joseph A. Gascon,17,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Montebello Gardens,34,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Montebello Park,34,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Suva,34,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Washington,34,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Winter Gardens,17,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cesar Chavez,68,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Macy Intermediate,17,Montebello Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Vineland Elementary,34,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bursch,17,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,De Anza  Elementary,34,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Foster,16,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Geddes Head Start,34,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kenmore Head Start,34,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Tracy,51,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Walnut,33,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Elizabeth Learning Center Head Start,115,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Slauson,54,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Rachel Holliday Children's Center,20,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,HUSD-FRUITVALE HEAD START,34,Hemet USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,HUSD-LITTLE LAKE HEAD START,34,Hemet USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,HUSD-HEMET ELEMENTARY HEAD START,51,Hemet USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,MVUSD-BUTTERFIELD HS,51,Moreno Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,MVUSD-EDGEMONT HS,34,Moreno Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,MVUSD-ARMADA HS,85,Moreno Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,DSUSD-HOOVER HEAD START,32,Desert Sands USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,DSUSD-VAN BUREN HEAD START,32,Desert Sands USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,DSUSD-EISENHOWER HEAD START,16,Desert Sands USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,DSUSD-JOHN ADAMS HEAD START,32,Desert Sands USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,DSUSD-LINCOLN HEAD START,16,Desert Sands USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-KATHERINE FINCHY HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-RIO VISTA HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-BUBBLING WELLS ELEM HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-JULIUS CORSINI ELEM HS,34,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-CATHEDRAL CITY CENTER HS,32,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-AGUA CALIENTE ELEM HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-TWO BUNCH PALMS HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-WENZLAFF ELEMENTRAY SCHOOL HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-DELLA LINDLEY ELEMENTARY HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-CAHUILLA ELEMENTARY HS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-CIELO VISTA ELEMNTARY HS,34,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-PETER PENDLETON HEAD START,32,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-VALLEY VIEW HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-CESAR CHAVEZ HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-LAS PALMITAS HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-MECCA HEAD START,10,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-JOHN KELLEY HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-OASIS HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-PALM VIEW HEAD START,32,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,SJUSD-SAN JACINTO HEAD START,68,San Jacinto USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,SJUSD-HYATT HS/EHS,34,San Jacinto USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,SJUSD-DE ANZA HEAD START,17,San Jacinto USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,RUSD-JEFFERSON ELEMENTARY HS,34,Riverside USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,RUSD-FREMONT ELEMENTARY HS,16,Riverside USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,RUSD-LONGFELLOW ELEMENTARY HS,34,Riverside USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,JUSD - INA ARBUCKLE ELEMENTARY HS,17,Jurupa USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,JUSD - WEST RIVERSIDE ELEMENTARY HS,17,Jurupa USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,JUSD - SCHOOL READINESS CENTER HS,17,Jurupa USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,JUSD - GLEN AVON ELEMENTARY HS,17,Jurupa USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,JUSD - SKY COUNTRY ELEMENTARY HS,17,Jurupa USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,Early Childhood Education Center,12,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - District Office Early Childhood Education,15,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - First Christian/Avenue J Early Childhood Education,34,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Chaparral Early Childhood Education,64,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Mesquite Early Childhood Education,32,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Manzanita Early Childhood Education - Dual Immersion,34,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Ocotillo Early Childhood Education,48,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Palm Tree Early Childhood Education,60,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Site 18 Early Childhood Education,232,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Tamarisk Early Childhood Education,32,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Tumbleweed Early Childhood Education - Dual Immersion & English Classes,146,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Yucca Early Childhood Education,94,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSD - Highland Early Childhood Education,16,Palmdale School District Early Childhood Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,H.A. Hyde Preschool Migrant & Seasonal Head Start,43,Pajaro Valley Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ohlone Preschool Migrant & Seasonal Head Start,43,Pajaro Valley Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Hall Dist PS  Migrant & Seasonal Head Start,44,Pajaro Valley Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Calabasas  Preschool Migrant & Seasonal Head Start,43,Pajaro Valley Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Freedom Preschool Migrant & Seasonal Head Start,43,Pajaro Valley Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,London Child Development Center,35,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Senaida Garcia Child Dvlp & Training Center,72,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cutler #2 Child Development Center,35,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ivanhoe Child Development Center,19,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,N Visalia #1 Child Development Center,18,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Terra Bella Home Base,12,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Fairview Village Child Development Center,51,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Porterville Child Development Center,37,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pixley Child Development Center,20,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Maple Child Development Center,69,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Dinuba Child Development Center,45,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Earlimart Child Development Center,36,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Linnell Home Base,12,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Woodlake #1 Child Development Center,40,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Woodlake Home Based,48,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Richgrove Child Development Center,19,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lindsay Home Base,24,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Teviston Home Based,48,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Tipton Home Based,12,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Tulare Home Based,48,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Tipton Child Development Center,15,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Visalia Home Based,72,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Orosi Home Base,48,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Clinite Child Development Center,64,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Strathmore Home Base,24,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Whittier,51,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Carmelitos,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Signal Hill,51,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Elm,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Beach,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Webster,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Plymouth,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Garfield,51,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,King,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Birney,36,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Smith,71,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,McKinley,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Buffum,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Burroughs,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Edison,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Harte,88,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Chavez,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Oropeza,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Roosevelt,54,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bethune,15,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Educare Los Angeles at Long Beach,102,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Jordan Plus,17,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Herrera,34,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Barton Head Start,20,Long Beach Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Le Grand Head Start,13,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Elim Head Start,20,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pioneer Head Start/Early Head Start,20,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Planada Head Start,32,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Schelby Head Start,60,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Castle Head Start/ Early Head Start,40,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Delhi HS Center,17,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Galen Clark Head Start,16,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Mitchell Head Start,16,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,San Luis Head Start/ Early Head Start,20,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bellevue Head Start,19,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,South Dos Palos Head Start,31,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Livingston Child Development Partnership,7,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Danielson Head Start,55,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Campus Park Head Start,32,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Shattuck Park Head Start,18,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Colleen Menefee Head Start,60,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Westside Head Start,52,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kennedy Head Start (ABC),32,ABC Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Willow Head Start (ABC),32,ABC Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Carver Head Start (ABC),32,ABC Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Niemes Head Start (ABC),32,ABC Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Melbourne Head Start (ABC),32,ABC Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Hawaiian (ABC),16,ABC Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Don Julian (Bassett),15,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Sunkist (Bassett),15,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Edgewood (Bassett),30,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Van Wig (Bassett),15,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Flanner (Bassett),15,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bassett CDC (Bassett),15,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Le Gore (El Monte),74,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cortada (El Monte),34,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,New Lexington (El Monte),17,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Rio Vista (El Monte),40,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cherrylee School (El Monte),17,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Gidley Elementary (El Monte),17,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Potrero (El Monte),17,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Wilkerson Head Start (El Monte),20,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Shirpser School (El Monte),20,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Columbia (El Monte),40,El Monte City School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Rice (Garvey),7,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Sanchez (Garvey),7,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Emerson (Garvey),25,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Monterey Vista (Garvey),7,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Williams (Garvey),119,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Dewey (Garvey),34,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bitely (Garvey),42,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Hillcrest (Garvey),25,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Duff (Garvey),31,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Willard (Garvey),18,Garvey School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Johnston (Norwalk),34,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Sanchez (Norwalk),34,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ramona (Norwalk),111,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Huerta (Norwalk),34,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Glazier (Norwalk),34,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Foster Road (Norwalk),16,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,New River (Norwalk),17,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Moffitt (Norwalk),34,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Columbia (Norwalk),67,Norwalk-La Mirada Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Barfield (Pomona),44,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Arroyo (Pomona),58,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kingsley (Pomona),28,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Philadelphia (Pomona),32,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Madison (Pomona),58,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pomona (Pomona),16,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Vejar (Pomona),28,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,San Jose (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Allison (Pomona),30,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lexington (Pomona),30,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Washington (Pomona),42,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Roosevelt (Pomona),30,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Alcott (Pomona),48,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pueblo (Pomona),12,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Westmont (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lincoln (Pomona),16,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cortez (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Montvue (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lopez (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Harrison (Pomona),44,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kellogg (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Mendoza (Pomona),16,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Franklin Family Learning Center,17,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pearson Elementary,20,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Everett Child Development Centers,20,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,John Muir Preformal Center,20,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Wright Start FLC,16,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Alberta Martone Preformal Center,20,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,El Vista Child Development Center,17,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kirschen Child Development Center,17,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Fairview Elementary,17,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Shackelford Elementary,20,Modesto City Schools Child development Programs,,,NA,FALSE,not counted: not at a pre-K school
+CA,Marilyn Frakes Child Development Center,16,Salida Union School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Salida Child Development Center,51,Salida Union School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Boer School Head Start Center,17,Salida Union School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Wakefield Head Start,68,Turlock Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cunningham Head Start/ Turlock Joint Elementary,34,Turlock Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Early Education Programs at Osborn,34,Turlock Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Early Education Programs at Crowell,34,Turlock Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Waterford Child Development Center,32,Waterford Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Keyes Head Start,29,Keyes Union School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Erwin (Bassett),15,Bassett Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Emerson (Pomona),14,Pomona Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Woodbine,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Hiram Johnson (SCUSD),22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Earl Warren,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ethel Phillips,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Susan B. Anthony,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Elder Creek,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Golden Empire,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,John Bidwell,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cesar Chavez,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Abraham Lincoln,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Parkway,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,John Sloat,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bowling Green - Chacon,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lisbon,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,H. W. Harkness,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Washington,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ethel I. Baker,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,James Marshall,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Bowling Green - McCoy,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Martin L. King Jr.,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,John Still,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Camellia,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Clayton B Wire,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Garfield Head Start/CSPP Wrap,40,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Sunrise HS Duration & HS/CSPP WRAP,48,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Howe  HS/CSPP Wrap,64,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Kingswood HS/CSPP WRAP,40,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Skycrest Head Start/CSPP Wrap,40,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Marvin Marshall EHS/ HS/CSPP WRAP,112,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Lichen Head Start Duration,16,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Cottage Head Start/CSPP Wrap,24,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,General Davie Jr. Primary Center - EHS/HS Duration & HS/CSPP WRAP,80,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pasadena Head Start Duration,16,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Dyer Kelly Head Start/CSPP Wrap,24,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ralph Richardson HS Duration & HS/CSPP WRAP,48,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Choices Charter School Head Start-CSPP Wrap,16,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Encina EHS & Encina Head Start/CSPP Wrap,24,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Coyle Head Start/CSPP Wrap,24,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Arlington Heights Head Start Duration,16,San Juan Unified School District/Child Development,,,NA,FALSE,not counted: not at a pre-K school
+CA,Morey Ave. Child Development Center,90,Twin Rivers Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Oakdale Elementary School,22,Twin Rivers Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Rio Linda Preschool Center,16,Twin Rivers Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Village Elementary School,20,Twin Rivers Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Samuel Kennedy Elementary School,19,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,John Reith Elemenary School,17,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Florin Elementary School,41,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Maeola Beitzel Elementary School,19,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Prairie Elementary School,41,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,David Reese Elementary School,24,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,James McKee Elementary School,24,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Union House Elementary School,20,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Herman Leimbach Elementary School,41,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Charles Mack Elementary School,17,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Isabelle Jackson Elementary School,19,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Irene B. West Elementary School,17,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Miwok Village Elementary School,19,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Foulks Ranch Elementary School,19,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Pleasant Grove Elementary School,24,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Sierra Enterprise Elementary School,20,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Florence Markofer Elementary School,18,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Porterville CDC,20,TULARE COUNTY DEPARTMENT OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school
+CA,Richgrove CDC,36,TULARE COUNTY DEPARTMENT OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school
+CA,Earlimart CDC,34,TULARE COUNTY DEPARTMENT OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school
+CA,Merced Early Learning Center,45,Merced County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Stone Lake Elementary,24,Elk Grove Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,"Dr. Jesse Ortiz, Jr Center",32,Yolo County Superintendent of Schools,,,NA,FALSE,not counted: not at a pre-K school
+CA,Woodville CDC,38,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,JUSD - MISSION BELL ELEMENTARY HS,17,Jurupa USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,Central Elementary,13,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Ellen Ochoa Learning Center,16,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Exposition Park Montessori Child Care Center,8,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Elwin Early Childhood Education,17,Baldwin Park Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Nicholas,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,Oak Ridge,22,Sacramento City Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,California,16,Hacienda La Puente Unified School District,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-MOUNTAIN VISTA HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-CORAL MOUNTAIN HEAD START,10,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,CVUSD-SEA VIEW HEAD START,16,Coachella Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,DSUSD-JACKSON HEAD START,16,Desert Sands USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,HUSD-RAMONA HEAD START,17,Hemet USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,MVUSD-EARLY LEARNING  ACADEMY HS,81,Moreno Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,MVUSD-CHAPARRAL HILLS HS,17,Moreno Valley USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-COYOTE RUN HS/EHS,15,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,PSUSD-ARROYO DE PAZ HS/EHS,17,Palm Springs USD,,,NA,FALSE,not counted: not at a pre-K school
+CA,Hester Child Development Center,60,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CA,Porterville Home Base - Success,36,Tulare County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+CO,Edwards Early Learning Center,30,EAGLE COUNTY REORGANIZED SCHOOL DISTRICT #50-J,JUNE CREEK ELEMENTARY SCHOOL,Eagle County School District No. Re 50,177,TRUE,counted: own district school
+CO,Homestake Peak,6,EAGLE COUNTY REORGANIZED SCHOOL DISTRICT #50-J,HOMESTAKE PEAK SCHOOL,Eagle County School District No. Re 50,514,TRUE,counted: own district school
+CO,Gypsum Elementary School,11,EAGLE COUNTY REORGANIZED SCHOOL DISTRICT #50-J,GYPSUM ELEMENTARY SCHOOL,Eagle County School District No. Re 50,119,FALSE,counted: own district school
+CO,Eagle Valley Elementary School,16,EAGLE COUNTY REORGANIZED SCHOOL DISTRICT #50-J,,,NA,FALSE,not counted: not at a pre-K school
+CO,ECS Preschool at Red Hill,6,EAGLE COUNTY REORGANIZED SCHOOL DISTRICT #50-J,RED HILL ELEMENTARY SCHOOL,Eagle County School District No. Re 50,21,TRUE,counted: own district school
+CO,Brush School District,70,"Brush School District RE-2J, Inc.",THOMSON PRIMARY SCHOOL,School District No. Re-2 Brush,35,TRUE,counted: own district school
+CO,Salida Early Childhood Center,56,Salida School District R-32-J,SALIDA EARLY CHILDHOOD CENTER,Salida School District No. R-32,31,TRUE,counted: own district school
+CO,ECE at Maddox,76,Englewood Head Start,ENGLEWOOD EARLY CHILDHOOD EDUCATION CENTER AT MADD,Englewood School District No. 1 in the county of Arapahoe,110,TRUE,counted: own district school
+CO,Sheridan Early Childhood Center,100,Sheridan School District #2,EARLY CHILDHOOD EDUCATION CENTER,Sheridan School District No. 2,73,FALSE,counted: own district school
+CO,The Center,30,LAKE COUNTY SCHOOL DISTRICT #1,,,NA,FALSE,not counted: not at a pre-K school
+CO,DPS - College View Elementary,37,Denver Public Schools Head Start,COLLEGE VIEW ELEMENTARY SCHOOL,School District No. 1 in the county of Denver and State of C,66,TRUE,counted: own district school
+CO,DPS - Smith Elementary,34,Denver Public Schools Head Start,SMITH ELEMENTARY SCHOOL,School District No. 1 in the county of Denver and State of C,30,TRUE,counted: own district school
+CO,DPS - Escalante-Biggs Academy,68,Denver Public Schools Head Start,ESCALANTE-BIGGS ACADEMY,School District No. 1 in the county of Denver and State of C,75,TRUE,counted: own district school
+CO,DPS - Ellis Elementary,34,Denver Public Schools Head Start,ELLIS ELEMENTARY SCHOOL,School District No. 1 in the county of Denver and State of C,52,TRUE,counted: own district school
+CO,DPS - McGlone Academy,34,Denver Public Schools Head Start,MCGLONE ACADEMY,School District No. 1 in the county of Denver and State of C,13,TRUE,counted: own district school
+CO,DPS - Samuel's Elementary,34,Denver Public Schools Head Start,SAMUELS ELEMENTARY SCHOOL,School District No. 1 in the county of Denver and State of C,78,TRUE,counted: own district school
+CO,DPS - Beach Court Elementary,34,Denver Public Schools Head Start,BEACH COURT ELEMENTARY SCHOOL,School District No. 1 in the county of Denver and State of C,13,TRUE,counted: own district school
+CO,DPS - Pascual LeDoux Academy,38,Denver Public Schools Head Start,PASCUAL LEDOUX ACADEMY,School District No. 1 in the county of Denver and State of C,17,TRUE,counted: own district school
+CO,DPS - Valverde Elementary,37,Denver Public Schools Head Start,VALVERDE ELEMENTARY SCHOOL,School District No. 1 in the county of Denver and State of C,5,TRUE,counted: own district school
+CO,Laurene Edmondson Elementary,18,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Carrie Martin,5,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Berthoud Early Childhood Center,6,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Sarah Milner Elementary,6,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Ponderosa Elementary,4,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Lincoln Elementary,6,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Berthoud Elementary,5,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Winona Elementary,3,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Early Childhood Center at Stansberry,34,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Riverview PreK - 8,4,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,High Plains PreK - 8,6,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Cottonwood Plains Elementary,3,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Centennial Elementary,6,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Peak View PreK-8,33,Thompson School District R2J,,,NA,FALSE,not counted: not at a pre-K school
+CO,Pioneer Preschool,20,Cripple Creek / Victor School District RE-1,CRESSON ELEMENTARY SCHOOL,Cripple Creek-Victor School District No. Re-1,8,TRUE,counted: own district school
+CT,Enfield Head Start,102,Enfield Head Start,EPS PK STEAM Academy,ENFIELD SCHOOL DISTRICT,0,TRUE,counted: own district school
+CT,Manchester Preschool Center,127,Manchester Head Start,,,NA,FALSE,not counted: not at a pre-K school
+CT,Early Childhood Learning Center at Hockanum School,162,Early Childhood Learning Center at Hockanum School,,,NA,FALSE,not counted: not at a pre-K school
+IL,Dr. Andy Hall Early Education Center,218,Mount Vernon City Schools District 80,Dr Andy Hall Early Educ Ctr,Mount Vernon SD 80,1339,TRUE,counted: own district school
+IL,Hanson Elementary School,45,Rock Island School District 41,Earl H Hanson Elem School,Rock Island SD 41,14,TRUE,counted: own district school
+IL,Horace Mann Early Learning Center,105,Rock Island School District 41,Horace Mann ELC,Rock Island SD 41,27,TRUE,counted: own district school
+IL,Jefferson Elementary School,15,Rock Island School District 41,Thomas Jefferson Elem School,Rock Island SD 41,19,TRUE,counted: own district school
+IL,Thurgood Marshall Learning Center,60,Rock Island School District 41,Thurgood Marshall Learning Ctr,Rock Island SD 41,3,TRUE,counted: own district school
+IL,Ridgewood Elementary School,15,Rock Island School District 41,Ridgewood Elem School,Rock Island SD 41,9,TRUE,counted: own district school
+IL,Rock Island Center for Math and Science,15,Rock Island School District 41,RICMS,Rock Island SD 41,14,TRUE,counted: own district school
+IN,Allen Elementary,42,Marion Community Schools,,,NA,FALSE,not counted: not at a pre-K school
+IN,Frances Slocum Elementary,20,Marion Community Schools,,,NA,FALSE,not counted: not at a pre-K school
+IN,Kendall Elementary,29,Marion Community Schools,,,NA,FALSE,not counted: not at a pre-K school
+IN,Riverview Elementary,35,Marion Community Schools,,,NA,FALSE,not counted: not at a pre-K school
+IN,Fayette County Head Start,134,FAYETTE COUNTY SCHOOL CORPORATION,Maplewood Elementary School,Fayette County School Corporation,16,TRUE,counted: own district school
+IN,Angola Head Start Center,64,Fremont Community Schools,Carlin Park Elementary School,M S D Steuben County,146,FALSE,not counted: school of another district
+IN,Fremont Head Start Center,32,Fremont Community Schools,,,NA,FALSE,not counted: not at a pre-K school
+IN,LaGrange Head Start Center,48,Fremont Community Schools,,,NA,FALSE,not counted: not at a pre-K school
+IN,Lake Ridge at Hosford - LAKE RIDGE DELEGATE,100,Lake Ridge Schools Head Start,,,NA,FALSE,not counted: not at a pre-K school
+IN,Mapleton Head  - The Hollow at Mapleton,68,RICHMOND COMMUNITY SCHOOLS CORPORATION,,,NA,FALSE,not counted: not at a pre-K school
+IN,Head Start Admin Building - The Horizon on Main,51,RICHMOND COMMUNITY SCHOOLS CORPORATION,,,NA,FALSE,not counted: not at a pre-K school
+IN,Darrough Chapel Early Learning Center,228,Kokomo School Corporation Head Start Program,,,NA,FALSE,not counted: not at a pre-K school
+IN,KSC Head Start Peru Site @ South Peru School,57,Kokomo School Corporation Head Start Program,,,NA,FALSE,not counted: not at a pre-K school
+IN,Fairview Elementary,17,RICHMOND COMMUNITY SCHOOLS CORPORATION,Fairview Elementary School,Richmond Community Schools,61,TRUE,counted: own district school
+MA,Greendale,136,Worcester Public Schools - Child Development Head Start,,,NA,FALSE,not counted: not at a pre-K school
+MA,Mill Swan,136,Worcester Public Schools - Child Development Head Start,,,NA,FALSE,not counted: not at a pre-K school
+MA,Millbury St.,144,Worcester Public Schools - Child Development Head Start,,,NA,FALSE,not counted: not at a pre-K school
+NM,Laguna Division of Early Childhood,66,Laguna Division of Early Childhood,,,NA,FALSE,not counted: not at a pre-K school
+NM,Pine Hill Head Start Center,43,Ramah Navajo Head Start,,,NA,FALSE,not counted: not at a pre-K school
+NM,Ramah Head Start Center,17,Ramah Navajo Head Start,,,NA,FALSE,not counted: not at a pre-K school
+NM,Alamo Navajo Early Childhood Center,54,Alamo Early Childhood Center-HS,,,NA,FALSE,not counted: not at a pre-K school
+NM,Conlee Elementary School-Head Start,18,Las Cruces School District #2,CONLEE ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,10,TRUE,counted: own district school
+NM,Hermosa Heights Elementary School-Head Start,16,Las Cruces School District #2,HERMOSA HGTS ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,19,TRUE,counted: own district school
+NM,Loma Heights Elementary School-Head Start,16,Las Cruces School District #2,LOMA HEIGHTS ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,94,TRUE,counted: own district school
+NM,MacArthur Elementary School-Head Start,16,Las Cruces School District #2,MAC ARTHUR ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,20,FALSE,counted: own district school
+NM,Dona Ana Elementary School-Head Start,14,Las Cruces School District #2,DONA ANA ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,28,FALSE,counted: own district school
+NM,Tombaugh Elementary School-Head Start,16,Las Cruces School District #2,TOMBAUGH ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,52,FALSE,counted: own district school
+NM,Desert Bloom Elementary School-Head Start,115,Las Cruces School District #2,CESAR CHAVEZ ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,25,FALSE,counted: own district school
+NM,Mesilla Elementary School-Head Start,16,Las Cruces School District #2,MESILLA ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,64,FALSE,counted: own district school
+NM,Valley View Elementary School-Head Start,27,Las Cruces School District #2,VALLEY VIEW ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,98,TRUE,counted: own district school
+NM,Booker T Washington Elementary School-Head Start,74,Las Cruces School District #2,BOOKER T. WASHINGTON,LAS CRUCES PUBLIC SCHOOLS,29,TRUE,counted: own district school
+NM,Mesilla Park Elementary School-Head Start,16,Las Cruces School District #2,MESILLA PARK ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,6,FALSE,counted: own district school
+NM,University Hills Elementary School-Head Start,33,Las Cruces School District #2,UNIVERSITY HILLS ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,41,TRUE,counted: own district school
+NM,Fairacres Elementary School-Head Start,18,Las Cruces School District #2,,,NA,FALSE,not counted: not at a pre-K school
+NM,Columbia Elementary School-Head Start,18,Las Cruces School District #2,COLUMBIA ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,76,FALSE,counted: own district school
+NM,Highland Elementary-Head Start,13,Las Cruces School District #2,HIGHLAND ELEMENTARY,LAS CRUCES PUBLIC SCHOOLS,12,TRUE,counted: own district school
+TX,Long Early Learning Center,380,Abilene Independent School District,LONG EARLY LEARNING CENTER,ABILENE ISD,79,TRUE,counted: own district school
+TX,LAMAR COUNTY HEAD START,208,Paris Independent School District,LAMAR COUNTY HEAD START,PARIS ISD,49,TRUE,counted: own district school
+TX,"Hitchcock ISD ""Kids First"" Head Start",182,Hitchcock Independent School District,,,NA,FALSE,not counted: not at a pre-K school
+TX,Texas City ISD Calvin Vincent Early Childhood Center,154,Texas City Independent School District,,,NA,FALSE,not counted: not at a pre-K school
+TX,Neil Armstrong Elementary School,91,South San Antonio Independent School District,NEIL ARMSTRONG EL,SOUTH SAN ANTONIO ISD,113,TRUE,counted: own district school
+TX,Roy P. Benavidez Elementary School,82,South San Antonio Independent School District,ROY BENAVIDEZ EL,SOUTH SAN ANTONIO ISD,12,FALSE,counted: own district school
+TX,"Miguel Carrillo, Jr. Elementary School",59,South San Antonio Independent School District,MIGUEL CARRILLO JR EL,SOUTH SAN ANTONIO ISD,60,TRUE,counted: own district school
+TX,Hutchins Elementary School,54,South San Antonio Independent School District,HUTCHINS EL,SOUTH SAN ANTONIO ISD,22,TRUE,counted: own district school
+TX,Fannin County Head Start,105,Bonham Independent School District,BAILEY INGLISH EARLY CHILDHOOD CENTER,BONHAM ISD,58,TRUE,counted: own district school
+TX,Southwood Valley Elementary School,34,College Station Independent School District,SOUTHWOOD VALLEY EL,COLLEGE STATION ISD,38,TRUE,counted: own district school
+TX,Rock Prairie Elementary School,28,College Station Independent School District,ROCK PRAIRIE EL,COLLEGE STATION ISD,25,TRUE,counted: own district school
+TX,Forest Ridge Elementary School,17,College Station Independent School District,FOREST RIDGE,COLLEGE STATION ISD,23,TRUE,counted: own district school
+TX,South Knoll Elementary School,34,College Station Independent School District,SOUTH KNOLL EL,COLLEGE STATION ISD,85,TRUE,counted: own district school
+TX,College Hills Elementary School,48,College Station Independent School District,COLLEGE HILLS EL,COLLEGE STATION ISD,323,TRUE,counted: own district school
+TX,Creek View Elementary School,21,College Station Independent School District,CREEK VIEW EL,COLLEGE STATION ISD,217,TRUE,counted: own district school
+TX,Spring Creek Elementary School,17,College Station Independent School District,SPRING CREEK EL,COLLEGE STATION ISD,204,TRUE,counted: own district school
+TX,River Bend Elementary School,22,College Station Independent School District,,,NA,FALSE,not counted: not at a pre-K school
+TX,Angleton Head Start School,17,"Brazoria County Head Start Early Learning Schools, Inc.",,,NA,FALSE,not counted: not at a pre-K school
+TX,Lake Jackson Head Start School,17,"Brazoria County Head Start Early Learning Schools, Inc.",,,NA,FALSE,not counted: not at a pre-K school
+TX,Brazoria ISD Classroom - Wild Peach,60,"Brazoria County Head Start Early Learning Schools, Inc.",WILD PEACH EL,COLUMBIA-BRAZORIA ISD,207,TRUE,not counted: school of another district
+TX,Brazoria Head Start-Barrow Elementary,17,"Brazoria County Head Start Early Learning Schools, Inc.",BARROW EL,COLUMBIA-BRAZORIA ISD,39,TRUE,not counted: school of another district
+TX,Mt. Pleasant ISD- Child Development Center,256,MT Pleasant Independent School District,CHILD DEVELOPMENT CENTER,MOUNT PLEASANT ISD,128,TRUE,counted: own district school
+TX,Douglass Early Childhood Learning Center,179,Sulphur Springs Independent School District,DOUGLASS ECLC,SULPHUR SPRINGS ISD,19,TRUE,counted: own district school
+TX,Denton ISD Ann Windle School for Young Children,193,Denton Independent School District,THE ANN WINDLE SCHOOL FOR YOUNG CHILDREN,DENTON ISD,161,TRUE,counted: own district school
+TX,Commerce Elementary,30,Greenville Independent School District,COMMERCE EL,COMMERCE ISD,3224,TRUE,not counted: school of another district
+TX,D.C Cannon Elem.,30,Greenville Independent School District,,,NA,FALSE,not counted: not at a pre-K school
+TX,L. P. Waters  ECLC,101,Greenville Independent School District,L P WATERS EARLY CHILDHOOD CENTER,GREENVILLE ISD,119,TRUE,counted: own district school
+TX,SAN FELIPE DEL RIO CONSOLIDATED INDEPENDENT SCHOOL DIST,346,SAN FELIPE DEL RIO CONSOLIDATED INDEPENDENT SCHOOL DIST,NORTH HEIGHTS EL,SAN FELIPE-DEL RIO CISD,10,TRUE,counted: own district school
+TX,BISD/Bingman Head Start,510,Beaumont Independent School District,BINGMAN PK,BEAUMONT ISD,42,TRUE,counted: own district school
+TX,Port Arthur Independent School District Head Start Program,333,Port Arthur Independent School District,WHEATLEY SCHOOL OF EARLY CHILDHOOD PROGRAMS,PORT ARTHUR ISD,34,TRUE,counted: own district school
+TX,Cooper ISD Head Start,60,COOPER INDEPENDENT SCHOOL DISTRICT,COOPER EL,COOPER ISD,91,TRUE,counted: own district school
+TX,Dogan,68,Harris County Department of Education,DOGAN EL,HOUSTON ISD,2,TRUE,not counted: school of another district
+TX,J.D. Walker,51,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Baytown,88,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,La Porte,34,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Sheffield,131,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Humble,51,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Compton,88,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Tidwell,34,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Barrett Head Start,34,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Channelview,68,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Fonwood,85,Harris County Department of Education,FONWOOD EARLY CHILDHOOD CTR,HOUSTON ISD,74,TRUE,not counted: school of another district
+TX,Coolwood Head Start,68,Harris County Department of Education,,,NA,FALSE,not counted: not at a pre-K school
+TX,Delegate Site-Hinojosa EC/PK & Head Start Ct,58,Aldine Independent School District,HINOJOSA EC/PK/K,ALDINE ISD,384,TRUE,counted: own district school
+TX,Delegate Site-Keeble EC/PK & Head Start Ctr.,58,Aldine Independent School District,KEEBLE EC/PK/K,ALDINE ISD,97,FALSE,counted: own district school
+TX,Delegate Site-Vines EC/PK & Head Start Ctr.,60,Aldine Independent School District,VINES EC/PK/K,ALDINE ISD,10,TRUE,counted: own district school
+TX,Delegate Site-Griggs EC/PK & Head Start Ctr.,73,Aldine Independent School District,GRIGGS EC/PK/K,ALDINE ISD,169,TRUE,counted: own district school
+TX,Delegate Site-Jones EC/PK & Head Start Ctr,40,Aldine Independent School District,JONES EC/PK/K,ALDINE ISD,131,TRUE,counted: own district school
+TX,Delegate Site-Kujawa EC/PK Head Start Ct,59,Aldine Independent School District,KUJAWA EC/PK/K,ALDINE ISD,7,TRUE,counted: own district school
+TX,Delegate Site-Magrill EC/PK & Head Start Ct,40,Aldine Independent School District,MAGRILL EC/PK/K,ALDINE ISD,62,TRUE,counted: own district school
+TX,Delegate Site-Garcia-Leza EC/PK & Head Start,57,Aldine Independent School District,GARCIA-LEZA EC/PK/K,ALDINE ISD,11,TRUE,counted: own district school
+TX,Delegate Site-Vardeman EC/PK & Head Start,58,Aldine Independent School District,VARDEMAN EC/PK/K,ALDINE ISD,134,TRUE,counted: own district school
+TX,Delegate Site - AISD Child Development Center,17,Aldine Independent School District,,,NA,FALSE,not counted: not at a pre-K school
+VT,Westminster Head Start,12,Windham Southeast School District,,,NA,FALSE,not counted: not at a pre-K school
+VT,Birge Nest,24,Windham Southeast School District,,,NA,FALSE,not counted: not at a pre-K school
+VT,West Bee Nursery,5,Windham Southeast School District,,,NA,FALSE,not counted: not at a pre-K school
+VT,Brattleboro Early Childhood Center (BECC),14,Windham Southeast School District,,,NA,FALSE,not counted: not at a pre-K school
+VT,Horizon Early Learning Program-West,7,Windham Southeast School District,,,NA,FALSE,not counted: not at a pre-K school
+WA,Roxhill@EC Hughes,36,SEATTLE SCHOOL DISTRICT #1,Roxhill Elementary School,Seattle Public Schools,17,TRUE,counted: own district school
+WA,Concord,18,SEATTLE SCHOOL DISTRICT #1,Concord International School,Seattle Public Schools,13,TRUE,counted: own district school
+WA,Emerson,18,SEATTLE SCHOOL DISTRICT #1,Emerson Elementary School,Seattle Public Schools,11,TRUE,counted: own district school
+WA,Martin Luther King Jr.,18,SEATTLE SCHOOL DISTRICT #1,Martin Luther King Jr. Elementary School,Seattle Public Schools,2,TRUE,counted: own district school
+WA,James Baldwin,36,SEATTLE SCHOOL DISTRICT #1,Northgate Elementary School,Seattle Public Schools,26,TRUE,counted: own district school
+WA,Broadview Thomson,36,SEATTLE SCHOOL DISTRICT #1,Broadview-Thomson K-8 School,Seattle Public Schools,54,TRUE,counted: own district school
+WA,West Seattle Elementary,18,SEATTLE SCHOOL DISTRICT #1,West Seattle Elementary School,Seattle Public Schools,11,TRUE,counted: own district school
+WA,Olympic Hills,35,SEATTLE SCHOOL DISTRICT #1,Olympic Hills Elementary School,Seattle Public Schools,16,TRUE,counted: own district school
+WA,John Muir Elementary School,18,SEATTLE SCHOOL DISTRICT #1,,,NA,FALSE,not counted: not at a pre-K school
+WA,Wing Luke Elementary School,36,SEATTLE SCHOOL DISTRICT #1,,,NA,FALSE,not counted: not at a pre-K school
+WA,Lowell Elementary School,18,SEATTLE SCHOOL DISTRICT #1,Lowell Elementary School,Seattle Public Schools,85,TRUE,counted: own district school
+WA,Viewlands,18,SEATTLE SCHOOL DISTRICT #1,Viewlands Elementary School,Seattle Public Schools,59,TRUE,counted: own district school
+WA,KImball,18,SEATTLE SCHOOL DISTRICT #1,,,NA,FALSE,not counted: not at a pre-K school
+WA,Edison,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Edison,Tacoma School District,83,TRUE,counted: own district school
+WA,Birney,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Birney,Tacoma School District,22,TRUE,counted: own district school
+WA,Roosevelt,17,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Roosevelt,Tacoma School District,52,TRUE,counted: own district school
+WA,Mann,37,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Mann,Tacoma School District,43,TRUE,counted: own district school
+WA,Downing,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Downing,Tacoma School District,36,TRUE,counted: own district school
+WA,Lister,35,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Lister,Tacoma School District,52,TRUE,counted: own district school
+WA,Edna Travis,18,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,McCarver,Tacoma School District,60,TRUE,counted: own district school
+WA,Whitman,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Whitman,Tacoma School District,70,FALSE,counted: own district school
+WA,Franklin,18,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Franklin,Tacoma School District,39,TRUE,counted: own district school
+WA,Geiger,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Geiger,Tacoma School District,1978,TRUE,counted: own district school
+WA,Fern Hill,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Fern Hill,Tacoma School District,12,TRUE,counted: own district school
+WA,Manitou Park,19,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Manitou Park,Tacoma School District,6,TRUE,counted: own district school
+WA,Larchmont,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Larchmont,Tacoma School District,81,TRUE,counted: own district school
+WA,Arlington,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Arlington,Tacoma School District,17,FALSE,counted: own district school
+WA,Jefferson,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+WA,Blix,19,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Blix Elementary,Tacoma School District,8,TRUE,counted: own district school
+WA,Stanley,18,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Stanley,Tacoma School District,79,TRUE,counted: own district school
+WA,Lowell,19,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,,,NA,FALSE,not counted: not at a pre-K school
+WA,Jenny Reed,20,TACOMA SCHOOL DISTRICT #10 DBA Tacoma Public Schools,Reed,Tacoma School District,91,TRUE,counted: own district school
+WI,Prairie Ridge Early Learning School,123,Eau Claire Area School District,Prairie Ridge Early Learning School,Eau Claire Area School District,32,TRUE,counted: own district school
+WI,Rolfs Education Center,78,WEST BEND JOINT SCHOOL DISTRICT 1,Rolf's Early Childhood Center,West Bend School District,28,TRUE,counted: own district school
+WI,Kettle Moraine YMCA,26,WEST BEND JOINT SCHOOL DISTRICT 1,,,NA,FALSE,not counted: not at a pre-K school
+WI,Jackson Community Center,17,WEST BEND JOINT SCHOOL DISTRICT 1,,,NA,FALSE,not counted: not at a pre-K school
+WI,Cesar Chavez Early Learning Station,140,KENOSHA UNIFIED SCHOOL DISTRICT,Chavez Learning Station,Kenosha School District,33,TRUE,counted: own district school
+WI,Bose Elementary School,20,KENOSHA UNIFIED SCHOOL DISTRICT,Bose Elementary,Kenosha School District,64,TRUE,counted: own district school
+WI,Brass Community School,45,KENOSHA UNIFIED SCHOOL DISTRICT,Brass Community School,Kenosha School District,550,TRUE,counted: own district school
+WI,Grewenow Elementary School,37,KENOSHA UNIFIED SCHOOL DISTRICT,Grewenow Elementary,Kenosha School District,5,TRUE,counted: own district school
+WI,Curtis Strange Elementary School,42,KENOSHA UNIFIED SCHOOL DISTRICT,Strange Elementary,Kenosha School District,69,TRUE,counted: own district school
+WI,Frank Elementary School,26,KENOSHA UNIFIED SCHOOL DISTRICT,Frank Elementary,Kenosha School District,18,TRUE,counted: own district school
+WI,MAPS Head Start of Merrill,88,Merrill Area Public School District,Pine River School for Young Learners (PRSYL),Merrill Area School District,16,FALSE,counted: own district school
+WI,Kenosha School of Language,20,KENOSHA UNIFIED SCHOOL DISTRICT,Stocker Elementary,Kenosha School District,71,TRUE,counted: own district school
+WI,Head Start Learning Center,188,Green Bay Area Public Schools,Green Bay Head Start,Green Bay Area Public School District,2,TRUE,counted: own district school
+WI,Jefferson Head Start Learning Center,148,Green Bay Area Public Schools,Jefferson Elementary,Green Bay Area Public School District,6,TRUE,counted: own district school
+WV,Mary Ingles Elementary,4,Kanawha County Schools,,,NA,FALSE,not counted: not at a pre-K school
+WV,Mary C. Snow-West Side Elementary,25,Kanawha County Schools,MARY C. SNOW WEST SIDE ELEMENTARY,KANAWHA COUNTY SCHOOLS,64,TRUE,counted: own district school
+WV,Midland Trail Elementary,10,Kanawha County Schools,MIDLAND TRAIL ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,7,TRUE,counted: own district school
+WV,Cedar Grove Elementary,6,Kanawha County Schools,CEDAR GROVE ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,43,FALSE,counted: own district school
+WV,Ruthlawn Elementary,17,Kanawha County Schools,RUTHLAWN ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,13,TRUE,counted: own district school
+WV,Alum Creek Elementary,9,Kanawha County Schools,ALUM CREEK ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,19,FALSE,counted: own district school
+WV,Bridgeview Elementary,20,Kanawha County Schools,BRIDGEVIEW ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,8,TRUE,counted: own district school
+WV,Dunbar Primary,24,Kanawha County Schools,DUNBAR PRIMARY CENTER,KANAWHA COUNTY SCHOOLS,42,TRUE,counted: own district school
+WV,Belle Elementary,16,Kanawha County Schools,BELLE ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,102,TRUE,counted: own district school
+WV,Cross Lanes Elementary,22,Kanawha County Schools,CROSS LANES ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,60,TRUE,counted: own district school
+WV,Anne Bailey Elementary,35,Kanawha County Schools,ANNE BAILEY ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,7,TRUE,counted: own district school
+WV,Pratt Elementary,8,Kanawha County Schools,,,NA,FALSE,not counted: not at a pre-K school
+WV,Sharon Dawes Elementary,7,Kanawha County Schools,SHARON DAWES ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,47,FALSE,counted: own district school
+WV,Sissonville Elementary,18,Kanawha County Schools,,,NA,FALSE,not counted: not at a pre-K school
+WV,Richmond Elementary,17,Kanawha County Schools,RICHMOND ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,6,TRUE,counted: own district school
+WV,Chesapeake Elementary,18,Kanawha County Schools,CHESAPEAKE ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,37,FALSE,counted: own district school
+WV,Elk Elementary Center,27,Kanawha County Schools,ELK ELEMENTARY CENTER,KANAWHA COUNTY SCHOOLS,550,TRUE,counted: own district school
+WV,Grandview Elementary,10,Kanawha County Schools,GRANDVIEW ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,4,FALSE,counted: own district school
+WV,Holz Elementary,12,Kanawha County Schools,HOLZ ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,6,TRUE,counted: own district school
+WV,Lakewood Elementary,10,Kanawha County Schools,LAKEWOOD ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,4,TRUE,counted: own district school
+WV,Nitro Elementary,17,Kanawha County Schools,NITRO ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,64,FALSE,counted: own district school
+WV,Ruffner Elementary,15,Kanawha County Schools,RUFFNER ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,22,TRUE,counted: own district school
+WV,Shoals Elementary,16,Kanawha County Schools,SHOALS ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,98,TRUE,counted: own district school
+WV,Piedmont Elementary,20,Kanawha County Schools,PIEDMONT YEAR-ROUND EDUCATION,KANAWHA COUNTY SCHOOLS,6,TRUE,counted: own district school
+WV,Andrews Heights Elementary,7,Kanawha County Schools,ANDREWS HEIGHTS ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,11,TRUE,counted: own district school
+WV,Clendenin Elementary,17,Kanawha County Schools,BRIDGE ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,7418,TRUE,counted: own district school
+WV,Kanawha City Elementary,10,Kanawha County Schools,KANAWHA CITY ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,110,TRUE,counted: own district school
+WV,Kenna Elementary,5,Kanawha County Schools,KENNA ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,20,TRUE,counted: own district school
+WV,Edgewood Elementary,12,Kanawha County Schools,EDGEWOOD ELEMENTARY,KANAWHA COUNTY SCHOOLS,718,TRUE,counted: own district school
+WV,Malden Elementary,9,Kanawha County Schools,MALDEN ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,70,FALSE,counted: own district school
+WV,Weberwood Elementary,5,Kanawha County Schools,WEBERWOOD ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,6,TRUE,counted: own district school
+WV,Montrose Elementary School,8,Kanawha County Schools,MONTROSE ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,3,TRUE,counted: own district school
+WV,Flinn Elementary School,18,Kanawha County Schools,,,NA,FALSE,not counted: not at a pre-K school
+WV,Alban Elementary School,20,Kanawha County Schools,ALBAN ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,3,TRUE,counted: own district school
+WV,Point Harmony Preschool,18,Kanawha County Schools,,,NA,FALSE,not counted: not at a pre-K school
+WV,Smoot Head Start / Pre-K,20,Greenbrier County Board of Education,SMOOT ELEMENTARY,GREENBRIER COUNTY SCHOOLS,58,FALSE,counted: own district school
+WV,Rupert Head Start / Pre-K,40,Greenbrier County Board of Education,RUPERT ELEMENTARY,GREENBRIER COUNTY SCHOOLS,41,FALSE,counted: own district school
+WV,Crichton Head Start / Pre-K,20,Greenbrier County Board of Education,CRICHTON ELEMENTARY,GREENBRIER COUNTY SCHOOLS,35,FALSE,counted: own district school
+WV,Frankford Head Start / Pre-K,35,Greenbrier County Board of Education,FRANKFORD ELEMENTARY,GREENBRIER COUNTY SCHOOLS,4960,TRUE,counted: own district school
+WV,Rainelle Head Start / Pre-K,40,Greenbrier County Board of Education,RAINELLE ELEMENTARY,GREENBRIER COUNTY SCHOOLS,48,TRUE,counted: own district school
+WV,Ronceverte  Pre-K,40,Greenbrier County Board of Education,RONCEVERTE ELEMENTARY,GREENBRIER COUNTY SCHOOLS,51,TRUE,counted: own district school
+WV,Greenbrier East Head Start/PreK,19,Greenbrier County Board of Education,GREENBRIER EAST HIGH SCHOOL,GREENBRIER COUNTY SCHOOLS,146,TRUE,counted: own district school
+WV,White Sulphur Springs Head Start / Pre-K,60,Greenbrier County Board of Education,WHITE SULPHUR ELEMENTARY,GREENBRIER COUNTY SCHOOLS,18,TRUE,counted: own district school
+WV,Alderson Head Start / Pre-K,40,Greenbrier County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+WV,Lewisburg Elementary PK/HS,60,Greenbrier County Board of Education,LEWISBURG ELEMENTARY,GREENBRIER COUNTY SCHOOLS,596,TRUE,counted: own district school
+WV,Union Center,30,MONROE COUNTY BOARD OF EDUCATION,MOUNTAIN VIEW ELEMENTARY & MIDDLE SCHOOL,MONROE COUNTY SCHOOLS,77,FALSE,counted: own district school
+WV,Peterstown Center,29,MONROE COUNTY BOARD OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school
+WV,Davis Elementary School,14,Braxton County Board of Education,DAVIS ELEMENTARY SCHOOL,BRAXTON COUNTY SCHOOLS,19,TRUE,counted: own district school
+WV,Frametown Elementary School,16,Braxton County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+WV,Little Birch Elementary School,3,Braxton County Board of Education,LITTLE BIRCH ELEMENTARY SCHOOL,BRAXTON COUNTY SCHOOLS,76,FALSE,counted: own district school
+WV,Flatwoods Elementary School,16,Braxton County Board of Education,,,NA,FALSE,not counted: not at a pre-K school
+WV,Burnsville Elementary School,8,Braxton County Board of Education,BURNSVILLE ELEMENTARY SCHOOL,BRAXTON COUNTY SCHOOLS,9,TRUE,counted: own district school
+WV,Sutton Elementary School,31,Braxton County Board of Education,SUTTON ELEMENTARY SCHOOL,BRAXTON COUNTY SCHOOLS,23,TRUE,counted: own district school
+WV,Pinch Elementary,12,Kanawha County Schools,PINCH ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,68,TRUE,counted: own district school
+WV,Overbrook Elementary,6,Kanawha County Schools,OVERBROOK ELEMENTARY SCHOOL,KANAWHA COUNTY SCHOOLS,7,FALSE,counted: own district school
+WV,Keyser PreK/Head Start,54,MINERAL COUNTY BOARD OF EDUCATION,KEYSER PRIMARY SCHOOL,MINERAL COUNTY SCHOOLS,551,TRUE,counted: own district school
+WV,Elk Garden PreK/Head Start,16,MINERAL COUNTY BOARD OF EDUCATION,ELK GARDEN SCHOOL,MINERAL COUNTY SCHOOLS,326,TRUE,counted: own district school
+WV,Burlington PreK/Head Start,6,MINERAL COUNTY BOARD OF EDUCATION,BURLINGTON PRIMARY,MINERAL COUNTY SCHOOLS,6320,TRUE,counted: own district school
+WV,Fountain PreK/Head Start,10,MINERAL COUNTY BOARD OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school
+WV,New Creek PreK/Head Start,10,MINERAL COUNTY BOARD OF EDUCATION,NEW CREEK PRIMARY SCHOOL,MINERAL COUNTY SCHOOLS,16,TRUE,counted: own district school
+WV,Frankfort Elementary,28,MINERAL COUNTY BOARD OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school
+WV,Catamount Children's Center Inc.,10,MINERAL COUNTY BOARD OF EDUCATION,,,NA,FALSE,not counted: not at a pre-K school

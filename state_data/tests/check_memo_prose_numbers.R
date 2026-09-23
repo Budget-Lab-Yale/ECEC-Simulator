@@ -1,0 +1,139 @@
+#-----------------------------------------------------------------------------
+# Do the build-derived numbers in the memo's PROSE still match the build?
+#
+# check_memo_matches_build.R reads the results table, never a sentence, so a
+# figure quoted in running text could go stale while every check stays green.
+# A general checker for prose numbers is not possible -- most are not build
+# outputs -- so this holds an explicit REGISTER of the ones that are. Adding a
+# build-derived figure to the prose means adding a row here.
+#
+#   Rscript state_data/tests/check_memo_prose_numbers.R
+#
+# Exit status is 1 on any mismatch.
+#-----------------------------------------------------------------------------
+suppressPackageStartupMessages({library(readr); library(dplyr)})
+
+source('state_data/00_main.R')     # main() is guarded; this only loads
+source('state_data/04_head_start_in_schools.R')   # guarded; MATCH_METRES
+
+TEX <- file.path(STATE_DATA_ROOT, 'docs', 'SUMMARY_method.tex')
+OUT <- file.path(STATE_DATA_ROOT, 'out')
+
+# Whitespace collapsed -- a pattern must not depend on where a line wraps.
+tex <- gsub('[[:space:]]+', ' ', paste(readLines(TEX, warn = FALSE), collapse = ' '))
+
+
+informal_share_range <- function(of) {
+
+  #----------------------------------------------------------------------------
+  # Informal care's share, across the five geographies, as whole percents.
+  #
+  # TWO DIFFERENT NUMBERS. Informal hours run higher than informal children, because the three
+  # informal types carry longer mean weeks than the formal ones.
+  #
+  # Params:
+  #   - of (chr): 'hours' or 'children'
+  #
+  # Returns: (chr vec) low and high, rounded as the memo prints them
+  #----------------------------------------------------------------------------
+
+  if (of == 'hours') {
+    s <- vapply(GEO, function(g) {
+      d <- read_csv(file.path(OUT, paste0(g, '.csv')), show_col_types = FALSE)
+      sum(d$annual_hours[d$ecec_type %in% INFORMAL]) / sum(d$annual_hours)
+    }, numeric(1))
+  } else {
+    # Children are fixed by step 2 alone: informal = 1 - the regional formal
+    # share. Only the two regions these geographies sit in can appear.
+    s <- 1 - NSECE_FORMAL_SHARE[c('northeast', 'south')]
+  }
+  format(round(100 * range(s)))
+}
+
+
+GEO      <- c('KY', 'NJ', 'NY', 'NYC', 'VA')
+INFORMAL <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
+
+# Whole states in the build -- NYC is county-defined, not a state.
+STATES <- GEOGRAPHIES[vapply(GEOGRAPHIES, function(g) is.null(load_spec(g)$counties),
+                             logical(1))]
+
+number_word <- function(n) c('one', 'two', 'three', 'four', 'five', 'six', 'seven',
+                             'eight', 'nine', 'ten')[n]
+
+derived_national <- function(q) {
+  d <- read_csv(file.path(OUT, 'nsece_universe.csv'), show_col_types = FALSE)
+  d$value[d$quantity == q & d$key == 'national']
+}
+
+# Step 3's Unpaid Center-Based over what the regional NSECE share would give.
+ratio_of <- function(g) {
+  s <- load_spec(g)
+  q <- utils::capture.output(r <- build_geo(s))
+  d <- attr(r, 'diagnostics')
+  programme_children(s)$total /
+    ((d$nonparental_total - d$residual) * NSECE_UNPAID_CENTRE_SHARE[[s$region]])
+}
+
+# Hours change at the top of the NSCH interval, whole percent.
+interval_pct <- function(g) {
+  d <- read_csv(file.path(OUT, paste0(g, '_interval.csv')), show_col_types = FALSE)
+  format(round(100 * (sum(d$high) / sum(d$annual_hours) - 1)))
+}
+
+
+# THE REGISTER. One row per build-derived figure quoted in running text.
+#   what     -- for the failure message
+#   pattern  -- sprintf template; each %s takes one expected figure
+#   value    -- what the build says it should be, one element per %s
+REGISTER <- list(
+  list(what    = 'step 5, informal share of children',
+       pattern = 'accounts for %s--%s\\%% of the estimated children',
+       value   = informal_share_range('children')),
+  # The grid flattens the hours spread, so the five geographies now round to
+  # one figure. A range would read as two numbers that are the same.
+  list(what    = 'step 5, informal share of hours',
+       pattern = 'and %s\\%% of modeled annual hours',
+       value   = unique(informal_share_range('hours'))),
+
+  # Step 3: the regional NSECE cross-check and the school deduction.
+  list(what    = 'step 3, NSECE unpaid centre share NE and S',
+       pattern = 'Center-Based: %s in the Northeast and %s in the South',
+       value   = sprintf('%.3f', NSECE_UNPAID_CENTRE_SHARE[c('northeast', 'south')])),
+  list(what    = 'step 3, KY ratio to the NSECE share',
+       pattern = 'Kentucky\'s %s is the largest here',
+       value   = sprintf('%.2f', ratio_of('KY'))),
+  list(what    = 'step 3, match radius',
+       pattern = 'geocodes are within %s metres',
+       value   = format(MATCH_METRES))
+)
+
+
+cat('checking ', length(REGISTER), ' build-derived figure(s) quoted in prose\n\n',
+    sep = '')
+
+fails <- 0
+for (r in REGISTER) {
+  want <- do.call(sprintf, c(list(r$pattern), as.list(r$value)))
+  if (grepl(want, tex, fixed = TRUE)) {
+    cat(sprintf('  [ok]   %-42s %s\n', r$what,
+                paste(r$value, collapse = '--')))
+  } else {
+    # Show what the memo says instead, so the fix is one edit rather than a hunt.
+    loose <- gsub('%s', '([0-9.,]+)', r$pattern, fixed = TRUE)
+    m <- regmatches(tex, regexpr(loose, tex))
+    cat(sprintf('  [FAIL] %-42s build says %s\n', r$what,
+                paste(r$value, collapse = '--')))
+    cat('           memo says: ', if (length(m)) m else '(phrase not found)',
+        '\n', sep = '')
+    fails <- fails + 1
+  }
+}
+
+if (fails == 0) {
+  cat('\nevery registered prose figure matches the build\n')
+} else {
+  cat('\n', fails, ' prose figure(s) are stale. The tables can be right while\n',
+      'a sentence is wrong -- that is what this check exists for.\n', sep = '')
+  quit(status = 1)
+}

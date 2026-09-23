@@ -1,0 +1,10 @@
+# Copy to state_data/config_local.yaml and set paths for this machine.
+# config_local.yaml is git-ignored -- machine-specific paths never get committed.
+#
+# The default is relative to the repository root, and the raw files it points
+# at are committed, so a fresh clone builds without downloading anything.
+# Point it elsewhere only if you keep the sources outside the repo.
+paths:
+  # PEP population, NSCH waves, CCD pre-K, Head Start site file -- see
+  # state_data/SOURCES.md for where each came from.
+  raw: 'state_data/raw'

@@ -93,13 +93,12 @@ also decouples cleanly from the simulation-year price equilibrium.
 
 ### Target file
 
-`config/state/demand/<ST>.csv`, base-year (2019) **annual hours** by care
-type, for the state:
+`config/state/demand/<ST>.csv`, base-year (2019) **annual hours** by TARGET
+GROUP, for the state:
 
 ```csv
 ecec_type,annual_hours
-High-Priced Center-Based,123456789
-Low-Priced Center-Based,...
+Center-Based,123456789
 Paid Home-Based,...
 Unpaid Center-Based,...
 Unpaid Home-Based,...
@@ -107,11 +106,19 @@ Other Paid,...
 Other Unpaid,...
 ```
 
-- Care types are the 7 non-parental `ecec_type` values from
-  `CHILD_CARE_CHOICES`; **`Parent Only` is the numeraire** (its delta is 0,
-  and its "hours" are residual by construction).
-- All 7 rows are required (v1 assumes a complete file; partial targeting is
-  a possible later extension).
+- A target names a GROUP, not a care type. `STATE_TARGET_GROUPS` maps the 6
+  groups onto the 7 non-parental `ecec_type` values from `CHILD_CARE_CHOICES`;
+  **`Parent Only` is the numeraire** (its delta is 0, and its "hours" are
+  residual by construction).
+- **Every group is a singleton except `Center-Based`**, which covers both
+  `Low-Priced Center-Based` and `High-Priced Center-Based`. No state publishes
+  the within-state price dispersion that split needs, so state sources support
+  the SUM. The pair therefore shares ONE delta: that constrains their combined
+  hours and leaves their modelled ratio untouched, because a common additive
+  utility shift cancels out of the odds between them.
+- All 6 rows are required (v1 assumes a complete file; partial targeting is
+  a possible later extension). A file naming `Low-Priced Center-Based` or
+  `High-Priced Center-Based` is REJECTED -- it has invented a split.
 - **If the file is absent**: no adjustment — the state run uses filtered
   households with national alphas.
 
@@ -250,7 +257,7 @@ adjustment was applied (and the solved deltas), the supply-parameter source
 
 ```
 config/state/
-├── demand/<ST>.csv       # 2019 annual hours by ecec_type (7 rows), optional
+├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows), optional
 ├── supply/<ST>.yaml      # supply params, schema = supply_2019.yaml, optional
 └── employment/<ST>.csv   # epop projections, schema = epop_projections.csv, optional
 ```

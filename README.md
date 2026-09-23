@@ -96,6 +96,35 @@ tests/                        # testthat test suite
 slurm/                        # SLURM parallel execution scripts
 ```
 
+## State-level demand inputs
+
+`state_data/` builds the state demand targets the simulator re-anchors to:
+one six-row annual-hours file per geography. It builds 19: KY, NJ, NY, NYC and
+VA, plus the 14 states with a full section in the September 2026 Flashpoint
+States and Expansion States memos (AZ, CA, CO, CT, IL, IN, MA, MN, NM, TX, VT,
+WA, WI, WV). Unpaid Center-Based is a regional NSECE share of formal care, like
+the other five types. State programme counts are a printed check only: they
+double-count Head Start children in state pre-K, and only some states report
+that overlap.
+
+- **[state_data/docs/SUMMARY_method.pdf](state_data/docs/SUMMARY_method.pdf)**
+  is the document to read — what every number means and how solid it is.
+- [state_data/README.md](state_data/README.md) is the map: how to build, the
+  ten checks that each exit non-zero on failure, and the known traps.
+- [state_data/SOURCES.md](state_data/SOURCES.md) carries provenance for every
+  input.
+
+The build and the simulator are wired together. `state_data/00_main.R` writes
+each whole-state file a second time to `config/state/demand/<ST>.csv`, and the
+simulator reads it from there (`adjust_alpha_for_state.R`). The simulator takes
+six target groups: one Center-Based target covers both centre price bands.
+NYC is county-defined, and the simulator selects households by state FIPS, so
+NYC has no simulator file. `config/runscripts/state_targets_smoke.csv` runs the
+baseline for KY, NJ, NY, and VA; `state_targets_all.csv` runs it for all 18
+whole states. A state run needs an interface built after
+state support was added, because the alpha files must carry `p0` and child
+weights.
+
 ## Model Flow
 
 1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment and prices (random forest), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`; see `docs/ecec_team_taxid_memo_2026-08-17.md`).
