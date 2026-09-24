@@ -71,7 +71,7 @@ ratio_of <- function(g) {
   s <- load_spec(g)
   q <- utils::capture.output(r <- build_geo(s))
   d <- attr(r, 'diagnostics')
-  programme_children(s)$total /
+  program_children(s)$total /
     ((d$nonparental_total - d$residual) * NSECE_UNPAID_CENTRE_SHARE[[s$region]])
 }
 

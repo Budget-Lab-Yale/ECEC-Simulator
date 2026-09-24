@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # MA.R -- Massachusetts
 #
-# Region northeast. The build reads three things here: the programme counts, the
+# Region northeast. The build reads three things here: the program counts, the
 # NSCH rate w/ its standard error, and the region. Every other constant is
 # NSECE and regional -- see 00_main.R.
 #
@@ -20,8 +20,8 @@ SPEC_MA <- list(
   fips   = 25,
   region = 'northeast',
 
-  programmes = tibble::tribble(
-    ~programme,          ~n_children,
+  programs = tibble::tribble(
+    ~program,          ~n_children,
     'public pre-K',        MA_PREK,
     'Head Start',          MA_HEAD_START,
     'Early Head Start',    MA_EARLY_HEAD_START),
@@ -38,13 +38,14 @@ SPEC_MA <- list(
   # (0.0%), from 04_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0,
 
-  # NSCH 2019 k6q20, children 0-4, child-weighted. n = 122 records.
-  # Single wave; 01_nsch_rate.R prints the pools.
+  # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 261 records.
+  # Year joins stratum -- each wave keeps own design. 2020 excluded: fielded
+  # through pandemic.
   # Derived by 01_nsch_rate.R; `--check` compares this constant back to it.
-  nonparental_rate = 0.7073,
+  nonparental_rate = 0.6560,
 
-  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM, PSU HHID,
-  # weight FWC, state read as a domain. Carried through to an interval on
-  # every output row; nothing else reads it.
-  nonparental_rate_se = 0.0548
+  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM x year,
+  # PSU HHID, weight FWC, state read as a domain. Carried through to an
+  # interval on every output row; nothing else reads it.
+  nonparental_rate_se = 0.0386
 )

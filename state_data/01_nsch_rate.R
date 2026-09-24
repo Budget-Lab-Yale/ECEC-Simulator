@@ -27,7 +27,7 @@ suppressPackageStartupMessages({
 })
 
 STATE_DATA_ROOT <- 'state_data'
-BASE_WAVE       <- 2019             # the wave the build uses -- the base year
+BASE_WAVE       <- '2018-19'        # pooled wave the build uses -- base year + year before
 WAVES           <- c(2018, 2019, 2020)
 
 # Geography -> state FIPS. NYC has no NSCH records of its own and takes NY's,
@@ -140,9 +140,8 @@ pooled_for <- function(waves, fips) {
   # wave keeps its own design and the pool is a stratified estimate rather
   # than a pile of records.
   #
-  # The build does NOT use a pool -- the 2020 wave was fielded through the
-  # pandemic. This prints the pools beside the single wave so that choice
-  # stays checkable.
+  # The build uses the 2018-19 pool (BASE_WAVE). 2020 excluded -- fielded
+  # through pandemic. Other pools printed beside it for reference.
   #
   # Params:
   #   - waves (list of data.frame), fips (int)
@@ -211,7 +210,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
         paste0('(?s).*\\b', k, '\\s*=\\s*([0-9.]+).*'), '\\1', txt, perl = TRUE))
 
       src_geo <- if (g == 'NYC') 'NY' else g    # the city borrows NY's row
-      ref <- all[all$geo == src_geo & all$wave == as.character(BASE_WAVE), ]
+      ref <- all[all$geo == src_geo & all$wave == BASE_WAVE, ]
       ok_r <- abs(got('nonparental_rate')    - round(ref$rate, 4))      < 5e-5
       ok_s <- abs(got('nonparental_rate_se') - round(ref$se_design, 4)) < 5e-5
       cat(sprintf('   %-4s rate %s  se %s\n', g,

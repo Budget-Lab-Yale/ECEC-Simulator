@@ -287,6 +287,24 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
   n_iter <- 0L
   repeat {
     gap <- log(targets / H)
+
+    # A type's modelled hours can reach zero DURING the contraction even though
+    # the zero-support check above passed at delta = 0: a large delta on one
+    # type can drive another type's probability mass to zero in floating point.
+    # gap is then infinite, max(abs(gap)) is NA, and the loop dies on R's
+    # generic 'missing value where TRUE/FALSE needed', which names neither the
+    # state, nor the type, nor the cause.
+    if (any(!is.finite(gap))) {
+      bad <- target_types[!is.finite(gap)]
+      stop('State demand contraction for ', state_postal, ': non-finite gap ',
+           'at iteration ', n_iter, ' for ', paste(bad, collapse = ', '),
+           '. Modelled hours were ',
+           paste(sprintf('%s=%.4g', target_types, H), collapse = ', '),
+           '. A care type has lost all probability mass, which usually means ',
+           'the state holds too few parent units to support every type. ',
+           'Raise --sim-sample, or check the target CSV.')
+    }
+
     if (max(abs(gap)) < STATE_DEMAND_CONTRACTION_TOL) break
 
     n_iter <- n_iter + 1L

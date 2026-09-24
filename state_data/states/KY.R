@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # KY.R -- Kentucky
 #
-# Region south. The build reads three things here: the programme counts, the
+# Region south. The build reads three things here: the program counts, the
 # NSCH rate w/ its standard error, and the region. Every other constant is
 # NSECE and regional -- see 00_main.R.
 #------------------------------------------------------------------------------
@@ -35,8 +35,8 @@ SPEC_KY <- list(
   fips   = 21,
   region = 'south',
 
-  programmes = tibble::tribble(
-    ~programme,          ~n_children,
+  programs = tibble::tribble(
+    ~program,          ~n_children,
     'public pre-K',        KY_PREK_CCD,
     'Head Start',          KY_HEAD_START,
     'Early Head Start',    KY_EARLY_HEAD_START),
@@ -53,20 +53,14 @@ SPEC_KY <- list(
   # (6.8%), from 04_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0.06771422111688899,
 
-  # NSCH 2019 k6q20, children 0-4, child-weighted. n = 147 records.
-  # SINGLE WAVE, deliberately. Pooling 2018+2019+2020 would centre exactly on
-  # 2019 and cut the error ~40%, but NSCH 2020 was fielded through the pandemic
-  # and Kentucky's rate collapses to 45.8% against 57-59% either side. Pooling
-  # 2018+2019 alone centres on mid-2018 while every other input is pinned to
-  # 2019. 01_nsch_rate.R prints both pools beside the single wave.
+  # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 287 records.
+  # Year joins stratum -- each wave keeps own design. 2020 excluded: fielded
+  # through pandemic.
   # Derived by 01_nsch_rate.R; `--check` compares this constant back to it.
-  nonparental_rate = 0.5940,
+  nonparental_rate = 0.5834,
 
-  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM, PSU HHID,
-  # weight FWC, state read as a domain. Census documents that design. Kish's
-  # effective n reads 4.88 on the same 147 records -- it prices the unequal
-  # weighting, never the stratification, so it is the wrong estimator and not
-  # a conservative one. Carried through to an interval on every output row;
-  # nothing else in the build reads it.
-  nonparental_rate_se = 0.0500
+  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM x year,
+  # PSU HHID, weight FWC, state read as a domain. Carried through to an
+  # interval on every output row; nothing else reads it.
+  nonparental_rate_se = 0.0372
 )

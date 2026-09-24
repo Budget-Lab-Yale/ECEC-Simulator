@@ -14,6 +14,8 @@ slurm/logs/
 
 # state_data local config
 state_data/config_local.yaml
+# Files too large for git (e.g. the 92 MB NDCP county workbook); cluster only.
+state_data/raw/local/
 
 # LaTeX build artefacts. latexmk and the LaTeX Workshop extension write these
 # beside the .tex on every save. Patterns are global: nothing tracked matches

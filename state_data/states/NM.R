@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # NM.R -- New Mexico
 #
-# Region west. The build reads three things here: the programme counts, the
+# Region west. The build reads three things here: the program counts, the
 # NSCH rate w/ its standard error, and the region. Every other constant is
 # NSECE and regional -- see 00_main.R.
 #
@@ -13,7 +13,7 @@ NM_HEAD_START       <- 7427     # NIEER State of Preschool 2019, ages 3-4
 NM_EARLY_HEAD_START <- 2080     # NIEER State(s) of Head Start (2023), 2018-19 bar
 
 # Head Start counts: NIEER state figures. Whether they include the AIAN
-# (tribal) programmes in this state is not checked.
+# (tribal) programs in this state is not checked.
 
 
 
@@ -23,8 +23,8 @@ SPEC_NM <- list(
   fips   = 35,
   region = 'west',
 
-  programmes = tibble::tribble(
-    ~programme,          ~n_children,
+  programs = tibble::tribble(
+    ~program,          ~n_children,
     'public pre-K',        NM_PREK,
     'Head Start',          NM_HEAD_START,
     'Early Head Start',    NM_EARLY_HEAD_START),
@@ -41,13 +41,14 @@ SPEC_NM <- list(
   # (12.1%), from 04_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0.12096056922620813,
 
-  # NSCH 2019 k6q20, children 0-4, child-weighted. n = 129 records.
-  # Single wave; 01_nsch_rate.R prints the pools.
+  # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 267 records.
+  # Year joins stratum -- each wave keeps own design. 2020 excluded: fielded
+  # through pandemic.
   # Derived by 01_nsch_rate.R; `--check` compares this constant back to it.
-  nonparental_rate = 0.5573,
+  nonparental_rate = 0.5435,
 
-  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM, PSU HHID,
-  # weight FWC, state read as a domain. Carried through to an interval on
-  # every output row; nothing else reads it.
-  nonparental_rate_se = 0.0584
+  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM x year,
+  # PSU HHID, weight FWC, state read as a domain. Carried through to an
+  # interval on every output row; nothing else reads it.
+  nonparental_rate_se = 0.0423
 )

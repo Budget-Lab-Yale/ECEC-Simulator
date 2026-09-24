@@ -22,7 +22,7 @@
 #      County School District" vs "Prince William County Public Schools").
 #
 # Test 3 is the one that binds: an address match alone only bounds the
-# overlap -- a grantee renting a school classroom runs a separate programme
+# overlap -- a grantee renting a school classroom runs a separate program
 # whose children never enter the school's membership. Test 2 stops a county
 # community action agency ("Pike County Head Start") matching a county
 # district on place name alone.

@@ -1,0 +1,32 @@
+# Binary files, marked explicitly.
+#
+# WHY THIS FILE EXISTS. core.autocrlf is true on the Windows checkouts, and
+# with no .gitattributes git decides text-versus-binary by a content heuristic.
+# It got that wrong for out/nonparental_rate_by_state_2019.png: it applied
+# LF-to-CRLF conversion on checkout and produced a 152,224-byte working file
+# that could never match the 113,814-byte blob, so the file showed as modified
+# forever and `git checkout --` re-applied the corruption instead of fixing it.
+#
+# The heuristic happens to read the PDFs and the Stata files correctly today.
+# It is still a heuristic. Naming the extensions costs nothing and does not
+# depend on file content.
+#
+# NOTE: deliberately no `* text=auto`. That would renormalise line endings
+# across every tracked text file in one commit, which is a much larger change
+# than this problem warrants.
+
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.dta   binary
+*.sas7bdat binary
+*.rds   binary
+*.RData binary
+*.xlsx  binary
+*.xls   binary
+*.xlsm  binary
+*.zip   binary
+*.gz    binary
+*.parquet binary

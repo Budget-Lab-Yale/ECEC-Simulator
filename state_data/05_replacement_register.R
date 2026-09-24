@@ -12,10 +12,13 @@
 # build appears here automatically, with no candidate, and the script says so.
 #
 # STATUS VALUES:
-#   tested-no       tested against the source; cannot carry this constant
-#   tested-partial  tested; carries the constant's type but not its quantity
-#   untested        candidate named, not yet tested
-#   blocked         source identified, retrieval blocked
+#   tested-no          tested against the source; cannot carry this constant
+#   tested-no-at-state tested; the source carries the quantity, but its finest
+#                      geography is the Census region, so it does not replace
+#                      NSECE where NSECE actually fails
+#   tested-partial     tested; carries the constant's type but not its quantity
+#   untested           candidate named, not yet tested
+#   blocked            source identified, retrieval blocked
 #
 # Usage:
 #   Rscript state_data/05_replacement_register.R
@@ -38,6 +41,13 @@ UNIVERSE_A <- 'A: NSECE, any regular care'
 SIPP_CELLS <- file.path(STATE_DATA_ROOT, 'raw',
                         'US_SIPP__children_0_4_by_care_type_and_state__2018-2023.csv')
 CELLS_OUT  <- file.path(STATE_DATA_ROOT, 'out', 'replacement_register_cells.csv')
+
+# THE NHES EVIDENCE. Regional part-time shares and hours universes, derived on
+# the cluster. check_nsece_against_nhes.R asserts the universe ratio against
+# it; hours_note() fills the register's own figures from it, so the register
+# cannot quote a number the file does not hold.
+NHES <- file.path(STATE_DATA_ROOT, 'raw',
+                  'US_NHES__ecpp_children_0_4_by_hours_universe__2019.csv')
 
 # SIPP's care flags against the build's six types. SIPP splits centre care into
 # a child care centre and a nursery/preschool, and has no paid/unpaid
@@ -65,7 +75,7 @@ REGISTER <- tibble::tribble(
 
   'children_all_over_10plus', 'NSECE_UNIVERSE_RATIO',      'step 1 -- carries the NSCH rate from the 10-hour universe up to any regular care',
   'formal_share',             'NSECE_FORMAL_SHARE',        'step 2 -- splits children into formal and informal',
-  'unpaid_centre_share',      'NSECE_UNPAID_CENTRE_SHARE', 'step 3 -- cross-check only; the build uses programme counts',
+  'unpaid_centre_share',      'NSECE_UNPAID_CENTRE_SHARE', 'step 3 -- cross-check only; the build uses program counts',
   'centre_home_split',        'NSECE_CENTRE_HOME_SPLIT',   'step 4 -- splits the rest of formal care into centres and homes',
   'informal_mix',             'NSECE_RESIDUAL_MIX',        'step 5 -- national fallback for a thin regional cell',
   'informal_mix_region',      'NSECE_MIX_REGION',          'step 5 -- splits informal care three ways',
@@ -74,6 +84,32 @@ REGISTER <- tibble::tribble(
   'part_time_share',          'NSECE_PART_TIME',           'step 6 -- national fallback part-time share',
   'part_time_share_region',   'NSECE_PART_TIME_REGION',    'step 6 -- places each child at 10 or 40 hrs/week on the simulator grid',
   'price_band_share',         'NSECE_ANNUAL_HOURS',        'step 6 -- blends the two paid-centre price bands into one Center-Based row')
+
+
+# THE PART-TIME / FULL-TIME MARKER. The simulator places every child at 10 or
+# 40 hrs/week and nothing between, so the build states its target on that grid.
+# A replacement that cannot say which side of the cut a child sits on cannot
+# feed the grid, whatever else it supplies:
+#
+#   - an HOURS source without the marker gives a mean, and a mean implies the
+#     wrong child count once it is put on a two-point grid;
+#   - a PRICE source without the marker prices a part-time child at the
+#     full-time rate, or the reverse, and the error runs straight into the
+#     equilibrium because price drives it.
+#
+# NSECE supplies the marker: 1a_nsece_processing.R cuts at 20 hrs/week and the
+# build uses the same cut. Any candidate is checked against this first.
+NEEDS_PT_FT <- c(children_all_over_10plus = FALSE,
+                 formal_share             = FALSE,
+                 unpaid_centre_share      = FALSE,
+                 centre_home_split        = FALSE,
+                 informal_mix             = FALSE,
+                 informal_mix_region      = FALSE,
+                 weekly_hours             = TRUE,
+                 weekly_hours_region      = TRUE,
+                 part_time_share          = TRUE,
+                 part_time_share_region   = TRUE,
+                 price_band_share         = TRUE)
 
 
 # THE SEARCH. Keyed on what the constant IS, not on which quantity it is, so
@@ -96,21 +132,87 @@ KIND <- c(children_all_over_10plus = 'ratio',
 
 CANDIDATE <- c(
   share = 'SIPP 2018-2023 (Bouchet: shared/raw_data/SIPP)',
-  hours = 'none identified',
-  ratio = 'SIPP 2018-2023, or NHES-ECPP')
+  hours = 'NHES-ECPP 2019 -- Census region only; state needs the IES restricted-use licence',
+  ratio = 'NHES-ECPP 2019 (has the hours the cut needs)')
 
 CANDIDATE_GEO <- c(share = 'state, all 51',
-                   hours = '--',
-                   ratio = 'state, all 51')
+                   hours = 'Census region (public-use); state restricted',
+                   ratio = 'Census region (public-use); state restricted')
 
 STATUS <- c(share = 'tested-partial',
-            hours = 'tested-no',
-            ratio = 'untested')
+            hours = 'tested-no-at-state',
+            ratio = 'tested-no-at-state')
 
 NOTE <- c(
   share = 'SIPP carries care type per child and identifies every state. It cannot carry payment per arrangement (EPAY is one household answer), so a paid/unpaid split is approximate. Cell sizes bind: see out/replacement_register_cells.csv.',
-  hours = 'SIPP has NO hours variable. Its whole care battery is yes/no flags; the only quantity is TPAYWK, a weekly amount the reference parent pays for all children together. NSCH k6q20 is binary at 10 hrs/week. NHES-ECPP has hours but state only in restricted-use.',
-  ratio = 'Needs an hours variable to define the 10-hour cut, so it inherits the hours problem. Left open.')
+  # The part-time shares in this note are FILLED FROM DISK by hours_note(),
+  # not typed. They were typed once, which made the register a third place the
+  # same four numbers had to be edited, and the only one nothing checked.
+  hours = 'NHES-ECPP 2019 public-use has real hours per arrangement (CAREHOURX, CPHRS, RCHRS, NCHRS) for %d children, and gives a part-time share at the build\'s own 20 hrs/week cut: %s. But its finest geography is CENREG, four Census regions -- the SAME wall as NSECE. State exists only in the IES restricted-use file, which needs a licence. SIPP has no hours at all; NSCH k6q20 is binary at 10 hrs/week; CCDF Table 14 is state x hours but covers subsidy children only and acf.gov is bot-blocked (202, empty body) from both Windows and Bouchet.',
+  ratio = 'Needs an hours variable to define the 10-hour cut. NHES-ECPP has one, but only at Census region, so the ratio cannot be made state-specific either.')
+
+
+# PER-QUANTITY OVERRIDE. A constant whose search differs from its kind's takes
+# its row from here. price_band_share is the only one so far: it is a `share`
+# by shape, but the thing that would replace it is a PRICE source, and the
+# price evidence is its own.
+OVERRIDE <- tibble::tribble(
+  ~quantity, ~candidate, ~candidate_geography, ~status, ~note,
+
+  'price_band_share',
+  'DOL Women\'s Bureau National Database of Childcare Prices (NDCP), 2008-2022',
+  'county, 47 states',
+  'tested-partial',
+  paste(
+    'NDCP gives median and 75th-percentile prices by county, provider type',
+    '(center / family) and age, and is fetchable from Bouchet (www.dol.gov is',
+    '403 from Windows, 200 there). BUT every price is a FULL-TIME WEEKLY price',
+    'and there is NO part-time series, so the grid\'s 10 hrs/week point has no',
+    'NDCP price. Worse for a state build, "full-time" is each state\'s own',
+    'definition and is not a fixed number of hours: ME reports 21-30 hrs most',
+    'frequent, IN 35, MI 45, NJ 51.7, and several states let each provider',
+    'decide. Using NDCP across states would import variation in the DEFINITION',
+    'of full-time as if it were variation in price. Hourly-reporting states are',
+    'converted at x40 hrs/week, which matches the simulator\'s full-time point',
+    'only by coincidence. Technical report in raw/documentation/.'))
+
+
+
+hours_note <- function() {
+
+  #----------------------------------------------------------------------------
+  # The `hours` note, with its figures read from the NHES derivation rather
+  # than typed into this file.
+  #
+  # The same regional part-time shares appear in the memo and in SOURCES.md.
+  # Typing them here too made this the third copy, and the only one no check
+  # compared against the file. Now the register cannot disagree with the
+  # evidence it cites.
+  #
+  # Returns: (chr)
+  #----------------------------------------------------------------------------
+
+  if (!file.exists(NHES)) {
+    stop('missing ', NHES, ' -- the register quotes figures it must read')
+  }
+
+  n <- read_csv(NHES, col_types = cols(
+    universe = col_character(), universe_label = col_character(),
+    region = col_character(), n = col_double(),
+    weighted_children = col_double(), mean_weekly_hours = col_double(),
+    share_under_20_hrs = col_double()))
+
+  # The five-hour cut is NSECE universe A's analogue, which is what the build
+  # screens on.
+  a <- n[n$universe == 'ge5' & n$region != 'national', ]
+  a <- a[order(match(a$region, c('northeast', 'south', 'midwest', 'west'))), ]
+  tot <- sum(a$n)
+
+  abb <- c(northeast = 'NE', south = 'S', midwest = 'MW', west = 'W')
+  shares <- paste(sprintf('%.3f %s', a$share_under_20_hrs,
+                          unname(abb[a$region])), collapse = ', ')
+  sprintf(NOTE[['hours']], tot, shares)
+}
 
 
 
@@ -139,6 +241,10 @@ main <- function() {
   geography_of <- function(keys) {
     if (all(grepl(':', keys, fixed = TRUE))) return('Census region x type')
     if (all(keys %in% REGIONS))              return('Census region')
+    # The regions PLUS a pooled national row. 02_nsece_constants.R emits that
+    # national row as reference; build itself reads four regional cells.
+    if (setequal(keys, c(REGIONS, 'national')))
+      return('Census region + national pool')
     if (identical(keys, 'national'))         return('national')
     'national, by care type'
   }
@@ -167,12 +273,41 @@ main <- function() {
   reg <- REGISTER %>%
     left_join(shape, by = 'quantity') %>%
     mutate(kind            = unname(KIND[quantity]),
+           needs_pt_ft_marker = unname(NEEDS_PT_FT[quantity]),
            candidate       = unname(CANDIDATE[kind]),
            candidate_geography = unname(CANDIDATE_GEO[kind]),
            status          = unname(STATUS[kind]),
            note            = unname(NOTE[kind])) %>%
+    mutate(note = if_else(kind == 'hours', hours_note(), note))
+
+  # A quantity in OVERRIDE takes its search from there, not from its kind.
+  stray <- setdiff(OVERRIDE$quantity, reg$quantity)
+  if (length(stray)) {
+    cat('OVERRIDE NAMES A QUANTITY THE REGISTER DOES NOT HOLD: ',
+        paste(stray, collapse = ', '), '\n', sep = '')
+    if (check_only) quit(status = 1)
+  }
+  for (i in seq_len(nrow(OVERRIDE))) {
+    j <- which(reg$quantity == OVERRIDE$quantity[i])
+    if (!length(j)) next
+    reg$candidate[j]           <- OVERRIDE$candidate[i]
+    reg$candidate_geography[j] <- OVERRIDE$candidate_geography[i]
+    reg$status[j]              <- OVERRIDE$status[i]
+    reg$note[j]                <- OVERRIDE$note[i]
+  }
+
+  reg <- reg %>%
     select(quantity, constant, feeds, geography_now, cells, min_records,
-           max_records, kind, candidate, candidate_geography, status, note)
+           max_records, kind, needs_pt_ft_marker, candidate,
+           candidate_geography, status, note)
+
+  # A quantity with no entry in NEEDS_PT_FT would carry NA and pass unnoticed.
+  if (any(is.na(reg$needs_pt_ft_marker))) {
+    cat('QUANTITY WITH NO PART-TIME / FULL-TIME RULING: ',
+        paste(reg$quantity[is.na(reg$needs_pt_ft_marker)], collapse = ', '),
+        '\n', sep = '')
+    if (check_only) quit(status = 1)
+  }
 
   if (check_only) {
     if (length(missing) || length(extra)) quit(status = 1)
@@ -185,11 +320,22 @@ main <- function() {
 
   cat('== REPLACEMENT REGISTER --', nrow(reg), 'NSECE constants\n\n')
   print(as.data.frame(reg %>% select(quantity, geography_now, cells,
-                                     min_records, kind, status)),
+                                     min_records, kind, needs_pt_ft_marker,
+                                     status)),
         row.names = FALSE)
 
   cat('\n== by status\n')
   print(as.data.frame(reg %>% count(kind, status, candidate)), row.names = FALSE)
+
+  cat('\n== part-time / full-time marker\n')
+  cat('   The simulator holds a child at 10 or 40 hrs/week. A replacement that\n')
+  cat('   cannot place a child on that cut cannot feed the grid.\n\n')
+  print(as.data.frame(reg %>%
+                        count(needs_pt_ft_marker, kind, status) %>%
+                        arrange(desc(needs_pt_ft_marker))),
+        row.names = FALSE)
+  cat('\n  ', sum(reg$needs_pt_ft_marker), ' of ', nrow(reg),
+      ' constants require the marker.\n', sep = '')
 
   cat('\nwrote', OUT, '\n')
 

@@ -1,0 +1,28 @@
+# SOURCE PROVENANCE -- archived 2026-09-03
+# Title:    FY 2019 Preliminary Data Table 14 -- Hours of Children In Care
+# Agency:   HHS Administration for Children and Families (ACF), Office of Child Care
+# Program:  Child Care and Development Fund (CCDF)
+# Origin:   ACF-801 case-level administrative records, FY2019
+# URL:      https://acf.gov/occ/data/fy-2019-preliminary-data-table-14
+# Published: 2021-05-21   Data as of: 2021-01-29
+# Retrieved: 2026-09-03. acf.gov filters on User-Agent -- a browser UA returns 200,
+#            a default client UA returns 403. Not a hard block.
+# Used for: National only, no state rows. Not usable per-state; kept as the record of why the FT/PT split stays national.
+#           NOT a build input. Floor/diagnostic only -- covers subsidised
+#           children only, and family copay is unobserved so the model paid/
+#           unpaid line cannot be drawn from these cells.
+# Caveats:  "adjusted" = raw state count x ACF-800 pooling factor. "0%" often
+#           means <0.5%. Multi-setting children counted proportionally by hours.
+#           "-" = not reported; American Samoa and Virgin Islands filed nothing.
+#           Months submitted: Alabama 9, Georgia 2, Louisiana 11; others 12.
+#           Georgia Invalid share is high after an eligibility-system transition.
+Age Group	Child's Home	Family Home	Group Home	Center	Weighted Averages
+0 to < 1 yr	157	176	164	173	173
+1 to < 2 yrs	160	181	170	181	180
+2 to < 3 yrs	162	182	169	183	182
+3 to < 4 yrs	159	180	171	181	180
+4 to < 5 yrs	159	176	167	174	174
+5 to < 6 yrs	144	157	139	149	149
+6 to < 13 yrs	124	136	109	114	118
+13+ yrs	145	142	105	123	131
+National	138	158	146	155	154

@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # WI.R -- Wisconsin
 #
-# Region midwest. The build reads three things here: the programme counts, the
+# Region midwest. The build reads three things here: the program counts, the
 # NSCH rate w/ its standard error, and the region. Every other constant is
 # NSECE and regional -- see 00_main.R.
 #
@@ -13,7 +13,7 @@ WI_HEAD_START       <- 11015    # NIEER State of Preschool 2019, ages 3-4
 WI_EARLY_HEAD_START <- 3289     # NIEER State(s) of Head Start (2023), 2018-19 bar
 
 # Head Start counts: NIEER state figures. Whether they include the AIAN
-# (tribal) programmes in this state is not checked.
+# (tribal) programs in this state is not checked.
 
 
 
@@ -23,8 +23,8 @@ SPEC_WI <- list(
   fips   = 55,
   region = 'midwest',
 
-  programmes = tibble::tribble(
-    ~programme,          ~n_children,
+  programs = tibble::tribble(
+    ~program,          ~n_children,
     'public pre-K',        WI_PREK,
     'Head Start',          WI_HEAD_START,
     'Early Head Start',    WI_EARLY_HEAD_START),
@@ -41,13 +41,14 @@ SPEC_WI <- list(
   # (14.9%), from 04_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0.14875389408099687,
 
-  # NSCH 2019 k6q20, children 0-4, child-weighted. n = 103 records.
-  # Single wave; 01_nsch_rate.R prints the pools.
+  # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 240 records.
+  # Year joins stratum -- each wave keeps own design. 2020 excluded: fielded
+  # through pandemic.
   # Derived by 01_nsch_rate.R; `--check` compares this constant back to it.
-  nonparental_rate = 0.5180,
+  nonparental_rate = 0.5840,
 
-  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM, PSU HHID,
-  # weight FWC, state read as a domain. Carried through to an interval on
-  # every output row; nothing else reads it.
-  nonparental_rate_se = 0.0648
+  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM x year,
+  # PSU HHID, weight FWC, state read as a domain. Carried through to an
+  # interval on every output row; nothing else reads it.
+  nonparental_rate_se = 0.0430
 )

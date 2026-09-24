@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # NJ.R -- New Jersey
 #
-# Region northeast. The build reads three things here: the programme counts,
+# Region northeast. The build reads three things here: the program counts,
 # the NSCH rate w/ its standard error, and the region. Every other constant is
 # NSECE and regional -- see 00_main.R.
 #------------------------------------------------------------------------------
@@ -20,8 +20,8 @@ SPEC_NJ <- list(
   fips   = 34,
   region = 'northeast',
 
-  programmes = tibble::tribble(
-    ~programme,          ~n_children,
+  programs = tibble::tribble(
+    ~program,          ~n_children,
     'public pre-K',        NJ_PREK_CCD,
     'Head Start',          NJ_HEAD_START,
     'Early Head Start',    NJ_EARLY_HEAD_START),
@@ -38,17 +38,14 @@ SPEC_NJ <- list(
   # (11.4%), from 04_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0.11373011196228638,
 
-  # NSCH 2019 k6q20, children 0-4, child-weighted. n = 101 records -- thinnest
-  # cell in the build. Single wave; 01_nsch_rate.R prints the pools.
-  # New Jersey's 2020 rate collapses to 42.6% against 58-60% either side.
+  # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 208 records.
+  # Year joins stratum -- each wave keeps own design. 2020 excluded: fielded
+  # through pandemic.
   # Derived by 01_nsch_rate.R; `--check` compares this constant back to it.
-  nonparental_rate = 0.6022,
+  nonparental_rate = 0.5919,
 
-  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM, PSU HHID,
-  # weight FWC, state read as a domain. Census documents that design. Kish's
-  # effective n reads 6.24 on the same 101 records -- it prices the unequal
-  # weighting, never the stratification, so it is the wrong estimator and not
-  # a conservative one. NJ moves most of the four, 6.24 to 6.47. Carried
-  # through to an interval on every output row; nothing else reads it.
-  nonparental_rate_se = 0.0647
+  # Standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM x year,
+  # PSU HHID, weight FWC, state read as a domain. Carried through to an
+  # interval on every output row; nothing else reads it.
+  nonparental_rate_se = 0.0434
 )

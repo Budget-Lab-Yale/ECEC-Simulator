@@ -103,14 +103,14 @@ one six-row annual-hours file per geography. It builds 19: KY, NJ, NY, NYC and
 VA, plus the 14 states with a full section in the September 2026 Flashpoint
 States and Expansion States memos (AZ, CA, CO, CT, IL, IN, MA, MN, NM, TX, VT,
 WA, WI, WV). Unpaid Center-Based is a regional NSECE share of formal care, like
-the other five types. State programme counts are a printed check only: they
+the other five types. State program counts are a printed check only: they
 double-count Head Start children in state pre-K, and only some states report
 that overlap.
 
 - **[state_data/docs/SUMMARY_method.pdf](state_data/docs/SUMMARY_method.pdf)**
   is the document to read — what every number means and how solid it is.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
-  ten checks that each exit non-zero on failure, and the known traps.
+  eleven checks that each exit non-zero on failure, and the known traps.
 - [state_data/SOURCES.md](state_data/SOURCES.md) carries provenance for every
   input.
 

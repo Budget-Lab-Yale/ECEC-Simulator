@@ -327,7 +327,7 @@ summarise_universe <- function(kids, label, all_children = NULL) {
 
   # Unpaid Center-Based share of formal care, by region -- step 3. Weighted
   # children whose primary type is Unpaid Center-Based over weighted children
-  # whose primary type is formal. Replaces programme counts in step 3: counts
+  # whose primary type is formal. Replaces program counts in step 3: counts
   # double-count Head Start children also in state pre-K, and only some
   # states report that overlap.
   unpaid <- kids %>%
@@ -515,11 +515,8 @@ main <- function() {
 
   b_kids <- dplyr::filter(prim, total_hours >= 10)
 
-  # POOLED NATIONAL SHARES, for BOTH universes. 03_national_sensitivity.R reads
-  # these to build the national arm. Emitting only universe B made that arm
-  # differ from the default build in two ways at once -- geography AND universe
-  # -- so the comparison it printed was not the geography comparison it
-  # claimed. Each universe now carries its own national row.
+  # POOLED NATIONAL SHARES, for BOTH universes. Reference rows only -- build
+  # reads regional cells.
   pooled_national <- function(kids, label) {
     paid_formal <- dplyr::filter(kids, ecec_choice %in%
                                  c('High-Priced Center-Based',

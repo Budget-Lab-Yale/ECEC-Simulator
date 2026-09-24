@@ -6,10 +6,10 @@
 #
 # THE CITY TAKES THE STATE'S NON-PARENTAL RATE. NSCH publishes no sub-state
 # geography, so there is no city rate to measure. What distinguishes the city
-# is its population and its programme counts.
+# is its population and its program counts.
 #
 # THE NY BUILD INCLUDES THIS ONE. Same rate, same Northeast constants, so the
-# build is linear in population and programme counts: NY rows minus NYC rows
+# build is linear in population and program counts: NY rows minus NYC rows
 # give the rest of the state.
 #------------------------------------------------------------------------------
 
@@ -25,8 +25,8 @@ SPEC_NYC <- list(
   counties = NYC_BOROUGHS,
   region   = 'northeast',
 
-  programmes = tibble::tribble(
-    ~programme,          ~n_children,
+  programs = tibble::tribble(
+    ~program,          ~n_children,
     'public pre-K',        NYC_PREK_CCD,
     'Head Start',          NYC_HEAD_START,
     'Early Head Start',    NYC_EARLY_HEAD_START),
@@ -43,11 +43,11 @@ SPEC_NYC <- list(
   # (0.0%), from 04_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0,
 
-  # New York's rate. See header. Derived by 01_nsch_rate.R.
-  nonparental_rate = 0.5766,
+  # New York's rate, NSCH 2018+2019 pooled. See header. Derived by 01_nsch_rate.R.
+  nonparental_rate = 0.6117,
 
-  # New York's standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM,
+  # New York's standard error, FROM THE SURVEY DESIGN: strata FIPSST x STRATUM x year,
   # PSU HHID, weight FWC, state read as a domain. NSCH holds no city
   # identifier, so the city borrows the state's error as it borrows the rate.
-  nonparental_rate_se = 0.0589
+  nonparental_rate_se = 0.0433
 )

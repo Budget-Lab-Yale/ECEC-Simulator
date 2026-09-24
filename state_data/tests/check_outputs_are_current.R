@@ -86,7 +86,7 @@ for (g in GEOGRAPHIES) {
     cat(sprintf('  [FAIL] %-4s interval bounds differ by %.4f%%\n', g, 100 * d))
     fails <- fails + 1
   } else if (anyNA(lo)) {
-    cat(sprintf('  [ok]   %-4s high agrees to %.0e; no low bound -- below %.1f%%, programmes exceed formal care\n',
+    cat(sprintf('  [ok]   %-4s high agrees to %.0e; no low bound -- below %.1f%%, programs exceed formal care\n',
                 g, TOL, 100 * min_feasible_rate(spec)))
   } else {
     cat(sprintf('  [ok]   %-4s low and high agree to %.0e\n', g, TOL))

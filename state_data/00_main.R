@@ -7,14 +7,14 @@
 # THE METHOD, per geography:
 #   1. children in regular care = population 0-4 x NSCH rate x universe ratio
 #   2. formal = that x regional NSECE formal share; informal = the rest
-#   3. Unpaid Center-Based = programme counts, less the Head Start a district
+#   3. Unpaid Center-Based = program counts, less the Head Start a district
 #      runs in its own pre-K school (CCD counts those children too)
 #   4. rest of formal split centre / home by the regional NSECE share
 #   5. informal split by the regional NSECE mix
 #   6. annual hours = children x the simulator's own hours grid x 50, split
 #      part-time / full-time by the regional NSECE share
 #
-# states/<GEO>.R is DATA: programme counts, NSCH rate w/ standard error,
+# states/<GEO>.R is DATA: program counts, NSCH rate w/ standard error,
 # Census region, and the school-overlap share. Everything else lives here and
 # reaches every geography.
 #
@@ -102,7 +102,7 @@ NSECE_MIN_RECORDS <- 30
 # Step 3 CROSS-CHECK only. Unpaid Center-Based over all formal care, by
 # region -- weighted children whose primary type is Unpaid Center-Based over
 # weighted children whose primary type is formal. Step 3 itself uses each
-# state's own programme counts; this says what the regional average gives.
+# state's own program counts; this says what the regional average gives.
 # Formal records: NE 235, MW 254, S 482, W 279 (Unpaid Center-Based 84, 93,
 # 163, 106) -- no fallback needed.
 NSECE_UNPAID_CENTRE_SHARE <- c(northeast = 0.29858157955075193,
@@ -180,12 +180,6 @@ NSECE_PART_TIME <- c(
   'Other Unpaid'        = 0.29237982925281690,
   'Other Paid'          = 0.28619765711509220,
   'Unpaid Home-Based'   = 0.11530630069636505)
-
-# NATIONAL annual hours per child on the simulator's grid. What the national
-# part-time shares give; 03_national_sensitivity.R's hybrid and national runs
-# use it in place of the regional grid.
-NSECE_GRID_HOURS_NATIONAL <-
-  (NSECE_PART_TIME * GRID_PT_HOURS + (1 - NSECE_PART_TIME) * GRID_FT_HOURS) * 50
 
 # Share of a type's children whose primary arrangement runs under 20 hrs/week
 # -- the cut 1a_nsece_processing.R uses, so the build and the simulator call
@@ -424,10 +418,10 @@ population_0_4 <- function(fips, counties = NULL) {
 
 
 
-programme_children <- function(spec) {
+program_children <- function(spec) {
 
   #----------------------------------------------------------------------------
-  # Step 3 total -- programme counts less the children CCD already counts.
+  # Step 3 total -- program counts less the children CCD already counts.
   #
   # Pre-K (CCD) + Head Start + Early Head Start counts a child twice when a
   # school district runs a Head Start class in one of its own pre-K schools:
@@ -453,7 +447,7 @@ programme_children <- function(spec) {
   # Returns: (list) gross, share, netted, total
   #----------------------------------------------------------------------------
 
-  p     <- setNames(spec$programmes$n_children, spec$programmes$programme)
+  p     <- setNames(spec$programs$n_children, spec$programs$program)
   gross <- sum(p)
   share <- spec$hs_in_schools_share
   if (is.null(share) || !is.finite(share) || share < 0 || share > 1) {
@@ -463,6 +457,53 @@ programme_children <- function(spec) {
   netted <- unname(p['Head Start']) * share
 
   list(gross = gross, share = share, netted = netted, total = gross - netted)
+}
+
+
+
+nieer_overlap <- function(spec) {
+
+  #----------------------------------------------------------------------------
+  # Head Start children NIEER also finds in state pre-K, for one geography.
+  #
+  # nieer_undup_34 holds NIEER's 3s+4s counts without and with Head Start
+  # (State of Preschool 2019, Table 4). The difference is Head Start net of
+  # children already counted in state pre-K, so gross Head Start less that
+  # difference is the overlap. Only some states report the pair; the rest carry
+  # a placeholder that makes the difference equal gross Head Start, which
+  # returns zero.
+  #
+  # DIAGNOSTIC ONLY. Step 3 does not deduct this -- see the note at its call
+  # site. Nothing else reads these fields, and printing them is what keeps a
+  # measured, documented figure from rotting unseen in nineteen spec files.
+  #
+  # Params:
+  #   - spec (list): from states/<GEO>.R
+  #
+  # Returns: (num) children, or NA where the pair is absent
+  #----------------------------------------------------------------------------
+
+  u <- spec$nieer_undup_34
+  if (is.null(u) || !all(c('without_hs', 'with_hs') %in% names(u)) ||
+      !all(is.finite(u))) return(NA_real_)
+
+  p  <- setNames(spec$programs$n_children, spec$programs$program)
+  hs <- unname(p['Head Start'])
+  if (!is.finite(hs) || hs <= 0) return(NA_real_)
+
+  ov <- hs - (u[['with_hs']] - u[['without_hs']])
+  if (!is.finite(ov) || ov < 0) return(NA_real_)
+
+  # A difference equal to gross Head Start means NIEER published a sum rather
+  # than an unduplicated count -- it did not measure the overlap for that
+  # state. Texas and Virginia look like this exactly; Minnesota and Wisconsin
+  # miss by one child, which is rounding in whole-child figures, not a measured
+  # overlap of one. Reporting either as a measured zero would claim knowledge
+  # the yearbook does not have, so both read as absent. The rule leaves the
+  # seven states the yearbook actually deduplicates -- CT, IL, KY, MA, NJ, NY,
+  # WV -- plus NYC, which inherits New York's.
+  if (ov / hs < 0.001) return(NA_real_)
+  ov
 }
 
 
@@ -497,32 +538,51 @@ build_geo <- function(spec) {
   formal   <- NSECE_FORMAL_SHARE[[spec$region]] * np_total
   informal <- np_total - formal
 
-  ## 3. Unpaid Center-Based -- programme counts, less the CCD double count ---
-  pc        <- programme_children(spec)
-  programme <- pc$total
-  cat('  programmes            ', format(pc$gross, big.mark = ','),
-      ' (', paste(spec$programmes$programme, collapse = ', '), ')\n', sep = '')
+  ## 3. Unpaid Center-Based -- program counts, less the CCD double count ---
+  pc        <- program_children(spec)
+  program <- pc$total
+  cat('  programs            ', format(pc$gross, big.mark = ','),
+      ' (', paste(spec$programs$program, collapse = ', '), ')\n', sep = '')
   cat(sprintf('  Head Start in own school %s of Head Start slots -> less %s -> %s\n',
               sprintf('%.1f%%', 100 * pc$share),
               format(round(pc$netted), big.mark = ','),
-              format(round(programme), big.mark = ',')))
+              format(round(program), big.mark = ',')))
 
   # Cross-check: what the regional NSECE share would give instead.
   unpaid_share <- NSECE_UNPAID_CENTRE_SHARE[[spec$region]]
   cat(sprintf('  vs regional NSECE     %s (share %.3f) -- build / NSECE %.2f\n',
               format(round(formal * unpaid_share), big.mark = ','), unpaid_share,
-              programme / (formal * unpaid_share)))
+              program / (formal * unpaid_share)))
 
-  # The programmes alone cannot exceed the formal total. If they do, nothing is
+  # THE OVERLAP THIS BUILD DOES NOT DEDUCT. Step 3 removes Head Start a district
+  # runs in one of its own pre-K schools, because CCD counts those children too.
+  # It does NOT remove Head Start children who are also enrolled in STATE
+  # pre-K. NIEER Table 4 measures that second overlap, and states/<GEO>.R carries
+  # the pair, but only some states report it and it nets against state pre-K in
+  # every setting while this build counts CCD pre-K in public schools only --
+  # so applying it would correct states unevenly, for a reason that is not about
+  # care. Printed, not applied: the figure was expensive to collect and it is
+  # the larger of the two wherever a state reports it.
+  ov <- nieer_overlap(spec)
+  if (is.finite(ov)) {
+    cat(sprintf('  NIEER state pre-K overlap %s (%.1f%% of Head Start) -- measured, NOT deducted\n',
+                format(round(ov), big.mark = ','),
+                100 * ov / unname(setNames(spec$programs$n_children,
+                                           spec$programs$program)['Head Start'])))
+  } else {
+    cat('  NIEER state pre-K overlap  not reported for this geography\n')
+  }
+
+  # The programs alone cannot exceed the formal total. If they do, nothing is
   # left for the centre-home split -- an input problem, stated as one.
-  if (programme >= formal) {
-    stop(spec$geo, ': programme enrolment ', format(round(programme), big.mark = ','),
+  if (program >= formal) {
+    stop(spec$geo, ': program enrolment ', format(round(program), big.mark = ','),
          ' meets or exceeds the formal total ',
          format(round(formal), big.mark = ','),
          '. Check the control total, the regional formal share and the ',
-         'programme figures.')
+         'program figures.')
   }
-  other_formal <- formal - programme
+  other_formal <- formal - program
 
   ## 4. centres and homes -- regional NSECE split ----------------------------
   split <- NSECE_CENTRE_HOME_SPLIT[[spec$region]]
@@ -530,7 +590,7 @@ build_geo <- function(spec) {
 
   ## 5. informal care -- regional NSECE mix, national fallback ---------------
   children <- c('Center-Based'        = other_formal * split,
-                'Unpaid Center-Based' = programme,
+                'Unpaid Center-Based' = program,
                 'Paid Home-Based'     = other_formal * (1 - split),
                 informal * regional_mix(spec$region))[ECEC_TYPES]
   cat('  informal              ', format(round(informal), big.mark = ','),
@@ -562,9 +622,9 @@ build_geo <- function(spec) {
                                unpaid_share = unpaid_share,
                                hs_in_schools_share = pc$share,
                                hs_netted = pc$netted,
-                               programme_gross = pc$gross,
-                               programme_net = pc$total,
-                               centre_based = other_formal * split + programme,
+                               program_gross = pc$gross,
+                               program_net = pc$total,
+                               centre_based = other_formal * split + program,
                                licensed_home = other_formal * (1 - split)))
 }
 
@@ -635,7 +695,7 @@ write_interval <- function(spec, point, geo) {
   # The non-parental rate rests on ~120 families per geography and carries a
   # standard error of five to six points. Every count is a share of the total
   # that rate produces, so that error reaches every row. It is NOT proportional:
-  # programme counts hold fixed while the other formal types absorb the
+  # program counts hold fixed while the other formal types absorb the
   # difference, so the build is re-run at each bound rather than scaled.
   #
   # The interval covers sampling error in the rate ALONE. It says nothing about
@@ -668,7 +728,7 @@ write_interval <- function(spec, point, geo) {
               100 * (spec$nonparental_rate + 1.96 * se),
               100 * (sum(out$high) / sum(out$annual_hours) - 1)))
   if (anyNA(lo)) {
-    cat(sprintf('  interval low bound    NONE -- programmes exceed formal care below rate %.1f%%\n',
+    cat(sprintf('  interval low bound    NONE -- programs exceed formal care below rate %.1f%%\n',
                 100 * min_feasible_rate(spec)))
   }
   f
@@ -680,8 +740,8 @@ interval_bound <- function(spec, rate) {
 
   #----------------------------------------------------------------------------
   # Build at one end of rate interval. NA per care type where rate leaves
-  # formal care at or below programme total -- data reject that rate, since
-  # programme counts alone need more formal care. min_feasible_rate() gives
+  # formal care at or below program total -- data reject that rate, since
+  # program counts alone need more formal care. min_feasible_rate() gives
   # the floor.
   #
   # Params:
@@ -711,7 +771,7 @@ interval_bound <- function(spec, rate) {
 min_feasible_rate <- function(spec, formal_share = NSECE_FORMAL_SHARE[[spec$region]]) {
 
   #----------------------------------------------------------------------------
-  # Lowest NSCH rate at which formal care exceeds netted programme total.
+  # Lowest NSCH rate at which formal care exceeds netted program total.
   #
   # Carries NSECE_UNIVERSE_RATIO, as step 1 does. Without it this floor and
   # build_geo() disagree, and a bound reads NA in one place and a number in
@@ -723,7 +783,7 @@ min_feasible_rate <- function(spec, formal_share = NSECE_FORMAL_SHARE[[spec$regi
   # Returns: (num) rate
   #----------------------------------------------------------------------------
 
-  programme_children(spec)$total /
+  program_children(spec)$total /
     (population_0_4(spec$fips, spec$counties) * NSECE_UNIVERSE_RATIO * formal_share)
 }
 
