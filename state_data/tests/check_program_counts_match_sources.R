@@ -1,0 +1,184 @@
+#-----------------------------------------------------------------------------
+# Do the step 3 program counts in states/<GEO>.R match their public sources?
+#
+# Every count is hand-transcribed into a spec file. Nothing tied them back to
+# the documents they came from -- a typo or a stale snapshot would reach the
+# build and the memo unchallenged. One source per program, compared directly:
+#
+#   public pre-K       = CCD 2018-19 pre-K membership, summed from the county
+#                        file (NYC: the five boroughs). CA has no CCD rows --
+#                        its spec cites NIEER -- so CA is reported, not checked.
+#   Head Start         = NIEER State of Preschool 2019, Appendix B: federal +
+#                        AIAN + Migrant & Seasonal funded slots, ages 3 and 4.
+#                        NIEER rounds each cell, so +/- 2 slots is allowed.
+#   Early Head Start   = NIEER State(s) of Head Start and Early Head Start
+#                        (2023), state profile, funded-enrollment chart,
+#                        2018-2019 bar -- smaller of the two bars.
+#   NYC shares         = NYC's share of New York's OPEN funded slots in the
+#                        Head Start service-location file 04_ reads, HS types
+#                        and EHS types separately.
+#
+# Every source is a public file in raw/ or raw/documentation/.
+#
+#   Rscript state_data/tests/check_program_counts_match_sources.R
+#
+# Exit status is 1 on any mismatch or a source row it cannot find.
+#-----------------------------------------------------------------------------
+suppressPackageStartupMessages({library(readr); library(dplyr)})
+
+source('state_data/00_main.R')     # main() is guarded; this only loads
+
+DOC      <- file.path(STATE_DATA_ROOT, 'raw', 'documentation')
+NIEER    <- file.path(DOC, 'US_NIEER__state_of_preschool_yearbook__2019.pdf')
+NIEER_HS <- file.path(DOC, 'US_NIEER__states_of_head_start_and_early_head_start__2023.pdf')
+CCD      <- raw_path('US_CCD__public_school_prekindergarten_children_by_county__2018-19.csv')
+HSSL     <- raw_path('US_HSSL__head_start_funded_slots_by_service_location__2026-09-23.csv')
+
+HS_TYPES  <- c('1', '3', '5')    # as 04_head_start_in_schools.R
+EHS_TYPES <- c('2', '4', '6')
+NYC_COUNTIES <- c('Bronx County', 'Kings County', 'New York County',
+                  'Queens County', 'Richmond County')
+NIEER_TOL <- 2
+BAR_POINTS <- 25                 # bar label within this many points of axis label
+
+for (f in c(NIEER, NIEER_HS, CCD, HSSL)) {
+  if (!file.exists(f)) { cat('MISSING SOURCE: ', f, '\n', sep = ''); quit(status = 1) }
+}
+
+
+
+pdf_row <- function(pages, state) {
+
+  #----------------------------------------------------------------------------
+  # Integers on a state's row of a PDF table, after its first dollar figure.
+  # Percent cells dropped. Row matched on full state name at line start --
+  # 'Virginia' never takes 'West Virginia'.
+  #
+  # Params:
+  #   - pages (chr vec) page text, state (chr) full name
+  #
+  # Returns: (num vec) the integers, or NULL if no row
+  #----------------------------------------------------------------------------
+
+  l <- unlist(strsplit(pages, '\n'))
+  hit <- grep(paste0('^\\s*', state, '\\s+\\$'), l, value = TRUE)
+  if (length(hit) != 1) return(NULL)
+  cells <- strsplit(trimws(sub(paste0('^\\s*', state, '\\s+'), '', hit)), '\\s{2,}|\\s+(?=\\$)',
+                    perl = TRUE)[[1]]
+  cells <- cells[-1]                                  # the first dollar figure
+  cells <- cells[!grepl('%$', cells) & !grepl('^\\$', cells)]
+  as.numeric(gsub(',', '', cells))
+}
+
+
+
+ehs_bar <- function(state) {
+
+  #----------------------------------------------------------------------------
+  # Early Head Start 2018-19 funded enrollment, read off state profile's
+  # funded-enrollment bar chart by word position: labels above '2018-2019'
+  # axis tick, between chart title and axis. Two bars per year -- Head Start
+  # always larger, so EHS = smaller label.
+  #
+  # Params:
+  #   - state (chr) full name
+  #
+  # Returns: (num) the count, or NA if page or bar not found
+  #----------------------------------------------------------------------------
+
+  key <- paste0('STATEPROFILE:', toupper(gsub(' ', '', state)), '2020-2021')
+  i <- which(startsWith(hs_hdr, key))[1]
+  if (is.na(i)) return(NA)
+  d <- hs_dat[[i]]
+  k <- which(d$text == 'Funded' & c(d$text[-1], '') == 'Enrollment')[1]
+  if (is.na(k)) return(NA)
+  ax <- d[d$text == '2018-2019' & d$y > d$y[k], ]
+  if (nrow(ax) == 0) return(NA)
+  ax <- ax[order(ax$y, ax$x), ][1, ]
+  n <- d[grepl('^[0-9][0-9,]*$', d$text) & d$y > d$y[k] & d$y < ax$y, ]
+  n <- n[abs(n$x + n$width / 2 - (ax$x + ax$width / 2)) < BAR_POINTS, ]
+  v <- as.numeric(gsub(',', '', n$text))
+  if (length(v) != 2) return(NA)
+  min(v)
+}
+
+
+nieer <- pdftools::pdf_text(NIEER)
+nieer_p <- nieer[grepl('FEDERAL HEAD START', nieer) &
+                 grepl('Funded enrollment', nieer)]
+hs_txt <- pdftools::pdf_text(NIEER_HS)
+hs_dat <- pdftools::pdf_data(NIEER_HS)
+hs_hdr <- gsub('\\s', '', substr(hs_txt, 1, 200))   # 'S TAT E P R O F I L E' spaced out
+
+ccd <- read_chr(CCD)
+ccd$n <- num(ccd$pk_enrollment)
+
+hssl <- read_chr(HSSL)
+hssl <- hssl[hssl$status == 'Open' & hssl$state == 'NY', ]
+hssl$slots <- num(hssl$funded_slots)
+share_nyc <- function(types) {
+  h <- hssl[hssl$program_type %in% types, ]
+  c(city = sum(h$slots[h$county %in% NYC_COUNTIES]), state = sum(h$slots))
+}
+
+fails <- 0
+say <- function(ok, geo, what, have, want) {
+  cat(sprintf('  %s %-4s %-18s spec %9s   source %9s\n', if (ok) '[ok]  ' else '[FAIL]',
+              geo, what, format(have, big.mark = ','), format(want, big.mark = ',')))
+  if (!ok) fails <<- fails + 1
+}
+
+STATE_NAME <- setNames(state.name, state.abb)
+
+for (g in GEOGRAPHIES) {
+  s <- load_spec(g)
+  p <- setNames(s$programs$n_children, s$programs$program)
+  prek <- unname(p[grep('pre-K', names(p))])
+
+  if (!is.null(s$counties)) {
+    # NYC -- county-defined, shares of New York's counts
+    want <- sum(ccd$n[ccd$state == 'NY' & ccd$county_name %in% NYC_COUNTIES])
+    say(prek == want, g, 'public pre-K', prek, want)
+    ny <- load_spec('NY')
+    nyp <- setNames(ny$programs$n_children, ny$programs$program)
+    hs  <- share_nyc(HS_TYPES);  ehs <- share_nyc(EHS_TYPES)
+    want <- round(nyp[['Head Start']] * hs[['city']] / hs[['state']])
+    say(p[['Head Start']] == want, g, 'Head Start', p[['Head Start']], want)
+    want <- round(nyp[['Early Head Start']] * ehs[['city']] / ehs[['state']])
+    say(p[['Early Head Start']] == want, g, 'Early Head Start', p[['Early Head Start']], want)
+    next
+  }
+
+  if (any(ccd$state == g)) {
+    want <- sum(ccd$n[ccd$state == g])
+    say(prek == want, g, 'public pre-K', prek, want)
+  } else {
+    cat(sprintf('  [--]   %-4s %-18s spec %9s   no CCD rows, spec cites NIEER\n',
+                g, 'public pre-K', format(prek, big.mark = ',')))
+  }
+
+  nm <- STATE_NAME[[g]]
+  nr <- pdf_row(nieer_p, nm)
+  if (is.null(nr) || length(nr) < 2) {
+    cat('  [FAIL]', g, 'row not found in NIEER Appendix B\n')
+    fails <- fails + 1
+  } else {
+    want <- sum(nr)
+    say(abs(p[['Head Start']] - want) <= NIEER_TOL, g, 'Head Start', p[['Head Start']], want)
+  }
+
+  want <- ehs_bar(nm)
+  if (is.na(want)) {
+    cat('  [FAIL]', g, '2018-19 bar not found in NIEER State(s) of Head Start\n')
+    fails <- fails + 1
+  } else {
+    say(p[['Early Head Start']] == want, g, 'Early Head Start', p[['Early Head Start']], want)
+  }
+}
+
+if (fails == 0) {
+  cat('\nevery program count matches its public source\n')
+} else {
+  cat('\n', fails, ' program count(s) do not match their source.\n', sep = '')
+  quit(status = 1)
+}

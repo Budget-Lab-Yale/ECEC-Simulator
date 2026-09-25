@@ -12,8 +12,9 @@
 #                NSECE's own screener, five hours. It reproduces NSECE's
 #                published figures exactly, which validates the code. THE
 #                SIMULATOR'S OWN UNIVERSE: 1a_nsece_processing.R keeps every
-#                child w/ positive hours and sets no threshold, so the build
-#                describes the population the simulator holds.
+#                NSECE child w/ positive hours, adds no threshold of its own
+#                -- screener's five-hour floor still applies -- so build
+#                describes population simulator holds.
 #   universe B   the same children whose TOTAL weekly hours across regular
 #                non-parental arrangements reach 10 -- the NSCH k6q20
 #                threshold. Kept because NSCH can only measure B, so
@@ -431,8 +432,9 @@ main <- function() {
               100 * mean(prim$total_hours >= 10)))
 
   # THE TARGETS ARE DENOMINATED IN HOURS, not children, so report the share of
-  # HOURS below the ten-hour line as well. The simulator's baseline includes
-  # every regular arrangement w/ positive hours, at no threshold.
+  # HOURS below the ten-hour line as well. Simulator's baseline includes
+  # every regular arrangement on NSECE screener (five-hour floor), adds no
+  # threshold of its own.
   hA <- sum(prim$child_weight * prim$hours)
   keep <- prim$total_hours >= 10
   hB <- sum(prim$child_weight[keep] * prim$hours[keep])
@@ -541,7 +543,8 @@ main <- function() {
     pooled_national(b_kids, 'B: NSCH-matched, 10+ hrs/week'))
 
   # THE UNIVERSE RATIO. NSCH k6q20 counts children at 10+ hrs/week, but the
-  # simulator's baseline holds every regular arrangement w/ positive hours.
+  # simulator's baseline holds every regular arrangement on NSECE screener
+  # (five-hour floor).
   # Step 1 scales the NSCH control total by this, so the build targets the
   # simulator's own population.
   universe_ratio <- tibble::tibble(

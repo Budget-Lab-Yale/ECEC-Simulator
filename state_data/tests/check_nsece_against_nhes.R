@@ -118,7 +118,8 @@ if (abs(gap - GAP_EXPECTED) > GAP_TOL) {
 
 cat('\n   The two do not agree, and that is the finding. NSECE says the\n')
 cat('   five-hour universe is 9.8% larger than the ten-hour one; NHES says\n')
-cat('   19.4%. The ratio scales step 1, so it moves every row in proportion.\n')
+cat('   19.4%. The ratio changes the step 1 control total. Program care holds\n')
+cat('   fixed, so the change goes to the rest of formal and to informal care.\n')
 cat('   NHES enters on looser terms (an arrangement "at least once a week"),\n')
 cat('   which inflates both sides and would push its ratio DOWN -- so the\n')
 cat('   construct difference does not explain the gap.\n')

@@ -320,10 +320,13 @@ It excludes preschool special education (52,307), which CCD counts elsewhere.
 
 ## Head Start service locations — the NYC share
 
-ACF's service-location file gives funded slots by site. NYC's Head Start count
-is the city's share of New York State slots in that file, 7,194 of 20,285,
-applied to the 2018–19 NIEER state figure. The file is a 2026 export, so this
-assumes the city's share was the same in 2019.
+ACF's service-location file gives funded slots by site. NYC's Head Start and
+Early Head Start counts are the city's shares of New York State slots at open
+sites in that file, applied to the 2018–19 NIEER state figures: 7,064 of
+20,518 Head Start slots (program types 1, 3, 5) and 4,426 of 8,590 Early Head
+Start slots (types 2, 4, 6). The file is the same 2026-09-23 export that
+`04_head_start_in_schools.R` reads, so this assumes the city's shares were the
+same in 2019. `tests/check_program_counts_match_sources.R` recomputes both.
 
 ## Reference documents
 
@@ -335,6 +338,7 @@ evidence for choices the method makes:
 | `US_NIEER__head_start_methodology__2023.pdf` | NIEER's method for Head Start funded slots by age |
 | `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap, state pre-K totals, CA pre-K |
 | `US_NIEER__states_of_head_start_and_early_head_start__2023.pdf` | NIEER State(s) of Head Start: Early Head Start 2018–19 by state |
+| `US_OHS__biennial_report_to_congress__FY2019.pdf` | OHS Report to Congress FY2019: HS + EHS funded enrollment by state. Evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
 | `US_NSCH__topical_variable_list__2019.pdf` | NSCH 2019 variable list, incl. `k6q20` wording |
 | `US_NSECE__home_based_provider_chartbook__2021-05.pdf` | NSECE home-based provider chartbook |
 | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on centre enrollment and capacity, NSECE 2019 |

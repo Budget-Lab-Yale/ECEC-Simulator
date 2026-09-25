@@ -110,7 +110,7 @@ that overlap.
 - **[state_data/docs/SUMMARY_method.pdf](state_data/docs/SUMMARY_method.pdf)**
   is the document to read — what every number means and how solid it is.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
-  eleven checks that each exit non-zero on failure, and the known traps.
+  twelve checks that each exit non-zero on failure, and the known traps.
 - [state_data/SOURCES.md](state_data/SOURCES.md) carries provenance for every
   input.
 

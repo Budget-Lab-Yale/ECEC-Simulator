@@ -20,12 +20,18 @@ NYC_PREK_CCD <- 26717   # CCD, five boroughs
 
 # Head Start ages 3-4, NIEER 2018-19. GROSS of pre-K overlap.
 NY_HEAD_START  <- 36863
-# City share taken from the Head Start service-location file's own funded slots,
-# 7,194 of 20,285 statewide.
-NYC_HEAD_START <- round(NY_HEAD_START * 7194 / 20285)   # 13,073
 
 NY_EARLY_HEAD_START  <- 11433
-NYC_EARLY_HEAD_START <- 5938
+
+# NYC SHARES. City's OPEN funded slots over New York's, ACF Head Start
+# service-location file (2026-09-23 export -- same file 04_ reads). Head Start
+# types 1, 3, 5; Early Head Start types 2, 4, 6. Applied to NIEER state counts;
+# assumes city's 2026 share held in 2018-19.
+# tests/check_program_counts_match_sources.R recomputes both from the file.
+NYC_HS_SLOTS  <- 7064;  NY_HS_SLOTS  <- 20518
+NYC_EHS_SLOTS <- 4426;  NY_EHS_SLOTS <- 8590
+NYC_HEAD_START       <- round(NY_HEAD_START * NYC_HS_SLOTS / NY_HS_SLOTS)              # 12,691
+NYC_EARLY_HEAD_START <- round(NY_EARLY_HEAD_START * NYC_EHS_SLOTS / NY_EHS_SLOTS)  # 5,891
 
 
 

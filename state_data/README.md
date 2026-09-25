@@ -224,19 +224,28 @@ is continuous, NHES can be cut at 5 and at 10 hours and so reproduce
 the only one a second survey can measure. `check_nsece_against_nhes.R` makes
 the comparison. **The two disagree: NSECE says the five-hour universe is 9.8%
 larger than the ten-hour one, NHES says 19.4%** — NHES is 8.7% higher. The
-ratio scales step 1, so it moves every row in proportion. The check records the
+ratio changes the step 1 control total. It does not move every row in
+proportion: program care (step 3) is fixed by its source counts, so the change
+goes to the rest of formal care and to informal care. With the NHES ratio,
+total hours rise 8.8–8.9% in the five memo geographies, and the Unpaid
+Center-Based child count does not change. The check records the
 gap and fails if either source moves, rather than correcting one to the other;
 which number is right is not yet settled. NHES enters on looser terms (an
 arrangement "at least once a week"), which inflates both sides and would push
 its ratio *down*, so the construct difference does not explain the gap.
 
 **Sensitivity.** Step 2 fixes the formal and informal totals, so no error in
-steps 3 or 4 moves care between formal and informal. Every step is a share of
-the control total, so the NSCH interval moves every row in proportion.
+steps 3 or 4 moves care between formal and informal. The NSCH interval does not
+move every row in proportion: program counts stay fixed, and the other formal
+types absorb the change, so `write_interval()` runs the build again at each
+bound. The interval covers NSCH-rate sampling error only — not the universe
+ratio disagreement, the step 3 assumptions, or NSECE sampling error. With no
+Head Start deduction, total hours change by less than 0.1% in the five memo
+geographies; Unpaid Center-Based hours rise by up to 5.5% (VA).
 
 ## Checks
 
-Eleven scripts, all exit 1 on failure. Nine are read-only; the other two,
+Twelve scripts, all exit 1 on failure. Ten are read-only; the other two,
 `01_nsch_rate.R --check` and `04_head_start_in_schools.R --check`, rewrite their
 own `out/` file before comparing, so each is a check that also refreshes its
 own input.
@@ -253,6 +262,7 @@ Rscript state_data/tests/check_sources_are_ascii.R         # no literal depends 
 Rscript state_data/tests/check_docs_describe_the_checks.R  # this paragraph is right
 Rscript state_data/tests/check_constants_match_derivation.R # constants match out/nsece_universe.csv
 Rscript state_data/tests/check_nsece_against_nhes.R        # NSECE against a second survey
+Rscript state_data/tests/check_program_counts_match_sources.R # program counts match their sources
 Rscript state_data/01_nsch_rate.R --check                  # constants match the survey
 python  state_data/tests/check_summarise_shadowing.py      # scans for the shadowing trap
 ```

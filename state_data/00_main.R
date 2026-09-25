@@ -48,9 +48,10 @@ ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
 # dataset 0009), child-weighted, over EVERY child 0-4 w/ a regular
 # non-parental arrangement -- NSECE's own five-hour screener, universe A.
 #
-# WHY A, NOT THE 10-HOUR UNIVERSE. The simulator sets no threshold:
-# src/1_processing/1a_nsece_processing.R keeps every child w/ positive hours.
-# Matching it means the build describes the population the simulator holds.
+# WHY A, NOT THE 10-HOUR UNIVERSE. Simulator's universe = A:
+# src/1_processing/1a_nsece_processing.R keeps every NSECE child w/ positive
+# hours, adds no threshold of its own -- NSECE screener's five-hour floor
+# still applies. Matching it, build describes population simulator holds.
 # NSCH k6q20 can only measure the 10+ population, so step 1 carries its rate
 # up to this universe w/ NSECE_UNIVERSE_RATIO.
 # 02_nsece_constants.R derives every one; full precision and record
@@ -166,8 +167,9 @@ NSECE_HOURS_REGION <- tibble::tribble(
 # THE SIMULATOR'S HOURS GRID. src/shared_functions/constants.R places a child
 # at 10 or 40 hrs/week and nothing between, so the build states its target on
 # the same grid: a type's hours are its part-time children x 10 plus its
-# full-time children x 40. A target built on NSECE's raw mean would match
-# hours while implying the wrong number of children.
+# full-time children x 40. Children, part-time shares only feed the
+# calculation -- out/<GEO>.csv carries hours alone, simulator matches hours,
+# may reach them w/ other child counts or 10/40 mix.
 GRID_PT_HOURS <- 10
 GRID_FT_HOURS <- 40
 

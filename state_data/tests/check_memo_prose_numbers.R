@@ -82,6 +82,44 @@ interval_pct <- function(g) {
 }
 
 
+# Build of g w/ a changed spec or universe ratio -- sensitivities quoted in
+# prose. Ratio restored on exit, so later rows see the real build.
+build_with <- function(g, ratio = NSECE_UNIVERSE_RATIO, hs_share = NULL) {
+  s <- load_spec(g)
+  if (!is.null(hs_share)) s$hs_in_schools_share <- hs_share
+  keep <- NSECE_UNIVERSE_RATIO
+  assign('NSECE_UNIVERSE_RATIO', ratio, envir = globalenv())
+  on.exit(assign('NSECE_UNIVERSE_RATIO', keep, envir = globalenv()))
+  q <- utils::capture.output(r <- build_geo(s))
+  setNames(r$annual_hours, r$ecec_type)
+}
+
+# NHES five-hour over ten-hour ratio, national -- as check_nsece_against_nhes.R
+# computes it.
+nhes_ratio <- function() {
+  n <- read_csv(file.path(STATE_DATA_ROOT, 'raw',
+                          'US_NHES__ecpp_children_0_4_by_hours_universe__2019.csv'),
+                show_col_types = FALSE)
+  w <- function(u) n$weighted_children[n$universe == u & n$region == 'national']
+  w('ge5') / w('ge10')
+}
+
+# Total-hours change w/ NHES ratio in place of NSECE's, low--high, 1 decimal.
+nhes_total_range <- function() {
+  r <- nhes_ratio()
+  p <- vapply(GEO, function(g) sum(build_with(g, ratio = r)) / sum(build_with(g)) - 1,
+              numeric(1))
+  sprintf('%.1f', 100 * range(p))
+}
+
+# No-deduction change, one care type, for the four geographies w/ a deduction.
+nodeduct_pct <- function(type) {
+  vapply(c('KY', 'NJ', 'NY', 'VA'), function(g) {
+    100 * (build_with(g, hs_share = 0)[[type]] / build_with(g)[[type]] - 1)
+  }, numeric(1))
+}
+
+
 # THE REGISTER. One row per build-derived figure quoted in running text.
 #   what     -- for the failure message
 #   pattern  -- sprintf template; each %s takes one expected figure
@@ -103,6 +141,16 @@ REGISTER <- list(
   list(what    = 'step 3, KY ratio to the NSECE share',
        pattern = 'Kentucky\'s %s is the largest here',
        value   = sprintf('%.2f', ratio_of('KY'))),
+  list(what    = 'step 1, total hours w/ NHES ratio',
+       pattern = 'total annual hours rise %s--%s\\%% in the five geographies',
+       value   = nhes_total_range()),
+  list(what    = 'step 3, Unpaid Center-Based w/out deduction',
+       pattern = 'Unpaid Center-Based hours rise %s\\%% in KY, %s\\%% in NJ, %s\\%% in NYS, and %s\\%% in VA',
+       value   = sprintf('%.1f', nodeduct_pct('Unpaid Center-Based'))),
+  # NYS's fall rounds to 0.0 -- memo says 'less than 0.1%' for it.
+  list(what    = 'step 3, Center-Based w/out deduction',
+       pattern = 'Home-Based hours fall by %s\\%%, %s\\%%, less than 0.1\\%%, and %s\\%%',
+       value   = sprintf('%.1f', -nodeduct_pct('Center-Based')[c('KY', 'NJ', 'VA')])),
   list(what    = 'step 3, match radius',
        pattern = 'geocodes are within %s metres',
        value   = format(MATCH_METRES))
