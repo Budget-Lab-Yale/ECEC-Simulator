@@ -8,7 +8,7 @@
 #
 # WHY A RATIO, NOT A LEVEL. The simulator reads this for the employment-rate
 # GROWTH path only -- base-year levels come from the state-filtered ACS
-# (config/state/README.md). Writing raw ACS levels would also import a level
+# (docs/state_level_analysis.md, section 8). Writing raw ACS levels would also import a level
 # difference that is about the survey, not the state: ACS runs 1-3 points below
 # the CPS-based national series for men and above it for women, because the two
 # ask about different reference periods. So each state's path is
@@ -46,19 +46,13 @@ DIAG      <- file.path(EPOP_DIR, 'state_epop_diagnostics.csv')
 # in ACS.
 MIN_N <- 100
 
-# The geographies the demand build covers. NYC is county-defined and the
-# simulator selects households by state FIPS, so it cannot appear.
-STATES <- c('AZ', 'CA', 'CO', 'CT', 'IL', 'IN', 'KY', 'MA', 'MN', 'NJ',
-            'NM', 'NY', 'TX', 'VA', 'VT', 'WA', 'WI', 'WV')
+# Postal -> FIPS, from the simulator's own table.
+source('src/shared_functions/constants.R')
+POSTAL_TO_FIPS <- STATE_POSTAL_TO_FIPS
 
-POSTAL_TO_FIPS <- c(
-  AL =  1, AK =  2, AZ =  4, AR =  5, CA =  6, CO =  8, CT =  9, DE = 10,
-  DC = 11, FL = 12, GA = 13, HI = 15, ID = 16, IL = 17, IN = 18, IA = 19,
-  KS = 20, KY = 21, LA = 22, ME = 23, MD = 24, MA = 25, MI = 26, MN = 27,
-  MS = 28, MO = 29, MT = 30, NE = 31, NV = 32, NH = 33, NJ = 34, NM = 35,
-  NY = 36, NC = 37, ND = 38, OH = 39, OK = 40, OR = 41, PA = 42, RI = 44,
-  SC = 45, SD = 46, TN = 47, TX = 48, UT = 49, VT = 50, VA = 51, WA = 53,
-  WV = 54, WI = 55, WY = 56)
+# Every state + DC -- demand build covers all 51. No Puerto Rico records in these ACS data.
+# NYC county-defined, simulator selects households by state FIPS -- absent.
+STATES <- names(POSTAL_TO_FIPS)
 
 BINS <- c('16_17', '18_19', '20_24', '25_29', '30_34', '35_39', '40_44',
           '45_49', '50_54', '55_59', '60_64', '65plus')
@@ -105,6 +99,10 @@ build <- function(check_only = FALSE) {
 
   #----------------------------------------------------------------------------
   # Writes config/state/employment/<ST>.csv for every state in STATES.
+  #
+  # Params:
+  #   - check_only (logical): TRUE skips writing <ST>.csv files, DIAG --
+  #     computes, prints diagnostics only
   #
   # Returns: (tibble) diagnostics, invisibly
   #----------------------------------------------------------------------------

@@ -23,6 +23,7 @@ SPEC_NYC <- list(
   name     = 'New York City',
   fips     = 36,
   counties = NYC_BOROUGHS,
+  county_fips = NYC_COUNTY_FIPS,
   region   = 'northeast',
 
   programs = tibble::tribble(
@@ -31,16 +32,9 @@ SPEC_NYC <- list(
     'Head Start',          NYC_HEAD_START,
     'Early Head Start',    NYC_EARLY_HEAD_START),
 
-  # HEAD START / STATE PRE-K OVERLAP. NIEER has no city cell. Table 4 pair
-  # scaled by city's Head Start share (NYC_HS_SLOTS of NY_HS_SLOTS), same share
-  # as NYC_HEAD_START. State pre-K scaled by city's share of NY CCD pre-K --
-  # holds NY's CCD coverage of state pre-K for the city.
-  nieer_undup_34   = round(SPEC_NY$nieer_undup_34 * NYC_HS_SLOTS / NY_HS_SLOTS),
-  nieer_state_prek = round(SPEC_NY$nieer_state_prek * NYC_PREK_CCD / NY_PREK_CCD),
-
   # HEAD START A DISTRICT RUNS IN ITS OWN PRE-K SCHOOL -- deducted in step 3,
   # since CCD counts those children too. 0 of 7,064 open Head Start slots
-  # (0.0%), from 04_head_start_in_schools.R; `--check` compares back to it.
+  # (0.0%), from 03_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0,
 
   # New York's rate, NSCH 2018+2019 pooled. See header. Derived by 01_nsch_rate.R.

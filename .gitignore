@@ -31,3 +31,6 @@ state_data/raw/local/
 *.out
 *.synctex.gz
 *.toc
+
+# Python bytecode
+__pycache__/

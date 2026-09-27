@@ -1,9 +1,9 @@
 #------------------------------------------------------------------------------
 # VT.R -- Vermont
 #
-# Region northeast. The build reads three things here: the program counts, the
-# NSCH rate w/ its standard error, and the region. Every other constant is
-# NSECE and regional -- see 00_main.R.
+# Region northeast. Build reads here: program counts, NSCH rate w/ standard error,
+# region, share of Head Start a district runs in own pre-K school. Every
+# other constant national or regional -- see 00_main.R.
 #
 # Full section in the Sep 2026 Expansion States memo(s).
 #------------------------------------------------------------------------------
@@ -26,16 +26,9 @@ SPEC_VT <- list(
     'Head Start',          VT_HEAD_START,
     'Early Head Start',    VT_EARLY_HEAD_START),
 
-  # HEAD START / STATE PRE-K OVERLAP. NIEER State of Preschool 2019, Table 4
-  # (p.28), 3s + 4s: pre-K + special ed 8,800; w/ Head Start, unduplicated,
-  # 9,765. Difference = Head Start net of children NIEER finds in state pre-K.
-  # State pre-K total 8,962 (profile p.168) -- scales overlap to CCD coverage.
-  nieer_undup_34   = c(without_hs = 8800, with_hs = 9765),
-  nieer_state_prek = 8962,
-
   # HEAD START A DISTRICT RUNS IN ITS OWN PRE-K SCHOOL -- deducted in step 3,
   # since CCD counts those children too. 0 of 521 open Head Start slots
-  # (0.0%), from 04_head_start_in_schools.R; `--check` compares back to it.
+  # (0.0%), from 03_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0,
 
   # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 241 records.

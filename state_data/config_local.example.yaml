@@ -6,5 +6,5 @@
 # Point it elsewhere only if you keep the sources outside the repo.
 paths:
   # PEP population, NSCH waves, CCD pre-K, Head Start site file -- see
-  # state_data/SOURCES.md for where each came from.
+  # state_data/README.md (Sources) for where each came from.
   raw: 'state_data/raw'

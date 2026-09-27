@@ -1,4 +1,22 @@
 state,ecec_type,children,meets_min
+AK,Center-Based,11,FALSE
+AK,Other Paid,6,FALSE
+AK,Other Unpaid,27,FALSE
+AK,Paid Home-Based,0,FALSE
+AK,Unpaid Center-Based,0,FALSE
+AK,Unpaid Home-Based,0,FALSE
+AL,Center-Based,92,TRUE
+AL,Other Paid,51,TRUE
+AL,Other Unpaid,142,TRUE
+AL,Paid Home-Based,24,FALSE
+AL,Unpaid Center-Based,4,FALSE
+AL,Unpaid Home-Based,0,FALSE
+AR,Center-Based,37,TRUE
+AR,Other Paid,16,FALSE
+AR,Other Unpaid,60,TRUE
+AR,Paid Home-Based,3,FALSE
+AR,Unpaid Center-Based,1,FALSE
+AR,Unpaid Home-Based,0,FALSE
 AZ,Center-Based,74,TRUE
 AZ,Other Paid,39,TRUE
 AZ,Other Unpaid,130,TRUE
@@ -23,6 +41,48 @@ CT,Other Unpaid,40,TRUE
 CT,Paid Home-Based,12,FALSE
 CT,Unpaid Center-Based,0,FALSE
 CT,Unpaid Home-Based,0,FALSE
+DC,Center-Based,12,FALSE
+DC,Other Paid,2,FALSE
+DC,Other Unpaid,6,FALSE
+DC,Paid Home-Based,0,FALSE
+DC,Unpaid Center-Based,0,FALSE
+DC,Unpaid Home-Based,0,FALSE
+DE,Center-Based,14,FALSE
+DE,Other Paid,7,FALSE
+DE,Other Unpaid,18,FALSE
+DE,Paid Home-Based,3,FALSE
+DE,Unpaid Center-Based,0,FALSE
+DE,Unpaid Home-Based,0,FALSE
+FL,Center-Based,227,TRUE
+FL,Other Paid,95,TRUE
+FL,Other Unpaid,325,TRUE
+FL,Paid Home-Based,34,TRUE
+FL,Unpaid Center-Based,2,FALSE
+FL,Unpaid Home-Based,0,FALSE
+GA,Center-Based,142,TRUE
+GA,Other Paid,69,TRUE
+GA,Other Unpaid,260,TRUE
+GA,Paid Home-Based,28,FALSE
+GA,Unpaid Center-Based,12,FALSE
+GA,Unpaid Home-Based,0,FALSE
+HI,Center-Based,15,FALSE
+HI,Other Paid,6,FALSE
+HI,Other Unpaid,18,FALSE
+HI,Paid Home-Based,5,FALSE
+HI,Unpaid Center-Based,0,FALSE
+HI,Unpaid Home-Based,0,FALSE
+IA,Center-Based,43,TRUE
+IA,Other Paid,25,FALSE
+IA,Other Unpaid,49,TRUE
+IA,Paid Home-Based,15,FALSE
+IA,Unpaid Center-Based,0,FALSE
+IA,Unpaid Home-Based,0,FALSE
+ID,Center-Based,22,FALSE
+ID,Other Paid,15,FALSE
+ID,Other Unpaid,44,TRUE
+ID,Paid Home-Based,3,FALSE
+ID,Unpaid Center-Based,0,FALSE
+ID,Unpaid Home-Based,0,FALSE
 IL,Center-Based,120,TRUE
 IL,Other Paid,76,TRUE
 IL,Other Unpaid,213,TRUE
@@ -35,24 +95,96 @@ IN,Other Unpaid,169,TRUE
 IN,Paid Home-Based,17,FALSE
 IN,Unpaid Center-Based,1,FALSE
 IN,Unpaid Home-Based,0,FALSE
+KS,Center-Based,31,TRUE
+KS,Other Paid,20,FALSE
+KS,Other Unpaid,47,TRUE
+KS,Paid Home-Based,14,FALSE
+KS,Unpaid Center-Based,1,FALSE
+KS,Unpaid Home-Based,0,FALSE
 KY,Center-Based,35,TRUE
 KY,Other Paid,22,FALSE
 KY,Other Unpaid,105,TRUE
 KY,Paid Home-Based,13,FALSE
 KY,Unpaid Center-Based,1,FALSE
 KY,Unpaid Home-Based,0,FALSE
+LA,Center-Based,53,TRUE
+LA,Other Paid,34,TRUE
+LA,Other Unpaid,103,TRUE
+LA,Paid Home-Based,10,FALSE
+LA,Unpaid Center-Based,1,FALSE
+LA,Unpaid Home-Based,0,FALSE
 MA,Center-Based,42,TRUE
 MA,Other Paid,13,FALSE
 MA,Other Unpaid,38,TRUE
 MA,Paid Home-Based,12,FALSE
 MA,Unpaid Center-Based,0,FALSE
 MA,Unpaid Home-Based,0,FALSE
+MD,Center-Based,112,TRUE
+MD,Other Paid,52,TRUE
+MD,Other Unpaid,149,TRUE
+MD,Paid Home-Based,30,TRUE
+MD,Unpaid Center-Based,0,FALSE
+MD,Unpaid Home-Based,0,FALSE
+ME,Center-Based,9,FALSE
+ME,Other Paid,11,FALSE
+ME,Other Unpaid,6,FALSE
+ME,Paid Home-Based,2,FALSE
+ME,Unpaid Center-Based,0,FALSE
+ME,Unpaid Home-Based,0,FALSE
+MI,Center-Based,104,TRUE
+MI,Other Paid,46,TRUE
+MI,Other Unpaid,190,TRUE
+MI,Paid Home-Based,32,TRUE
+MI,Unpaid Center-Based,7,FALSE
+MI,Unpaid Home-Based,0,FALSE
 MN,Center-Based,91,TRUE
 MN,Other Paid,43,TRUE
 MN,Other Unpaid,128,TRUE
 MN,Paid Home-Based,37,TRUE
 MN,Unpaid Center-Based,2,FALSE
 MN,Unpaid Home-Based,0,FALSE
+MO,Center-Based,34,TRUE
+MO,Other Paid,14,FALSE
+MO,Other Unpaid,82,TRUE
+MO,Paid Home-Based,14,FALSE
+MO,Unpaid Center-Based,1,FALSE
+MO,Unpaid Home-Based,0,FALSE
+MS,Center-Based,75,TRUE
+MS,Other Paid,34,TRUE
+MS,Other Unpaid,137,TRUE
+MS,Paid Home-Based,16,FALSE
+MS,Unpaid Center-Based,2,FALSE
+MS,Unpaid Home-Based,0,FALSE
+MT,Center-Based,11,FALSE
+MT,Other Paid,8,FALSE
+MT,Other Unpaid,24,FALSE
+MT,Paid Home-Based,2,FALSE
+MT,Unpaid Center-Based,1,FALSE
+MT,Unpaid Home-Based,0,FALSE
+NC,Center-Based,121,TRUE
+NC,Other Paid,51,TRUE
+NC,Other Unpaid,181,TRUE
+NC,Paid Home-Based,28,FALSE
+NC,Unpaid Center-Based,5,FALSE
+NC,Unpaid Home-Based,0,FALSE
+ND,Center-Based,13,FALSE
+ND,Other Paid,1,FALSE
+ND,Other Unpaid,7,FALSE
+ND,Paid Home-Based,4,FALSE
+ND,Unpaid Center-Based,0,FALSE
+ND,Unpaid Home-Based,0,FALSE
+NE,Center-Based,31,TRUE
+NE,Other Paid,10,FALSE
+NE,Other Unpaid,49,TRUE
+NE,Paid Home-Based,15,FALSE
+NE,Unpaid Center-Based,1,FALSE
+NE,Unpaid Home-Based,0,FALSE
+NH,Center-Based,18,FALSE
+NH,Other Paid,7,FALSE
+NH,Other Unpaid,22,FALSE
+NH,Paid Home-Based,0,FALSE
+NH,Unpaid Center-Based,0,FALSE
+NH,Unpaid Home-Based,0,FALSE
 NJ,Center-Based,86,TRUE
 NJ,Other Paid,53,TRUE
 NJ,Other Unpaid,118,TRUE
@@ -65,18 +197,78 @@ NM,Other Unpaid,36,TRUE
 NM,Paid Home-Based,7,FALSE
 NM,Unpaid Center-Based,1,FALSE
 NM,Unpaid Home-Based,0,FALSE
+NV,Center-Based,24,FALSE
+NV,Other Paid,23,FALSE
+NV,Other Unpaid,51,TRUE
+NV,Paid Home-Based,6,FALSE
+NV,Unpaid Center-Based,0,FALSE
+NV,Unpaid Home-Based,0,FALSE
 NY,Center-Based,169,TRUE
 NY,Other Paid,69,TRUE
 NY,Other Unpaid,215,TRUE
 NY,Paid Home-Based,39,TRUE
 NY,Unpaid Center-Based,6,FALSE
 NY,Unpaid Home-Based,0,FALSE
+OH,Center-Based,89,TRUE
+OH,Other Paid,35,TRUE
+OH,Other Unpaid,175,TRUE
+OH,Paid Home-Based,18,FALSE
+OH,Unpaid Center-Based,1,FALSE
+OH,Unpaid Home-Based,0,FALSE
+OK,Center-Based,77,TRUE
+OK,Other Paid,29,FALSE
+OK,Other Unpaid,123,TRUE
+OK,Paid Home-Based,16,FALSE
+OK,Unpaid Center-Based,7,FALSE
+OK,Unpaid Home-Based,0,FALSE
+OR,Center-Based,49,TRUE
+OR,Other Paid,34,TRUE
+OR,Other Unpaid,78,TRUE
+OR,Paid Home-Based,12,FALSE
+OR,Unpaid Center-Based,6,FALSE
+OR,Unpaid Home-Based,0,FALSE
+PA,Center-Based,133,TRUE
+PA,Other Paid,65,TRUE
+PA,Other Unpaid,253,TRUE
+PA,Paid Home-Based,27,FALSE
+PA,Unpaid Center-Based,5,FALSE
+PA,Unpaid Home-Based,0,FALSE
+RI,Center-Based,5,FALSE
+RI,Other Paid,3,FALSE
+RI,Other Unpaid,18,FALSE
+RI,Paid Home-Based,4,FALSE
+RI,Unpaid Center-Based,0,FALSE
+RI,Unpaid Home-Based,0,FALSE
+SC,Center-Based,55,TRUE
+SC,Other Paid,35,TRUE
+SC,Other Unpaid,109,TRUE
+SC,Paid Home-Based,13,FALSE
+SC,Unpaid Center-Based,2,FALSE
+SC,Unpaid Home-Based,0,FALSE
+SD,Center-Based,17,FALSE
+SD,Other Paid,6,FALSE
+SD,Other Unpaid,12,FALSE
+SD,Paid Home-Based,9,FALSE
+SD,Unpaid Center-Based,0,FALSE
+SD,Unpaid Home-Based,0,FALSE
+TN,Center-Based,96,TRUE
+TN,Other Paid,41,TRUE
+TN,Other Unpaid,159,TRUE
+TN,Paid Home-Based,29,FALSE
+TN,Unpaid Center-Based,1,FALSE
+TN,Unpaid Home-Based,0,FALSE
 TX,Center-Based,318,TRUE
 TX,Other Paid,144,TRUE
 TX,Other Unpaid,494,TRUE
 TX,Paid Home-Based,93,TRUE
 TX,Unpaid Center-Based,21,FALSE
 TX,Unpaid Home-Based,0,FALSE
+UT,Center-Based,33,TRUE
+UT,Other Paid,25,FALSE
+UT,Other Unpaid,80,TRUE
+UT,Paid Home-Based,10,FALSE
+UT,Unpaid Center-Based,0,FALSE
+UT,Unpaid Home-Based,0,FALSE
 VA,Center-Based,121,TRUE
 VA,Other Paid,59,TRUE
 VA,Other Unpaid,191,TRUE
@@ -107,3 +299,9 @@ WV,Other Unpaid,42,TRUE
 WV,Paid Home-Based,1,FALSE
 WV,Unpaid Center-Based,0,FALSE
 WV,Unpaid Home-Based,0,FALSE
+WY,Center-Based,6,FALSE
+WY,Other Paid,2,FALSE
+WY,Other Unpaid,7,FALSE
+WY,Paid Home-Based,2,FALSE
+WY,Unpaid Center-Based,0,FALSE
+WY,Unpaid Home-Based,0,FALSE

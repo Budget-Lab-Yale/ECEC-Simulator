@@ -6,8 +6,8 @@
 # build and the memo unchallenged. One source per program, compared directly:
 #
 #   public pre-K       = CCD 2018-19 pre-K membership, summed from the county
-#                        file (NYC: the five boroughs). CA has no CCD rows --
-#                        its spec cites NIEER -- so CA is reported, not checked.
+#                        file (NYC: the five boroughs). CA has no CCD rows, MI
+#                        reports none -- specs cite NIEER, reported, not checked.
 #   Head Start         = NIEER State of Preschool 2019, Appendix B: federal +
 #                        AIAN + Migrant & Seasonal funded slots, ages 3 and 4.
 #                        NIEER rounds each cell, so +/- 2 slots is allowed.
@@ -15,7 +15,7 @@
 #                        (2023), state profile, funded-enrollment chart,
 #                        2018-2019 bar -- smaller of the two bars.
 #   NYC shares         = NYC's share of New York's OPEN funded slots in the
-#                        Head Start service-location file 04_ reads, HS types
+#                        Head Start service-location file 03_ reads, HS types
 #                        and EHS types separately.
 #
 # Every source is a public file in raw/ or raw/documentation/.
@@ -34,10 +34,9 @@ NIEER_HS <- file.path(DOC, 'US_NIEER__states_of_head_start_and_early_head_start_
 CCD      <- raw_path('US_CCD__public_school_prekindergarten_children_by_county__2018-19.csv')
 HSSL     <- raw_path('US_HSSL__head_start_funded_slots_by_service_location__2026-09-23.csv')
 
-HS_TYPES  <- c('1', '3', '5')    # as 04_head_start_in_schools.R
+HS_TYPES  <- c('1', '3', '5')    # as 03_head_start_in_schools.R
 EHS_TYPES <- c('2', '4', '6')
-NYC_COUNTIES <- c('Bronx County', 'Kings County', 'New York County',
-                  'Queens County', 'Richmond County')
+NYC_COUNTIES <- paste0(load_spec('NYC')$counties, ' County')   # states/NY.R
 NIEER_TOL <- 2
 BAR_POINTS <- 25                 # bar label within this many points of axis label
 
@@ -116,19 +115,51 @@ ccd$n <- num(ccd$pk_enrollment)
 hssl <- read_chr(HSSL)
 hssl <- hssl[hssl$status == 'Open' & hssl$state == 'NY', ]
 hssl$slots <- num(hssl$funded_slots)
+
+
+
 share_nyc <- function(types) {
+
+  #----------------------------------------------------------------------------
+  # OPEN funded slots in New York's service-location file, NYC counties vs
+  # whole state.
+  #
+  # Params:
+  #   - types (chr): program_type codes, HS_TYPES or EHS_TYPES
+  #
+  # Returns: (num) named c(city, state) slot totals
+  #----------------------------------------------------------------------------
+
   h <- hssl[hssl$program_type %in% types, ]
   c(city = sum(h$slots[h$county %in% NYC_COUNTIES]), state = sum(h$slots))
 }
 
 fails <- 0
+
+
+
 say <- function(ok, geo, what, have, want) {
+
+  #----------------------------------------------------------------------------
+  # Prints one [ok]/[FAIL] line, spec vs source; on failure bumps global
+  # `fails`.
+  #
+  # Params:
+  #   - ok (logical): check passed
+  #   - geo (chr): geography code
+  #   - what (chr): program label
+  #   - have (num): count in spec
+  #   - want (num): count in source
+  #
+  # Returns: (NULL) called for side effects
+  #----------------------------------------------------------------------------
+
   cat(sprintf('  %s %-4s %-18s spec %9s   source %9s\n', if (ok) '[ok]  ' else '[FAIL]',
               geo, what, format(have, big.mark = ','), format(want, big.mark = ',')))
   if (!ok) fails <<- fails + 1
 }
 
-STATE_NAME <- setNames(state.name, state.abb)
+STATE_NAME <- c(setNames(state.name, state.abb), DC = 'District of Columbia')
 
 for (g in GEOGRAPHIES) {
   s <- load_spec(g)
@@ -149,11 +180,13 @@ for (g in GEOGRAPHIES) {
     next
   }
 
-  if (any(ccd$state == g)) {
+  # CA has no CCD rows; MI's rows all read 0 ('Not reported') -- both specs
+  # cite NIEER state pre-K, so both reported, not checked.
+  if (sum(ccd$n[ccd$state == g], na.rm = TRUE) > 0) {
     want <- sum(ccd$n[ccd$state == g])
     say(prek == want, g, 'public pre-K', prek, want)
   } else {
-    cat(sprintf('  [--]   %-4s %-18s spec %9s   no CCD rows, spec cites NIEER\n',
+    cat(sprintf('  [--]   %-4s %-18s spec %9s   no CCD count, spec cites NIEER\n',
                 g, 'public pre-K', format(prek, big.mark = ',')))
   }
 

@@ -1,9 +1,9 @@
 #------------------------------------------------------------------------------
 # WV.R -- West Virginia
 #
-# Region south. The build reads three things here: the program counts, the
-# NSCH rate w/ its standard error, and the region. Every other constant is
-# NSECE and regional -- see 00_main.R.
+# Region south. Build reads here: program counts, NSCH rate w/ standard error,
+# region, share of Head Start a district runs in own pre-K school. Every
+# other constant national or regional -- see 00_main.R.
 #
 # Full section in the Sep 2026 Flashpoint States memo(s).
 #------------------------------------------------------------------------------
@@ -26,16 +26,9 @@ SPEC_WV <- list(
     'Head Start',          WV_HEAD_START,
     'Early Head Start',    WV_EARLY_HEAD_START),
 
-  # HEAD START / STATE PRE-K OVERLAP. NIEER State of Preschool 2019, Table 4
-  # (p.28), 3s + 4s: pre-K + special ed 13,063; w/ Head Start, unduplicated,
-  # 15,486. Difference = Head Start net of children NIEER finds in state pre-K.
-  # State pre-K total 13,534 (profile p.174) -- scales overlap to CCD coverage.
-  nieer_undup_34   = c(without_hs = 13063, with_hs = 15486),
-  nieer_state_prek = 13534,
-
   # HEAD START A DISTRICT RUNS IN ITS OWN PRE-K SCHOOL -- deducted in step 3,
   # since CCD counts those children too. 970 of 5,939 open Head Start slots
-  # (16.3%), from 04_head_start_in_schools.R; `--check` compares back to it.
+  # (16.3%), from 03_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0.16332715945445361,
 
   # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 281 records.

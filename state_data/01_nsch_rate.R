@@ -6,16 +6,16 @@
 # This script is where both come from.
 #
 # THE STANDARD ERROR USES THE SURVEY DESIGN, not Kish's effective sample size.
-# Census documents NSCH as a stratified address sample, and instructs analysts
-# to declare the stratum, the household, and the child weight FWC:
+# Census documents NSCH as stratified address sample, instructs analysts to
+# declare stratum, household, and child weight FWC:
 #   https://www.census.gov/programs-surveys/nsch/technical-documentation/methodology/2019.html
-# Kish treats the sample as unequally weighted SRS. It captures the weighting
-# loss, never the stratification gain, so it is the wrong estimator rather than
-# a conservative one -- it can read high or low. Both appear below.
+# Kish treats sample as unequally weighted SRS. Captures weighting loss, never
+# stratification gain -- wrong estimator, not conservative one, can read high
+# or low. Both appear below.
 #
-# A state is a DOMAIN, not a separate survey. The design is declared once over
-# every record, then subset. Subsetting the data first drops the strata a
-# domain does not reach, understating the variance.
+# State a DOMAIN, not separate survey. Design declared once over every record,
+# then subset. Subsetting data first drops strata domain doesn't reach,
+# understating variance.
 #
 # Usage:
 #   Rscript state_data/01_nsch_rate.R            # table + out/nsch_rate.csv
@@ -30,11 +30,11 @@ STATE_DATA_ROOT <- 'state_data'
 BASE_WAVE       <- '2018-19'        # pooled wave the build uses -- base year + year before
 WAVES           <- c(2018, 2019, 2020)
 
-# Geography -> state FIPS. NYC has no NSCH records of its own and takes NY's,
-# so it is not a row here; states/NYC.R copies the NY constants.
-GEO_FIPS <- c(KY = 21, NJ = 34, NY = 36, VA = 51,
-              AZ =  4, CA =  6, CO =  8, CT =  9, IL = 17, IN = 18, MA = 25,
-              MN = 27, NM = 35, TX = 48, VT = 50, WA = 53, WI = 55, WV = 54)
+# Geography -> state FIPS: every state + DC, from the simulator's own table.
+# NYC has no NSCH records of its own and takes NY's, so it is not a row here;
+# states/NYC.R copies the NY constants.
+source('src/shared_functions/constants.R')
+GEO_FIPS <- STATE_POSTAL_TO_FIPS
 
 # Lonely strata. Declaring FIPSST x STRATUM gives two strata per state, both
 # populated in every wave, so no stratum is lonely and the option never fires.
@@ -159,6 +159,19 @@ pooled_for <- function(waves, fips) {
 
 
 main <- function(args = commandArgs(trailingOnly = TRUE)) {
+
+  #----------------------------------------------------------------------------
+  # Entry point -- non-parental rate, design SE, Kish SE per geography for
+  # single waves 2018, 2019, 2020 and pools 2018-19, 2019-20, 2018-20;
+  # prints table, writes out/nsch_rate.csv.
+  #
+  # Params:
+  #   - args (chr): CLI args -- --check compares nonparental_rate,
+  #     nonparental_rate_se in every states/<GEO>.R (NYC against NY's row) to
+  #     BASE_WAVE, exits 1 on any stale constant
+  #
+  # Returns: (tibble) all single-wave, pooled rows, invisibly
+  #----------------------------------------------------------------------------
 
   waves <- setNames(lapply(WAVES, nsch_wave), WAVES)
   desg  <- lapply(waves, nsch_design)

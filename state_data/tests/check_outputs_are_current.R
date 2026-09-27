@@ -127,8 +127,9 @@ for (g in GEOGRAPHIES) {
 }
 
 ## what this does NOT cover ------------------------------------------------
-# out/ holds two more committed files. nsch_rate.csv is regenerated below,
-# because 01_nsch_rate.R can run anywhere. nsece_universe.csv cannot: it comes
+# out/ holds two more committed files. nsch_rate.csv is checked for presence
+# here; 01_nsch_rate.R --check compares it to the survey. nsece_universe.csv
+# cannot be rebuilt: it comes
 # from licensed NSECE microdata held on the cluster, so there is nothing here
 # to rebuild it from. It is the source of the NSECE constants in 00_main.R,
 # and it is listed here so that the gap is visible rather than implied.
@@ -146,7 +147,7 @@ for (f in c('nsece_universe.csv')) {
 if (fails == 0) {
   cat('\nout/ is current: every figure this machine can rebuild matches the code\n')
 } else {
-  cat('\n', fails, ' geography(ies) are STALE. Re-run:\n', sep = '')
+  cat('\n', fails, ' output check(s) FAILED. Re-run:\n', sep = '')
   cat('  Rscript state_data/00_main.R --all --check --interval\n')
   quit(status = 1)
 }

@@ -5,7 +5,8 @@
 # derives the suite from disk and fails if that prose drifts:
 #
 #   tests/check_*.R, check_*.py     the read-only checks
-#   01_nsch_rate.R --check          a derivation that also verifies itself
+#   01_nsch_rate.R --check          derivations that also verify themselves
+#   03_head_start_in_schools.R --check
 #
 # 00_main.R --check is NOT counted. It runs the build's own invariants while
 # writing out/, so it is the thing being checked, not a check.
@@ -23,6 +24,7 @@ DOCS <- c('README.md',
 
 WORDS <- c('one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
            'nine', 'ten', 'eleven', 'twelve')
+
 
 
 writes_output <- function(path) {
@@ -55,7 +57,7 @@ writes_output <- function(path) {
 checks <- sort(c(list.files(file.path(ROOT, 'tests'), pattern = '^check_.*[.](R|py)$',
                             full.names = TRUE)))
 # Two derivations verify their own committed constants w/ --check.
-derivations <- file.path(ROOT, c('01_nsch_rate.R', '04_head_start_in_schools.R'))
+derivations <- file.path(ROOT, c('01_nsch_rate.R', '03_head_start_in_schools.R'))
 stopifnot(all(file.exists(derivations)))
 
 all_checks <- c(checks, derivations)

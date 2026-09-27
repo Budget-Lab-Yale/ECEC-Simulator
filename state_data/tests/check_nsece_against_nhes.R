@@ -58,7 +58,21 @@ nhes  <- read_csv(NHES, col_types = cols(
   weighted_children = col_double(), mean_weekly_hours = col_double(),
   share_under_20_hrs = col_double()))
 
+
+
 nhes_val <- function(universe, region, col) {
+
+  #----------------------------------------------------------------------------
+  # One value from NHES-ECPP table for one universe, region.
+  #
+  # Params:
+  #   - universe (chr): `universe` column value
+  #   - region (chr): `region` column value
+  #   - col (chr): column to return, e.g. 'mean_weekly_hours'
+  #
+  # Returns: (num) value, NA unless exactly one row matches
+  #----------------------------------------------------------------------------
+
   r <- nhes[nhes$universe == universe & nhes$region == region, ]
   if (nrow(r) != 1) return(NA_real_)
   r[[col]]

@@ -25,12 +25,14 @@
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
-  library(dplyr); library(tidyr); library(readr); library(tibble)
+  library(dplyr); library(readr); library(tibble)
 })
 
 STATE_DATA_ROOT <- 'state_data'
-BASE_YEAR       <- 2019    # simulator calibration year -- every input pins here
 
+# Null default -- x unless NULL, else y.
+#   - x (any): value to test; y (any): fallback
+# Returns: (any) x or y
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
 
@@ -299,10 +301,6 @@ regional_annual_hours <- function(region) {
 
 
 
-FORMAL_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based')
-
-
-
 #=============================================================================
 # SHARED INPUTS
 #=============================================================================
@@ -319,7 +317,12 @@ PATHS <- local({
 })
 
 
+
+# Path under raw-data root (PATHS$raw).
+#   - ... (chr): path components below root
+# Returns: (chr) full path
 raw_path <- function(...) file.path(PATHS$raw, ...)
+
 
 
 read_chr <- function(path) {
@@ -336,13 +339,13 @@ read_chr <- function(path) {
 
   if (!file.exists(path)) stop('missing raw file: ', path)
 
-  # readr warns once per session for any ragged row, which says nothing about
-  # WHICH way the row is ragged. Inspect instead, and judge:
+  # readr warns once per session for any ragged row -- says nothing about
+  # WHICH way row is ragged. Inspect instead, judge:
   #
-  #   fewer fields than the header -- benign. The publisher left a trailing
-  #     column off. readr fills NA, every named column keeps its own value.
-  #   more fields than the header -- NOT benign. Fields are dropped off the
-  #     end, so a column may hold another column's value. Stop.
+  #   fewer fields than header -- benign. Publisher left trailing column
+  #     off. readr fills NA, every named column keeps own value.
+  #   more fields than header -- NOT benign. Fields dropped off end,
+  #     column may hold another column's value. Stop.
   d <- withCallingHandlers(
     readr::read_csv(path, col_types = readr::cols(.default = readr::col_character()),
                     show_col_types = FALSE),
@@ -376,7 +379,12 @@ read_chr <- function(path) {
 }
 
 
+
+# Quiet numeric coercion -- unparseable values become NA w/out warning.
+#   - x (chr): values to coerce
+# Returns: (num) coerced vector
 num <- function(x) suppressWarnings(as.numeric(x))
+
 
 
 population_0_4 <- function(fips, counties = NULL) {
@@ -416,7 +424,32 @@ population_0_4 <- function(fips, counties = NULL) {
 # THE BUILD
 #=============================================================================
 
+# HEAD START SLOTS -> ENROLLED CHILDREN. Specs hold FUNDED SLOTS (NIEER), as
+# their sources print them; step 3 converts them here. National only -- no
+# public state series. OHS PIR 2018-19: Services Snapshots (HS, EHS, AIAN) +
+# Biennial Report to Congress FY2019, Appendix C. All in raw/documentation/.
+#
+# PREGNANT WOMEN. EHS funded slots incl. slots for pregnant women: 5,988 of
+# 166,693 (EHS snapshot, 'Total Funded Pregnant Women'). Removed first.
+EHS_FUNDED          <- 166693
+EHS_FUNDED_PREGNANT <- 5988
+EHS_PREGNANT_SHARE  <- EHS_FUNDED_PREGNANT / EHS_FUNDED        # 0.0359
 
+# ENROLLED PER SLOT, point in time. Children enrolled at year end = cumulative
+# enrollment less children who left, did not re-enroll (App. C A.15, A.19,
+# A.20), over funded child slots. Cumulative / funded is the wrong ratio --
+# counts leavers and their replacements, a flow not a stock. Year-end, not
+# October 1 like CCD.
+#
+# App. C pools HS, EHS, AIAN; snapshots give HS, EHS funded w/out AIAN, AIAN
+# as one total (22,894, 282 pregnant women). AIAN child slots split by its
+# cumulative age mix: 0-2 6,433, 3-5 18,648.
+AIAN_CHILD_SLOTS <- 22894 - 282
+AIAN_EHS_SLOTS   <- AIAN_CHILD_SLOTS * 6433 / (6433 + 18648)
+HS_ENROLLED_PER_SLOT  <- (775902 - 112939) /
+                         (675734 + AIAN_CHILD_SLOTS - AIAN_EHS_SLOTS)   # 0.957
+EHS_ENROLLED_PER_SLOT <- (230069 - 76419) /
+                         (EHS_FUNDED - EHS_FUNDED_PREGNANT + AIAN_EHS_SLOTS)  # 0.923
 
 
 
@@ -428,7 +461,7 @@ program_children <- function(spec) {
   # Pre-K (CCD) + Head Start + Early Head Start counts a child twice when a
   # school district runs a Head Start class in one of its own pre-K schools:
   # that class sits in the school's CCD membership AND in the federal Head
-  # Start count. 04_head_start_in_schools.R measures that share of each
+  # Start count. 03_head_start_in_schools.R measures that share of each
   # state's Head Start slots from national files -- ACF service locations x
   # CCD pre-K by school x CCD district names x EDGE geocodes -- so every
   # state is measured the same way, w/out depending on what a state reported
@@ -441,71 +474,32 @@ program_children <- function(spec) {
   #
   # NIEER's own unduplicated figure (Table 4) is the wrong correction here:
   # it nets against STATE pre-K in every setting, while this build counts CCD
-  # pre-K in public schools only, and only seven states report it.
+  # pre-K in public schools only, and NIEER reports it for only some states.
+  #
+  # SLOTS TO CHILDREN FIRST. Head Start, EHS specs are funded slots; EHS loses
+  # its pregnant-women share, both scale by enrolled per slot (constants
+  # above). Deduction share then applies to enrolled Head Start.
   #
   # Params:
   #   - spec (list): from states/<GEO>.R
   #
-  # Returns: (list) gross, share, netted, total
+  # Returns: (list) children (by program, enrolled), gross, share, netted, total
   #----------------------------------------------------------------------------
 
   p     <- setNames(spec$programs$n_children, spec$programs$program)
+  p['Head Start']       <- p[['Head Start']] * HS_ENROLLED_PER_SLOT
+  p['Early Head Start'] <- p[['Early Head Start']] * (1 - EHS_PREGNANT_SHARE) *
+                           EHS_ENROLLED_PER_SLOT
   gross <- sum(p)
   share <- spec$hs_in_schools_share
   if (is.null(share) || !is.finite(share) || share < 0 || share > 1) {
     stop(spec$geo, ': spec lacks a valid hs_in_schools_share -- run ',
-         '04_head_start_in_schools.R, see states/KY.R')
+         '03_head_start_in_schools.R, see states/KY.R')
   }
   netted <- unname(p['Head Start']) * share
 
-  list(gross = gross, share = share, netted = netted, total = gross - netted)
-}
-
-
-
-nieer_overlap <- function(spec) {
-
-  #----------------------------------------------------------------------------
-  # Head Start children NIEER also finds in state pre-K, for one geography.
-  #
-  # nieer_undup_34 holds NIEER's 3s+4s counts without and with Head Start
-  # (State of Preschool 2019, Table 4). The difference is Head Start net of
-  # children already counted in state pre-K, so gross Head Start less that
-  # difference is the overlap. Only some states report the pair; the rest carry
-  # a placeholder that makes the difference equal gross Head Start, which
-  # returns zero.
-  #
-  # DIAGNOSTIC ONLY. Step 3 does not deduct this -- see the note at its call
-  # site. Nothing else reads these fields, and printing them is what keeps a
-  # measured, documented figure from rotting unseen in nineteen spec files.
-  #
-  # Params:
-  #   - spec (list): from states/<GEO>.R
-  #
-  # Returns: (num) children, or NA where the pair is absent
-  #----------------------------------------------------------------------------
-
-  u <- spec$nieer_undup_34
-  if (is.null(u) || !all(c('without_hs', 'with_hs') %in% names(u)) ||
-      !all(is.finite(u))) return(NA_real_)
-
-  p  <- setNames(spec$programs$n_children, spec$programs$program)
-  hs <- unname(p['Head Start'])
-  if (!is.finite(hs) || hs <= 0) return(NA_real_)
-
-  ov <- hs - (u[['with_hs']] - u[['without_hs']])
-  if (!is.finite(ov) || ov < 0) return(NA_real_)
-
-  # A difference equal to gross Head Start means NIEER published a sum rather
-  # than an unduplicated count -- it did not measure the overlap for that
-  # state. Texas and Virginia look like this exactly; Minnesota and Wisconsin
-  # miss by one child, which is rounding in whole-child figures, not a measured
-  # overlap of one. Reporting either as a measured zero would claim knowledge
-  # the yearbook does not have, so both read as absent. The rule leaves the
-  # seven states the yearbook actually deduplicates -- CT, IL, KY, MA, NJ, NY,
-  # WV -- plus NYC, which inherits New York's.
-  if (ov / hs < 0.001) return(NA_real_)
-  ov
+  list(children = p, gross = gross, share = share, netted = netted,
+       total = gross - netted)
 }
 
 
@@ -541,11 +535,11 @@ build_geo <- function(spec) {
   informal <- np_total - formal
 
   ## 3. Unpaid Center-Based -- program counts, less the CCD double count ---
-  pc        <- program_children(spec)
+  pc      <- program_children(spec)
   program <- pc$total
   cat('  programs            ', format(pc$gross, big.mark = ','),
       ' (', paste(spec$programs$program, collapse = ', '), ')\n', sep = '')
-  cat(sprintf('  Head Start in own school %s of Head Start slots -> less %s -> %s\n',
+  cat(sprintf('  Head Start in own school %s of enrolled Head Start -> less %s -> %s\n',
               sprintf('%.1f%%', 100 * pc$share),
               format(round(pc$netted), big.mark = ','),
               format(round(program), big.mark = ',')))
@@ -556,24 +550,10 @@ build_geo <- function(spec) {
               format(round(formal * unpaid_share), big.mark = ','), unpaid_share,
               program / (formal * unpaid_share)))
 
-  # THE OVERLAP THIS BUILD DOES NOT DEDUCT. Step 3 removes Head Start a district
-  # runs in one of its own pre-K schools, because CCD counts those children too.
-  # It does NOT remove Head Start children who are also enrolled in STATE
-  # pre-K. NIEER Table 4 measures that second overlap, and states/<GEO>.R carries
-  # the pair, but only some states report it and it nets against state pre-K in
-  # every setting while this build counts CCD pre-K in public schools only --
-  # so applying it would correct states unevenly, for a reason that is not about
-  # care. Printed, not applied: the figure was expensive to collect and it is
-  # the larger of the two wherever a state reports it.
-  ov <- nieer_overlap(spec)
-  if (is.finite(ov)) {
-    cat(sprintf('  NIEER state pre-K overlap %s (%.1f%% of Head Start) -- measured, NOT deducted\n',
-                format(round(ov), big.mark = ','),
-                100 * ov / unname(setNames(spec$programs$n_children,
-                                           spec$programs$program)['Head Start'])))
-  } else {
-    cat('  NIEER state pre-K overlap  not reported for this geography\n')
-  }
+  # NOT DEDUCTED: Head Start children also in STATE pre-K (NIEER Table 4). Table
+  # 4 nets against state pre-K in every setting, build counts CCD pre-K in public
+  # schools only, NIEER reports it for only some states -- applying it would
+  # correct states unevenly, for a reason not about care.
 
   # The programs alone cannot exceed the formal total. If they do, nothing is
   # left for the centre-home split -- an input problem, stated as one.
@@ -637,10 +617,14 @@ build_geo <- function(spec) {
 # ORCHESTRATION
 #=============================================================================
 
+# Every state + DC, plus NYC. Memo's five first. Puerto Rico not built -- no
+# NSCH rate, no NSECE region, no ACS wage, no simulator households.
 GEOGRAPHIES <- c('KY', 'NJ', 'NY', 'NYC', 'VA',
-                 # full sections, Sep 2026 Flashpoint + Expansion States memos
-                 'AZ', 'CA', 'CO', 'CT', 'IL', 'IN', 'MA', 'MN', 'NM', 'TX',
-                 'VT', 'WA', 'WI', 'WV')
+                 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL',
+                 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'LA', 'ME', 'MD',
+                 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NM',
+                 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN',
+                 'TX', 'UT', 'VT', 'WA', 'WV', 'WI', 'WY')
 
 # Simulator reads state demand targets here (src/3_simulation/
 # 3a_initialize_simulation.R). Whole states only -- simulator selects
@@ -648,12 +632,24 @@ GEOGRAPHIES <- c('KY', 'NJ', 'NY', 'NYC', 'VA',
 SIMULATOR_DEMAND_DIR <- file.path('config', 'state', 'demand')
 
 
+
 load_spec <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # Sources states/<GEO>.R into global env, returns its SPEC_<GEO>.
+  #
+  # Params:
+  #   - geo (chr): geography code, e.g. 'KY', 'NYC'
+  #
+  # Returns: (list) SPEC_<GEO>; stops if spec file missing
+  #----------------------------------------------------------------------------
+
   f <- file.path(STATE_DATA_ROOT, 'states', paste0(geo, '.R'))
   if (!file.exists(f)) stop('no spec for ', geo, ' at ', f)
   source(f, local = FALSE)
   get(paste0('SPEC_', geo))
 }
+
 
 
 write_geo <- function(res, geo, spec) {
@@ -691,17 +687,17 @@ write_geo <- function(res, geo, spec) {
 write_interval <- function(spec, point, geo) {
 
   #----------------------------------------------------------------------------
-  # Sidecar carrying the sampling error of the one soft input through to every
+  # Sidecar carrying sampling error of one soft input through to every
   # output row.
   #
-  # The non-parental rate rests on ~120 families per geography and carries a
-  # standard error of five to six points. Every count is a share of the total
-  # that rate produces, so that error reaches every row. It is NOT proportional:
-  # program counts hold fixed while the other formal types absorb the
-  # difference, so the build is re-run at each bound rather than scaled.
+  # Non-parental rate rests on 208-403 NSCH records per geography (2018-19
+  # pooled), design standard error 3-5 points. Every count a share of total
+  # rate produces -- error reaches every row. NOT proportional: program
+  # counts hold fixed while other formal types absorb difference -- build
+  # re-run at each bound, not scaled.
   #
-  # The interval covers sampling error in the rate ALONE. It says nothing about
-  # sampling error in the regional NSECE shares, which is not quantified here.
+  # Interval covers sampling error in rate ALONE. Says nothing about sampling
+  # error in regional NSECE shares, not quantified here.
   #
   # Params:
   #   - spec (list), point (tibble) the central build, geo (chr)
@@ -790,6 +786,7 @@ min_feasible_rate <- function(spec, formal_share = NSECE_FORMAL_SHARE[[spec$regi
 }
 
 
+
 check_geo <- function(res, geo) {
 
   #----------------------------------------------------------------------------
@@ -820,14 +817,28 @@ check_geo <- function(res, geo) {
 }
 
 
+
 main <- function(args = commandArgs(trailingOnly = TRUE)) {
+
+  #----------------------------------------------------------------------------
+  # Entry point -- builds each requested geography, writes out/<GEO>.csv (plus
+  # simulator copy for whole states), prints summary. Prints usage, returns
+  # NULL when neither --all nor --geo given.
+  #
+  # Params:
+  #   - args (chr): CLI args -- --geo KY[,NJ], --all, --check (run
+  #     check_geo(), exit 1 on any failure), --interval (write
+  #     <GEO>_interval.csv)
+  #
+  # Returns: (list) central build per geography, invisibly
+  #----------------------------------------------------------------------------
 
   geos <- if ('--all' %in% args) {
     GEOGRAPHIES
   } else if ('--geo' %in% args) {
     strsplit(args[which(args == '--geo') + 1], ',')[[1]]
   } else {
-    cat('usage: Rscript state_data/00_main.R [--geo KY[,NJ]] [--all] [--check]\n')
+    cat('usage: Rscript state_data/00_main.R [--geo KY[,NJ]] [--all] [--check] [--interval]\n')
     cat('geographies: ', paste(GEOGRAPHIES, collapse = ', '), '\n')
     return(invisible(NULL))
   }

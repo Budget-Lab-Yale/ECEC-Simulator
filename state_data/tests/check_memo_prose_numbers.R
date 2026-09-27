@@ -14,13 +14,14 @@
 suppressPackageStartupMessages({library(readr); library(dplyr)})
 
 source('state_data/00_main.R')     # main() is guarded; this only loads
-source('state_data/04_head_start_in_schools.R')   # guarded; MATCH_METRES
+source('state_data/03_head_start_in_schools.R')   # guarded; MATCH_METRES
 
 TEX <- file.path(STATE_DATA_ROOT, 'docs', 'SUMMARY_method.tex')
 OUT <- file.path(STATE_DATA_ROOT, 'out')
 
 # Whitespace collapsed -- a pattern must not depend on where a line wraps.
 tex <- gsub('[[:space:]]+', ' ', paste(readLines(TEX, warn = FALSE), collapse = ' '))
+
 
 
 informal_share_range <- function(of) {
@@ -54,32 +55,6 @@ informal_share_range <- function(of) {
 GEO      <- c('KY', 'NJ', 'NY', 'NYC', 'VA')
 INFORMAL <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 
-# Whole states in the build -- NYC is county-defined, not a state.
-STATES <- GEOGRAPHIES[vapply(GEOGRAPHIES, function(g) is.null(load_spec(g)$counties),
-                             logical(1))]
-
-number_word <- function(n) c('one', 'two', 'three', 'four', 'five', 'six', 'seven',
-                             'eight', 'nine', 'ten')[n]
-
-derived_national <- function(q) {
-  d <- read_csv(file.path(OUT, 'nsece_universe.csv'), show_col_types = FALSE)
-  d$value[d$quantity == q & d$key == 'national']
-}
-
-# Step 3's Unpaid Center-Based over what the regional NSECE share would give.
-ratio_of <- function(g) {
-  s <- load_spec(g)
-  q <- utils::capture.output(r <- build_geo(s))
-  d <- attr(r, 'diagnostics')
-  program_children(s)$total /
-    ((d$nonparental_total - d$residual) * NSECE_UNPAID_CENTRE_SHARE[[s$region]])
-}
-
-# Hours change at the top of the NSCH interval, whole percent.
-interval_pct <- function(g) {
-  d <- read_csv(file.path(OUT, paste0(g, '_interval.csv')), show_col_types = FALSE)
-  format(round(100 * (sum(d$high) / sum(d$annual_hours) - 1)))
-}
 
 
 # Build of g w/ a changed spec or universe ratio -- sensitivities quoted in
@@ -94,6 +69,8 @@ build_with <- function(g, ratio = NSECE_UNIVERSE_RATIO, hs_share = NULL) {
   setNames(r$annual_hours, r$ecec_type)
 }
 
+
+
 # NHES five-hour over ten-hour ratio, national -- as check_nsece_against_nhes.R
 # computes it.
 nhes_ratio <- function() {
@@ -104,6 +81,8 @@ nhes_ratio <- function() {
   w('ge5') / w('ge10')
 }
 
+
+
 # Total-hours change w/ NHES ratio in place of NSECE's, low--high, 1 decimal.
 nhes_total_range <- function() {
   r <- nhes_ratio()
@@ -111,6 +90,8 @@ nhes_total_range <- function() {
               numeric(1))
   sprintf('%.1f', 100 * range(p))
 }
+
+
 
 # No-deduction change, one care type, for the four geographies w/ a deduction.
 nodeduct_pct <- function(type) {
@@ -138,9 +119,6 @@ REGISTER <- list(
   list(what    = 'step 3, NSECE unpaid centre share NE and S',
        pattern = 'Center-Based: %s in the Northeast and %s in the South',
        value   = sprintf('%.3f', NSECE_UNPAID_CENTRE_SHARE[c('northeast', 'south')])),
-  list(what    = 'step 3, KY ratio to the NSECE share',
-       pattern = 'Kentucky\'s %s is the largest here',
-       value   = sprintf('%.2f', ratio_of('KY'))),
   list(what    = 'step 1, total hours w/ NHES ratio',
        pattern = 'total annual hours rise %s--%s\\%% in the five geographies',
        value   = nhes_total_range()),
@@ -152,8 +130,19 @@ REGISTER <- list(
        pattern = 'Home-Based hours fall by %s\\%%, %s\\%%, less than 0.1\\%%, and %s\\%%',
        value   = sprintf('%.1f', -nodeduct_pct('Center-Based')[c('KY', 'NJ', 'VA')])),
   list(what    = 'step 3, match radius',
-       pattern = 'geocodes are within %s metres',
-       value   = format(MATCH_METRES))
+       pattern = 'geocodes are within %s meters',
+       value   = format(MATCH_METRES)),
+  # NSECE constants quoted in prose. Centre share once printed the ten-hour
+  # universe's values (0.876, 0.805) while the build used five-hour ones.
+  list(what    = 'step 1, universe ratio',
+       pattern = 'Universe ratio: %s.',
+       value   = sprintf('%.3f', NSECE_UNIVERSE_RATIO)),
+  list(what    = 'step 2, formal share NE and S',
+       pattern = 'formal share is %s\\%% in the Northeast (NJ, NYS, NYC) and %s\\%% in the South',
+       value   = sprintf('%.1f', 100 * NSECE_FORMAL_SHARE[c('northeast', 'south')])),
+  list(what    = 'step 4, centre share NE and S',
+       pattern = 'center share is %s in the Northeast and %s in the South',
+       value   = sprintf('%.3f', NSECE_CENTRE_HOME_SPLIT[c('northeast', 'south')]))
 )
 
 

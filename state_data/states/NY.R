@@ -1,16 +1,19 @@
 #------------------------------------------------------------------------------
 # NY.R -- New York State, all 62 counties, city included.
 #
-# Region northeast. The build reads three things here: the program counts,
-# the NSCH rate w/ its standard error, and the region. Every other constant is
-# NSECE and regional -- see 00_main.R.
+# Region northeast. Build reads here: program counts, NSCH rate w/ standard
+# error, region, share of Head Start a district runs in own pre-K school.
+# Every other constant national or regional -- see 00_main.R.
 #
 # NYC.R builds the five boroughs on their own, from the constants here. The two
 # outputs OVERLAP by design: each is a deliverable in its own right.
 #------------------------------------------------------------------------------
 
 
-NYC_BOROUGHS <- c('Bronx', 'Kings', 'New York', 'Queens', 'Richmond')
+# The five boroughs -- county names as Census PEP writes them, FIPS in same
+# order. Only definition; NYC.R, 03_head_start_in_schools.R, checks read these.
+NYC_BOROUGHS    <- c('Bronx', 'Kings', 'New York', 'Queens', 'Richmond')
+NYC_COUNTY_FIPS <- c('36005', '36047', '36061', '36081', '36085')
 
 
 # Public-school pre-K, CCD 2018-19: 54,451 children across all 62 counties,
@@ -24,7 +27,7 @@ NY_HEAD_START  <- 36863
 NY_EARLY_HEAD_START  <- 11433
 
 # NYC SHARES. City's OPEN funded slots over New York's, ACF Head Start
-# service-location file (2026-09-23 export -- same file 04_ reads). Head Start
+# service-location file (2026-09-23 export -- same file 03_ reads). Head Start
 # types 1, 3, 5; Early Head Start types 2, 4, 6. Applied to NIEER state counts;
 # assumes city's 2026 share held in 2018-19.
 # tests/check_program_counts_match_sources.R recomputes both from the file.
@@ -48,16 +51,9 @@ SPEC_NY <- list(
     'Head Start',          NY_HEAD_START,
     'Early Head Start',    NY_EARLY_HEAD_START),
 
-  # HEAD START / STATE PRE-K OVERLAP. NIEER State of Preschool 2019, Table 4
-  # (p.28), 3s + 4s: pre-K + special ed 151,805; w/ Head Start, unduplicated,
-  # 177,532. Difference = Head Start net of children NIEER finds in state pre-K.
-  # State pre-K total 126,302 (profile p.136) -- scales overlap to CCD coverage.
-  nieer_undup_34   = c(without_hs = 151805, with_hs = 177532),
-  nieer_state_prek = 126302,
-
   # HEAD START A DISTRICT RUNS IN ITS OWN PRE-K SCHOOL -- deducted in step 3,
   # since CCD counts those children too. 42 of 20,518 open Head Start slots
-  # (0.2%), from 04_head_start_in_schools.R; `--check` compares back to it.
+  # (0.2%), from 03_head_start_in_schools.R; `--check` compares back to it.
   hs_in_schools_share = 0.0020469831367579687,
 
   # NSCH 2018+2019 pooled k6q20, children 0-4, child-weighted. n = 234 records.

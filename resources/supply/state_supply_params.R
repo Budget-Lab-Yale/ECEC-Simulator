@@ -38,7 +38,8 @@
 # then the state's own base-year wage, which is the pair the curve is anchored
 # on. A cell under 50 ACS workers takes ratio 1, so that state keeps the
 # national wage for that education group rather than swinging on a handful of
-# records -- one in 2018-19 records (VT/no_ba, 49 records).
+# records -- nine cells in 2018-19 records (BA: AK, DC, DE, ID, MT, ND, RI, WY;
+# no-BA: VT).
 #
 # WHAT IS DELIBERATELY NOT CHANGED. labor_requirements, elasticities and
 # per_unit_residual stay national.
@@ -77,16 +78,35 @@ DIAG     <- file.path(DIR, 'state_supply_diagnostics.csv')
 # mean weekly hours. Splitting by children alone would be wrong -- the bands
 # differ in hours (27.5 against 40.4 a week).
 #
-# From out/nsece_universe.csv, universe A.
-HI_SHARE <- 0.07008002232267292; HI_HOURS <- 27.454813402111718
-LO_SHARE <- 0.06556113476684644; LO_HOURS <- 40.405040897598035
+# Read from state_data/out/nsece_universe.csv, universe A -- not re-typed, so
+# cannot drift from the derivation.
+NSECE_UNIVERSE <- file.path('state_data', 'out', 'nsece_universe.csv')
+band <- read_csv(NSECE_UNIVERSE, show_col_types = FALSE) %>%
+  filter(startsWith(universe, 'A:'),
+         key %in% c('High-Priced Center-Based', 'Low-Priced Center-Based'),
+         quantity %in% c('price_band_share', 'weekly_hours'))
+band_val <- function(q, k) {
+
+  #----------------------------------------------------------------------------
+  # One universe-A price-band value from nsece_universe.csv.
+  #
+  # Params:
+  #   - q (chr): quantity, 'price_band_share' or 'weekly_hours'
+  #   - k (chr): key, 'High-Priced Center-Based' or 'Low-Priced Center-Based'
+  #
+  # Returns: (num) value; stops unless exactly one row matches
+  #----------------------------------------------------------------------------
+
+  v <- band$value[band$quantity == q & band$key == k]
+  if (length(v) != 1) stop('nsece_universe.csv: no single row for ', q, ' / ', k)
+  v
+}
+HI_SHARE <- band_val('price_band_share', 'High-Priced Center-Based')
+LO_SHARE <- band_val('price_band_share', 'Low-Priced Center-Based')
+HI_HOURS <- band_val('weekly_hours', 'High-Priced Center-Based')
+LO_HOURS <- band_val('weekly_hours', 'Low-Priced Center-Based')
 LOW_FRACTION <- (LO_SHARE * LO_HOURS) /
                 (LO_SHARE * LO_HOURS + HI_SHARE * HI_HOURS)
-
-# Demand rows that have no supply sector. Informal care is not produced by a
-# paid provider, so it contributes no labour.
-SECTOR_OF <- c('Unpaid Center-Based'  = 'unpaid_center_based',
-               'Paid Home-Based'      = 'paid_home_based')
 
 SECTOR_ORDER <- c('unpaid_center_based', 'low_price_center_based',
                   'high_price_center_based', 'paid_home_based')
@@ -129,6 +149,17 @@ state_labor_supply <- function(natl, demand_path) {
 
 
 main <- function() {
+
+  #----------------------------------------------------------------------------
+  # Entry point -- per state demand file in DEMAND, writes OUT_DIR/<ST>.yaml:
+  # national parameter set w/ labor_supply re-based to state base-year hours,
+  # wages scaled by state wage ratio. Writes DIAG, prints table.
+  #
+  # Params: none -- --check on CLI skips all writes; exits 1 if NATIONAL,
+  #   WAGES, or any demand file missing
+  #
+  # Returns: (tibble) one diagnostics row per state, invisibly
+  #----------------------------------------------------------------------------
 
   check_only <- '--check' %in% commandArgs(TRUE)
 

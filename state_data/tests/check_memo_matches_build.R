@@ -25,8 +25,22 @@ TYPES <- ECEC_TYPES
 
 tex <- readLines(TEX, warn = FALSE)
 
+
+
 row_of <- function(label, after) {
-  # the first row starting with `label` at or after line `after`
+
+  #----------------------------------------------------------------------------
+  # Numeric cells of first memo table row starting with `label` after line
+  # `after` (strictly after -- code tests i > after). Strips \\, whitespace,
+  # commas, \%.
+  #
+  # Params:
+  #   - label (chr): row label before first '&' (regex)
+  #   - after (int): line index in `tex` to search past
+  #
+  # Returns: (num) cells after label, NULL if no such row
+  #----------------------------------------------------------------------------
+
   i <- grep(sprintf('^%s\\s*&', label), tex)
   i <- i[i > after][1]
   if (is.na(i)) return(NULL)

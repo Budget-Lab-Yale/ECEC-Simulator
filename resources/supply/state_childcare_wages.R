@@ -34,7 +34,7 @@
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
-  library(dplyr); library(readr); library(tidyr)
+  library(dplyr); library(readr)
 })
 
 DIR <- file.path('resources', 'supply')
@@ -49,21 +49,28 @@ OUT <- file.path(DIR, 'state_childcare_wage_ratios.csv')
 # Vermont had 13 no-BA, 18 BA records.
 MIN_N <- 50
 
-STATES <- c('AZ', 'CA', 'CO', 'CT', 'IL', 'IN', 'KY', 'MA', 'MN', 'NJ',
-            'NM', 'NY', 'TX', 'VA', 'VT', 'WA', 'WI', 'WV')
 
-POSTAL_TO_FIPS <- c(
-  AL =  1, AK =  2, AZ =  4, AR =  5, CA =  6, CO =  8, CT =  9, DE = 10,
-  DC = 11, FL = 12, GA = 13, HI = 15, ID = 16, IL = 17, IN = 18, IA = 19,
-  KS = 20, KY = 21, LA = 22, ME = 23, MD = 24, MA = 25, MI = 26, MN = 27,
-  MS = 28, MO = 29, MT = 30, NE = 31, NV = 32, NH = 33, NJ = 34, NM = 35,
-  NY = 36, NC = 37, ND = 38, OH = 39, OK = 40, OR = 41, PA = 42, RI = 44,
-  SC = 45, SD = 46, TN = 47, TX = 48, UT = 49, VT = 50, VA = 51, WA = 53,
-  WV = 54, WI = 55, WY = 56)
+# Postal -> FIPS, from the simulator's own table.
+source('src/shared_functions/constants.R')
+POSTAL_TO_FIPS <- STATE_POSTAL_TO_FIPS
+
+# Every state + DC -- demand build covers all 51. No Puerto Rico records in these ACS data.
+STATES <- names(POSTAL_TO_FIPS)
 
 
 
 main <- function() {
+
+  #----------------------------------------------------------------------------
+  # Entry point -- state-to-national childcare hourly-earnings ratio by
+  # education from SAMPLE; cells under MIN_N workers take ratio 1. Joins
+  # SAMPLE_CHECK ratio as check, writes OUT, prints table.
+  #
+  # Params: none -- --check on CLI skips write, exits 1 if any state lacks
+  #   ACS cell; exits 1 if ACS input missing or national rows != 2
+  #
+  # Returns: (tibble) one row per state x education group, invisibly
+  #----------------------------------------------------------------------------
 
   check_only <- '--check' %in% commandArgs(TRUE)
 

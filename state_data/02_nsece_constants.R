@@ -66,6 +66,17 @@ PUBLISHED_FORMAL <- c(northeast = 0.5653, midwest = 0.5292,
 
 
 arg <- function(flag, default = NA_character_) {
+
+  #----------------------------------------------------------------------------
+  # Value following a CLI flag.
+  #
+  # Params:
+  #   - flag (chr): flag name, e.g. '--nsece'
+  #   - default (chr): returned when flag absent
+  #
+  # Returns: (chr) arg after flag, or default
+  #----------------------------------------------------------------------------
+
   a <- commandArgs(trailingOnly = TRUE)
   i <- which(a == flag)
   if (length(i) == 0) return(default)
@@ -242,14 +253,14 @@ build_arrangements <- function(d) {
 primary_arrangement <- function(arr) {
 
   #----------------------------------------------------------------------------
-  # One row per child: the primary care type, its hours, and the child's TOTAL
+  # One row per child: primary care type, its hours, child's TOTAL
   # non-parental hours.
   #
-  # K-8 is dropped first. NSCH's question is about care from someone other than
-  # a parent -- it names centres, preschool, Head Start, family child care,
-  # nannies, babysitters and relatives, and it does not name school. Counting
-  # school hours would put every school-age child over the ten-hour line for
-  # the wrong reason.
+  # K-8 dropped first. NSCH's question asks about care from someone other than
+  # parent -- names centres, preschool, Head Start, family child care,
+  # nannies, babysitters, and relatives, doesn't name school. Counting school
+  # hours would put every school-age child over ten-hour line for wrong
+  # reason.
   #
   # Params:
   #   - arr (tibble) from build_arrangements()
@@ -328,9 +339,8 @@ summarise_universe <- function(kids, label, all_children = NULL) {
 
   # Unpaid Center-Based share of formal care, by region -- step 3. Weighted
   # children whose primary type is Unpaid Center-Based over weighted children
-  # whose primary type is formal. Replaces program counts in step 3: counts
-  # double-count Head Start children also in state pre-K, and only some
-  # states report that overlap.
+  # whose primary type is formal. Printed cross-check only -- step 3 uses
+  # program counts, not this share.
   unpaid <- kids %>%
     filter(!is.na(region), ecec_choice %in% FORMAL) %>%
     group_by(region) %>%
@@ -404,6 +414,17 @@ summarise_universe <- function(kids, label, all_children = NULL) {
 
 
 main <- function() {
+
+  #----------------------------------------------------------------------------
+  # Entry point -- reads NSECE household file, builds children, arrangements,
+  # primary arrangement, prints every regional constant 00_main.R carries,
+  # writes long CSV of quantities by universe.
+  #
+  # Params: none -- reads --nsece <dir> (or env NSECE_ROOT; stops if neither),
+  #   --out <file> (default nsece_universe.csv) from CLI
+  #
+  # Returns: (tibble) written quantities, invisibly
+  #----------------------------------------------------------------------------
 
   root <- arg('--nsece', Sys.getenv('NSECE_ROOT'))
   if (!nzchar(root)) stop('pass --nsece <dir> or set NSECE_ROOT')
@@ -489,9 +510,9 @@ main <- function() {
               blend(bands, 'A'), blend(bands, 'B'),
               100 * (blend(bands, 'B') / blend(bands, 'A') - 1)))
 
-  cat('\n== CENTRE-HOME SPLIT OF PAID FORMAL CARE, by region (step 4)\n')
+  cat('\n== CENTRE-HOME SPLIT OF PAID FORMAL CARE, by region (step 4, universe A)\n')
   print(as.data.frame(
-    b$split %>% mutate(across(where(is.numeric), ~round(.x, 4)))),
+    a$split %>% mutate(across(where(is.numeric), ~round(.x, 4)))),
     row.names = FALSE)
 
   cat('\n== PART-TIME SHARE (hours < ', PT_FT_CUT, '), by region and type\n', sep = '')
@@ -508,11 +529,11 @@ main <- function() {
                                     B = unpaid_share), by = 'region') %>%
       mutate(across(where(is.numeric), ~round(.x, 4)))), row.names = FALSE)
 
-  cat('\n== INFORMAL MIX, by region (universe B)\n')
-  print(as.data.frame(b$mix_r %>% mutate(across(where(is.numeric), ~round(.x, 4)))),
+  cat('\n== INFORMAL MIX, by region (universe A)\n')
+  print(as.data.frame(a$mix_r %>% mutate(across(where(is.numeric), ~round(.x, 4)))),
         row.names = FALSE)
-  cat('\n== WEEKLY HOURS, by region (universe B)\n')
-  print(as.data.frame(b$hours_r %>% mutate(across(where(is.numeric), ~round(.x, 2)))),
+  cat('\n== WEEKLY HOURS, by region (universe A)\n')
+  print(as.data.frame(a$hours_r %>% mutate(across(where(is.numeric), ~round(.x, 2)))),
         row.names = FALSE)
 
   b_kids <- dplyr::filter(prim, total_hours >= 10)

@@ -35,7 +35,23 @@ a <- d[d$universe == UNIVERSE_A, ]
 failures <- 0
 checked  <- 0
 
+
+
 report <- function(ok, what, got, want) {
+
+  #----------------------------------------------------------------------------
+  # Counts one check in global `checked`; on failure bumps global `failures`,
+  # prints FAIL line with both values at 17 digits.
+  #
+  # Params:
+  #   - ok (logical): check passed; non-TRUE (incl. NA) counts as failure
+  #   - what (chr): label, e.g. 'quantity[key]'
+  #   - got (num): value in build
+  #   - want (num): value in CSV
+  #
+  # Returns: (NULL) called for side effects
+  #----------------------------------------------------------------------------
+
   checked <<- checked + 1
   if (!isTRUE(ok)) {
     failures <<- failures + 1
@@ -44,14 +60,41 @@ report <- function(ok, what, got, want) {
   }
 }
 
+
+
 lookup <- function(quantity, key) {
+
+  #----------------------------------------------------------------------------
+  # Universe-A row of CSV for one quantity, key.
+  #
+  # Params:
+  #   - quantity (chr): `quantity` column value
+  #   - key (chr): `key` column value
+  #
+  # Returns: (tibble) single matching row, NULL unless exactly one
+  #----------------------------------------------------------------------------
+
   r <- a[a$quantity == quantity & a$key == key, ]
   if (nrow(r) != 1) return(NULL)
   r
 }
 
-# One named vector against one quantity, key by key.
+
+
 check_vec <- function(vec, quantity, keymap = identity) {
+
+  #----------------------------------------------------------------------------
+  # One named vector against one quantity, key by key; missing CSV row
+  # counts as failure.
+  #
+  # Params:
+  #   - vec (num): named constant from 00_main.R
+  #   - quantity (chr): CSV quantity to compare against
+  #   - keymap (function): maps vector name to CSV key; default identity
+  #
+  # Returns: (NULL) updates globals `checked`, `failures`
+  #----------------------------------------------------------------------------
+
   for (nm in names(vec)) {
     r <- lookup(quantity, keymap(nm))
     if (is.null(r)) {
@@ -65,8 +108,22 @@ check_vec <- function(vec, quantity, keymap = identity) {
   }
 }
 
-# One region x type table against one quantity, value AND record count.
+
+
 check_tbl <- function(tbl, valcol, quantity) {
+
+  #----------------------------------------------------------------------------
+  # One region x type table against one quantity, value AND record count;
+  # CSV key 'region:type', missing row counts as failure.
+  #
+  # Params:
+  #   - tbl (tibble): constant from 00_main.R with region, type, n columns
+  #   - valcol (chr): column of tbl holding value
+  #   - quantity (chr): CSV quantity to compare against
+  #
+  # Returns: (NULL) updates globals `checked`, `failures`
+  #----------------------------------------------------------------------------
+
   for (i in seq_len(nrow(tbl))) {
     key <- paste0(tbl$region[i], ':', tbl$type[i])
     r <- lookup(quantity, key)
