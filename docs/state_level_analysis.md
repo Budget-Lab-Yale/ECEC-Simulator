@@ -330,7 +330,7 @@ adjustment was applied (and the solved deltas), the supply-parameter source
 
 ```
 config/state/
-├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows); state_data/00_main.R
+├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows); state_data/code/00_main.R
 ├── supply/<ST>.yaml      # supply params, schema = supply_2019.yaml; resources/supply/state_supply_params.R
 └── employment/<ST>.csv   # epop projections, schema = epop_projections.csv; resources/epop/state_epop_projections.R
 ```

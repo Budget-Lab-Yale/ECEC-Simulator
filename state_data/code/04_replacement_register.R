@@ -21,8 +21,8 @@
 #   blocked            source identified, retrieval blocked
 #
 # Usage:
-#   Rscript state_data/04_replacement_register.R
-#   Rscript state_data/04_replacement_register.R --check
+#   Rscript state_data/code/04_replacement_register.R
+#   Rscript state_data/code/04_replacement_register.R --check
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({

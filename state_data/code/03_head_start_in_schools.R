@@ -33,14 +33,15 @@
 #
 # Writes out/head_start_in_schools.csv (one row per geography) and
 # out/head_start_in_schools_review.csv (every site that passes test 2, and the
-# decision on it).
+# decision on it). load_spec() (00_main.R) reads hs_in_schools_share live from
+# the first file, so there is nothing to go stale between this script and the
+# geography it feeds.
 #
 # Usage:
-#   Rscript state_data/03_head_start_in_schools.R
-#   Rscript state_data/03_head_start_in_schools.R --check
+#   Rscript state_data/code/03_head_start_in_schools.R
 #------------------------------------------------------------------------------
 
-source('state_data/00_main.R')     # main() guarded; GEOGRAPHIES, load_spec()
+source('state_data/code/00_main.R')     # main() guarded; GEOGRAPHIES, load_spec()
 
 HSSL_FILE     <- 'US_HSSL__head_start_funded_slots_by_service_location__2026-09-23.csv'
 MATCH_METRES  <- 150   # campus scale; 100-400 m is a plateau, see memo
@@ -297,7 +298,6 @@ STATE_POSTAL_OF <- setNames(names(STATE_POSTAL_TO_FIPS),
                             as.character(STATE_POSTAL_TO_FIPS))
 
 if (sys.nframe() == 0) {
-  args    <- commandArgs(trailingOnly = TRUE)
   schools <- load_schools()
   sites   <- load_sites()
   cat('pre-K schools ', nrow(schools), ', open Head Start sites ', nrow(sites),
@@ -312,22 +312,4 @@ if (sys.nframe() == 0) {
   cat('\nHead Start slots a district runs in its own pre-K school\n\n')
   print(as.data.frame(summary %>% dplyr::mutate(share = round(100 * share, 1))),
         row.names = FALSE)
-
-  ## --check: does states/<GEO>.R carry what this script derives? -------------
-  if ('--check' %in% args) {
-    cat('\nchecking hs_in_schools_share in states/<GEO>.R\n')
-    fails <- 0
-    for (g in GEOGRAPHIES) {
-      want <- summary$share[summary$geo == g]
-      got  <- load_spec(g)$hs_in_schools_share
-      ok   <- is.numeric(got) && abs(got - want) < 1e-12
-      cat(sprintf('   %-4s %s  %.4f\n', g, if (ok) '[ok]  ' else '[FAIL]', want))
-      if (!ok) cat(sprintf('        file %s, derived %.6f\n',
-                           format(got %||% NA), want))
-      fails <- fails + !ok
-    }
-    cat('\n', if (fails == 0) 'SHARES MATCH THE MATCH' else
-        paste(fails, 'SHARE(S) STALE'), '\n')
-    if (fails > 0) quit(status = 1)
-  }
 }

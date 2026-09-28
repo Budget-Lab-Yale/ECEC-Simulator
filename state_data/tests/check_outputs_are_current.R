@@ -11,7 +11,7 @@
 #-----------------------------------------------------------------------------
 suppressPackageStartupMessages({library(readr); library(dplyr)})
 
-source('state_data/00_main.R')     # main() is guarded; this only loads
+source('state_data/code/00_main.R')     # main() is guarded; this only loads
 
 OUT <- file.path(STATE_DATA_ROOT, 'out')
 TOL <- 1e-6                        # relative; these should agree to the bit
@@ -148,6 +148,6 @@ if (fails == 0) {
   cat('\nout/ is current: every figure this machine can rebuild matches the code\n')
 } else {
   cat('\n', fails, ' output check(s) FAILED. Re-run:\n', sep = '')
-  cat('  Rscript state_data/00_main.R --all --check --interval\n')
+  cat('  Rscript state_data/code/00_main.R --all --check --interval\n')
   quit(status = 1)
 }

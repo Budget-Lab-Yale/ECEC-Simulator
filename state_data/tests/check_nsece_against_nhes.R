@@ -41,7 +41,7 @@ UNIVERSE_A <- 'A: NSECE, any regular care'
 GAP_EXPECTED <- 1.0873337
 GAP_TOL      <- 5e-4
 
-source('state_data/00_main.R')     # main() is guarded; this only loads
+source('state_data/code/00_main.R')     # main() is guarded; this only loads
 
 for (f in c(NSECE, NHES)) {
   if (!file.exists(f)) {

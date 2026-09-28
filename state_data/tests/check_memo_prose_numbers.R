@@ -13,8 +13,8 @@
 #-----------------------------------------------------------------------------
 suppressPackageStartupMessages({library(readr); library(dplyr)})
 
-source('state_data/00_main.R')     # main() is guarded; this only loads
-source('state_data/03_head_start_in_schools.R')   # guarded; MATCH_METRES
+source('state_data/code/00_main.R')     # main() is guarded; this only loads
+source('state_data/code/03_head_start_in_schools.R')   # guarded; MATCH_METRES
 
 TEX <- file.path(STATE_DATA_ROOT, 'docs', 'SUMMARY_method.tex')
 OUT <- file.path(STATE_DATA_ROOT, 'out')
@@ -57,38 +57,12 @@ INFORMAL <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 
 
 
-# Build of g w/ a changed spec or universe ratio -- sensitivities quoted in
-# prose. Ratio restored on exit, so later rows see the real build.
-build_with <- function(g, ratio = NSECE_UNIVERSE_RATIO, hs_share = NULL) {
+# Build of g w/ a changed Head Start deduction -- sensitivity quoted in prose.
+build_with <- function(g, hs_share = NULL) {
   s <- load_spec(g)
   if (!is.null(hs_share)) s$hs_in_schools_share <- hs_share
-  keep <- NSECE_UNIVERSE_RATIO
-  assign('NSECE_UNIVERSE_RATIO', ratio, envir = globalenv())
-  on.exit(assign('NSECE_UNIVERSE_RATIO', keep, envir = globalenv()))
   q <- utils::capture.output(r <- build_geo(s))
   setNames(r$annual_hours, r$ecec_type)
-}
-
-
-
-# NHES five-hour over ten-hour ratio, national -- as check_nsece_against_nhes.R
-# computes it.
-nhes_ratio <- function() {
-  n <- read_csv(file.path(STATE_DATA_ROOT, 'raw',
-                          'US_NHES__ecpp_children_0_4_by_hours_universe__2019.csv'),
-                show_col_types = FALSE)
-  w <- function(u) n$weighted_children[n$universe == u & n$region == 'national']
-  w('ge5') / w('ge10')
-}
-
-
-
-# Total-hours change w/ NHES ratio in place of NSECE's, low--high, 1 decimal.
-nhes_total_range <- function() {
-  r <- nhes_ratio()
-  p <- vapply(GEO, function(g) sum(build_with(g, ratio = r)) / sum(build_with(g)) - 1,
-              numeric(1))
-  sprintf('%.1f', 100 * range(p))
 }
 
 
@@ -119,9 +93,6 @@ REGISTER <- list(
   list(what    = 'step 3, NSECE unpaid centre share NE and S',
        pattern = 'Center-Based: %s in the Northeast and %s in the South',
        value   = sprintf('%.3f', NSECE_UNPAID_CENTRE_SHARE[c('northeast', 'south')])),
-  list(what    = 'step 1, total hours w/ NHES ratio',
-       pattern = 'total annual hours rise %s--%s\\%% in the five geographies',
-       value   = nhes_total_range()),
   list(what    = 'step 3, Unpaid Center-Based w/out deduction',
        pattern = 'Unpaid Center-Based hours rise %s\\%% in KY, %s\\%% in NJ, %s\\%% in NYS, and %s\\%% in VA',
        value   = sprintf('%.1f', nodeduct_pct('Unpaid Center-Based'))),

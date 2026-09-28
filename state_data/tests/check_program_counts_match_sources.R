@@ -26,7 +26,7 @@
 #-----------------------------------------------------------------------------
 suppressPackageStartupMessages({library(readr); library(dplyr)})
 
-source('state_data/00_main.R')     # main() is guarded; this only loads
+source('state_data/code/00_main.R')     # main() is guarded; this only loads
 
 DOC      <- file.path(STATE_DATA_ROOT, 'raw', 'documentation')
 NIEER    <- file.path(DOC, 'US_NIEER__state_of_preschool_yearbook__2019.pdf')

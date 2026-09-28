@@ -30,6 +30,7 @@ state_data/raw/local/
 *.lot
 *.out
 *.synctex.gz
+*.synctex(busy)
 *.toc
 
 # Python bytecode

@@ -109,10 +109,10 @@ other five types are regional NSECE shares.
 - **[state_data/docs/SUMMARY_method.pdf](state_data/docs/SUMMARY_method.pdf)**
   is the document to read — what every number means and how solid it is.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
-  provenance of every input, the twelve checks that each exit non-zero on
+  provenance of every input, the ten checks that each exit non-zero on
   failure, and the known traps.
 
-The build and the simulator are wired together. `state_data/00_main.R` writes
+The build and the simulator are wired together. `state_data/code/00_main.R` writes
 each whole-state file a second time to `config/state/demand/<ST>.csv`, and the
 simulator reads it from there (`adjust_alpha_for_state.R`). The simulator takes
 six target groups: one Center-Based target covers both centre price bands.

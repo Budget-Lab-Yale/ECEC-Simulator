@@ -25,7 +25,7 @@ UNIVERSE_A <- 'A: NSECE, any regular care'
 
 TOL <- 1e-12   # same double, not a rounded copy
 
-source('state_data/00_main.R')
+source('state_data/code/00_main.R')
 
 d <- read_csv(CSV, col_types = cols(.default = col_character()))
 d$value <- as.numeric(d$value)

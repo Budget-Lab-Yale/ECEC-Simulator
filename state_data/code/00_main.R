@@ -14,14 +14,17 @@
 #   6. annual hours = children x the simulator's own hours grid x 50, split
 #      part-time / full-time by the regional NSECE share
 #
-# states/<GEO>.R is DATA: program counts, NSCH rate w/ standard error,
-# Census region, and the school-overlap share. Everything else lives here and
-# reaches every geography.
+# states/<GEO>.R is DATA: program counts and Census region, each hand-researched
+# with its source next to it. The NSCH rate w/ standard error and the
+# school-overlap share are NOT there -- load_spec() reads both live from
+# out/nsch_rate_base.csv and out/head_start_in_schools.csv (01_ and 03_ write
+# them), so there is nothing hand-copied left to drift. Everything else lives
+# here and reaches every geography.
 #
 # Usage:
-#   Rscript state_data/00_main.R --geo KY
-#   Rscript state_data/00_main.R --all
-#   Rscript state_data/00_main.R --all --check --interval
+#   Rscript state_data/code/00_main.R --geo KY
+#   Rscript state_data/code/00_main.R --all
+#   Rscript state_data/code/00_main.R --all --check --interval
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -99,7 +102,14 @@ NSECE_RESIDUAL_MIX <- local({
 })
 
 # A regional cell under this many unweighted NSECE children takes the national
-# value -- South Unpaid Home-Based rests on 4 children, Northeast on 8.
+# value. NOT derived from a reliability rule -- no such rule is cited anywhere
+# in this build. The exact number is inconsequential: every real regional cell
+# here is either <=14 (the four Unpaid Home-Based cells -- 5, 8, 11, 14 records)
+# or >=33 (everything else), so any threshold from 15 to 32 triggers the same
+# fallback decisions. 30 sits in that gap. If a future geography or vintage
+# puts a real cell between 15 and 32, this stops being a free choice and wants
+# an actual criterion (e.g. a relative-standard-error bound computed from the
+# NSECE microdata on the cluster) -- not a wider guess.
 NSECE_MIN_RECORDS <- 30
 
 # Step 3 CROSS-CHECK only. Unpaid Center-Based over all formal care, by
@@ -633,21 +643,78 @@ SIMULATOR_DEMAND_DIR <- file.path('config', 'state', 'demand')
 
 
 
+nsch_rate_of <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # This geography's row of out/nsch_rate_base.csv (01_nsch_rate.R, BASE_WAVE
+  # only). NYC has no NSCH records of its own -- reads NY's row, the same
+  # borrowing states/NYC.R used to do by hand.
+  #
+  # Params:
+  #   - geo (chr)
+  #
+  # Returns: (list) rate, se_design; stops if the file or the row is missing
+  #----------------------------------------------------------------------------
+
+  f <- file.path(STATE_DATA_ROOT, 'out', 'nsch_rate_base.csv')
+  if (!file.exists(f)) stop('no ', f, ' -- run 01_nsch_rate.R first')
+  d <- readr::read_csv(f, show_col_types = FALSE)
+  g <- if (geo == 'NYC') 'NY' else geo
+  row <- d[d$geo == g, ]
+  if (nrow(row) != 1) stop('no nsch_rate_base.csv row for ', g)
+  list(rate = row$rate[[1]], se_design = row$se_design[[1]])
+}
+
+
+
+hs_in_schools_share_of <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # This geography's share from out/head_start_in_schools.csv
+  # (03_head_start_in_schools.R) -- unlike the NSCH rate, NYC has its own row.
+  #
+  # Params:
+  #   - geo (chr)
+  #
+  # Returns: (num); stops if the file or the row is missing
+  #----------------------------------------------------------------------------
+
+  f <- file.path(STATE_DATA_ROOT, 'out', 'head_start_in_schools.csv')
+  if (!file.exists(f)) stop('no ', f, ' -- run 03_head_start_in_schools.R first')
+  d <- readr::read_csv(f, show_col_types = FALSE)
+  row <- d[d$geo == geo, ]
+  if (nrow(row) != 1) stop('no head_start_in_schools.csv row for ', geo)
+  row$share[[1]]
+}
+
+
+
 load_spec <- function(geo) {
 
   #----------------------------------------------------------------------------
-  # Sources states/<GEO>.R into global env, returns its SPEC_<GEO>.
+  # Sources states/<GEO>.R into global env, returns its SPEC_<GEO> with
+  # nonparental_rate, nonparental_rate_se, and hs_in_schools_share OVERWRITTEN
+  # live from the out/ files 01_ and 03_ write. The state file holds only
+  # program counts and Census region by hand -- these three are machine-derived
+  # and would otherwise be a second, driftable copy of the same number.
   #
   # Params:
   #   - geo (chr): geography code, e.g. 'KY', 'NYC'
   #
-  # Returns: (list) SPEC_<GEO>; stops if spec file missing
+  # Returns: (list) SPEC_<GEO>; stops if spec file, or either out/ file, is missing
   #----------------------------------------------------------------------------
 
   f <- file.path(STATE_DATA_ROOT, 'states', paste0(geo, '.R'))
   if (!file.exists(f)) stop('no spec for ', geo, ' at ', f)
   source(f, local = FALSE)
-  get(paste0('SPEC_', geo))
+  spec <- get(paste0('SPEC_', geo))
+
+  nsch <- nsch_rate_of(geo)
+  spec$nonparental_rate    <- nsch$rate
+  spec$nonparental_rate_se <- nsch$se_design
+  spec$hs_in_schools_share <- hs_in_schools_share_of(geo)
+
+  spec
 }
 
 
@@ -838,7 +905,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   } else if ('--geo' %in% args) {
     strsplit(args[which(args == '--geo') + 1], ',')[[1]]
   } else {
-    cat('usage: Rscript state_data/00_main.R [--geo KY[,NJ]] [--all] [--check] [--interval]\n')
+    cat('usage: Rscript state_data/code/00_main.R [--geo KY[,NJ]] [--all] [--check] [--interval]\n')
     cat('geographies: ', paste(GEOGRAPHIES, collapse = ', '), '\n')
     return(invisible(NULL))
   }

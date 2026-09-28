@@ -29,7 +29,7 @@
 # Submit w/ sbatch -- the file is 117 MB and several thousand columns wide.
 #
 # Usage:
-#   Rscript state_data/02_nsece_constants.R --nsece <dir> [--out <file>]
+#   Rscript state_data/code/02_nsece_constants.R --nsece <dir> [--out <file>]
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({

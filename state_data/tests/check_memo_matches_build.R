@@ -20,7 +20,7 @@ GEO <- c('KY', 'NJ', 'NY', 'NYC', 'VA')
 # to edit whenever they moved -- and a checker that silently disagrees with the
 # thing it checks is worse than no checker. Sourcing 00_main.R is safe: main()
 # is guarded, so nothing runs.
-source('state_data/00_main.R')
+source('state_data/code/00_main.R')
 TYPES <- ECEC_TYPES
 
 tex <- readLines(TEX, warn = FALSE)

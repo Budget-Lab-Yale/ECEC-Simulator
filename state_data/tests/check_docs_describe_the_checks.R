@@ -5,11 +5,15 @@
 # derives the suite from disk and fails if that prose drifts:
 #
 #   tests/check_*.R, check_*.py     the read-only checks
-#   01_nsch_rate.R --check          derivations that also verify themselves
-#   03_head_start_in_schools.R --check
 #
-# 00_main.R --check is NOT counted. It runs the build's own invariants while
-# writing out/, so it is the thing being checked, not a check.
+# 01_nsch_rate.R and 03_head_start_in_schools.R used to carry a --check that
+# compared their derivation to a hand copy in states/<GEO>.R. load_spec()
+# (00_main.R) now reads both live from the out/ files these scripts write, so
+# there is no hand copy left to compare against -- neither script is a check
+# any more, just a derivation.
+#
+# 00_main.R --check is NOT counted either. It runs the build's own invariants
+# while writing out/, so it is the thing being checked, not a check.
 #
 #   Rscript state_data/tests/check_docs_describe_the_checks.R
 #
@@ -56,11 +60,8 @@ writes_output <- function(path) {
 ## what is actually on disk --------------------------------------------------
 checks <- sort(c(list.files(file.path(ROOT, 'tests'), pattern = '^check_.*[.](R|py)$',
                             full.names = TRUE)))
-# Two derivations verify their own committed constants w/ --check.
-derivations <- file.path(ROOT, c('01_nsch_rate.R', '03_head_start_in_schools.R'))
-stopifnot(all(file.exists(derivations)))
 
-all_checks <- c(checks, derivations)
+all_checks <- checks
 n_total    <- length(all_checks)
 n_readonly <- sum(!vapply(all_checks, writes_output, logical(1)))
 

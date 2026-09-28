@@ -6,15 +6,15 @@ divided with regional NSECE shares, with Unpaid Center-Based from each state's
 program counts.
 
 ```bash
-Rscript state_data/00_main.R --geo KY                  # build one
-Rscript state_data/00_main.R --all                     # build all 52
-Rscript state_data/00_main.R --all --check --interval  # with invariants and error bounds
+Rscript state_data/code/00_main.R --geo KY                  # build one
+Rscript state_data/code/00_main.R --all                     # build all 52
+Rscript state_data/code/00_main.R --all --check --interval  # with invariants and error bounds
 ```
 
 **[docs/SUMMARY_method.pdf](docs/SUMMARY_method.pdf) is the document to read.**
 It says what every number means, where it comes from, and how solid it is. Its
 source is beside it as a .tex. This file is the map, and the record of every
-source. `SOURCES.csv` is the machine-readable register: one row per source and
+source. `docs/SOURCES.csv` is the machine-readable register: one row per source and
 geography, with its URL, vintage, and retrieval date.
 
 ## What is built
@@ -70,19 +70,19 @@ geographies; Unpaid Center-Based hours rise by up to 5.3% (VA).
 ## Layout
 
 ```
-00_main.R                    the method, the NSECE constants, and the CLI
+code/00_main.R                the method, the NSECE constants, and the CLI
 states/<GEO>.R               one per geography: program counts (funded
-                               slots), in-school Head Start share, NSCH rate
-                               and standard error, Census region
-01_nsch_rate.R               derives each state's rate and standard error
-02_nsece_constants.R         derives every NSECE constant (runs on the cluster)
-03_head_start_in_schools.R   measures the Head Start a district runs in its
+                               slots) and Census region, hand-researched
+code/01_nsch_rate.R           derives each state's rate and standard error
+code/02_nsece_constants.R     derives every NSECE constant (runs on the cluster)
+code/03_head_start_in_schools.R measures the Head Start a district runs in its
                                own pre-K school, for step 3
-04_replacement_register.R    one row per NSECE constant: what it feeds, its
+code/04_replacement_register.R one row per NSECE constant: what it feeds, its
                                geography today, and the replacement search
+code/config_local.example.yaml copy to state_data/config_local.yaml (git-ignored)
 tests/                       the check suite
 docs/SUMMARY_method.tex      the method memo, and the .pdf built from it
-SOURCES.csv                  every source, where it came from, what it feeds
+docs/SOURCES.csv             every source, where it came from, what it feeds
 raw/                         the input files
 raw/documentation/           reports behind hand-extracted numbers
 raw/local/                   files too large for git (git-ignored)
@@ -91,37 +91,62 @@ cluster/                     scripts that derive raw/ summaries from
 cluster/out/                 SIPP feasibility cell counts, per year
 out/<GEO>.csv                the output
 out/<GEO>_interval.csv       low and high bounds, from the NSCH rate
-out/nsch_rate.csv            the NSCH derivation
+out/nsch_rate.csv            the NSCH derivation, every wave and pool
+out/nsch_rate_base.csv       BASE_WAVE only -- what load_spec() reads
 out/nsece_universe.csv       the NSECE derivation, full precision
 out/head_start_in_schools.csv the school-overlap share per geography
 out/head_start_in_schools_review.csv every matched site, for review
 out/replacement_register.csv what could replace each NSECE constant
 out/replacement_register_cells.csv SIPP records per state x care type
-config_local.example.yaml    copy to config_local.yaml (git-ignored)
 ```
 
 ## Adding a geography
 
 A state file is **data, not logic**. Copy the closest existing one.
 
-1. Write `states/<GEO>.R`: a `SPEC_<GEO>` list with `fips`, `region`,
-   `programs`, `hs_in_schools_share`, `nonparental_rate`, and
-   `nonparental_rate_se`. A sub-state
-   geography also declares `counties` and `county_fips`, like NYC.
+1. Write `states/<GEO>.R`: a `SPEC_<GEO>` list with `fips`, `region`, and
+   `programs`. A sub-state geography also declares `counties` and
+   `county_fips`, like NYC. Do NOT write `hs_in_schools_share`,
+   `nonparental_rate`, or `nonparental_rate_se` -- `load_spec()` fills all
+   three in live; see below.
 2. Add the code to `GEOGRAPHIES` in `00_main.R`.
-3. `Rscript state_data/00_main.R --geo <GEO> --check`
+3. Add the geography to `01_nsch_rate.R`'s `GEO_FIPS` (via
+   `STATE_POSTAL_TO_FIPS`) and rerun it, and to `03_head_start_in_schools.R`'s
+   run, so `out/nsch_rate_base.csv` and `out/head_start_in_schools.csv` carry
+   a row for it.
+4. `Rscript state_data/code/00_main.R --geo <GEO> --check`
 
 A geography needs three things:
 
 - **A Census region**, which selects every NSECE constant.
 - **Program counts** for step 3 — public pre-K (CCD), Head Start, and Early
-  Head Start (NIEER funded slots) — plus the share of Head Start a district
-  runs in its own pre-K school, from `03_head_start_in_schools.R --check`.
+  Head Start (NIEER funded slots), hand-researched with a source next to each
+  number.
 - **A measured non-parental rate** from NSCH `k6q20`, which covers all 51:
 
 ```
 filter k6q20 in (1,2), sc_age_years <= 4, weight by fwc, subset fipsst
 ```
+
+### How `load_spec()` reads the two derived fields
+
+`hs_in_schools_share` and `nonparental_rate`/`nonparental_rate_se` are not
+hand-researched -- they are the output of `03_head_start_in_schools.R` and
+`01_nsch_rate.R`, each a single deterministic pass over raw data with no
+per-geography judgment call. Keeping a hand copy of a fully-derived number in
+`states/<GEO>.R` bought nothing but a second place for it to drift, so
+`load_spec()` reads both live, after sourcing the state file:
+
+- `nonparental_rate` / `nonparental_rate_se` — that geography's row of
+  `out/nsch_rate_base.csv` (`01_nsch_rate.R`, `BASE_WAVE` only). NYC has no
+  NSCH records of its own, so `load_spec('NYC')` reads NY's row.
+- `hs_in_schools_share` — that geography's row of
+  `out/head_start_in_schools.csv` (`03_head_start_in_schools.R`). NYC has its
+  own row here (its Head Start slots are its own), unlike the NSCH rate.
+
+Both `out/` files ship committed, so a normal build never regenerates them.
+Rerun `01_nsch_rate.R` / `03_head_start_in_schools.R` only when the raw NSCH
+or Head Start site data changes, or when a new geography needs a row.
 
 ## Sources
 
@@ -176,12 +201,11 @@ someone other than a parent or guardian. The prompt names every arrangement
 type and never asks which one applies. Wording is in
 `raw/documentation/US_NSCH__topical_variable_list__2019.pdf`.
 
-The rate and its standard error are constants in `states/<GEO>.R`.
-`01_nsch_rate.R` is where they come from:
+The build reads each rate and standard error from `out/nsch_rate_base.csv`.
+`01_nsch_rate.R` derives that file from the survey:
 
 ```bash
-Rscript state_data/01_nsch_rate.R           # table + out/nsch_rate.csv
-Rscript state_data/01_nsch_rate.R --check   # compare states/<GEO>.R back to NSCH
+Rscript state_data/code/01_nsch_rate.R  # out/nsch_rate.csv + out/nsch_rate_base.csv
 ```
 
 The error uses the **survey design** — strata `FIPSST × STRATUM`, PSU `HHID`,
@@ -191,13 +215,14 @@ The 2019 file is the Census re-release (`nsch_2019e_topical`, 2024), all 51
 states. An earlier copy held only six states; its 3,545 records match the
 re-release on every column the build reads, so no rate or error moved.
 
-The build uses the 2018 and 2019 waves, pooled (`BASE_WAVE` in
-`01_nsch_rate.R`); each wave keeps its own design in the pool. The 2020 file is
-held for reference only: NSCH 2020 was fielded through the pandemic, and its
-care rates fall 5 to 18 points in KY, NJ, and VA.
+The build uses the single 2019 wave (`BASE_WAVE` in `01_nsch_rate.R`). The 2018
+and 2020 files are held for reference only: 2018-19 and 2019-20 pools are
+printed beside the single-wave table, and 2020 sits out of every pool because
+NSCH 2020 was fielded through the pandemic, with care rates falling 5 to 18
+points in KY, NJ, and VA.
 
-State cells run 208–403 records (unweighted children, 2018–19 pooled). NSCH has
-no sub-state identifier, so NYC uses the New York State rate and standard error.
+State cells run 99–206 records (unweighted children, 2019). NSCH has no
+sub-state identifier, so NYC uses the New York State rate and standard error.
 
 ### NSECE — the regional constants
 
@@ -212,7 +237,7 @@ cluster at `/nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1`. Pass
 117 MB and several thousand columns wide.
 
 ```bash
-Rscript state_data/02_nsece_constants.R --nsece <dir>
+Rscript state_data/code/02_nsece_constants.R --nsece <dir>
 ```
 
 It writes each constant with its unweighted record count to
@@ -361,8 +386,8 @@ the build appears in the register with no candidate rather than being silently
 missed.
 
 ```bash
-Rscript state_data/04_replacement_register.R          # table + out/replacement_register.csv
-Rscript state_data/04_replacement_register.R --check  # register covers every quantity
+Rscript state_data/code/04_replacement_register.R          # table + out/replacement_register.csv
+Rscript state_data/code/04_replacement_register.R --check  # register covers every quantity
 ```
 
 **Every candidate is checked for a part-time / full-time marker first.** The
@@ -612,10 +637,13 @@ evidence for choices the method makes:
 
 ## Checks
 
-Twelve scripts, all exit 1 on failure. Ten are read-only; the other two,
-`01_nsch_rate.R --check` and `03_head_start_in_schools.R --check`, rewrite their
-own `out/` file before comparing, so each is a check that also refreshes its
-own input.
+Ten scripts, all read-only, all exit 1 on failure. `01_nsch_rate.R` and
+`03_head_start_in_schools.R` used to carry a `--check` that compared their
+derivation to a hand copy of `nonparental_rate`/`nonparental_rate_se`/
+`hs_in_schools_share` in `states/<GEO>.R`. `load_spec()` (`00_main.R`) now
+reads all three live from the `out/` files those two scripts write, so there
+is no hand copy left to go stale, and neither script is a check any more --
+see "How `load_spec()` reads the two derived fields" below.
 
 `check_docs_describe_the_checks.R` guards this paragraph: it derives the suite
 from disk and fails if the count or the read-only split drifts.
@@ -630,8 +658,6 @@ Rscript state_data/tests/check_docs_describe_the_checks.R  # this paragraph is r
 Rscript state_data/tests/check_constants_match_derivation.R # constants match out/nsece_universe.csv
 Rscript state_data/tests/check_nsece_against_nhes.R        # NSECE against a second survey
 Rscript state_data/tests/check_program_counts_match_sources.R # program counts match their sources
-Rscript state_data/01_nsch_rate.R --check                  # constants match the survey
-Rscript state_data/03_head_start_in_schools.R --check      # shares match the site match
 python  state_data/tests/check_summarise_shadowing.py      # scans for the shadowing trap
 ```
 

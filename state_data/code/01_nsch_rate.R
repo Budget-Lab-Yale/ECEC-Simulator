@@ -1,9 +1,10 @@
 #------------------------------------------------------------------------------
 # 01_nsch_rate.R -- derives the non-parental rate and its standard error.
 #
-# The one soft input in the build. 00_main.R reads it as two constants per
-# geography, `nonparental_rate` and `nonparental_rate_se` in states/<GEO>.R.
-# This script is where both come from.
+# The one soft input in the build. load_spec() (00_main.R) reads both
+# constants live from out/nsch_rate_base.csv -- the BASE_WAVE row of what
+# this script derives -- rather than from a copy in states/<GEO>.R, so there
+# is nothing to go stale between this script and the geography it feeds.
 #
 # THE STANDARD ERROR USES THE SURVEY DESIGN, not Kish's effective sample size.
 # Census documents NSCH as stratified address sample, instructs analysts to
@@ -18,8 +19,8 @@
 # understating variance.
 #
 # Usage:
-#   Rscript state_data/01_nsch_rate.R            # table + out/nsch_rate.csv
-#   Rscript state_data/01_nsch_rate.R --check    # compare to states/<GEO>.R
+#   Rscript state_data/code/01_nsch_rate.R    # table + out/nsch_rate.csv,
+#                                              # out/nsch_rate_base.csv
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -27,7 +28,7 @@ suppressPackageStartupMessages({
 })
 
 STATE_DATA_ROOT <- 'state_data'
-BASE_WAVE       <- '2018-19'        # pooled wave the build uses -- base year + year before
+BASE_WAVE       <- '2019'           # single wave the build uses -- base year
 WAVES           <- c(2018, 2019, 2020)
 
 # Geography -> state FIPS: every state + DC, from the simulator's own table.
@@ -140,8 +141,9 @@ pooled_for <- function(waves, fips) {
   # wave keeps its own design and the pool is a stratified estimate rather
   # than a pile of records.
   #
-  # The build uses the 2018-19 pool (BASE_WAVE). 2020 excluded -- fielded
-  # through pandemic. Other pools printed beside it for reference.
+  # The build uses the single 2019 wave (BASE_WAVE), not a pool. Pools
+  # printed beside it for reference only. 2020 excluded from every pool --
+  # fielded through pandemic.
   #
   # Params:
   #   - waves (list of data.frame), fips (int)
@@ -163,12 +165,12 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   #----------------------------------------------------------------------------
   # Entry point -- non-parental rate, design SE, Kish SE per geography for
   # single waves 2018, 2019, 2020 and pools 2018-19, 2019-20, 2018-20;
-  # prints table, writes out/nsch_rate.csv.
+  # prints table, writes out/nsch_rate.csv and out/nsch_rate_base.csv (the
+  # BASE_WAVE row only, geo + rate + se_design, what load_spec() reads).
   #
   # Params:
-  #   - args (chr): CLI args -- --check compares nonparental_rate,
-  #     nonparental_rate_se in every states/<GEO>.R (NYC against NY's row) to
-  #     BASE_WAVE, exits 1 on any stale constant
+  #   - args (chr): CLI args, unused -- kept so main() still matches
+  #     commandArgs() when run as a script
   #
   # Returns: (tibble) all single-wave, pooled rows, invisibly
   #----------------------------------------------------------------------------
@@ -212,33 +214,13 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
   readr::write_csv(all, f)
   cat('\nwrote ', f, '\n', sep = '')
 
-  ## --check: do states/<GEO>.R carry what this script derives? ---------------
-  if ('--check' %in% args) {
-    cat('\nchecking states/<GEO>.R against the ', BASE_WAVE, ' wave\n', sep = '')
-    fails <- 0
-    for (g in c(names(GEO_FIPS), 'NYC')) {
-      src <- file.path(STATE_DATA_ROOT, 'states', paste0(g, '.R'))
-      txt <- paste(readLines(src, warn = FALSE), collapse = '\n')
-      got <- function(k) as.numeric(sub(
-        paste0('(?s).*\\b', k, '\\s*=\\s*([0-9.]+).*'), '\\1', txt, perl = TRUE))
-
-      src_geo <- if (g == 'NYC') 'NY' else g    # the city borrows NY's row
-      ref <- all[all$geo == src_geo & all$wave == BASE_WAVE, ]
-      ok_r <- abs(got('nonparental_rate')    - round(ref$rate, 4))      < 5e-5
-      ok_s <- abs(got('nonparental_rate_se') - round(ref$se_design, 4)) < 5e-5
-      cat(sprintf('   %-4s rate %s  se %s\n', g,
-                  if (ok_r) '[ok]  ' else '[FAIL]',
-                  if (ok_s) '[ok]  ' else '[FAIL]'))
-      if (!ok_r) cat(sprintf('        file %.4f, derived %.4f\n',
-                             got('nonparental_rate'), ref$rate))
-      if (!ok_s) cat(sprintf('        file %.4f, derived %.4f\n',
-                             got('nonparental_rate_se'), ref$se_design))
-      fails <- fails + (!ok_r) + (!ok_s)
-    }
-    cat('\n', if (fails == 0) 'CONSTANTS MATCH THE SURVEY' else
-        paste(fails, 'CONSTANT(S) STALE'), '\n')
-    if (fails > 0) quit(status = 1)
-  }
+  # BASE_WAVE only, full precision, the two columns load_spec() reads. NYC is
+  # not a row here -- it has no NSCH records of its own; load_spec() reads
+  # NY's row for it, the same way states/NYC.R used to copy NY's constants.
+  base <- all[all$wave == BASE_WAVE, c('geo', 'rate', 'se_design')]
+  fb <- file.path(STATE_DATA_ROOT, 'out', 'nsch_rate_base.csv')
+  readr::write_csv(base, fb)
+  cat('wrote ', fb, '\n', sep = '')
 
   invisible(all)
 }
