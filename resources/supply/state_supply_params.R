@@ -26,6 +26,12 @@
 # hours, which are the committed demand targets. It puts the ratio back at
 # about 1 in the base year, which is where the curve was calibrated.
 #
+# FALLBACK ONLY when demand is re-anchored. 3a_initialize_simulation.R then
+# replaces labor_supply with colSums(L_req * model base-year sector hours) from
+# adjust_alpha_for_state() -- the model's own centre split, not LOW_FRACTION --
+# so the ratio is exactly 1 in the base year. This value is used as is only for
+# a state with no config/state/demand/<ST>.csv.
+#
 # WAGES ALSO STATE-SPECIFIC. state_childcare_wages.R measures hourly earnings
 # of childcare workers by state, education from 2018, 2019 records of ACS
 # 2015-2019 5-year (wage + business income, self-employed included); this

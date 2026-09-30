@@ -7,10 +7,10 @@
 # THE METHOD, per geography:
 #   1. children in regular care = population 0-4 x NSCH rate x universe ratio
 #   2. formal = that x regional NSECE formal share; informal = the rest
-#   3. Unpaid Center-Based = program counts, less the Head Start a district
+#   3. informal split by the regional NSECE mix
+#   4. Unpaid Center-Based = program counts, less the Head Start a district
 #      runs in its own pre-K school (CCD counts those children too)
-#   4. rest of formal split centre / home by the regional NSECE share
-#   5. informal split by the regional NSECE mix
+#   5. rest of formal split centre / home by the regional NSECE share
 #   6. annual hours = children x the simulator's own hours grid x 50, split
 #      part-time / full-time by the regional NSECE share
 #
@@ -105,16 +105,16 @@ NSECE_RESIDUAL_MIX <- local({
 # value. NOT derived from a reliability rule -- no such rule is cited anywhere
 # in this build. The exact number is inconsequential: every real regional cell
 # here is either <=14 (the four Unpaid Home-Based cells -- 5, 8, 11, 14 records)
-# or >=33 (everything else), so any threshold from 15 to 32 triggers the same
+# or >=33 (everything else), so any threshold from 15 to 33 triggers the same
 # fallback decisions. 30 sits in that gap. If a future geography or vintage
 # puts a real cell between 15 and 32, this stops being a free choice and wants
 # an actual criterion (e.g. a relative-standard-error bound computed from the
 # NSECE microdata on the cluster) -- not a wider guess.
 NSECE_MIN_RECORDS <- 30
 
-# Step 3 CROSS-CHECK only. Unpaid Center-Based over all formal care, by
+# Step 4 CROSS-CHECK only. Unpaid Center-Based over all formal care, by
 # region -- weighted children whose primary type is Unpaid Center-Based over
-# weighted children whose primary type is formal. Step 3 itself uses each
+# weighted children whose primary type is formal. Step 4 itself uses each
 # state's own program counts; this says what the regional average gives.
 # Formal records: NE 235, MW 254, S 482, W 279 (Unpaid Center-Based 84, 93,
 # 163, 106) -- no fallback needed.
@@ -123,14 +123,14 @@ NSECE_UNPAID_CENTRE_SHARE <- c(northeast = 0.29858157955075193,
                                south     = 0.3027785115943172,
                                west      = 0.27074481379107573)
 
-# Step 4. Paid centres (both price bands) over paid centres + Paid Home-Based.
+# Step 5. Paid centres (both price bands) over paid centres + Paid Home-Based.
 # Records: NE 154, MW 175, S 337, W 187 -- no fallback needed.
 NSECE_CENTRE_HOME_SPLIT <- c(northeast = 0.8799388331780533,
                              midwest   = 0.6971700039202228,
                              south     = 0.8163487199353228,
                              west      = 0.8101736350960986)
 
-# Step 5. Share within informal care, w/ unweighted records.
+# Step 3. Share within informal care, w/ unweighted records.
 NSECE_MIX_REGION <- tibble::tribble(
   ~region,     ~type,               ~share,             ~n,
   'midwest',   'Other Paid',        0.3871987148073660, 100,
@@ -435,7 +435,7 @@ population_0_4 <- function(fips, counties = NULL) {
 #=============================================================================
 
 # HEAD START SLOTS -> ENROLLED CHILDREN. Specs hold FUNDED SLOTS (NIEER), as
-# their sources print them; step 3 converts them here. National only -- no
+# their sources print them; step 4 converts them here. National only -- no
 # public state series. OHS PIR 2018-19: Services Snapshots (HS, EHS, AIAN) +
 # Biennial Report to Congress FY2019, Appendix C. All in raw/documentation/.
 #
@@ -466,7 +466,7 @@ EHS_ENROLLED_PER_SLOT <- (230069 - 76419) /
 program_children <- function(spec) {
 
   #----------------------------------------------------------------------------
-  # Step 3 total -- program counts less the children CCD already counts.
+  # Step 4 total -- program counts less the children CCD already counts.
   #
   # Pre-K (CCD) + Head Start + Early Head Start counts a child twice when a
   # school district runs a Head Start class in one of its own pre-K schools:
@@ -544,7 +544,12 @@ build_geo <- function(spec) {
   formal   <- NSECE_FORMAL_SHARE[[spec$region]] * np_total
   informal <- np_total - formal
 
-  ## 3. Unpaid Center-Based -- program counts, less the CCD double count ---
+  ## 3. informal care -- regional NSECE mix, national fallback ---------------
+  informal_types <- informal * regional_mix(spec$region)
+  cat('  informal              ', format(round(informal), big.mark = ','),
+      sprintf(' -- %.1f%% of non-parental care\n', 100 * informal / np_total))
+
+  ## 4. Unpaid Center-Based -- program counts, less the CCD double count ---
   pc      <- program_children(spec)
   program <- pc$total
   cat('  programs            ', format(pc$gross, big.mark = ','),
@@ -576,17 +581,14 @@ build_geo <- function(spec) {
   }
   other_formal <- formal - program
 
-  ## 4. centres and homes -- regional NSECE split ----------------------------
+  ## 5. centres and homes -- regional NSECE split ----------------------------
   split <- NSECE_CENTRE_HOME_SPLIT[[spec$region]]
   cat(sprintf('  centre share          %.3f (NSECE %s)\n', split, spec$region))
 
-  ## 5. informal care -- regional NSECE mix, national fallback ---------------
   children <- c('Center-Based'        = other_formal * split,
                 'Unpaid Center-Based' = program,
                 'Paid Home-Based'     = other_formal * (1 - split),
-                informal * regional_mix(spec$region))[ECEC_TYPES]
-  cat('  informal              ', format(round(informal), big.mark = ','),
-      sprintf(' -- %.1f%% of non-parental care\n', 100 * informal / np_total))
+                informal_types)[ECEC_TYPES]
 
   ## 6. annual hours -- the simulator's grid, split part-time / full-time ----
   pt         <- regional_part_time(spec$region)
@@ -757,8 +759,8 @@ write_interval <- function(spec, point, geo) {
   # Sidecar carrying sampling error of one soft input through to every
   # output row.
   #
-  # Non-parental rate rests on 208-403 NSCH records per geography (2018-19
-  # pooled), design standard error 3-5 points. Every count a share of total
+  # Non-parental rate rests on 101-147 NSCH records per memo geography (2019
+  # wave), design standard error 5-6.5 points. Every count a share of total
   # rate produces -- error reaches every row. NOT proportional: program
   # counts hold fixed while other formal types absorb difference -- build
   # re-run at each bound, not scaled.

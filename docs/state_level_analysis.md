@@ -242,6 +242,16 @@ labor_supply = colSums(L_req * state base-year hours)
 which is the definition `1a_nsece_processing.R` uses nationally, applied to the
 state's own base-year hours.
 
+**When demand is re-anchored, the simulator replaces that figure.** At state
+initialisation (`3a_initialize_simulation.R`), `adjust_alpha_for_state()`
+returns the model's own base-year hours by supply sector at the solved deltas,
+and the simulator sets `L_0 = colSums(L_req * sector_hours)`. The contraction
+pins combined centre hours but not the low/high split, and the two bands differ
+sharply in BA labour per hour (0.035 against 0.076), so a file value built from
+a fixed national split would leave the base-year ratio off 1 for BA labour.
+From the model's own hours, `L / L_0 = 1` in the base year by construction.
+The file's `labor_supply` remains the fallback for a state with no demand file.
+
 **`wages` are state-specific too.** `resources/supply/state_childcare_wages.R`
 measures hourly earnings of childcare workers by state and education from the
 2018 and 2019 records of the 2015–2019 ACS 5-year sample (IPUMS extract `usa:33`,
@@ -282,13 +292,18 @@ Simulation-year employment targets are
   swapped.
 
 **The employment files are built, not hand-written.**
-`resources/epop/state_epop_projections.R` writes one per state from IPUMS ACS
-2006–2024; `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv` is the
-derivation it reads, written on the cluster by `resources/epop/acs_epop.py`.
+`resources/epop/state_epop_projections.R` writes one per state from BLS LAUS
+2006–2024; `resources/epop/US_BLS__laus_state_epop__2006-2024.csv` is the input
+it reads, pulled from the BLS API by `resources/epop/bls_laus_epop.R` (series
+`LASST{FIPS}0000000000007`, seasonally adjusted, ages 16+; national `LNS12300000`).
 All 50 states and DC are present: `STATES` in that script is every entry of
-the FIPS table in `src/shared_functions/constants.R`. Each file is the national path times the
-state's ACS epop over national ACS epop, year by year, with the ratio held flat
-outside 2006–2024. It is a ratio rather than a level because ACS runs 1 to 3
+the FIPS table in `src/shared_functions/constants.R`. Each file is the national
+path times R, the state's LAUS epop over the national CPS epop (annual means),
+held flat outside 2006–2024. LAUS has no sex or age detail, so every bin takes
+the same R. Only the change in R since 2019 reaches the simulator, so runs from
+2026 get national growth times R(2024) / R(2019), one adjustment per state
+(0.960 to 1.043 across the 51). LAUS is model-based and smooths CPS sampling
+noise, so single years need no pooling. It is a ratio rather than a level because ACS runs 1 to 3
 points below the CPS-based national series for men and above it for women — a
 reference-period difference about the survey, not the state — and that
 difference cancels in a ratio. The script's header explains the choice in full.

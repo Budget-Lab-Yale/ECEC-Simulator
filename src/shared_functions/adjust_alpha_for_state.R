@@ -181,6 +181,40 @@ build_choice_hours_map <- function(n_children, target_types) {
 
 
 
+build_sector_hours_map <- function(n_children) {
+
+  #----------------------------------------------------------------------------
+  # Per-child (n_choices x 4) annual-hours matrices by SUPPLY sector, in
+  # SECTOR_MAPPING order -- centre price bands kept apart, unlike the target
+  # groups. Same hours as build_choice_hours_map(), so sector hours at the
+  # solved deltas sum to the achieved target hours.
+  #
+  # Params:
+  #   - n_children (int): Number of children (1 or 2)
+  #
+  # Returns: (list) S1, S2 (matrix or NULL)
+  #----------------------------------------------------------------------------
+
+  catalog <- get_choice_catalog(n_children)
+  sectors <- SECTOR_MAPPING$ecec_type
+
+  sector_matrix <- function(type_col, hours_col) {
+    hours <- unname(HOURS_ANNUAL[catalog[[hours_col]]])
+    S <- matrix(0, nrow = nrow(catalog), ncol = length(sectors),
+                dimnames = list(NULL, sectors))
+    for (s in sectors) {
+      rows_s <- which(catalog[[type_col]] == s)
+      S[rows_s, s] <- hours[rows_s]
+    }
+    S
+  }
+
+  list(S1 = sector_matrix('child1_ecec_type', 'child1_hours_choice'),
+       S2 = if (n_children == 2) sector_matrix('child2_ecec_type', 'child2_hours_choice') else NULL)
+}
+
+
+
 adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
                                    targets_csv_path, state_postal) {
 
@@ -212,6 +246,8 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
   #   - deltas (named num vec): Solved utility constants by care type
   #   - achieved (named num vec): Model aggregate hours at the solution
   #   - targets (named num vec): Target aggregate hours
+  #   - sector_hours (named num vec): Model base-year hours by supply sector
+  #       at the solution, SECTOR_MAPPING order
   #   - n_iter (int): Contraction iterations used
   #----------------------------------------------------------------------------
 
@@ -245,6 +281,7 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
 
     state_data[[pu_type]] <- c(
       build_choice_hours_map(n_children, target_types),
+      build_sector_hours_map(n_children),
       list(p0 = ad$p0[in_state, , drop = FALSE], w1 = w1, w2 = w2,
            in_state = in_state)
     )
@@ -319,6 +356,21 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
     H <- aggregate_hours(deltas)
   }
 
+  # Base-year hours by supply sector at the solution. The contraction pins the
+  # combined centre hours, not the low/high split -- the model keeps its own.
+  # The caller builds base-year labor from these, so the wage curve starts at
+  # the base-year wage by construction.
+  sector_hours <- setNames(rep(0, nrow(SECTOR_MAPPING)), SECTOR_MAPPING$ecec_type)
+  for (sd in state_data) {
+    E <- exp(sd$d_by_choice(deltas))
+    U <- sweep(sd$p0, 2, E, '*')
+    P <- U / rowSums(U)
+    sector_hours <- sector_hours + colSums(P %*% sd$S1 * sd$w1)
+    if (!is.null(sd$S2)) {
+      sector_hours <- sector_hours + colSums(P %*% sd$S2 * sd$w2)
+    }
+  }
+
   cat('  State demand adjustment (', state_postal, '): converged in ',
       n_iter, ' iterations\n', sep = '')
   for (t in target_types) {
@@ -349,6 +401,7 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
     deltas = deltas,
     achieved = H,
     targets = targets,
+    sector_hours = sector_hours,
     n_iter = n_iter
   )
 }

@@ -157,7 +157,7 @@ check_vec(NSECE_FORMAL_SHARE,        'formal_share')
 check_vec(NSECE_UNPAID_CENTRE_SHARE, 'unpaid_centre_share')
 check_vec(NSECE_CENTRE_HOME_SPLIT,   'centre_home_split')
 
-# Step 5. National informal mix, before 00_main.R rescales it to sum to 1.
+# Step 3. National informal mix, before 00_main.R rescales it to sum to 1.
 check_vec(NSECE_RESIDUAL_MIX * sum(NSECE_RESIDUAL_MIX), 'informal_mix')
 
 # Step 6. National part-time shares, and the national hours fallback.

@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# Do the step 3 program counts in states/<GEO>.R match their public sources?
+# Do the step 4 program counts in states/<GEO>.R match their public sources?
 #
 # Every count is hand-transcribed into a spec file. Nothing tied them back to
 # the documents they came from -- a typo or a stale snapshot would reach the

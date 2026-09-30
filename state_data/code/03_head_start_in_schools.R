@@ -2,7 +2,7 @@
 # 03_head_start_in_schools.R -- Head Start places a school district runs in
 # one of its own pre-K schools.
 #
-# Step 3 adds CCD pre-K + Head Start + Early Head Start. A Head Start class a
+# Step 4 adds CCD pre-K + Head Start + Early Head Start. A Head Start class a
 # district runs in its own school can sit in that school's CCD pre-K
 # membership AND in the federal Head Start count -- counted twice. This
 # measures that overlap from national files only, so every state is treated

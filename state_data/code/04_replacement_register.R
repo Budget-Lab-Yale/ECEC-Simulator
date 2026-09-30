@@ -75,10 +75,10 @@ REGISTER <- tibble::tribble(
 
   'children_all_over_10plus', 'NSECE_UNIVERSE_RATIO',      'step 1 -- carries the NSCH rate from the 10-hour universe up to any regular care',
   'formal_share',             'NSECE_FORMAL_SHARE',        'step 2 -- splits children into formal and informal',
-  'unpaid_centre_share',      'NSECE_UNPAID_CENTRE_SHARE', 'step 3 -- cross-check only; the build uses program counts',
-  'centre_home_split',        'NSECE_CENTRE_HOME_SPLIT',   'step 4 -- splits the rest of formal care into centres and homes',
-  'informal_mix',             'NSECE_RESIDUAL_MIX',        'step 5 -- national fallback for a thin regional cell',
-  'informal_mix_region',      'NSECE_MIX_REGION',          'step 5 -- splits informal care three ways',
+  'unpaid_centre_share',      'NSECE_UNPAID_CENTRE_SHARE', 'step 4 -- cross-check only; the build uses program counts',
+  'centre_home_split',        'NSECE_CENTRE_HOME_SPLIT',   'step 5 -- splits the rest of formal care into centres and homes',
+  'informal_mix',             'NSECE_RESIDUAL_MIX',        'step 3 -- national fallback for a thin regional cell',
+  'informal_mix_region',      'NSECE_MIX_REGION',          'step 3 -- splits informal care three ways',
   'weekly_hours',             'NSECE_ANNUAL_HOURS',        'step 6 -- national fallback hours per child',
   'weekly_hours_region',      'NSECE_HOURS_REGION',        'step 6 -- reference hours; superseded by the grid for the target',
   'part_time_share',          'NSECE_PART_TIME',           'step 6 -- national fallback part-time share',
@@ -364,7 +364,7 @@ sipp_cells <- function() {
     return(invisible(NULL))
   }
 
-  source(file.path(STATE_DATA_ROOT, '00_main.R'))   # main() is guarded
+  source(file.path(STATE_DATA_ROOT, 'code', '00_main.R'))   # main() is guarded
 
   # The whole states the build writes. NYC is county-defined, and SIPP carries
   # no county, so it cannot appear.

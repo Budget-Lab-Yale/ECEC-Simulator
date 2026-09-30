@@ -63,7 +63,7 @@ steps 3 or 4 moves care between formal and informal. The NSCH interval does not
 move every row in proportion: program counts stay fixed, and the other formal
 types absorb the change, so `write_interval()` runs the build again at each
 bound. The interval covers NSCH-rate sampling error only — not the universe
-ratio disagreement, the step 3 assumptions, or NSECE sampling error. With no
+ratio disagreement, the step 4 assumptions, or NSECE sampling error. With no
 Head Start deduction, total hours change by less than 0.1% in the five memo
 geographies; Unpaid Center-Based hours rise by up to 5.3% (VA).
 
@@ -76,7 +76,7 @@ states/<GEO>.R               one per geography: program counts (funded
 code/01_nsch_rate.R           derives each state's rate and standard error
 code/02_nsece_constants.R     derives every NSECE constant (runs on the cluster)
 code/03_head_start_in_schools.R measures the Head Start a district runs in its
-                               own pre-K school, for step 3
+                               own pre-K school, for step 4
 code/04_replacement_register.R one row per NSECE constant: what it feeds, its
                                geography today, and the replacement search
 code/config_local.example.yaml copy to state_data/config_local.yaml (git-ignored)
@@ -119,7 +119,7 @@ A state file is **data, not logic**. Copy the closest existing one.
 A geography needs three things:
 
 - **A Census region**, which selects every NSECE constant.
-- **Program counts** for step 3 — public pre-K (CCD), Head Start, and Early
+- **Program counts** for step 4 — public pre-K (CCD), Head Start, and Early
   Head Start (NIEER funded slots), hand-researched with a source next to each
   number.
 - **A measured non-parental rate** from NSCH `k6q20`, which covers all 51:
@@ -178,16 +178,16 @@ so.
 | Population 0–4 | Census Population Estimates, county by age | `raw/US_PEP__…` | 2019 | step 1 |
 | Participation rate | NSCH topical file, question `k6q20` | `raw/US_NSCH__…` (2018, 2019, 2020) | 2019 | step 1 |
 | NSECE constants | NSECE household file, ICPSR 37941 dataset 0009 | cluster only (licensed) | 2019 | steps 2, 4, 5, 6 |
-| Public pre-K | NCES Common Core of Data, pre-K membership by county | `raw/US_CCD__…by_county…` | 2018–19 | step 3 |
-| California and Michigan public pre-K | NIEER, *State of Preschool 2019*, state pages | constant | 2018–19 | step 3, CA and MI |
-| Head Start | NIEER, *State of Preschool 2019*, Appendix B | constant | 2018–19 | step 3 |
-| Early Head Start | NIEER, *The State(s) of Head Start and Early Head Start* (2023) | constant | 2018–19 | step 3 |
-| Slots to enrolled children | OHS PIR 2018–19: Services Snapshots, Report to Congress Appendix C | constant, `00_main.R` | 2018–19 | step 3 |
-| Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US_HSSL__…2026-09-23`, `raw/US_CCD__…`, `raw/US_EDGE__…` | 2026, 2018–19 | step 3 deduction; NYC shares |
+| Public pre-K | NCES Common Core of Data, pre-K membership by county | `raw/US_CCD__…by_county…` | 2018–19 | step 4 |
+| California and Michigan public pre-K | NIEER, *State of Preschool 2019*, state pages | constant | 2018–19 | step 4, CA and MI |
+| Head Start | NIEER, *State of Preschool 2019*, Appendix B | constant | 2018–19 | step 4 |
+| Early Head Start | NIEER, *The State(s) of Head Start and Early Head Start* (2023) | constant | 2018–19 | step 4 |
+| Slots to enrolled children | OHS PIR 2018–19: Services Snapshots, Report to Congress Appendix C | constant, `00_main.R` | 2018–19 | step 4 |
+| Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US_HSSL__…2026-09-23`, `raw/US_CCD__…`, `raw/US_EDGE__…` | 2026, 2018–19 | step 4 deduction; NYC shares |
 | NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 | not held | 2018–19 | evaluated, not used |
-| Base-year wage ratio | ACS 2015–2019 five-year (2018 and 2019 records), IPUMS | `resources/supply/US_ACS__childcare_hourly_wage_by_state_and_education__2019.csv` | 2018–19 | step 8 |
-| National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | steps 7, 8 |
-| State employment paths | ACS 2006–2024, IPUMS | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv` | 2006–2024 | simulator employment growth |
+| Base-year wage ratio | ACS 2015–2019 five-year (2018 and 2019 records), IPUMS | `resources/supply/US_ACS__childcare_hourly_wage_by_state_and_education__2019.csv` | 2018–19 | step 7 |
+| National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
+| State employment paths | BLS LAUS state employment-population ratios; CPS national ratio | `resources/epop/US_BLS__laus_state_epop__2006-2024.csv` | 2006–2024 | step 8 |
 | SIPP care-type counts | SIPP annual public-use files, pooled | `raw/US_SIPP__…` | 2018–2023 | replacement register |
 | NHES hours universes | NHES-ECPP public-use, cut at 5 and 10 hrs/week | `raw/US_NHES__…` | 2019 | cross-source check |
 
@@ -262,9 +262,9 @@ cluster. `check_constants_match_derivation.R` compares every constant back to
 its universe-A row, value and record count, so the pair cannot drift apart
 unnoticed. **Refresh the file whenever `02_nsece_constants.R` is rerun.**
 
-### Program counts — step 3
+### Program counts — step 4
 
-**Why step 3 uses program counts.** Public pre-K enrolment and Head Start
+**Why step 4 uses program counts.** Public pre-K enrolment and Head Start
 funded slots are *published, state by state*, so this is one of the very few
 places where the build does not have to fall back on a regional NSECE share.
 `program_children()` sums public pre-K (CCD) + Head Start + Early Head Start,
@@ -334,9 +334,12 @@ only on request, which this build does not use.
   funded side is the HS and EHS snapshots (675,734 and 166,693 − 5,988), plus
   AIAN child slots (22,894 − 282). The AIAN snapshot gives one AIAN total, so I
   split it by the AIAN cumulative age mix (0–2: 6,433, 3–5: 18,648). The
-  result: **0.957 for Head Start, 0.923 for Early Head Start.** Any split of the
-  AIAN slots between the plausible extremes moves each by less than 0.005.
-- **Rejected: cumulative over funded** (Head Start 1.12, EHS children 1.40).
+  result: **0.957 for Head Start, 0.923 for Early Head Start** (0.890 per EHS
+  funded slot, after the pregnant-women share). The split matters: all AIAN
+  slots to one program gives Head Start 0.949 to 0.981 and EHS 0.838 to 0.956.
+  The age split matches the program definitions the build uses (Head Start
+  3 to kindergarten, EHS under 3).
+- **Rejected: cumulative over funded** (Head Start 1.12, EHS children 1.38).
   Cumulative enrollment counts the children who left and the children who took
   their places, so it is a flow over the year, not a count at one time.
 - **Rejected: KIDS COUNT table 9786** (Head Start enrollment by age). It is
@@ -345,7 +348,7 @@ only on request, which this build does not use.
   on or near October 1.
 
 **Head Start and pre-K can count the same children.** A state can fund pre-K
-places inside Head Start, and a district can run Head Start in a school. Step 3
+places inside Head Start, and a district can run Head Start in a school. Step 4
 deducts only the part CCD already counts: Head Start that a district runs in
 one of its own pre-K schools. `03_head_start_in_schools.R` finds it from four
 national files — ACF service locations, CCD pre-K by school, the CCD school
@@ -359,7 +362,7 @@ difference between the two columns is Head Start net of the overlap. Special
 education cancels: Virginia reports no overlap, and its difference is exactly
 its gross Head Start, 11,579. The overlap is with state pre-K, in every
 setting; CCD counts public schools only, so Table 4 is the wrong correction for
-step 3. Of the 18 states read by hand before September 2026, seven report an
+step 4. Of the 18 states read by hand before September 2026, seven report an
 overlap: CT, IL, KY, MA, NJ, NY, WV. Deducting where reported and nowhere else
 would treat states differently for a reason that is not about care. NIEER marks
 the others "some Head Start children may also be counted in state pre-K" and

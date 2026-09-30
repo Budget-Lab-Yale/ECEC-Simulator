@@ -57,50 +57,29 @@ INFORMAL <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 
 
 
-# Build of g w/ a changed Head Start deduction -- sensitivity quoted in prose.
-build_with <- function(g, hs_share = NULL) {
-  s <- load_spec(g)
-  if (!is.null(hs_share)) s$hs_in_schools_share <- hs_share
-  q <- utils::capture.output(r <- build_geo(s))
-  setNames(r$annual_hours, r$ecec_type)
-}
-
-
-
-# No-deduction change, one care type, for the four geographies w/ a deduction.
-nodeduct_pct <- function(type) {
-  vapply(c('KY', 'NJ', 'NY', 'VA'), function(g) {
-    100 * (build_with(g, hs_share = 0)[[type]] / build_with(g)[[type]] - 1)
-  }, numeric(1))
-}
-
-
 # THE REGISTER. One row per build-derived figure quoted in running text.
 #   what     -- for the failure message
 #   pattern  -- sprintf template; each %s takes one expected figure
 #   value    -- what the build says it should be, one element per %s
 REGISTER <- list(
-  list(what    = 'step 5, informal share of children',
+  list(what    = 'step 3, informal share of children',
        pattern = 'accounts for %s--%s\\%% of the estimated children',
        value   = informal_share_range('children')),
   # The grid flattens the hours spread, so the five geographies now round to
   # one figure. A range would read as two numbers that are the same.
-  list(what    = 'step 5, informal share of hours',
-       pattern = 'and %s\\%% of modeled annual hours',
+  list(what    = 'step 3, informal share of hours',
+       pattern = 'and %s\\%% of the modeled annual hours',
        value   = unique(informal_share_range('hours'))),
 
-  # Step 3: the regional NSECE cross-check and the school deduction.
-  list(what    = 'step 3, NSECE unpaid centre share NE and S',
-       pattern = 'Center-Based: %s in the Northeast and %s in the South',
-       value   = sprintf('%.3f', NSECE_UNPAID_CENTRE_SHARE[c('northeast', 'south')])),
-  list(what    = 'step 3, Unpaid Center-Based w/out deduction',
-       pattern = 'Unpaid Center-Based hours rise %s\\%% in KY, %s\\%% in NJ, %s\\%% in NYS, and %s\\%% in VA',
-       value   = sprintf('%.1f', nodeduct_pct('Unpaid Center-Based'))),
-  # NYS's fall rounds to 0.0 -- memo says 'less than 0.1%' for it.
-  list(what    = 'step 3, Center-Based w/out deduction',
-       pattern = 'Home-Based hours fall by %s\\%%, %s\\%%, less than 0.1\\%%, and %s\\%%',
-       value   = sprintf('%.1f', -nodeduct_pct('Center-Based')[c('KY', 'NJ', 'VA')])),
-  list(what    = 'step 3, match radius',
+  # Step 4: slots to children, and the school overlap.
+  list(what    = 'step 4a, children per funded slot HS and EHS',
+       pattern = 'funded slot: %s for Head Start and %s for Early Head Start',
+       value   = sprintf('%.3f', c(HS_ENROLLED_PER_SLOT,
+                                   (1 - EHS_PREGNANT_SHARE) * EHS_ENROLLED_PER_SLOT))),
+  list(what    = 'step 4b, flagged overlap share',
+       pattern = 'flagged share is %s\\%% in KY, %s\\%% in NJ, %s\\%% in NYS, %s\\%% in NYC, and %s\\%% in VA',
+       value   = sprintf('%.1f', 100 * vapply(GEO, hs_in_schools_share_of, numeric(1)))),
+  list(what    = 'step 4b, match radius',
        pattern = 'geocodes are within %s meters',
        value   = format(MATCH_METRES)),
   # NSECE constants quoted in prose. Centre share once printed the ten-hour
@@ -108,12 +87,30 @@ REGISTER <- list(
   list(what    = 'step 1, universe ratio',
        pattern = 'Universe ratio: %s.',
        value   = sprintf('%.3f', NSECE_UNIVERSE_RATIO)),
-  list(what    = 'step 2, formal share NE and S',
-       pattern = 'formal share is %s\\%% in the Northeast (NJ, NYS, NYC) and %s\\%% in the South',
-       value   = sprintf('%.1f', 100 * NSECE_FORMAL_SHARE[c('northeast', 'south')])),
-  list(what    = 'step 4, centre share NE and S',
-       pattern = 'center share is %s in the Northeast and %s in the South',
-       value   = sprintf('%.3f', NSECE_CENTRE_HOME_SPLIT[c('northeast', 'south')]))
+  # Step 8: the state adjustment to national employment growth, R(2024)/R(2019),
+  # from the LAUS input state_epop_projections.R reads (unrounded).
+  list(what    = 'step 8, employment growth adjustment KY NJ NY VA',
+       pattern = 'The state adjustment, the last term, is %s in KY, %s in NJ, %s in NY, and %s in VA',
+       value   = local({
+         d <- read_csv('resources/epop/US_BLS__laus_state_epop__2006-2024.csv', show_col_types = FALSE)
+         e <- function(g, y) d$epop[d$geo == g & d$year == y]
+         sprintf('%.3f', vapply(c('KY', 'NJ', 'NY', 'VA'), function(g)
+           (e(g, 2024) / e('US', 2024)) / (e(g, 2019) / e('US', 2019)), numeric(1)))
+       })),
+  list(what    = 'step 8, adjustment range, all 51',
+       pattern = '(%s to %s across all 50 states and DC)',
+       value   = local({
+         d <- read_csv('resources/epop/US_BLS__laus_state_epop__2006-2024.csv', show_col_types = FALSE)
+         e <- function(y) { x <- d[d$year == y, ]; setNames(x$epop / x$epop[x$geo == 'US'], x$geo) }
+         a <- (e(2024) / e(2019))[setdiff(unique(d$geo), 'US')]
+         sprintf('%.3f', range(a))
+       })),
+  list(what    = 'step 2, formal share, four regions',
+       pattern = 'formal share is %s\\%% in the Northeast, %s\\%% in the Midwest, %s\\%% in the South, and %s\\%% in the West',
+       value   = sprintf('%.1f', 100 * NSECE_FORMAL_SHARE[c('northeast', 'midwest', 'south', 'west')])),
+  list(what    = 'step 5, centre share, four regions',
+       pattern = 'who are Center-Based. It is %s in the Northeast, %s in the Midwest, %s in the South, and %s in the West',
+       value   = sprintf('%.3f', NSECE_CENTRE_HOME_SPLIT[c('northeast', 'midwest', 'south', 'west')]))
 )
 
 

@@ -337,9 +337,9 @@ summarise_universe <- function(kids, label, all_children = NULL) {
                 share = sum(child_weight) / denom, .groups = 'drop')
   }
 
-  # Unpaid Center-Based share of formal care, by region -- step 3. Weighted
+  # Unpaid Center-Based share of formal care, by region -- step 4. Weighted
   # children whose primary type is Unpaid Center-Based over weighted children
-  # whose primary type is formal. Printed cross-check only -- step 3 uses
+  # whose primary type is formal. Printed cross-check only -- step 4 uses
   # program counts, not this share.
   unpaid <- kids %>%
     filter(!is.na(region), ecec_choice %in% FORMAL) %>%
@@ -350,9 +350,9 @@ summarise_universe <- function(kids, label, all_children = NULL) {
               unpaid_share = w(ecec_choice == 'Unpaid Center-Based', child_weight),
               .groups = 'drop')
 
-  # Centre-home split of paid formal care, by region -- divides step 4's other
+  # Centre-home split of paid formal care, by region -- divides step 5's other
   # formal. Paid centres (both price bands) over paid centres + Paid
-  # Home-Based. Unpaid Center-Based excluded: own share, step 3.
+  # Home-Based. Unpaid Center-Based excluded: own share, step 4.
   PAID_CENTRE <- c('High-Priced Center-Based', 'Low-Priced Center-Based')
   split <- kids %>%
     filter(!is.na(region), ecec_choice %in% c(PAID_CENTRE, 'Paid Home-Based')) %>%
@@ -510,7 +510,7 @@ main <- function() {
               blend(bands, 'A'), blend(bands, 'B'),
               100 * (blend(bands, 'B') / blend(bands, 'A') - 1)))
 
-  cat('\n== CENTRE-HOME SPLIT OF PAID FORMAL CARE, by region (step 4, universe A)\n')
+  cat('\n== CENTRE-HOME SPLIT OF PAID FORMAL CARE, by region (step 5, universe A)\n')
   print(as.data.frame(
     a$split %>% mutate(across(where(is.numeric), ~round(.x, 4)))),
     row.names = FALSE)
@@ -522,7 +522,7 @@ main <- function() {
                 by = c('region', 'ecec_choice')) %>%
       mutate(across(where(is.numeric), ~round(.x, 4)))), row.names = FALSE)
 
-  cat('\n== UNPAID CENTER-BASED SHARE OF FORMAL CARE, by region (step 3)\n')
+  cat('\n== UNPAID CENTER-BASED SHARE OF FORMAL CARE, by region (step 4)\n')
   print(as.data.frame(
     a$unpaid %>% select(region, n_A = children, unpaid_A = n_unpaid, A = unpaid_share) %>%
       left_join(b$unpaid %>% select(region, n_B = children, unpaid_B = n_unpaid,

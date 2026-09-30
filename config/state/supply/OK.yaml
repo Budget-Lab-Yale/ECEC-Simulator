@@ -16,8 +16,8 @@ wages:
   no_ba: 10.9840223
   ba: 18.5047436
 labor_supply:
-  no_ba: 7639895.2070367
-  ba: 6074106.0691873
+  no_ba: 1.1876863e+07
+  ba: 7324161.090073
 elasticities:
   no_ba: 4.0
   ba: 2.0

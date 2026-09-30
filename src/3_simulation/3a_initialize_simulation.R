@@ -454,6 +454,19 @@ initialize_simulation <- function() {
         supply_source <- 'nsece'
       }
 
+      # Base-year labor from the model's own base-year hours. The demand
+      # contraction pins combined centre hours, not the low/high split, so labor
+      # built from a fixed national split would miss the model's own base-year
+      # labor. Built from the re-anchored model's sector hours -- the same
+      # colSums(L_req * Qd) the solver uses -- the wage curve starts at the
+      # base-year wage by construction.
+      if (!is.null(demand_adjustment)) {
+        L_file <- st_supply_params$L
+        st_supply_params$L <- colSums(st_supply_params$L_req * demand_adjustment$sector_hours)
+        cat(sprintf('  Base-year labor: model base-year hours -> no_ba %.4g, ba %.4g (supply file %.4g, %.4g)\n',
+                    st_supply_params$L[1], st_supply_params$L[2], L_file[1], L_file[2]))
+      }
+
       # Employment growth: state epop file when present, else national CBO
       epop_override_path <- file.path('config', 'state', 'employment', paste0(st, '.csv'))
       st_epop_path <- if (file.exists(epop_override_path)) epop_override_path else NULL
@@ -490,6 +503,7 @@ initialize_simulation <- function() {
         demand_adjusted  = !is.null(demand_adjustment),
         demand_deltas    = if (!is.null(demand_adjustment)) as.list(demand_adjustment$deltas) else NULL,
         supply_source    = supply_source,
+        base_year_labor  = as.list(setNames(st_supply_params$L, c('no_ba', 'ba'))),
         epop_source      = st_epop_path %||% 'national'
       )
     }

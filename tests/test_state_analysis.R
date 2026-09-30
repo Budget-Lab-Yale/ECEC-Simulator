@@ -218,6 +218,23 @@ cat('      not the centre adjustment reaching between the bands.\n')
 
 
 #------------------------------
+# Test 1b2: sector hours at the solution -- the basis of base-year labor
+#------------------------------
+# 3a builds base-year labor as colSums(L_req * sector_hours), so the sector
+# hours must be the model's own base-year hours: the formal targets, with the
+# centre target split by the model's own bands.
+
+sh <- result$sector_hours
+stopifnot(identical(names(sh), SECTOR_MAPPING$ecec_type))
+stopifnot(abs(sh[['Unpaid Center-Based']] / result$targets[['Unpaid Center-Based']] - 1) < 1e-6,
+          abs(sh[['Paid Home-Based']] / result$targets[['Paid Home-Based']] - 1) < 1e-6,
+          abs((sh[['Low-Priced Center-Based']] + sh[['High-Priced Center-Based']]) /
+                result$targets[['Center-Based']] - 1) < 1e-6)
+stopifnot(max(abs(sh[centre_bands] / band_hours(result$deltas)[centre_bands] - 1)) < 1e-9)
+cat('PASS: sector hours reproduce the formal targets and the model\'s own centre bands\n')
+
+
+#------------------------------
 # Test 1c: a target file naming a price band is rejected
 #------------------------------
 split_csv <- tempfile(fileext = '.csv')
