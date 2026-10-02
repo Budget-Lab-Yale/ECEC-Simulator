@@ -100,11 +100,13 @@ slurm/                        # SLURM parallel execution scripts
 
 `state_data/` builds the state demand targets the simulator re-anchors to:
 one six-row annual-hours file per geography. It builds 52: the 50 states, DC,
-and New York City. Puerto Rico is not built: it has no NSCH rate, no NSECE
-region, and no ACS wage, and the simulator's ACS households do not include it.
+and New York City. Puerto Rico is not built: it has no NSCH rate and no NSECE
+region, and the simulator's ACS households do not include it.
 Unpaid Center-Based comes from each state's program counts (public pre-K, Head
 Start, and Early Head Start), less the Head Start that CCD already counts. The
-other five types are regional NSECE shares.
+other five types divide the rest by the simulator's own base-year choice
+probabilities, summed over the state's ACS households (`--shares nsece` builds
+on regional NSECE shares instead).
 
 - **[state_data/docs/SUMMARY_method.pdf](state_data/docs/SUMMARY_method.pdf)**
   is the document to read — what every number means and how solid it is.
@@ -113,13 +115,15 @@ other five types are regional NSECE shares.
   failure, and the known traps.
 
 The build and the simulator are wired together. `state_data/code/00_main.R` writes
-each whole-state file a second time to `config/state/demand/<ST>.csv`, and the
+each file a second time to `config/state/demand/<GEO>.csv`, and the
 simulator reads it from there (`adjust_alpha_for_state.R`). The simulator takes
-six target groups: one Center-Based target covers both centre price bands.
-NYC is county-defined, and the simulator selects households by state FIPS, so
-NYC has no simulator file. `config/runscripts/state_targets_smoke.csv` runs the
+six target groups: one Center-Based target covers both center price bands.
+A runscript can name `NYC` beside the states: the simulator selects its
+households by STATEFIP 36 and the five borough county FIPS
+(`SUBSTATE_GEOGRAPHIES` in `constants.R`). That needs an interface built from
+a raw ACS pull that carries `COUNTYFIP`. `config/runscripts/state_targets_smoke.csv` runs the
 baseline for KY, NJ, NY, and VA; `state_targets_all.csv` runs it for all 50
-states and DC. A state run needs an interface built after
+states, DC, and NYC. A state run needs an interface built after
 state support was added, because the alpha files must carry `p0` and child
 weights.
 

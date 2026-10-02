@@ -49,8 +49,8 @@ CELLS_OUT  <- file.path(STATE_DATA_ROOT, 'out', 'replacement_register_cells.csv'
 NHES <- file.path(STATE_DATA_ROOT, 'raw',
                   'US_NHES__ecpp_children_0_4_by_hours_universe__2019.csv')
 
-# SIPP's care flags against the build's six types. SIPP splits centre care into
-# a child care centre and a nursery/preschool, and has no paid/unpaid
+# SIPP's care flags against the build's six types. SIPP splits center care into
+# a child care center and a nursery/preschool, and has no paid/unpaid
 # distinction per arrangement, so this is a mapping of CONVENIENCE for counting
 # records -- not a proposed replacement rule.
 SIPP_TO_TYPE <- c(RDAYCARE = 'Center-Based',

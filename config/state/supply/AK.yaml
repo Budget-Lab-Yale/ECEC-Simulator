@@ -13,11 +13,11 @@ labor_requirements:
     no_ba: 0.1600461
     ba: 0.0380721
 wages:
-  no_ba: 11.8926026
-  ba: 19.695002
+  no_ba: 13.5598912
+  ba: 20.3120567
 labor_supply:
-  no_ba: 2352062.524107
-  ba: 1069953.3276246
+  no_ba: 3771006.5000979
+  ba: 1431653.2315048
 elasticities:
   no_ba: 4.0
   ba: 2.0

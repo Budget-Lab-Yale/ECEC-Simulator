@@ -6,12 +6,13 @@
 #
 # THE CITY TAKES THE STATE'S NON-PARENTAL RATE. NSCH publishes no sub-state
 # geography, so there is no city rate to measure. load_spec() (00_main.R)
-# reads NY's row of out/nsch_rate_base.csv for geo == 'NYC' -- not hand-copied
-# here. What distinguishes the city is its population and its program counts.
+# reads the parent state's row of out/nsch_rate_base.csv -- parent_geo() in
+# src/shared_functions/constants.R, NYC -> NY -- not hand-copied here. What distinguishes the city is its population and its program counts.
 #
-# THE NY BUILD INCLUDES THIS ONE. Same rate, same Northeast constants, so the
-# build is linear in population and program counts: NY rows minus NYC rows
-# give the rest of the state.
+# THE NY BUILD INCLUDES THIS ONE. Same rate, so step 1 and program counts
+# subtract exactly -- but p0 mix a ratio per geography, so NY rows minus NYC
+# rows only approximate a rest-of-state build: within 0.6% of hours per care
+# type (memo check registers the figure).
 #------------------------------------------------------------------------------
 
 source(file.path(STATE_DATA_ROOT, 'states', 'NY.R'))

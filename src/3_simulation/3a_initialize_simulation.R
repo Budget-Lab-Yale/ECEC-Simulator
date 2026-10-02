@@ -358,8 +358,12 @@ initialize_simulation <- function() {
     cat('--no-price-wedge flag set: disabling price heterogeneity (all wedges = 1.0)\n')
   }
 
+  # National cache in state runs too -- each state context takes its own rows
+  # of it (below). Income percentiles then rank every household on the national
+  # distribution, as QRF price models were trained; ranking within a state put
+  # households in wrong bins, and small states (AK) gave tied quantile breaks.
   cached_price_wedge <- NULL
-  if (!is_state_run && !wedge_disabled) {
+  if (!wedge_disabled) {
     cached_price_wedge <- compute_price_wedge_cache(
       parent_units = sim_base_hh$parent_units,
       children     = sim_base_hh$children,
@@ -391,9 +395,8 @@ initialize_simulation <- function() {
       fips <- run_states[[st]]
       cat('\nBuilding state context:', st, '(FIPS', fips, ')\n')
 
-      state_hh_ids <- sim_base_hh$households %>%
-        filter(statefip == fips) %>%
-        pull(hh_id)
+      # State by STATEFIP; sub-state (NYC) adds COUNTYFIP
+      state_hh_ids <- select_geo_hh_ids(sim_base_hh$households, st, fips)
 
       if (length(state_hh_ids) == 0) {
         stop('No households found for state ', st, ' (FIPS ', fips, ').')
@@ -474,15 +477,9 @@ initialize_simulation <- function() {
         cat('  Employment growth: state epop file (', st_epop_path, ')\n', sep = '')
       }
 
-      st_price_wedge <- NULL
-      if (!wedge_disabled) {
-        st_price_wedge <- compute_price_wedge_cache(
-          parent_units = st_base_hh$parent_units,
-          children     = st_base_hh$children,
-          households   = st_base_hh$households,
-          qrf_models   = price_models$price_qrf_models
-        )
-      }
+      # This state's rows of the national price wedge cache
+      st_price_wedge <- if (is.null(cached_price_wedge)) NULL else
+        cached_price_wedge %>% filter(hh_id %in% state_hh_ids)
 
       state_contexts[[st]] <- list(
         postal                     = st,

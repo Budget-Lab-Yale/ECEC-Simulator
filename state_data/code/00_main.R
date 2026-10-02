@@ -4,15 +4,22 @@
 # Writes one file per geography: out/<GEO>.csv, six rows, annual hours by care
 # type. docs/SUMMARY_method.pdf says what each number means.
 #
-# THE METHOD, per geography:
+# THE METHOD, per geography. Step numbers name quantities across state_data/
+# (README, SOURCES.csv, replacement register) -- kept fixed, though p0 runs
+# them in order 1, 4, 2-3-5, 6.
 #   1. children in regular care = population 0-4 x NSCH rate x universe ratio
-#   2. formal = that x regional NSECE formal share; informal = the rest
-#   3. informal split by the regional NSECE mix
 #   4. Unpaid Center-Based = program counts, less the Head Start a district
 #      runs in its own pre-K school (CCD counts those children too)
-#   5. rest of formal split centre / home by the regional NSECE share
-#   6. annual hours = children x the simulator's own hours grid x 50, split
-#      part-time / full-time by the regional NSECE share
+#   2, 3, 5. rest (step 1 less step 4) split over other five types by
+#      simulator p0 summed over geography's own ACS households (SHARE MODEL
+#      below). Formal share, informal mix, center-home split all results.
+#   6. annual hours = children x simulator's own hours grid x 50, split
+#      part-time / full-time by p0's part-time share per type
+#
+# --shares nsece: regional NSECE constants, steps in number order -- 2 formal
+# = step 1 x formal share, informal = rest; 3 informal split by informal mix;
+# 4 programs carved out of formal; 5 rest of formal split center / home by
+# center share; 6 part-time share regional. Kept for comparison.
 #
 # states/<GEO>.R is DATA: program counts and Census region, each hand-researched
 # with its source next to it. The NSCH rate w/ standard error and the
@@ -31,6 +38,10 @@ suppressPackageStartupMessages({
   library(dplyr); library(readr); library(tibble)
 })
 
+# Simulator's geography tables -- STATE_POSTAL_TO_FIPS, SUBSTATE_GEOGRAPHIES,
+# parent_geo() -- so the build and the simulator name geographies one way.
+source('src/shared_functions/constants.R')
+
 STATE_DATA_ROOT <- 'state_data'
 
 # Null default -- x unless NULL, else y.
@@ -44,7 +55,7 @@ STATE_DATA_ROOT <- 'state_data'
 # CONSTANTS
 #=============================================================================
 
-# Care types written out. Centre care is one row -- the simulator's own
+# Care types written out. Center care is one row -- the simulator's own
 # low/high price split is not a state-level quantity.
 ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
                 'Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
@@ -63,13 +74,13 @@ ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
 # counts in out/nsece_universe.csv.
 #
 # Primary type per child, by the simulator's own rule
-# (src/1_processing/1a_nsece_processing.R): paid centre > unpaid centre >
+# (src/1_processing/1a_nsece_processing.R): paid center > unpaid center >
 # paid home > other paid > unpaid home > other unpaid; hours break ties.
 
 
 # NATIONAL annual hours per child -- weekly mean in the primary arrangement
-# x 50. Fallback for a regional cell under NSECE_MIN_RECORDS. Centre-Based is
-# the mean over both paid-centre price bands.
+# x 50. Fallback for a regional cell under NSECE_MIN_RECORDS. Center-Based is
+# the mean over both paid-center price bands.
 NSECE_ANNUAL_HOURS <- c(
   'Center-Based'        = (0.07008002232267292 * 50 * 27.454813402111718 +
                            0.06556113476684644 * 50 * 40.405040897598035) /
@@ -123,7 +134,7 @@ NSECE_UNPAID_CENTRE_SHARE <- c(northeast = 0.29858157955075193,
                                south     = 0.3027785115943172,
                                west      = 0.27074481379107573)
 
-# Step 5. Paid centres (both price bands) over paid centres + Paid Home-Based.
+# Step 5. Paid centers (both price bands) over paid centers + Paid Home-Based.
 # Records: NE 154, MW 175, S 337, W 187 -- no fallback needed.
 NSECE_CENTRE_HOME_SPLIT <- c(northeast = 0.8799388331780533,
                              midwest   = 0.6971700039202228,
@@ -146,7 +157,7 @@ NSECE_MIX_REGION <- tibble::tribble(
   'west',      'Other Unpaid',      0.6636263920592722, 292,
   'west',      'Unpaid Home-Based', 0.0235523780281013,  14)
 
-# Step 6. Mean weekly hours in the primary arrangement, paid centres pooled
+# Step 6. Mean weekly hours in the primary arrangement, paid centers pooled
 # into one Center-Based row (no price-band blend).
 NSECE_HOURS_REGION <- tibble::tribble(
   ~region,     ~type,                 ~weekly,             ~n,
@@ -248,24 +259,6 @@ regional_part_time <- function(region) {
 
 
 
-regional_grid_hours <- function(region) {
-
-  #----------------------------------------------------------------------------
-  # Annual hours ONE child of each type carries on the simulator's grid:
-  # part-time share x 10 + full-time share x 40, x 50 weeks.
-  #
-  # Params:
-  #   - region (chr)
-  #
-  # Returns: (named num) annual hours per child, by care type
-  #----------------------------------------------------------------------------
-
-  pt <- regional_part_time(region)
-  (pt * GRID_PT_HOURS + (1 - pt) * GRID_FT_HOURS) * 50
-}
-
-
-
 regional_mix <- function(region) {
 
   #----------------------------------------------------------------------------
@@ -307,6 +300,120 @@ regional_annual_hours <- function(region) {
   thin <- r$type[r$n < NSECE_MIN_RECORDS]
   h[thin] <- NSECE_ANNUAL_HOURS[thin]
   h[ECEC_TYPES]
+}
+
+
+
+#=============================================================================
+# SHARE MODEL -- simulator p0 over the state's ACS households
+#=============================================================================
+
+# WHICH SHARES the build uses for steps 2, 3, 5, 6 -- formal share, informal
+# mix, center-home split, part-time share.
+#   'p0'    simulator's base-year choice probabilities summed over the
+#           geography's own ACS households (state_data/cluster/acs_p0_shares.R).
+#           State mix follows state demographics -- income, parent employment,
+#           family type, child age -- under national preferences.
+#   'nsece' regional NSECE constants above, national fallback for thin cells.
+# Step 1 total (NSCH), step 4 Unpaid Center-Based (program counts) same under
+# both. --shares overrides on the command line.
+SHARE_SOURCE <- 'p0'
+
+# p0 summary, one row per geography x simulator care type x hours choice,
+# weighted children 0-4. Built on the cluster from a full-sample interface.
+P0_SHARES_FILE <- 'US_ACS__p0_children_by_care_type_and_hours__2019.csv'
+
+# Simulator care type -> build row. Both center price bands -> one row, as the
+# demand file has one Center-Based target. Parent Only dropped.
+P0_TYPE_MAP <- c('Low-Priced Center-Based'  = 'Center-Based',
+                 'High-Priced Center-Based' = 'Center-Based',
+                 'Unpaid Center-Based'      = 'Unpaid Center-Based',
+                 'Paid Home-Based'          = 'Paid Home-Based',
+                 'Other Unpaid'             = 'Other Unpaid',
+                 'Other Paid'               = 'Other Paid',
+                 'Unpaid Home-Based'        = 'Unpaid Home-Based')
+
+FORMAL_TYPES   <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based')
+
+# build_geo() stop phrase when programs fill the total they come out of --
+# interval_bound() maps that one error to NA.
+PROGRAMS_TOO_LARGE <- 'meets or exceeds'
+
+
+
+p0_children_of <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # This geography's p0 children by build row and hours (pt/ft).
+  #
+  # Params:
+  #   - geo (chr)
+  #
+  # Returns: (tibble) ecec_type, pt, ft -- weighted children 0-4
+  #----------------------------------------------------------------------------
+
+  f <- raw_path(P0_SHARES_FILE)
+  if (!file.exists(f)) {
+    stop('no ', f, ' -- run state_data/cluster/acs_p0_shares.R on the cluster, ',
+         'or build w/ --shares nsece')
+  }
+  d <- read_chr(f) %>%
+    dplyr::filter(geo == !!geo, ecec_type %in% names(P0_TYPE_MAP)) %>%
+    dplyr::mutate(row = unname(P0_TYPE_MAP[ecec_type]), children = num(children))
+  if (!nrow(d)) stop('no p0 rows for ', geo, ' in ', f)
+  odd <- setdiff(unique(d$hours_choice), c('pt', 'ft'))
+  if (length(odd)) {
+    stop(geo, ': non-parental care w/ hours choice ', paste(odd, collapse = ', '),
+         ' -- expected pt or ft only')
+  }
+
+  d %>%
+    dplyr::group_by(ecec_type = row) %>%
+    dplyr::summarise(pt = sum(children[hours_choice == 'pt']),
+                     ft = sum(children[hours_choice == 'ft']), .groups = 'drop') %>%
+    dplyr::right_join(tibble::tibble(ecec_type = ECEC_TYPES), by = 'ecec_type') %>%
+    dplyr::mutate(pt = dplyr::coalesce(pt, 0), ft = dplyr::coalesce(ft, 0))
+}
+
+
+
+geo_shares <- function(spec, source = SHARE_SOURCE) {
+
+  #----------------------------------------------------------------------------
+  # The four shares steps 2, 3, 5, 6 use, from either source.
+  #
+  # Params:
+  #   - spec (list): from states/<GEO>.R
+  #   - source (chr): 'p0' or 'nsece'
+  #
+  # Returns: (list) pt (named num, ECEC_TYPES), source (chr), plus
+  #            nsece: formal_share (num), centre_split (num), mix (named num,
+  #                   informal types)
+  #            p0:    rest_mix (named num, the five types but Unpaid
+  #                   Center-Based -- what build_geo() divides)
+  #----------------------------------------------------------------------------
+
+  if (source == 'nsece') {
+    return(list(formal_share = NSECE_FORMAL_SHARE[[spec$region]],
+                centre_split = NSECE_CENTRE_HOME_SPLIT[[spec$region]],
+                mix          = regional_mix(spec$region),
+                pt           = regional_part_time(spec$region),
+                source       = 'nsece'))
+  }
+  if (source != 'p0') stop('unknown share source: ', source)
+
+  d   <- p0_children_of(spec$geo)
+  n   <- setNames(d$pt + d$ft, d$ecec_type)
+  if (any(n[ECEC_TYPES] <= 0)) {
+    stop(spec$geo, ': p0 holds no children in ',
+         paste(ECEC_TYPES[n[ECEC_TYPES] <= 0], collapse = ', '))
+  }
+  # The five types the share model divides -- all but Unpaid Center-Based,
+  # which program counts set.
+  rest <- setdiff(ECEC_TYPES, 'Unpaid Center-Based')
+  list(rest_mix     = n[rest] / sum(n[rest]),
+       pt           = setNames(d$pt / (d$pt + d$ft), d$ecec_type)[ECEC_TYPES],
+       source       = 'p0')
 }
 
 
@@ -397,17 +504,18 @@ num <- function(x) suppressWarnings(as.numeric(x))
 
 
 
-population_0_4 <- function(fips, counties = NULL) {
+population_0_4 <- function(fips, county_fips = NULL) {
 
   #----------------------------------------------------------------------------
   # Children 0-4, Census PEP vintage 2019, summed to the geography.
   #
-  # `counties` names a sub-state geography (NYC's five boroughs); NULL takes
-  # the state.
+  # `county_fips` defines a sub-state geography (NYC's five boroughs) by
+  # 5-digit county FIPS -- same codes simulator selects ACS households on.
+  # NULL takes the state.
   #
   # Params:
   #   - fips (int): state FIPS
-  #   - counties (chr vec|NULL): county names w/out the 'County' suffix
+  #   - county_fips (chr vec|NULL): 5-digit county FIPS, e.g. '36005'
   #
   # Returns: (num) children 0-4
   #----------------------------------------------------------------------------
@@ -415,14 +523,14 @@ population_0_4 <- function(fips, counties = NULL) {
   pep <- read_chr(raw_path(
     'US_PEP__population_children_age_0_4_by_county__2019.csv')) %>%
     dplyr::filter(num(STATE) == fips) %>%
-    dplyr::mutate(county = sub(' County$', '', CTYNAME), pop = num(TOT_POP))
+    dplyr::mutate(cfips = paste0(STATE, COUNTY), pop = num(TOT_POP))
 
-  if (!is.null(counties)) {
-    missing <- setdiff(counties, pep$county)
+  if (!is.null(county_fips)) {
+    missing <- setdiff(county_fips, pep$cfips)
     if (length(missing) > 0) {
-      stop('population: county not found -- ', paste(missing, collapse = ', '))
+      stop('population: county FIPS not found -- ', paste(missing, collapse = ', '))
     }
-    pep <- dplyr::filter(pep, county %in% counties)
+    pep <- dplyr::filter(pep, cfips %in% county_fips)
   }
 
   sum(pep$pop)
@@ -531,7 +639,7 @@ build_geo <- function(spec) {
   ## 1. children in regular care ---------------------------------------------
   # NSCH k6q20 counts children at 10+ hrs/week. The simulator holds every
   # regular arrangement, so the rate is carried up to that universe.
-  n_children <- population_0_4(spec$fips, spec$counties)
+  n_children <- population_0_4(spec$fips, spec$county_fips)
   nsch_total <- n_children * spec$nonparental_rate
   np_total   <- round(nsch_total * NSECE_UNIVERSE_RATIO)
   cat('  children 0-4          ', format(n_children, big.mark = ','), '\n')
@@ -540,16 +648,9 @@ build_geo <- function(spec) {
   cat(sprintf('  x universe ratio      %.4f -> %s in any regular care\n',
               NSECE_UNIVERSE_RATIO, format(np_total, big.mark = ',')))
 
-  ## 2. formal and informal totals -------------------------------------------
-  formal   <- NSECE_FORMAL_SHARE[[spec$region]] * np_total
-  informal <- np_total - formal
-
-  ## 3. informal care -- regional NSECE mix, national fallback ---------------
-  informal_types <- informal * regional_mix(spec$region)
-  cat('  informal              ', format(round(informal), big.mark = ','),
-      sprintf(' -- %.1f%% of non-parental care\n', 100 * informal / np_total))
-
-  ## 4. Unpaid Center-Based -- program counts, less the CCD double count ---
+  ## 4 first. Unpaid Center-Based -- program counts, less the CCD double count
+  # Same under both share sources. Computed first: the p0 order divides only
+  # what the programs leave.
   pc      <- program_children(spec)
   program <- pc$total
   cat('  programs            ', format(pc$gross, big.mark = ','),
@@ -559,67 +660,110 @@ build_geo <- function(spec) {
               format(round(pc$netted), big.mark = ','),
               format(round(program), big.mark = ',')))
 
-  # Cross-check: what the regional NSECE share would give instead.
-  unpaid_share <- NSECE_UNPAID_CENTRE_SHARE[[spec$region]]
-  cat(sprintf('  vs regional NSECE     %s (share %.3f) -- build / NSECE %.2f\n',
-              format(round(formal * unpaid_share), big.mark = ','), unpaid_share,
-              program / (formal * unpaid_share)))
+  ## 2. formal and informal totals -------------------------------------------
+  # Shares from SHARE_SOURCE. NSECE comparison = --shares nsece build, not
+  # printed beside p0.
+  #
+  # TWO ORDERS. Both stop w/ PROGRAMS_TOO_LARGE in message -- interval_bound()
+  # matches it.
+  #   nsece  formal = regional formal share x total; programs carved out of
+  #          formal; rest split center / home. Stops if programs >= formal.
+  #   p0     NSCH sets total, programs set Unpaid Center-Based, p0's own mix
+  #          of the OTHER FIVE types divides the rest. Formal = programs + p0
+  #          center + home -- a result, not an input. Fixing a p0 formal share
+  #          first, then carving programs out of it, broke WV on 2026-10-01:
+  #          p0 formal 0.471 x 46,196 = 21,739 children < programs 21,860.
+  #          Stops only if programs >= the whole non-parental total.
+  sh <- geo_shares(spec)
+
+  if (sh$source == 'p0') {
+    ## 2-5 in one step: p0's mix of the five types divides what programs leave
+    if (program >= np_total) {
+      stop(spec$geo, ': program enrolment ', format(round(program), big.mark = ','),
+           ' ', PROGRAMS_TOO_LARGE, ' the non-parental total ',
+           format(round(np_total), big.mark = ','),
+           '. Check the control total and the program figures.')
+    }
+    children <- c((np_total - program) * sh$rest_mix,
+                  'Unpaid Center-Based' = program)[ECEC_TYPES]
+  } else {
+    ## 2. formal = regional share x total; 3. informal by regional mix
+    formal <- sh$formal_share * np_total
+    # Programs alone cannot exceed the formal total. If they do, nothing is
+    # left for the center-home split -- an input problem, stated as one.
+    if (program >= formal) {
+      stop(spec$geo, ': program enrolment ', format(round(program), big.mark = ','),
+           ' ', PROGRAMS_TOO_LARGE, ' the formal total ',
+           format(round(formal), big.mark = ','),
+           '. Check the control total, the formal share, and the ',
+           'program figures.')
+    }
+    ## 5. rest of formal split center / home by the regional share
+    other_formal <- formal - program
+    children <- c('Center-Based'        = other_formal * sh$centre_split,
+                  'Unpaid Center-Based' = program,
+                  'Paid Home-Based'     = other_formal * (1 - sh$centre_split),
+                  (np_total - formal) * sh$mix)[ECEC_TYPES]
+  }
+
+  # Both orders report the same derived quantities.
+  formal   <- sum(children[FORMAL_TYPES])
+  informal <- np_total - formal
+  split    <- children[['Center-Based']] /
+                (children[['Center-Based']] + children[['Paid Home-Based']])
+  cat(sprintf('  formal share          %.3f (%s)\n', formal / np_total, sh$source))
+  cat('  informal              ', format(round(informal), big.mark = ','),
+      sprintf(' -- %.1f%% of non-parental care\n', 100 * informal / np_total))
+
+  # nsece only -- programs against what regional NSECE unpaid-center share
+  # would give. Printed, not used.
+  if (sh$source == 'nsece') {
+    unpaid_share <- NSECE_UNPAID_CENTRE_SHARE[[spec$region]]
+    cat(sprintf('  vs regional NSECE     %s (share %.3f) -- build / NSECE %.2f\n',
+                format(round(formal * unpaid_share), big.mark = ','), unpaid_share,
+                program / (formal * unpaid_share)))
+  }
 
   # NOT DEDUCTED: Head Start children also in STATE pre-K (NIEER Table 4). Table
   # 4 nets against state pre-K in every setting, build counts CCD pre-K in public
   # schools only, NIEER reports it for only some states -- applying it would
   # correct states unevenly, for a reason not about care.
 
-  # The programs alone cannot exceed the formal total. If they do, nothing is
-  # left for the centre-home split -- an input problem, stated as one.
-  if (program >= formal) {
-    stop(spec$geo, ': program enrolment ', format(round(program), big.mark = ','),
-         ' meets or exceeds the formal total ',
-         format(round(formal), big.mark = ','),
-         '. Check the control total, the regional formal share and the ',
-         'program figures.')
-  }
-  other_formal <- formal - program
-
-  ## 5. centres and homes -- regional NSECE split ----------------------------
-  split <- NSECE_CENTRE_HOME_SPLIT[[spec$region]]
-  cat(sprintf('  centre share          %.3f (NSECE %s)\n', split, spec$region))
-
-  children <- c('Center-Based'        = other_formal * split,
-                'Unpaid Center-Based' = program,
-                'Paid Home-Based'     = other_formal * (1 - split),
-                informal_types)[ECEC_TYPES]
+  cat(sprintf('  centre share          %.3f (%s)\n', split, sh$source))
 
   ## 6. annual hours -- the simulator's grid, split part-time / full-time ----
-  pt         <- regional_part_time(spec$region)
-  grid_hours <- regional_grid_hours(spec$region)
+  pt         <- sh$pt
+  grid_hours <- (pt * GRID_PT_HOURS + (1 - pt) * GRID_FT_HOURS) * 50
   out <- tibble::tibble(ecec_type    = ECEC_TYPES,
                         children     = unname(children),
                         part_time    = unname(children * pt[ECEC_TYPES]),
                         annual_hours = unname(children) *
                                          unname(grid_hours[ECEC_TYPES]))
 
-  # What NSECE's raw mean hours would have given. Printed, never targeted: the
-  # simulator cannot place a child anywhere but 10 or 40 hrs/week.
-  raw <- unname(children) * unname(regional_annual_hours(spec$region))
   cat(sprintf('  part-time share       %s\n',
               paste(sprintf('%s %.0f%%', substr(ECEC_TYPES, 1, 6),
                             100 * pt[ECEC_TYPES]), collapse = '  ')))
-  cat(sprintf('  hours on the grid     %.0fm vs %.0fm on NSECE raw means (%+.1f%%)\n',
-              sum(out$annual_hours) / 1e6, sum(raw) / 1e6,
-              100 * (sum(out$annual_hours) / sum(raw) - 1)))
+  # nsece only -- what NSECE's raw mean hours would have given. Printed, never
+  # targeted: simulator places a child at 10 or 40 hrs/week only.
+  if (sh$source == 'nsece') {
+    raw <- unname(children) * unname(regional_annual_hours(spec$region))
+    cat(sprintf('  hours on the grid     %.0fm vs %.0fm on NSECE raw means (%+.1f%%)\n',
+                sum(out$annual_hours) / 1e6, sum(raw) / 1e6,
+                100 * (sum(out$annual_hours) / sum(raw) - 1)))
+  }
 
   structure(out,
             diagnostics = list(geo = spec$geo, children_0_4 = n_children,
                                nonparental_total = np_total,
+                               share_source = sh$source,
+                               formal_share = formal / np_total,  # realised
                                centre_share = split, residual = informal,
-                               unpaid_share = unpaid_share,
                                hs_in_schools_share = pc$share,
                                hs_netted = pc$netted,
                                program_gross = pc$gross,
                                program_net = pc$total,
-                               centre_based = other_formal * split + program,
-                               licensed_home = other_formal * (1 - split)))
+                               centre_based = children[['Center-Based']] + program,
+                               licensed_home = children[['Paid Home-Based']]))
 }
 
 
@@ -629,18 +773,18 @@ build_geo <- function(spec) {
 # ORCHESTRATION
 #=============================================================================
 
-# Every state + DC, plus NYC. Memo's five first. Puerto Rico not built -- no
-# NSCH rate, no NSECE region, no ACS wage, no simulator households.
-GEOGRAPHIES <- c('KY', 'NJ', 'NY', 'NYC', 'VA',
-                 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL',
-                 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'LA', 'ME', 'MD',
-                 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NM',
-                 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN',
-                 'TX', 'UT', 'VT', 'WA', 'WV', 'WI', 'WY')
+# Every simulator geography -- states + DC (STATE_POSTAL_TO_FIPS), sub-state
+# (SUBSTATE_GEOGRAPHIES), both constants.R. Memo's five first, rest in FIPS
+# order. Puerto Rico not in either table -- no NSCH rate, no NSECE region, no
+# simulator households.
+MEMO_GEOGRAPHIES <- c('KY', 'NJ', 'NY', 'NYC', 'VA')
+GEOGRAPHIES <- c(MEMO_GEOGRAPHIES,
+                 setdiff(c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES)),
+                         MEMO_GEOGRAPHIES))
 
-# Simulator reads state demand targets here (src/3_simulation/
-# 3a_initialize_simulation.R). Whole states only -- simulator selects
-# households by STATEFIP, so a county-defined geography (NYC) has no reader.
+# Simulator reads demand targets here (src/3_simulation/
+# 3a_initialize_simulation.R), every geography incl. NYC -- simulator selects
+# NYC households by STATEFIP + COUNTYFIP (SUBSTATE_GEOGRAPHIES, constants.R).
 SIMULATOR_DEMAND_DIR <- file.path('config', 'state', 'demand')
 
 
@@ -661,7 +805,7 @@ nsch_rate_of <- function(geo) {
   f <- file.path(STATE_DATA_ROOT, 'out', 'nsch_rate_base.csv')
   if (!file.exists(f)) stop('no ', f, ' -- run 01_nsch_rate.R first')
   d <- readr::read_csv(f, show_col_types = FALSE)
-  g <- if (geo == 'NYC') 'NY' else geo
+  g <- parent_geo(geo)
   row <- d[d$geo == g, ]
   if (nrow(row) != 1) stop('no nsch_rate_base.csv row for ', g)
   list(rate = row$rate[[1]], se_design = row$se_design[[1]])
@@ -724,8 +868,8 @@ load_spec <- function(geo) {
 write_geo <- function(res, geo, spec) {
 
   #----------------------------------------------------------------------------
-  # Writes out/<GEO>.csv. Whole state -> same file also to
-  # config/state/demand/<GEO>.csv, where simulator reads it.
+  # Writes out/<GEO>.csv, same file also to config/state/demand/<GEO>.csv,
+  # where simulator reads it -- every geography, NYC incl.
   #
   # Params:
   #   - res (tibble) central build, geo (chr), spec (list) its SPEC_<GEO>
@@ -740,14 +884,10 @@ write_geo <- function(res, geo, spec) {
   readr::write_csv(rows, f)
   cat('  wrote                 ', f, '\n')
 
-  if (is.null(spec$counties)) {
-    dir.create(SIMULATOR_DEMAND_DIR, showWarnings = FALSE, recursive = TRUE)
-    sim_f <- file.path(SIMULATOR_DEMAND_DIR, paste0(geo, '.csv'))
-    readr::write_csv(rows, sim_f)
-    cat('  wrote                 ', sim_f, '\n')
-  } else {
-    cat('  simulator copy         none --', geo, 'is county-defined\n')
-  }
+  dir.create(SIMULATOR_DEMAND_DIR, showWarnings = FALSE, recursive = TRUE)
+  sim_f <- file.path(SIMULATOR_DEMAND_DIR, paste0(geo, '.csv'))
+  readr::write_csv(rows, sim_f)
+  cat('  wrote                 ', sim_f, '\n')
   f
 }
 
@@ -765,8 +905,9 @@ write_interval <- function(spec, point, geo) {
   # counts hold fixed while other formal types absorb difference -- build
   # re-run at each bound, not scaled.
   #
-  # Interval covers sampling error in rate ALONE. Says nothing about sampling
-  # error in regional NSECE shares, not quantified here.
+  # Interval covers sampling error in rate ALONE. Says nothing about error in
+  # the shares (p0: ACS sampling + calibration; nsece: NSECE sampling), not
+  # quantified here.
   #
   # Params:
   #   - spec (list), point (tibble) the central build, geo (chr)
@@ -826,7 +967,7 @@ interval_bound <- function(spec, rate) {
   # land on it. Only that error maps to NA; anything else propagates.
   r <- tryCatch({ quiet <- utils::capture.output(x <- build_geo(s)); x },
                 error = function(e) {
-                  if (grepl('meets or exceeds the formal total', conditionMessage(e))) NULL
+                  if (grepl(PROGRAMS_TOO_LARGE, conditionMessage(e), fixed = TRUE)) NULL
                   else stop(e)
                 })
   if (is.null(r)) return(setNames(rep(NA_real_, length(ECEC_TYPES)), ECEC_TYPES))
@@ -835,23 +976,26 @@ interval_bound <- function(spec, rate) {
 
 
 
-min_feasible_rate <- function(spec, formal_share = NSECE_FORMAL_SHARE[[spec$region]]) {
+min_feasible_rate <- function(spec, formal_share = if (SHARE_SOURCE == 'p0') 1
+                                                    else geo_shares(spec)$formal_share) {
 
   #----------------------------------------------------------------------------
   # Lowest NSCH rate at which formal care exceeds netted program total.
+  # p0 order: programs need only stay below the whole non-parental total, so
+  # formal_share defaults to 1 there.
   #
   # Carries NSECE_UNIVERSE_RATIO, as step 1 does. Without it this floor and
   # build_geo() disagree, and a bound reads NA in one place and a number in
   # the other.
   #
   # Params:
-  #   - spec (list), formal_share (num) default regional
+  #   - spec (list), formal_share (num) default from SHARE_SOURCE
   #
   # Returns: (num) rate
   #----------------------------------------------------------------------------
 
   program_children(spec)$total /
-    (population_0_4(spec$fips, spec$counties) * NSECE_UNIVERSE_RATIO * formal_share)
+    (population_0_4(spec$fips, spec$county_fips) * NSECE_UNIVERSE_RATIO * formal_share)
 }
 
 
@@ -891,23 +1035,30 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   #----------------------------------------------------------------------------
   # Entry point -- builds each requested geography, writes out/<GEO>.csv (plus
-  # simulator copy for whole states), prints summary. Prints usage, returns
-  # NULL when neither --all nor --geo given.
+  # simulator copy), prints summary. Prints usage, returns NULL when neither
+  # --all nor --geo given.
   #
   # Params:
   #   - args (chr): CLI args -- --geo KY[,NJ], --all, --check (run
   #     check_geo(), exit 1 on any failure), --interval (write
-  #     <GEO>_interval.csv)
+  #     <GEO>_interval.csv), --shares p0|nsece (override SHARE_SOURCE)
   #
   # Returns: (list) central build per geography, invisibly
   #----------------------------------------------------------------------------
+
+  if ('--shares' %in% args) {
+    s <- args[which(args == '--shares') + 1]
+    if (!s %in% c('p0', 'nsece')) stop('--shares takes p0 or nsece, got ', s)
+    SHARE_SOURCE <<- s
+  }
+  cat('share source:', SHARE_SOURCE, '\n')
 
   geos <- if ('--all' %in% args) {
     GEOGRAPHIES
   } else if ('--geo' %in% args) {
     strsplit(args[which(args == '--geo') + 1], ',')[[1]]
   } else {
-    cat('usage: Rscript state_data/code/00_main.R [--geo KY[,NJ]] [--all] [--check] [--interval]\n')
+    cat('usage: Rscript state_data/code/00_main.R [--geo KY[,NJ]] [--all] [--check] [--interval] [--shares p0|nsece]\n')
     cat('geographies: ', paste(GEOGRAPHIES, collapse = ', '), '\n')
     return(invisible(NULL))
   }

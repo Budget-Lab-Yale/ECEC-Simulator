@@ -358,4 +358,46 @@ expect_error(
   'empty state fails loudly'
 )
 
+#------------------------------
+# Test 5: sub-state geography (NYC) -- parser and household selection
+#------------------------------
+
+source('src/shared_functions/select_geo_hh_ids.R')
+
+# get_run_states() lives in config.R, which runs code when sourced -- take
+# only its definition
+cfg_exprs <- parse('src/misc/config.R')
+is_def <- vapply(cfg_exprs, function(e) {
+  is.call(e) && identical(e[[1]], as.name('<-')) &&
+    identical(e[[2]], as.name('get_run_states'))
+}, logical(1))
+stopifnot(sum(is_def) == 1)
+eval(cfg_exprs[[which(is_def)]])
+
+rs <- get_run_states(tibble(state = 'NY;NYC;VA'))
+stopifnot(identical(names(rs), c('NY', 'NYC', 'VA')),
+          unname(rs) == c(36, 36, 51))
+cat('PASS: runscript parser accepts NYC, carries STATEFIP 36\n')
+
+expect_error(get_run_states(tibble(state = 'NYX')), 'Unknown state',
+             'unknown sub-state code fails loudly')
+
+# Synthetic households: NYC boroughs, rest of NY, county unidentified (0),
+# and another state on the same county code
+hh <- tibble(hh_id     = 1:7,
+             statefip  = c(36, 36, 36, 36, 36, 36, 51),
+             countyfip = c(5, 47, 61, 81, 85, 0, 5))
+stopifnot(identical(select_geo_hh_ids(hh, 'NY', 36), 1:6),
+          identical(select_geo_hh_ids(hh, 'NYC', 36), 1:5),
+          identical(select_geo_hh_ids(hh, 'VA', 51), 7L))
+cat('PASS: NYC selects the five boroughs, not unidentified NY counties or other states\n')
+
+expect_error(select_geo_hh_ids(select(hh, -countyfip), 'NYC', 36),
+             'no countyfip', 'NYC w/out countyfip fails loudly')
+expect_error(select_geo_hh_ids(mutate(hh, countyfip = NA), 'NYC', 36),
+             'no countyfip', 'NYC w/ all-NA countyfip fails loudly')
+stopifnot(identical(select_geo_hh_ids(select(hh, -countyfip), 'NY', 36), 1:6))
+cat('PASS: whole-state run needs no countyfip\n')
+
+
 cat('\nAll state-analysis tests passed.\n')

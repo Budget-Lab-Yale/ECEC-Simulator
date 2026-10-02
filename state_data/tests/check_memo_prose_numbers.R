@@ -14,7 +14,6 @@
 suppressPackageStartupMessages({library(readr); library(dplyr)})
 
 source('state_data/code/00_main.R')     # main() is guarded; this only loads
-source('state_data/code/03_head_start_in_schools.R')   # guarded; MATCH_METRES
 
 TEX <- file.path(STATE_DATA_ROOT, 'docs', 'SUMMARY_method.tex')
 OUT <- file.path(STATE_DATA_ROOT, 'out')
@@ -24,37 +23,99 @@ tex <- gsub('[[:space:]]+', ' ', paste(readLines(TEX, warn = FALSE), collapse = 
 
 
 
-informal_share_range <- function(of) {
+GEO  <- MEMO_GEOGRAPHIES
+ST4  <- setdiff(GEO, 'NYC')
+f3   <- function(x) sprintf('%.3f', x)
+f2   <- function(x) sprintf('%.2f', x)
+big  <- function(x) format(round(x), big.mark = ',', scientific = FALSE)
 
-  #----------------------------------------------------------------------------
-  # Informal care's share, across the five geographies, as whole percents.
-  #
-  # TWO DIFFERENT NUMBERS. Informal hours run higher than informal children, because the three
-  # informal types carry longer mean weeks than the formal ones.
-  #
-  # Params:
-  #   - of (chr): 'hours' or 'children'
-  #
-  # Returns: (chr vec) low and high, rounded as the memo prints them
-  #----------------------------------------------------------------------------
+# Inputs the updates memo quotes. Each is the file the build writes or reads,
+# so a rebuild that moves a figure fails here until the memo moves with it.
+EPOP_DIAG <- read_csv('resources/epop/state_epop_diagnostics.csv', show_col_types = FALSE)
+OEWS_R    <- read_csv('resources/supply/state_childcare_wage_ratios_oews.csv', show_col_types = FALSE)
+OEWS_EMP  <- read_csv('resources/supply/US_OEWS__childcare_employment_and_wages_by_state__2019.csv',
+                      show_col_types = FALSE)
+SUP_DIAG  <- read_csv('resources/supply/state_supply_diagnostics.csv', show_col_types = FALSE)
+NATL_SUP  <- yaml::read_yaml('resources/supply/US_NSECE__national_supply_parameters__2019.yaml')
+STATES51  <- setdiff(OEWS_R$state, 'NYC')
 
-  if (of == 'hours') {
-    s <- vapply(GEO, function(g) {
-      d <- read_csv(file.path(OUT, paste0(g, '.csv')), show_col_types = FALSE)
-      sum(d$annual_hours[d$ecec_type %in% INFORMAL]) / sum(d$annual_hours)
-    }, numeric(1))
-  } else {
-    # Children are fixed by step 2 alone: informal = 1 - the regional formal
-    # share. Only the two regions these geographies sit in can appear.
-    s <- 1 - NSECE_FORMAL_SHARE[c('northeast', 'south')]
-  }
-  format(round(100 * range(s)))
+# Employment: adjustment k(2024)/k(2019). Memo's LAUS figures describe a
+# removed method -- no input left to check them against, not registered.
+adj_new <- setNames(EPOP_DIAG$adjustment, EPOP_DIAG$state)
+
+# Wage ratios by group, states only
+ratio <- function(tab, st, g) tab$wage_ratio[tab$state == st & tab$educ_group == g]
+rng   <- function(g) range(OEWS_R$wage_ratio[OEWS_R$educ_group == g & OEWS_R$state %in% STATES51])
+
+# Validity: national NSECE labour hours / 2,080 against national OEWS workers
+OEWS_HOURS <- 2080
+us_w   <- OEWS_EMP[OEWS_EMP$state == 'US', ]
+oews_w <- tapply(us_w$tot_emp, us_w$educ_group, sum)
+fte    <- c(no_ba = NATL_SUP$labor_supply$no_ba, ba = NATL_SUP$labor_supply$ba) / OEWS_HOURS
+
+# Labour quantity: OEWS-based over demand-based, no-BA, whole extremes
+l0  <- SUP_DIAG[SUP_DIAG$state %in% STATES51, ]
+nm  <- c(setNames(datasets::state.name, datasets::state.abb), DC = 'District of Columbia')
+lo  <- l0[which.min(l0$oews_over_demand_no_ba), ]
+hi  <- l0[which.max(l0$oews_over_demand_no_ba), ]
+
+# Crosswalk households, unweighted
+xw_n <- length(readLines(gzfile('resources/acs/US_ACS__household_county_puma_crosswalk__2019.csv.gz'))) - 1
+
+
+# Build every geography under both share sources, quietly.
+build_all <- function(src) {
+  SHARE_SOURCE <<- src
+  lapply(setNames(GEOGRAPHIES, GEOGRAPHIES), function(g) {
+    quiet <- utils::capture.output(r <- build_geo(load_spec(g))); r
+  })
 }
+B_P0 <- build_all('p0')
+B_NS <- build_all('nsece')
+SHARE_SOURCE <- 'p0'
+diag_rng <- function(b, k) range(vapply(b, function(r) attr(r, 'diagnostics')[[k]], numeric(1)))
+kids     <- function(b, g, t) { r <- b[[g]]; r$children[r$ecec_type == t] }
 
+# WV under the first p0 order: p0 formal share x non-parental total, against
+# the program children -- the case that made the build divide only the rest.
+# Rest of NY State: NY build minus NYC build, against a direct build from
+# rest-of-state p0 (NY p0 minus NYC p0 -- weighted counts, so additive).
+# Largest hours gap over care types, percent.
+ros_gap <- local({
+  ny <- B_P0[['NY']]; nyc <- B_P0[['NYC']]
+  dn <- attr(ny, 'diagnostics'); dc <- attr(nyc, 'diagnostics')
+  np <- dn$nonparental_total - dc$nonparental_total
+  pr <- dn$program_net - dc$program_net
+  a <- p0_children_of('NY'); b <- p0_children_of('NYC')
+  pt <- setNames(a$pt - b$pt, a$ecec_type)[ECEC_TYPES]
+  ft <- setNames(a$ft - b$ft, a$ecec_type)[ECEC_TYPES]
+  rest <- setdiff(ECEC_TYPES, 'Unpaid Center-Based')
+  kids <- c((np - pr) * (pt + ft)[rest] / sum((pt + ft)[rest]),
+            'Unpaid Center-Based' = pr)[ECEC_TYPES]
+  s <- pt / (pt + ft)
+  direct <- kids * (s * GRID_PT_HOURS + (1 - s) * GRID_FT_HOURS) * 50
+  diff <- setNames(ny$annual_hours - nyc$annual_hours, ny$ecec_type)[ECEC_TYPES]
+  max(abs(diff / direct - 1)) * 100
+})
 
-GEO      <- c('KY', 'NJ', 'NY', 'NYC', 'VA')
-INFORMAL <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
+wv <- local({
+  spec <- load_spec('WV')
+  d <- attr(B_P0[['WV']], 'diagnostics')
+  p <- p0_children_of('WV'); n <- setNames(p$pt + p$ft, p$ecec_type)
+  c(formal = sum(n[FORMAL_TYPES]) / sum(n[ECEC_TYPES]) * d$nonparental_total,
+    program = program_children(spec)$total)
+})
 
+# Register check rows
+REG <- read_csv(file.path(OUT, 'register_check.csv'), show_col_types = FALSE)
+k1  <- function(x) ifelse(is.na(x), '--', sprintf('%.1f', x / 1000))
+pc  <- function(x) sprintf('$%s%d\\%%$', ifelse(x >= 0, '+', '-'), as.integer(round(abs(100 * x))))
+reg_row <- function(g, label) {
+  r <- REG[REG$geo == g, ]
+  c(label, k1(r$register_centre_children), k1(r$build_centre), pc(r$gap_centre),
+    k1(r$register_home_children), k1(r$build_paid_home),
+    if (is.na(r$gap_home)) '--' else pc(r$gap_home))
+}
 
 
 # THE REGISTER. One row per build-derived figure quoted in running text.
@@ -62,55 +123,78 @@ INFORMAL <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 #   pattern  -- sprintf template; each %s takes one expected figure
 #   value    -- what the build says it should be, one element per %s
 REGISTER <- list(
-  list(what    = 'step 3, informal share of children',
-       pattern = 'accounts for %s--%s\\%% of the estimated children',
-       value   = informal_share_range('children')),
-  # The grid flattens the hours spread, so the five geographies now round to
-  # one figure. A range would read as two numbers that are the same.
-  list(what    = 'step 3, informal share of hours',
-       pattern = 'and %s\\%% of the modeled annual hours',
-       value   = unique(informal_share_range('hours'))),
-
-  # Step 4: slots to children, and the school overlap.
-  list(what    = 'step 4a, children per funded slot HS and EHS',
-       pattern = 'funded slot: %s for Head Start and %s for Early Head Start',
-       value   = sprintf('%.3f', c(HS_ENROLLED_PER_SLOT,
-                                   (1 - EHS_PREGNANT_SHARE) * EHS_ENROLLED_PER_SLOT))),
-  list(what    = 'step 4b, flagged overlap share',
-       pattern = 'flagged share is %s\\%% in KY, %s\\%% in NJ, %s\\%% in NYS, %s\\%% in NYC, and %s\\%% in VA',
-       value   = sprintf('%.1f', 100 * vapply(GEO, hs_in_schools_share_of, numeric(1)))),
-  list(what    = 'step 4b, match radius',
-       pattern = 'geocodes are within %s meters',
-       value   = format(MATCH_METRES)),
-  # NSECE constants quoted in prose. Centre share once printed the ten-hour
-  # universe's values (0.876, 0.805) while the build used five-hour ones.
-  list(what    = 'step 1, universe ratio',
-       pattern = 'Universe ratio: %s.',
-       value   = sprintf('%.3f', NSECE_UNIVERSE_RATIO)),
-  # Step 8: the state adjustment to national employment growth, R(2024)/R(2019),
-  # from the LAUS input state_epop_projections.R reads (unrounded).
-  list(what    = 'step 8, employment growth adjustment KY NJ NY VA',
-       pattern = 'The state adjustment, the last term, is %s in KY, %s in NJ, %s in NY, and %s in VA',
+  list(what    = 'section 5, adjustment KY NJ NY VA, all-state range',
+       pattern = 'is %s in KY, %s in NJ, %s in NY, and %s in VA (%s to %s across all 50 states and DC)',
+       value   = c(f3(adj_new[ST4]), f3(range(adj_new[STATES51])))),
+  list(what    = 'section 4, OEWS ratio range by group',
+       pattern = 'the OEWS ratio runs from %s to %s without a degree and from %s to %s with one',
+       value   = c(f3(rng('no_ba')), f3(rng('ba')))),
+  list(what    = 'section 4, ratio table KY',
+       pattern = 'KY & %s & %s',
+       value   = f3(c(ratio(OEWS_R, 'KY', 'no_ba'), ratio(OEWS_R, 'KY', 'ba')))),
+  list(what    = 'section 4, ratio table NJ',
+       pattern = 'NJ & %s & %s',
+       value   = f3(c(ratio(OEWS_R, 'NJ', 'no_ba'), ratio(OEWS_R, 'NJ', 'ba')))),
+  list(what    = 'section 4, ratio table NYS',
+       pattern = 'NYS & %s & %s',
+       value   = f3(c(ratio(OEWS_R, 'NY', 'no_ba'), ratio(OEWS_R, 'NY', 'ba')))),
+  list(what    = 'section 4, ratio table VA',
+       pattern = 'VA & %s & %s',
+       value   = f3(c(ratio(OEWS_R, 'VA', 'no_ba'), ratio(OEWS_R, 'VA', 'ba')))),
+  list(what    = 'section 4, validity no degree',
+       pattern = 'No degree & %s & %s & %s',
+       value   = c(big(fte['no_ba']), big(oews_w['no_ba']), f2(fte['no_ba'] / oews_w['no_ba']))),
+  list(what    = 'section 4, validity degree',
+       pattern = 'Degree & %s & %s & %s',
+       value   = c(big(fte['ba']), big(oews_w['ba']), f2(fte['ba'] / oews_w['ba']))),
+  list(what    = 'section 4, validity total',
+       pattern = 'Total & %s & %s & %s',
+       value   = c(big(sum(fte)), big(sum(oews_w)), f2(sum(fte) / sum(oews_w)))),
+  list(what    = 'section 4, labour quantity ratio range',
+       pattern = 'the ratio of the two runs from %s (%s) to %s (%s)',
+       value   = c(f2(lo$oews_over_demand_no_ba), nm[[lo$state]],
+                   f2(hi$oews_over_demand_no_ba), nm[[hi$state]])),
+  list(what    = 'section 2, formal and centre share ranges, both sources',
+       pattern = 'the formal share is now %s to %s, against %s to %s with the NSECE shares. The center share is %s to %s, against %s to %s',
+       value   = f3(c(diag_rng(B_P0, 'formal_share'), diag_rng(B_NS, 'formal_share'),
+                      diag_rng(B_P0, 'centre_share'), diag_rng(B_NS, 'centre_share')))),
+  list(what    = 'section 2, formal share and program share, DC and WV',
+       pattern = '%s in DC and %s in West Virginia, where program children are %s\\%% and %s\\%% of that care',
        value   = local({
-         d <- read_csv('resources/epop/US_BLS__laus_state_epop__2006-2024.csv', show_col_types = FALSE)
-         e <- function(g, y) d$epop[d$geo == g & d$year == y]
-         sprintf('%.3f', vapply(c('KY', 'NJ', 'NY', 'VA'), function(g)
-           (e(g, 2024) / e('US', 2024)) / (e(g, 2019) / e('US', 2019)), numeric(1)))
+         d <- function(g) attr(B_P0[[g]], 'diagnostics')
+         c(f3(c(d('DC')$formal_share, d('WV')$formal_share)),
+           sprintf('%.0f', 100 * c(d('DC')$program_net / d('DC')$nonparental_total,
+                                   d('WV')$program_net / d('WV')$nonparental_total)))
        })),
-  list(what    = 'step 8, adjustment range, all 51',
-       pattern = '(%s to %s across all 50 states and DC)',
+  list(what    = 'section 2, formal share range, five memo geographies',
+       pattern = 'In the five memo geographies the formal share is %s to %s',
+       value   = f3(range(vapply(B_P0[GEO], function(r) attr(r, 'diagnostics')$formal_share, numeric(1))))),
+  list(what    = 'section 2, NYS Paid Home-Based, both sources',
+       pattern = 'Paid Home-Based has %s children, against %s with the NSECE shares',
+       value   = big(c(kids(B_P0, 'NY', 'Paid Home-Based'), kids(B_NS, 'NY', 'Paid Home-Based')))),
+  list(what    = 'section 2, p0 non-parental children over NSCH total, range and median',
+       pattern = 'non-parental care is %s to %s times the NSCH count (median %s)',
        value   = local({
-         d <- read_csv('resources/epop/US_BLS__laus_state_epop__2006-2024.csv', show_col_types = FALSE)
-         e <- function(y) { x <- d[d$year == y, ]; setNames(x$epop / x$epop[x$geo == 'US'], x$geo) }
-         a <- (e(2024) / e(2019))[setdiff(unique(d$geo), 'US')]
-         sprintf('%.3f', range(a))
+         r <- vapply(GEOGRAPHIES, function(g) {
+           d <- p0_children_of(g)
+           sum(d$pt + d$ft) / attr(B_P0[[g]], 'diagnostics')$nonparental_total
+         }, numeric(1))
+         f2(c(range(r), stats::median(r)))
        })),
-  list(what    = 'step 2, formal share, four regions',
-       pattern = 'formal share is %s\\%% in the Northeast, %s\\%% in the Midwest, %s\\%% in the South, and %s\\%% in the West',
-       value   = sprintf('%.1f', 100 * NSECE_FORMAL_SHARE[c('northeast', 'midwest', 'south', 'west')])),
-  list(what    = 'step 5, centre share, four regions',
-       pattern = 'who are Center-Based. It is %s in the Northeast, %s in the Midwest, %s in the South, and %s in the West',
-       value   = sprintf('%.3f', NSECE_CENTRE_HOME_SPLIT[c('northeast', 'midwest', 'south', 'west')]))
+  list(what    = 'section 2, NYS minus NYC against a direct rest-of-state build',
+       pattern = 'The difference is at most %s\\%% of the hours in a care type',
+       value   = sprintf('%.1f', ros_gap)),
+  list(what    = 'section 2, WV first-order formal vs programs',
+       pattern = 'smaller than the program children: %s against %s',
+       value   = big(c(wv[['formal']], wv[['program']]))),
+  list(what    = 'section 6, register row KY',  pattern = '%s & %s & %s & %s & %s & %s & %s', value = reg_row('KY', 'KY')),
+  list(what    = 'section 6, register row NJ',  pattern = '%s & %s & %s & %s & %s & %s & %s', value = reg_row('NJ', 'NJ')),
+  list(what    = 'section 6, register row NYS', pattern = '%s & %s & %s & %s & %s & %s & %s', value = reg_row('NY', 'NYS')),
+  list(what    = 'section 6, register row NYC', pattern = '%s & %s & %s & %s & %s & %s & %s', value = reg_row('NYC', 'NYC')),
+  list(what    = 'section 6, register row VA',  pattern = '%s & %s & %s & %s & %s & %s & %s', value = reg_row('VA', 'VA')),
+  list(what    = 'section 3, crosswalk households',
+       pattern = 'All %s households in the simulator',
+       value   = big(xw_n))
 )
 
 

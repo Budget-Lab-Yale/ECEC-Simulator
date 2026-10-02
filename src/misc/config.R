@@ -403,18 +403,24 @@ get_run_states <- function(runscript) {
     trimws() %>%
     toupper()
 
-  unknown <- setdiff(postal, names(STATE_POSTAL_TO_FIPS))
+  unknown <- setdiff(postal, c(names(STATE_POSTAL_TO_FIPS),
+                               names(SUBSTATE_GEOGRAPHIES)))
   if (length(unknown) > 0) {
     stop('Unknown state abbreviation(s) in runscript: ',
          paste(unknown, collapse = ', '),
-         '. Use USPS postal codes (50 states + DC).')
+         '. Use USPS postal codes (50 states + DC) or a sub-state code (',
+         paste(names(SUBSTATE_GEOGRAPHIES), collapse = ', '), ').')
   }
   if (any(duplicated(postal))) {
     stop('Duplicate state(s) in runscript: ',
          paste(postal[duplicated(postal)], collapse = ', '))
   }
 
-  STATE_POSTAL_TO_FIPS[postal]
+  # Sub-state geography carries its state's FIPS; init adds county filter
+  setNames(vapply(postal, function(p) {
+    if (p %in% names(SUBSTATE_GEOGRAPHIES)) SUBSTATE_GEOGRAPHIES[[p]]$statefip
+    else unname(STATE_POSTAL_TO_FIPS[p])
+  }, numeric(1)), postal)
 }
 
 

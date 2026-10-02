@@ -18,9 +18,17 @@ import glob
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO = os.path.dirname(ROOT)
+# code/ and cluster/ hold the build since the September reorganisation; the
+# list once stopped at states/ and tests/, so the build itself went unscanned.
+# resources/ holds the supply and employment builders the state files use.
 files = sorted(glob.glob(os.path.join(ROOT, '*.R')) +
+               glob.glob(os.path.join(ROOT, 'code', '*.R')) +
+               glob.glob(os.path.join(ROOT, 'cluster', '*.R')) +
                glob.glob(os.path.join(ROOT, 'states', '*.R')) +
-               glob.glob(os.path.join(ROOT, 'tests', '*.R')))
+               glob.glob(os.path.join(ROOT, 'tests', '*.R')) +
+               glob.glob(os.path.join(REPO, 'resources', '**', '*.R'), recursive=True) +
+               sys.argv[1:])   # extra files, e.g. to test the scanner itself
 
 print('scanning %d R files for summarise()/mutate() name shadowing\n' % len(files))
 
@@ -53,10 +61,21 @@ for f in files:
             pos = re.search(r'\b%s\s*=(?!=)' % re.escape(name), block)
             if not pos:
                 continue
-            rest = block[pos.end():]
-            if re.search(r'\b%s\s*\[' % re.escape(name), rest):
-                ln = s[:start].count('\n') + 1
+            # rest = everything after this argument's own expression
+            nxt = re.search(r',\s*[A-Za-z_][A-Za-z0-9_.]*\s*=(?!=)', block[pos.end():])
+            rest = block[pos.end() + nxt.start():] if nxt else ''
+            ln = s[:start].count('\n') + 1
+            if re.search(r'\b%s\s*\[' % re.escape(name), block[pos.end():]):
                 print('  %s:%d  %s() reassigns %r then indexes it'
+                      % (os.path.basename(f), ln, m.group(1), name))
+                bad += 1
+            # summarise() only: reassigned name inside a later aggregate --
+            # sum(h * w) / sum(w) after w = sum(w) divides by the scalar.
+            # mutate() reuse is normal, so not flagged there.
+            elif m.group(1) != 'mutate' and re.search(
+                    r'\b(sum|mean|median|min|max|weighted\.mean)\s*\([^()]*\b%s\b'
+                    % re.escape(name), rest):
+                print('  %s:%d  %s() reassigns %r then aggregates it again'
                       % (os.path.basename(f), ln, m.group(1), name))
                 bad += 1
 

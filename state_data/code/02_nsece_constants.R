@@ -3,7 +3,7 @@
 #
 # From the NSECE 2019 household file, w/ the classification
 # src/1_processing/1a_nsece_processing.R uses, by Census region and nationally:
-# formal share, centre-home split, informal mix, weekly hours -- each w/ its
+# formal share, center-home split, informal mix, weekly hours -- each w/ its
 # unweighted record count. Full precision to out/nsece_universe.csv.
 #
 # TWO UNIVERSES, and the build uses A:
@@ -40,7 +40,7 @@ suppressPackageStartupMessages({
 # Census region codes as HH9_REGION carries them.
 REGIONS <- c('1' = 'northeast', '2' = 'midwest', '3' = 'south', '4' = 'west')
 
-# Centre price split, the boundary 1a_nsece_processing.R uses.
+# Center price split, the boundary 1a_nsece_processing.R uses.
 PRICE_BOUNDARY <- 4.75
 
 # Weekly hours below which the simulator calls an arrangement part-time.
@@ -49,7 +49,7 @@ PRICE_BOUNDARY <- 4.75
 PT_FT_CUT <- 20
 
 # Primary-arrangement ranking. Same order and same reason as the simulator:
-# paid before unpaid, centre before home, hours only as a tie-break.
+# paid before unpaid, center before home, hours only as a tie-break.
 CATEGORY_PRIORITY <- c('K-8', 'High-Priced Center-Based',
                        'Low-Priced Center-Based', 'Unpaid Center-Based',
                        'Paid Home-Based', 'Other Paid', 'Unpaid Home-Based',
@@ -257,7 +257,7 @@ primary_arrangement <- function(arr) {
   # non-parental hours.
   #
   # K-8 dropped first. NSCH's question asks about care from someone other than
-  # parent -- names centres, preschool, Head Start, family child care,
+  # parent -- names centers, preschool, Head Start, family child care,
   # nannies, babysitters, and relatives, doesn't name school. Counting school
   # hours would put every school-age child over ten-hour line for wrong
   # reason.
@@ -290,7 +290,7 @@ summarise_universe <- function(kids, label, all_children = NULL) {
   # Params:
   #   - kids (tibble): child rows w/ ecec_choice, hours, child_weight, region
   #   - label (chr)
-  #   - all_children (tibble|NULL): every child 0-4, in care or not. The centre
+  #   - all_children (tibble|NULL): every child 0-4, in care or not. The center
   #       price-band shares are shares of THAT denominator, not of children in
   #       care, which is how 00_main.R states them.
   #
@@ -323,7 +323,7 @@ summarise_universe <- function(kids, label, all_children = NULL) {
               .groups = 'drop') %>%
     mutate(annual = weekly * 50)
 
-  # Centre price bands. Only the RATIO of the two enters the blended
+  # Center price bands. Only the RATIO of the two enters the blended
   # Center-Based hours, so the denominator cancels there -- but 00_main.R and
   # the memo both print the shares themselves, so compute them as stated.
   bands <- NULL
@@ -350,8 +350,8 @@ summarise_universe <- function(kids, label, all_children = NULL) {
               unpaid_share = w(ecec_choice == 'Unpaid Center-Based', child_weight),
               .groups = 'drop')
 
-  # Centre-home split of paid formal care, by region -- divides step 5's other
-  # formal. Paid centres (both price bands) over paid centres + Paid
+  # Center-home split of paid formal care, by region -- divides step 5's other
+  # formal. Paid centers (both price bands) over paid centers + Paid
   # Home-Based. Unpaid Center-Based excluded: own share, step 4.
   PAID_CENTRE <- c('High-Priced Center-Based', 'Low-Priced Center-Based')
   split <- kids %>%
@@ -397,7 +397,7 @@ summarise_universe <- function(kids, label, all_children = NULL) {
     ungroup() %>%
     select(universe, region, ecec_choice, children, share)
 
-  # Paid centres pooled into one Center-Based row -- no price-band blend.
+  # Paid centers pooled into one Center-Based row -- no price-band blend.
   hrs_r <- kids %>%
     filter(!is.na(region)) %>%
     mutate(ecec_choice = dplyr::if_else(ecec_choice %in% PAID_CENTRE,

@@ -489,6 +489,36 @@ run_acs_processing <- function() {
     fread() %>%
     tibble()
 
+  # County for sub-state runs (SUBSTATE_GEOGRAPHIES, constants.R). Raw pull
+  # carries no COUNTYFIP -- take it from the household crosswalk built off
+  # IPUMS usa:33, same 2019 1-year sample (resources/acs/
+  # acs_county_crosswalk_2019.py). Joins on SERIAL; CBSERIAL must agree, else
+  # the two extracts are not the same households. Crosswalk absent -> no
+  # countyfip, a sub-state run then fails at simulation init.
+  county_xwalk_path <- file.path('resources', 'acs',
+                                 'US_ACS__household_county_puma_crosswalk__2019.csv.gz')
+  if (!'COUNTYFIP' %in% names(acs_raw) && file.exists(county_xwalk_path)) {
+    # Base gzfile reader -- fread needs R.utils for .gz, base R does not.
+    county_xwalk <- utils::read.csv(gzfile(county_xwalk_path),
+                                    colClasses = 'numeric') %>%
+      tibble() %>%
+      select(SERIAL, xw_cbserial = CBSERIAL, COUNTYFIP)
+    acs_raw <- acs_raw %>%
+      left_join(county_xwalk, by = 'SERIAL')
+    in_2019 <- acs_raw$YEAR == 2019
+    # as.numeric: fread may read 13-digit CBSERIAL as integer64
+    bad <- in_2019 & (is.na(acs_raw$xw_cbserial) |
+                        acs_raw$xw_cbserial != as.numeric(acs_raw$CBSERIAL))
+    if (any(bad)) {
+      stop(sum(bad), ' 2019 person records fail the county crosswalk join ',
+           '(SERIAL absent or CBSERIAL disagrees): ', county_xwalk_path,
+           ' is not built from this raw pull. Rebuild it with ',
+           'resources/acs/acs_county_crosswalk_2019.py.')
+    }
+    acs_raw <- select(acs_raw, -xw_cbserial)
+    cat('  County crosswalk joined: ', county_xwalk_path, '\n', sep = '')
+  }
+
   # Corrected Census tax-unit crosswalk (April 2024 Census correction).
   # The legacy IPUMS TAXID splits nearly all married couples into two
   # separate tax units; see docs/ecec_team_taxid_memo_2026-08-17.md.
@@ -524,7 +554,7 @@ run_acs_processing <- function() {
         HHWT,
         HHINCOME,
         REGION,
-        any_of('STATEFIP'),
+        any_of(c('STATEFIP', 'COUNTYFIP')),
         PERNUM, PERWT,
         AGE, SEX, MARST, RACE, HISPAN, EDUC,
         RELATE,
@@ -612,6 +642,10 @@ run_acs_processing <- function() {
         # NA when the raw pull predates STATEFIP; state runs then fail loudly
         # at simulation init.
         statefip  = if ('STATEFIP' %in% names(acs)) first(STATEFIP) else NA_integer_,
+        # IPUMS county within state (0 = not identified), for sub-state runs
+        # (SUBSTATE_GEOGRAPHIES, constants.R). NA when raw pull lacks COUNTYFIP;
+        # a sub-state run then fails loudly at simulation init.
+        countyfip = if ('COUNTYFIP' %in% names(acs)) first(COUNTYFIP) else NA_integer_,
         n_members = n(),
         .groups   = 'drop'
       )

@@ -15,7 +15,7 @@
 # CA State Preschool Program 140,920 + Transitional Kindergarten 104,694.
 # CA, MI only geographies w/out a CCD count. Excludes preschool special ed (52,307), which
 # CCD counts elsewhere -- so CA reads low against CCD states. CSPP incl.
-# contracted non-school centres.
+# contracted non-school centers.
 CA_PREK             <- 245614   # NIEER 2018-19, CSPP + TK (no CCD rows)
 CA_HEAD_START       <- 70631    # NIEER State of Preschool 2019, ages 3-4
 CA_EARLY_HEAD_START <- 24052    # NIEER State(s) of Head Start (2023), 2018-19 bar

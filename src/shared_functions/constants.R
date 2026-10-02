@@ -201,6 +201,29 @@ STATE_POSTAL_TO_FIPS <- c(
   WV = 54, WI = 55, WY = 56
 )
 
+# Sub-state geographies a runscript may name beside the states. Each selects
+# households on STATEFIP and IPUMS COUNTYFIP (3-digit, within state; 0 = county
+# not identified). NYC = five boroughs: Bronx 005, Kings 047, New York 061,
+# Queens 081, Richmond 085 -- every NYC PUMA nests in one borough, so IPUMS
+# identifies all five. Needs a raw ACS pull carrying COUNTYFIP.
+#
+# `parent`: the state whose figures a sub-state geography takes where no
+# source has its own -- NSCH rate (state_data build), childcare wage ratio
+# (state_supply_params.R), age-sex composition (state_epop_projections.R).
+# One table, so a new sub-state geography is one entry here.
+SUBSTATE_GEOGRAPHIES <- list(
+  NYC = list(statefip = 36L, countyfip = c(5L, 47L, 61L, 81L, 85L), parent = 'NY')
+)
+
+# Geography whose figures `geo` takes: its parent state if sub-state, else
+# itself.
+#   - geo (chr): postal code or sub-state code
+# Returns: (chr) postal code
+parent_geo <- function(geo) {
+  p <- SUBSTATE_GEOGRAPHIES[[geo]]$parent
+  if (is.null(p)) geo else p
+}
+
 # Convergence settings for the state demand-target contraction
 # (adjust_alpha_for_state): delta_t += log(H_target / H_model), iterated until
 # the max abs log-gap falls below tolerance

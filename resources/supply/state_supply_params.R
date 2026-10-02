@@ -17,35 +17,28 @@
 # The simulator already provides the remedy as an INPUT: when
 # config/state/supply/<ST>.yaml exists, parse_supply_params_yaml() replaces the
 # whole parameter set for that state. So these files carry the national
-# parameters unchanged, with ONE quantity re-based to the state:
+# parameters unchanged, w/ TWO quantities re-based to the state -- L_0, w_0.
 #
-#     labor_supply = colSums(L_req * state base-year hours)
+# L_0 (labor_supply). Simulator sets it itself whenever demand re-anchored:
+# 3a_initialize_simulation.R replaces labor_supply w/ colSums(L_req * model
+# base-year sector hours) from adjust_alpha_for_state() -- ratio exactly 1 in
+# base year. Every geography has config/state/demand/<GEO>.csv, so value here
+# a FALLBACK, used only for a state w/out one:
 #
-# That is the same definition 1a_nsece_processing.R uses nationally -- labour
-# requirements times base-year hours -- applied to the state's own base-year
-# hours, which are the committed demand targets. It puts the ratio back at
-# about 1 in the base year, which is where the curve was calibrated.
+#     labor_supply = national NSECE L_0 x state share of national OEWS workers
 #
-# FALLBACK ONLY when demand is re-anchored. 3a_initialize_simulation.R then
-# replaces labor_supply with colSums(L_req * model base-year sector hours) from
-# adjust_alpha_for_state() -- the model's own centre split, not LOW_FRACTION --
-# so the ratio is exactly 1 in the base year. This value is used as is only for
-# a state with no config/state/demand/<ST>.csv.
+# per group. Demand-based figure, colSums(L_req * state demand hours) -- same
+# definition 1a_nsece_processing.R uses nationally -- printed beside it
+# (oews_over_demand) as a cross-check.
 #
-# WAGES ALSO STATE-SPECIFIC. state_childcare_wages.R measures hourly earnings
-# of childcare workers by state, education from 2018, 2019 records of ACS
-# 2015-2019 5-year (wage + business income, self-employed included); this
-# scales national wage by state's ratio to national figure. ACS national level
-# $12.75 no-BA, $19.49 BA
-# against NSECE $12.06, $19.70 -- RATIO keeps NSECE's definition, which rest of
-# parameter set built on, cancels any difference common to every state.
-#
-# Setting w_0 to the state wage is what the curve wants: at L = L_0 the wage is
-# then the state's own base-year wage, which is the pair the curve is anchored
-# on. A cell under 50 ACS workers takes ratio 1, so that state keeps the
-# national wage for that education group rather than swinging on a handful of
-# records -- nine cells in 2018-19 records (BA: AK, DC, DE, ID, MT, ND, RI, WY;
-# no-BA: VT).
+# w_0 (wages). OEWS May 2019, by occupation (oews_childcare_2019.R). no_ba =
+# Childcare Workers (39-9011); ba = Preschool Teachers (25-2011) + Special
+# Education Teachers, Preschool (25-2051) + Childcare Administrators (11-9031),
+# employment-weighted. Scales national NSECE wage by
+# state hourly mean / national hourly mean. RATIO keeps NSECE's definition,
+# which rest of parameter set built on, cancels any difference common to every
+# state. Suppressed OEWS cell -> ratio 1. At L = L_0 market wage = state's own
+# base-year wage -- pair the curve anchored on.
 #
 # WHAT IS DELIBERATELY NOT CHANGED. labor_requirements, elasticities and
 # per_unit_residual stay national.
@@ -73,10 +66,17 @@ suppressPackageStartupMessages({
 
 DIR      <- file.path('resources', 'supply')
 NATIONAL <- file.path(DIR, 'US_NSECE__national_supply_parameters__2019.yaml')
-WAGES    <- file.path(DIR, 'state_childcare_wage_ratios.csv')
+# Wage ratios, state employment share: OEWS May 2019 by occupation
+# (oews_childcare_2019.R).
+WAGES    <- file.path(DIR, 'state_childcare_wage_ratios_oews.csv')
 DEMAND   <- file.path('config', 'state', 'demand')
 OUT_DIR  <- file.path('config', 'state', 'supply')
 DIAG     <- file.path(DIR, 'state_supply_diagnostics.csv')
+
+# Sub-state geographies (NYC) take their parent state's wage ratio --
+# parent_geo(), constants.R; OEWS state file has no NYC. Employment share =
+# parent's x the sub-state's share of the parent's demand-based L_0.
+source('src/shared_functions/constants.R')
 
 # The demand file carries ONE Center-Based row covering both price bands, since
 # no state publishes the dispersion a split would need. Splitting it here needs
@@ -177,20 +177,21 @@ main <- function() {
 
   if (!file.exists(WAGES)) {
     cat('MISSING INPUT: ', WAGES,
-        ' -- run state_childcare_wages.R first\n', sep = '')
+        ' -- run oews_childcare_2019.R first\n', sep = '')
     quit(status = 1)
   }
   wr <- read_csv(WAGES, show_col_types = FALSE)
 
-  wage_ratio <- function(st, grp) {
-    r <- wr$wage_ratio[wr$state == st & wr$educ_group == grp]
+  wage_ratio <- function(st, grp, col = 'wage_ratio') {
+    st <- parent_geo(st)
+    r <- wr[[col]][wr$state == st & wr$educ_group == grp]
     if (length(r) != 1 || !is.finite(r) || r <= 0) {
-      stop('no usable wage ratio for ', st, '/', grp, ' in ', WAGES)
+      stop('no usable ', col, ' for ', st, '/', grp)
     }
     r
   }
 
-  files <- list.files(DEMAND, pattern = '^[A-Z]{2}[.]csv$', full.names = TRUE)
+  files <- list.files(DEMAND, pattern = '^[A-Z]{2,3}[.]csv$', full.names = TRUE)
   if (!length(files)) {
     cat('no state demand files in ', DEMAND, '\n', sep = '')
     quit(status = 1)
@@ -201,12 +202,27 @@ main <- function() {
     st <- sub('[.]csv$', '', basename(f))
     L  <- state_labor_supply(natl, f)
 
+    # OEWS employment: national NSECE L_0 x state share of national OEWS
+    # workers, per group. Fallback only -- simulator replaces L_0 w/ model
+    # base-year hours whenever a demand file exists. NYC: NY's share scaled
+    # by NYC's share of NY demand-based L_0.
+    es <- function(grp) {
+      s <- wage_ratio(st, grp, col = 'emp_share')
+      if (parent_geo(st) != st) {
+        Ln <- state_labor_supply(natl, file.path(DEMAND, paste0(parent_geo(st), '.csv')))
+        s <- s * L[[grp]] / Ln[[grp]]
+      }
+      s
+    }
+    L_oews <- list(no_ba = natl$labor_supply$no_ba * es('no_ba'),
+                   ba    = natl$labor_supply$ba    * es('ba'))
+
     rn <- wage_ratio(st, 'no_ba')
     rb <- wage_ratio(st, 'ba')
     w  <- list(no_ba = natl$wages$no_ba * rn, ba = natl$wages$ba * rb)
 
     out <- natl
-    out$labor_supply <- list(no_ba = L$no_ba, ba = L$ba)
+    out$labor_supply <- L_oews
     out$wages        <- w
 
     if (!check_only) {
@@ -216,8 +232,12 @@ main <- function() {
 
     rows[[st]] <- tibble::tibble(
       state          = st,
-      L0_no_ba       = L$no_ba,
-      L0_ba          = L$ba,
+      L0_no_ba       = L_oews$no_ba,
+      L0_ba          = L_oews$ba,
+      L0_demand_no_ba = L$no_ba,
+      L0_demand_ba    = L$ba,
+      oews_over_demand_no_ba = L_oews$no_ba / L$no_ba,
+      oews_over_demand_ba    = L_oews$ba / L$ba,
       natl_L0_no_ba  = natl$labor_supply$no_ba,
       share_of_natl  = L$no_ba / natl$labor_supply$no_ba,
       wage_ratio_no_ba = rn,
@@ -239,15 +259,17 @@ main <- function() {
     wage_ratio_no_ba = round(wage_ratio_no_ba, 3),
     wage_ratio_ba    = round(wage_ratio_ba, 3),
     w_no_ba = round(w_no_ba, 2),
-    w_ba    = round(w_ba, 2)) %>%
-    select(state, L0_no_ba, share_of_natl, wage_ratio_no_ba, w_no_ba,
-           wage_ratio_ba, w_ba)), row.names = FALSE)
+    w_ba    = round(w_ba, 2),
+    oews_over_demand_no_ba = round(oews_over_demand_no_ba, 2),
+    oews_over_demand_ba    = round(oews_over_demand_ba, 2)) %>%
+    select(state, L0_no_ba, oews_over_demand_no_ba, oews_over_demand_ba,
+           wage_ratio_no_ba, w_no_ba, wage_ratio_ba, w_ba)), row.names = FALSE)
 
   cat('\n   national wages: no_ba $', sprintf('%.2f', natl$wages$no_ba),
       '  ba $', sprintf('%.2f', natl$wages$ba), '\n', sep = '')
-  cat('   share_of_natl is what L/L_0 collapsed to before these files existed.\n')
-  cat('   a wage ratio of exactly 1.000 is a cell under 50 ACS workers,\n')
-  cat('   which keeps the national wage rather than a handful of records.\n')
+  cat('   wage_ratio = OEWS state / national hourly mean. A ratio of exactly\n')
+  cat('   1.000 is a suppressed OEWS cell, which keeps the national wage.\n')
+  cat('   oews_over_demand = OEWS-based L_0 / demand-based L_0.\n')
   if (!check_only) {
     cat('wrote ', OUT_DIR, '/<ST>.yaml and ', DIAG, '\n', sep = '')
   }

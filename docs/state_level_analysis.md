@@ -32,10 +32,18 @@ A new optional runscript column: `state`.
 | column absent, blank, or `all` | National run — exact current behavior, bit-identical output |
 | `NY` | Single-state run for New York |
 | `NY;CA;TX` | Multiple states — independent per-state runs (see §6) |
+| `NYC` | New York City — the five boroughs, a sub-state geography |
 
 - Format: **USPS postal abbreviations**, semicolon-separated (CSV-safe).
   Crosswalked in code to FIPS codes (IPUMS `STATEFIP` is numeric FIPS) via a
   51-entry table (50 states + DC) in `constants.R`.
+- **Sub-state geographies.** `SUBSTATE_GEOGRAPHIES` in `constants.R` names
+  each one with its state FIPS and IPUMS county codes. NYC is STATEFIP 36 with
+  COUNTYFIP 005 (Bronx), 047 (Kings), 061 (New York), 081 (Queens), and 085
+  (Richmond). Every NYC PUMA nests in one borough, so IPUMS identifies all
+  five. `select_geo_hh_ids()` applies the county filter. A sub-state
+  geography runs as its own independent market, like a state, and can run
+  beside its state (`NY;NYC`).
 - The value must be identical on every row of the runscript (it is a
   run-level setting, validated at parse time).
 - Unknown abbreviation, or a state with zero households after filtering,
@@ -49,6 +57,10 @@ A new optional runscript column: `state`.
   it, so **state runs require a freshly generated interface** (`-N/-A/-C`
   interfaces predating this feature cannot be used for state runs; national
   runs remain compatible with old interfaces).
+- **A sub-state run also needs `COUNTYFIP`** in the raw ACS pull, which ACS
+  processing carries into `households` as `countyfip`. A NYC run on an
+  interface without it stops at initialization; it never falls back to the
+  whole state.
 - **Calibration additionally stores the base-year choice-probability
   matrices (`p0`)** alongside the alpha matrices (same `.rds`, same
   `row_ids` keys). The state demand adjustment (§5) needs `p0`; recomputing
@@ -64,6 +76,9 @@ processing (national)  →  calibration (national)
               - recompute alphas to hit state demand targets   (§5)
               - override supply params if state yaml present    (§7)
               - resolve state epop file if present              (§8)
+              - take the state's rows of the national price
+                wedge cache (income percentiles stay national,
+                as the price models were trained)
         →  each simulation year: loop over states               (§6)
               - per-state equilibrium (baseline + counterfactuals)
               - per-state warm-start prices
@@ -232,40 +247,79 @@ KY, NJ, NY and VA on 2026-09-24 measured the consequence: the ratio came out
 and the BA wage solved *below* the no-BA wage in every state, because its
 elasticity is 2 rather than 4 and the same ratio bites twice as hard.
 
-So each file carries the national parameters unchanged with one quantity
-re-based to the state:
+So each file carries the national parameters with `labor_supply` re-based to
+the state. Until 1 October 2026 the file held
 
 ```
 labor_supply = colSums(L_req * state base-year hours)
 ```
 
 which is the definition `1a_nsece_processing.R` uses nationally, applied to the
-state's own base-year hours.
+state's own base-year hours. The file now holds the OEWS-based figure instead,
+national L_0 × the state's share of national OEWS workers (below), and prints
+this demand-based figure beside it.
 
 **When demand is re-anchored, the simulator replaces that figure.** At state
 initialisation (`3a_initialize_simulation.R`), `adjust_alpha_for_state()`
 returns the model's own base-year hours by supply sector at the solved deltas,
 and the simulator sets `L_0 = colSums(L_req * sector_hours)`. The contraction
-pins combined centre hours but not the low/high split, and the two bands differ
+pins combined center hours but not the low/high split, and the two bands differ
 sharply in BA labour per hour (0.035 against 0.076), so a file value built from
 a fixed national split would leave the base-year ratio off 1 for BA labour.
 From the model's own hours, `L / L_0 = 1` in the base year by construction.
 The file's `labor_supply` remains the fallback for a state with no demand file.
 
-**`wages` are state-specific too.** `resources/supply/state_childcare_wages.R`
-measures hourly earnings of childcare workers by state and education from the
-2018 and 2019 records of the 2015–2019 ACS 5-year sample (IPUMS extract `usa:33`,
-defined in `resources/supply/acs_ipums_extract_2019.R`; the summary is written
-on the cluster by `resources/supply/acs_ccwage_2019.py`), and the national wage
-is scaled by each state's ratio to the national figure. Earnings are wage plus
-business income, so self-employed providers — 16.8% of weighted childcare
-staff — count. Every ratio carries a replicate-weight standard error (largest
-among cells used 0.245, NV/ba). ACS puts the national level at $12.75 no-BA and
-$19.49 BA against NSECE's $12.06 and $19.70; using a *ratio* rather than the
-ACS level keeps NSECE's definition — which the rest of the parameter set is
-built on — and cancels a difference common to every state. A cell under 50 ACS
-workers takes ratio 1 and keeps the national wage; nine cells are that thin
-(BA: AK, DC, DE, ID, MT, ND, RI, WY; no-BA: VT).
+**`wages` and the labour quantity come from BLS occupations.**
+`resources/supply/oews_childcare_2019.R` reads OEWS May 2019 (BLS
+`oesm19st.zip`, held at `state_data/raw/US_OEWS__occupational_employment_and_wages_by_state__2019-05.zip`)
+for every SOC occupation that cares for children under school age -- four:
+
+| SOC | Occupation | Simulator group |
+|---|---|---|
+| 39-9011 | Childcare Workers | no-BA |
+| 25-2011 | Preschool Teachers, Except Special Education | BA |
+| 25-2051 | Special Education Teachers, Preschool | BA |
+| 11-9031 | Education and Childcare Administrators, Preschool and Daycare | BA |
+
+OEWS has no education detail, so the group is a mapping by occupation, not a
+measured degree split. Kindergarten, elementary, and other special-education
+teachers teach school-age children, and Teaching Assistants (25-9045) is one
+code from preschool to grade 12, mostly K-12, so none of them is included. BLS
+publishes 25-2051 pay as annual only; its hourly figure is the annual mean ÷
+2,080, OEWS's own rule. Each state's wage is the national NSECE wage × the
+state hourly mean ÷ the national hourly mean, BA weighted by employment over its
+three occupations. The national figure is the 50 states and DC, because the state
+file has no national row. Using a *ratio* keeps NSECE's wage definition, which
+the rest of the parameter set is built on. Ratios run 0.757 to 1.338 (no-BA)
+and 0.725 to 1.429 (BA). BLS publishes no 25-2051 row for DE, DC, HI, LA, ME,
+NH, VA, or WV and suppresses its employment in OR; it publishes no 11-9031 row
+for DC and suppresses 11-9031 employment in FL and OR. BA in those states rests
+on the other occupations. NY has the highest BA ratio: it holds 5,930 of the
+20,710 special-education preschool teachers, at $43.24 an hour against $31.79
+nationally. ACS industry-based ratios were the wage source until 1 October
+2026; they correlated with the three-occupation OEWS ratios at 0.70 for no-BA
+and 0.32 for BA. They and their
+scripts were removed that day.
+
+Each file's `labor_supply` is the national NSECE L_0 × the state's share of
+national OEWS workers in that group. The demand-based figure, labour
+requirements × the state's base-year hours, is printed beside it. A run with a
+demand file replaces both with the model's own base-year hours (below).
+
+**Validity check.** National NSECE labour supply over 2,080 hours, against
+national OEWS employment: no-BA 609,608 FTE against 561,530 workers (1.09), BA
+262,634 against 499,860 (0.53), total 0.82. OEWS counts wage and salary jobs
+only, so self-employed home-based providers are absent from it — the no-BA
+ratio above 1 fits that. The BA ratio says the occupation mapping puts more
+workers in BA than NSECE's degree measure does: many OEWS preschool teachers
+hold no degree, and the occupation includes teachers in public schools.
+
+**State by state, OEWS labour and demand-implied labour disagree.** The
+OEWS-based L_0 over the demand-based one runs from 0.57 (HI) to 2.57 (NE) for
+no-BA, mean 1.12 across the 52 files (p0-share demand files, 1 October 2026). A state's share of national childcare
+workers is often far from its share of the base-year care hours its demand file
+implies. Runs with a demand file do not feel this, because the simulator
+replaces L_0 with the model's own hours; it says the OEWS fallback is weak.
 
 `labor_requirements`, `elasticities` and `per_unit_residual` stay national.
 `per_unit_residual` is the one worth stating: the equilibrium solves
@@ -292,21 +346,32 @@ Simulation-year employment targets are
   swapped.
 
 **The employment files are built, not hand-written.**
-`resources/epop/state_epop_projections.R` writes one per state from BLS LAUS
-2006–2024; `resources/epop/US_BLS__laus_state_epop__2006-2024.csv` is the input
-it reads, pulled from the BLS API by `resources/epop/bls_laus_epop.R` (series
-`LASST{FIPS}0000000000007`, seasonally adjusted, ages 16+; national `LNS12300000`).
-All 50 states and DC are present: `STATES` in that script is every entry of
-the FIPS table in `src/shared_functions/constants.R`. Each file is the national
-path times R, the state's LAUS epop over the national CPS epop (annual means),
-held flat outside 2006–2024. LAUS has no sex or age detail, so every bin takes
-the same R. Only the change in R since 2019 reaches the simulator, so runs from
-2026 get national growth times R(2024) / R(2019), one adjustment per state
-(0.960 to 1.043 across the 51). LAUS is model-based and smooths CPS sampling
-noise, so single years need no pooling. It is a ratio rather than a level because ACS runs 1 to 3
-points below the CPS-based national series for men and above it for women — a
-reference-period difference about the survey, not the state — and that
-difference cancels in a ratio. The script's header explains the choice in full.
+`resources/epop/state_epop_projections.R` writes one per state, DC, and NYC
+from the national CBO cell rates and each state's own age-sex composition:
+
+1. **Composition.** The share of the state's population 16+ in each sex × age
+   cell, from the ACS (`resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`).
+   The national composition is the sum over the states.
+2. **Implied rate.** The rate the state would have if each cell had the CBO
+   national rate: Σ cell share × CBO cell rate. The same sum with the national
+   composition gives the national rate.
+3. **Uniform scale.** Every cell is the CBO cell rate × k, where k = national
+   rate ÷ state implied rate. So the state's aggregate equals the national
+   rate, and a state with the national composition gets the national path.
+   The script checks this on every build, for every state and year, and stops
+   if any aggregate misses the national rate.
+
+The national file has no 60–64 or 65+ rates from 2026 on, so each year's sum
+runs over the cells that have a rate, for the state and the nation alike.
+Composition is held at its nearest ACS year outside 2006–2024, so runs from
+2026 use the 2024 composition. Only the change in k since 2019 reaches the
+simulator: a state's growth path differs from the national one only through
+the change in its age-sex composition. Runs from 2026 get national growth ×
+k(2024)/k(2019): 0.989 (DC) to 1.013 (DE) across the 52 files, against 0.960 to
+1.043 under the LAUS method it replaced (30 September to 1 October 2026; its
+input and download script were then removed). The state's own labour market
+does not enter. NYC takes New York's composition until a county-level one is
+built.
 Base-year employment *levels* always come from the state-filtered data; only
 the growth path is taken from the file.
 
@@ -352,6 +417,8 @@ config/state/
 
 Each falls back to the national input when absent. Demand and employment are
 optional; a state with a demand file also needs its supply file (§7). All
-three are built, for the 50 states and DC, by the scripts named above. `<ST>`
-is the USPS postal abbreviation, uppercase. How the demand targets are built is
+three are built, for the 50 states, DC, and NYC, by the scripts named above.
+`<ST>` is the USPS postal abbreviation, uppercase, or a sub-state code
+(`NYC`). NYC's supply file takes New York's wage ratio, and its employment
+file takes New York's age-sex composition: neither source has a city figure. How the demand targets are built is
 in `state_data/README.md`.

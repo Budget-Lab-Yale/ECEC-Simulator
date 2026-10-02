@@ -164,7 +164,7 @@ check_vec(NSECE_RESIDUAL_MIX * sum(NSECE_RESIDUAL_MIX), 'informal_mix')
 check_vec(NSECE_PART_TIME, 'part_time_share')
 
 # NSECE_ANNUAL_HOURS is 50 x the national weekly mean, except Center-Based,
-# which blends the two paid-centre price bands by their shares.
+# which blends the two paid-center price bands by their shares.
 for (ty in setdiff(ECEC_TYPES, 'Center-Based')) {
   r <- lookup('weekly_hours', ty)
   if (is.null(r)) {

@@ -36,7 +36,7 @@ OUT_DIR = sys.argv[1] if len(sys.argv) > 1 else '.'
 YEARS = [2018, 2019, 2020, 2021, 2022, 2023]
 
 # The build's six types, from SIPP's flags. Priority order matches the
-# simulator's own rule: paid centre > unpaid centre > paid home > other paid >
+# simulator's own rule: paid center > unpaid center > paid home > other paid >
 # unpaid home > other unpaid. SIPP cannot see payment per arrangement, so
 # "paid" here is the household's EPAY answer -- an approximation, and one more
 # reason SIPP is not a drop-in.

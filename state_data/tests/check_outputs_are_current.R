@@ -94,23 +94,12 @@ for (g in GEOGRAPHIES) {
 }
 
 ## simulator copies ----------------------------------------------------------
-# Simulator reads config/state/demand/<GEO>.csv, not out/. Each whole-state
-# copy must equal out/<GEO>.csv, pass simulator's own reader. County-defined
-# geography (NYC) must have no copy -- simulator would read it as a state.
+# Simulator reads config/state/demand/<GEO>.csv, not out/. Every copy, NYC's
+# incl., must equal out/<GEO>.csv, pass simulator's own reader.
 cat('\nchecking the simulator copies in', SIMULATOR_DEMAND_DIR, '\n\n')
 source('src/shared_functions/adjust_alpha_for_state.R')
 for (g in GEOGRAPHIES) {
-  spec  <- load_spec(g)
   sim_f <- file.path(SIMULATOR_DEMAND_DIR, paste0(g, '.csv'))
-  if (!is.null(spec$counties)) {
-    if (file.exists(sim_f)) {
-      cat('  [FAIL]', g, '- county-defined, yet', sim_f, 'exists\n')
-      fails <- fails + 1
-    } else {
-      cat(sprintf('  [--]   %-4s county-defined, no simulator copy\n', g))
-    }
-    next
-  }
   if (!file.exists(sim_f)) {
     cat('  [FAIL]', g, '-', sim_f, 'does not exist\n'); fails <- fails + 1; next
   }

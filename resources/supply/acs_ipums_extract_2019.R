@@ -1,5 +1,9 @@
 # Submit an IPUMS USA extract for the state childcare wage work.
 #
+# KEPT FOR THE COUNTY CROSSWALK. The wage work this extract (usa:33) fed was
+# removed 1 Oct 2026; its us2019a records now give every ACS household its
+# county (resources/acs/acs_county_crosswalk_2019.py).
+#
 # IPUMS_API_KEY is read by ipumsr from ~/.Renviron (mode 600). The value is
 # never printed or passed on the command line.
 #
@@ -11,7 +15,7 @@
 #                       childcare workers, most of them home-based providers.
 #   CLASSWKR            Self-employed (incorporated or not) vs wage/salary vs
 #                       government, so a wage can be measured per SECTOR -- the
-#                       supply side prices home-based care and centres
+#                       supply side prices home-based care and centers
 #                       separately, and pooling them hides the difference.
 #   WKSWORK1            Continuous weeks worked, which the ACS asks again from
 #                       2019. Replaces the interval midpoints the 2018 file

@@ -67,6 +67,7 @@ src/
     ├── prepare_year_context.R         # Year-level data preparation (shared by 3b + slurm)
     ├── filter_sim_base_hh.R           # Household filter/subsample cascade (shared by 3a paths)
     ├── adjust_alpha_for_state.R       # State demand re-anchoring contraction (state-level runs)
+    ├── select_geo_hh_ids.R            # Household ids for a run geography (state, or sub-state e.g. NYC)
     ├── get_hourly_wage_growth_factor.R          # Hourly wage growth projection
     ├── get_employment_rate_growth_factor.R      # Employment rate growth projection (epop_path override for state runs)
     └── get_cpi_growth_factor.R                  # CPI growth projection
@@ -94,8 +95,9 @@ docs/                         # Documentation & memos
 ## Key Architectural Patterns
 
 ### State-Level Analysis
-Optional runscript `state` column (USPS postal codes, semicolon-separated) runs
-the simulation per state: processing/calibration stay national; simulation init
+Optional runscript `state` column (USPS postal codes, or a sub-state code from
+`SUBSTATE_GEOGRAPHIES` such as `NYC`, semicolon-separated) runs the simulation
+per state: processing/calibration stay national; simulation init
 builds per-state contexts (household filter, alpha re-anchoring via
 `adjust_alpha_for_state()` when `config/state/demand/<ST>.csv` exists, supply
 yaml / epop CSV overrides); years loop over states; summaries carry a `state`
