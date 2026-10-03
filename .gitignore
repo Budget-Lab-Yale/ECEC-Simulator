@@ -14,7 +14,7 @@ slurm/logs/
 
 # state_data local config
 state_data/config_local.yaml
-# Files too large for git (e.g. the 92 MB NDCP county workbook); cluster only.
+# Files too large for git; cluster only.
 state_data/raw/local/
 
 # LaTeX build artefacts. latexmk and the LaTeX Workshop extension write these
@@ -35,3 +35,12 @@ state_data/raw/local/
 
 # Python bytecode
 __pycache__/
+
+# Anna's state memo and LaTeX drafts -- kept local, never committed
+state_data/docs/SUMMARY_method.tex
+state_data/docs/SUMMARY_method.pdf
+state_data/docs/archive/
+state_data/docs/try_fit.*
+
+# Editor settings (memo LaTeX) -- local only
+.vscode/

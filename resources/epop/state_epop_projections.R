@@ -34,8 +34,8 @@
 # so New York's path, until a county-level composition is built.
 #
 # Usage:
-#   Rscript resources/epop/state_epop_projections.R
-#   Rscript resources/epop/state_epop_projections.R --check
+#   Rscript resources/epop/state_epop_projections.R [--check]
+#   --check: compute, print, write nothing
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -46,17 +46,12 @@ EPOP_DIR  <- file.path('resources', 'epop')
 NATIONAL  <- file.path(EPOP_DIR, 'epop_projections.csv')
 ACS_POP   <- file.path(EPOP_DIR, 'US_ACS__epop_by_state_sex_age__2006-2024.csv')
 OUT_DIR   <- file.path('config', 'state', 'employment')
-DIAG      <- file.path(EPOP_DIR, 'state_epop_diagnostics.csv')
 
-# Postal -> FIPS, from the simulator's own table.
+# STATE_POSTAL_TO_FIPS, SUBSTATE_GEOGRAPHIES, parent_geo()
 source('src/shared_functions/constants.R')
 
-# Every state + DC -- demand build covers all 51.
-STATES <- names(STATE_POSTAL_TO_FIPS)
-
-# Sub-state geographies (NYC) take their parent state's composition --
-# parent_geo(), constants.R.
-SUBSTATES <- names(SUBSTATE_GEOGRAPHIES)
+STATES    <- names(STATE_POSTAL_TO_FIPS)   # 50 + DC -- demand build covers all 51
+SUBSTATES <- names(SUBSTATE_GEOGRAPHIES)   # NYC -- takes parent state's composition
 
 
 
@@ -101,11 +96,10 @@ composition_shares <- function(acs, years) {
 build <- function(check_only = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Writes config/state/employment/<ST>.csv for every state in STATES + NYC.
+  # Writes OUT_DIR/<ST>.csv for STATES + SUBSTATES; prints diagnostics.
   #
   # Params:
-  #   - check_only (logical): TRUE skips writing <ST>.csv files, DIAG --
-  #     computes, prints diagnostics only
+  #   - check_only (logical): TRUE skips all writes
   #
   # Returns: (tibble) diagnostics, invisibly
   #----------------------------------------------------------------------------
@@ -153,34 +147,35 @@ build <- function(check_only = FALSE) {
   diags <- list()
 
   for (st in c(STATES, SUBSTATES)) {
-    src <- parent_geo(st)
-    ks  <- k %>% filter(geo == src)
-    kk  <- ks$k[match(natl$year, ks$year)]
+    ks <- filter(k, geo == parent_geo(st))
+    kk <- ks$k[match(natl$year, ks$year)]
     if (anyNA(kk)) stop(st, ': no scale factor for some simulator years')
 
+    # Every cell column, plus 16plus columns: national x k. Simulator reads
+    # fine bins only (get_employment_rate_growth_factor.R); 16plus kept for
+    # schema.
     out <- natl
-    for (col in cell_cols) out[[col]] <- natl[[col]] * kk
-
-    # 16plus columns: national x k, as the cells. Simulator reads fine bins
-    # only (get_employment_rate_growth_factor.R); kept for the schema.
-    for (col in c('epop_m_16plus', 'epop_f_16plus')) out[[col]] <- natl[[col]] * kk
+    for (col in c(cell_cols, 'epop_m_16plus', 'epop_f_16plus')) {
+      out[[col]] <- natl[[col]] * kk
+    }
 
     if (!check_only) {
       dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
       write_csv(out, file.path(OUT_DIR, paste0(st, '.csv')), na = '')
     }
 
+    y19 <- ks$year == 2019
+    y24 <- ks$year == 2024
     diags[[st]] <- tibble::tibble(
       state        = st,
-      implied_2019 = round(ks$rate[ks$year == 2019], 2),
-      natl_2019    = round(ks$natl_rate[ks$year == 2019], 2),
-      k_2019       = round(ks$k[ks$year == 2019], 4),
-      k_2024       = round(ks$k[ks$year == 2024], 4),
-      adjustment   = round(ks$k[ks$year == 2024] / ks$k[ks$year == 2019], 4))
+      implied_2019 = round(ks$rate[y19], 2),
+      natl_2019    = round(ks$natl_rate[y19], 2),
+      k_2019       = round(ks$k[y19], 4),
+      k_2024       = round(ks$k[y24], 4),
+      adjustment   = round(ks$k[y24] / ks$k[y19], 4))
   }
 
   dg <- bind_rows(diags)
-  if (!check_only) write_csv(dg, DIAG)
 
   cat('== state epop, ', nrow(dg), ' geographies: ACS composition x CBO cells, ',
       'scaled to the national rate\n\n', sep = '')
@@ -188,7 +183,7 @@ build <- function(check_only = FALSE) {
   cat('\nadjustment = k(2024) / k(2019): the multiplier on national growth in',
       'the runs\n')
   if (!check_only) {
-    cat('wrote ', OUT_DIR, '/<ST>.csv and ', DIAG, '\n', sep = '')
+    cat('wrote ', OUT_DIR, '/<ST>.csv\n', sep = '')
   }
   invisible(dg)
 }

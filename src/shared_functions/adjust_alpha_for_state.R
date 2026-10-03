@@ -13,17 +13,12 @@
 #------------------------------------------------------------------------------
 
 
-# STATE TARGET GROUPS. A state target file names a GROUP; a group covers one
-# or more of the model's care types. Every group is a singleton except centre
-# care, where the two price bands share one target.
-#
-# WHY. No state publishes the within-state price dispersion the low/high split
-# needs -- each state's published price falls wholly on one side of the
-# national boundary, so a state split would have to be invented from a
-# national share. State sources support the SUM. The contraction therefore
-# solves ONE delta for the pair. That constrains their combined hours and
-# leaves their modelled ratio untouched: a common additive utility shift
-# cancels out of the odds between them.
+# Target groups: a state target file names a GROUP of model care types. All
+# singletons except centre care -- no state publishes the within-state price
+# dispersion a low/high split needs (each state's price falls wholly on one
+# side of national boundary), state sources support only the SUM. One delta for
+# the pair pins combined hours, leaves modelled ratio alone: a common additive
+# shift cancels out of odds between them.
 STATE_TARGET_GROUPS <- list(
   'Center-Based'        = c('Low-Priced Center-Based', 'High-Priced Center-Based'),
   'Unpaid Center-Based' = 'Unpaid Center-Based',
@@ -37,17 +32,16 @@ STATE_TARGET_GROUPS <- list(
 state_target_group_of <- function(ecec_type) {
 
   #----------------------------------------------------------------------------
-  # Care type -> its target group. NA where no group covers it, incl.
-  # 'Parent Only', the numeraire.
+  # Care type -> target group; NA where ungrouped (incl. 'Parent Only').
   #
   # Params:
   #   - ecec_type (chr vec)
   #
-  # Returns: (chr vec) group name, NA where ungrouped
+  # Returns: (chr vec) group name or NA
   #----------------------------------------------------------------------------
 
-  lookup <- unlist(lapply(names(STATE_TARGET_GROUPS), function(g)
-    setNames(rep(g, length(STATE_TARGET_GROUPS[[g]])), STATE_TARGET_GROUPS[[g]])))
+  lookup <- setNames(rep(names(STATE_TARGET_GROUPS), lengths(STATE_TARGET_GROUPS)),
+                     unlist(STATE_TARGET_GROUPS, use.names = FALSE))
   unname(lookup[ecec_type])
 }
 
@@ -57,8 +51,8 @@ read_state_demand_targets <- function(targets_csv_path, state_postal) {
 
   #----------------------------------------------------------------------------
   # Reads and validates a state demand target CSV (2019 annual hours by care
-  # type). All 6 target GROUPS are required with positive hours. Centre care
-  # is one combined group -- a file naming a price band is rejected.
+  # type). All 6 target GROUPS required, positive; file naming a centre
+  # price band rejected.
   #
   # Params:
   #   - targets_csv_path (chr): Path to config/state/demand/<ST>.csv
@@ -77,7 +71,7 @@ read_state_demand_targets <- function(targets_csv_path, state_postal) {
 
   target_types <- names(STATE_TARGET_GROUPS)
 
-  # A file naming a price band is a file that invented a split.
+  # Naming a price band means file invented a split
   split_rows <- intersect(targets_df$ecec_type,
                           STATE_TARGET_GROUPS[['Center-Based']])
   if (length(split_rows) > 0) {
@@ -143,7 +137,7 @@ build_choice_hours_map <- function(n_children, target_types) {
     C <- matrix(0, nrow = n_choices, ncol = n_types,
                 dimnames = list(NULL, target_types))
     for (t in target_types) {
-      # Both centre bands map to one group, so both add into that column.
+      # Both centre bands map to one group -- both fill that column
       rows_t <- which(!is.na(grp) & grp == t)
       C[rows_t, t] <- hours[rows_t]
     }
@@ -159,8 +153,7 @@ build_choice_hours_map <- function(n_children, target_types) {
 
   # Utility shift by choice: deltas at each child's care type ('Parent Only'
   # and any non-targeted type contribute 0)
-  # Both centre bands look up the same group, so both take the same shift and
-  # their odds against each other do not move.
+  # Both centre bands take same group's shift -- odds between them fixed
   g1 <- state_target_group_of(catalog$child1_ecec_type)
   g2 <- if (n_children == 2) state_target_group_of(catalog$child2_ecec_type) else NULL
 
@@ -184,33 +177,34 @@ build_choice_hours_map <- function(n_children, target_types) {
 build_sector_hours_map <- function(n_children) {
 
   #----------------------------------------------------------------------------
-  # Per-child (n_choices x 4) annual-hours matrices by SUPPLY sector, in
-  # SECTOR_MAPPING order -- centre price bands kept apart, unlike the target
-  # groups. Same hours as build_choice_hours_map(), so sector hours at the
-  # solved deltas sum to the achieved target hours.
+  # Per-child (n_choices x 4) annual-hours matrices by SUPPLY sector
+  # (SECTOR_MAPPING order, centre bands apart). Same hours as
+  # build_choice_hours_map() -- sector hours at solved deltas sum to achieved
+  # target hours.
   #
   # Params:
-  #   - n_children (int): Number of children (1 or 2)
+  #   - n_children (int): 1 or 2
   #
-  # Returns: (list) S1, S2 (matrix or NULL)
+  # Returns: (list) S1, S2 (matrix; S2 NULL for 1 child)
   #----------------------------------------------------------------------------
 
   catalog <- get_choice_catalog(n_children)
   sectors <- SECTOR_MAPPING$ecec_type
 
-  sector_matrix <- function(type_col, hours_col) {
-    hours <- unname(HOURS_ANNUAL[catalog[[hours_col]]])
+  # S[j, s] = child's hours under choice j if j places child in sector s
+  sector_matrix <- function(child) {
+    hours <- unname(HOURS_ANNUAL[catalog[[paste0('child', child, '_hours_choice')]]])
+    type  <- catalog[[paste0('child', child, '_ecec_type')]]
     S <- matrix(0, nrow = nrow(catalog), ncol = length(sectors),
                 dimnames = list(NULL, sectors))
     for (s in sectors) {
-      rows_s <- which(catalog[[type_col]] == s)
+      rows_s <- which(type == s)
       S[rows_s, s] <- hours[rows_s]
     }
     S
   }
 
-  list(S1 = sector_matrix('child1_ecec_type', 'child1_hours_choice'),
-       S2 = if (n_children == 2) sector_matrix('child2_ecec_type', 'child2_hours_choice') else NULL)
+  list(S1 = sector_matrix(1), S2 = if (n_children == 2) sector_matrix(2) else NULL)
 }
 
 
@@ -246,8 +240,7 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
   #   - deltas (named num vec): Solved utility constants by care type
   #   - achieved (named num vec): Model aggregate hours at the solution
   #   - targets (named num vec): Target aggregate hours
-  #   - sector_hours (named num vec): Model base-year hours by supply sector
-  #       at the solution, SECTOR_MAPPING order
+  #   - sector_hours (named num vec): Base-year hours by sector at solution
   #   - n_iter (int): Contraction iterations used
   #----------------------------------------------------------------------------
 
@@ -325,12 +318,10 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
   repeat {
     gap <- log(targets / H)
 
-    # A type's modelled hours can reach zero DURING the contraction even though
-    # the zero-support check above passed at delta = 0: a large delta on one
-    # type can drive another type's probability mass to zero in floating point.
-    # gap is then infinite, max(abs(gap)) is NA, and the loop dies on R's
-    # generic 'missing value where TRUE/FALSE needed', which names neither the
-    # state, nor the type, nor the cause.
+    # Hours can hit zero mid-contraction despite passing zero-support check: a
+    # large delta on one type can underflow another's mass. Infinite gap would
+    # make max(abs(gap)) NA -- R's generic 'missing value where TRUE/FALSE
+    # needed' names no state, type, or cause.
     if (any(!is.finite(gap))) {
       bad <- target_types[!is.finite(gap)]
       stop('State demand contraction for ', state_postal, ': non-finite gap ',
@@ -356,10 +347,9 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
     H <- aggregate_hours(deltas)
   }
 
-  # Base-year hours by supply sector at the solution. The contraction pins the
-  # combined centre hours, not the low/high split -- the model keeps its own.
-  # The caller builds base-year labor from these, so the wage curve starts at
-  # the base-year wage by construction.
+  # Sector hours at solution (SECTOR_MAPPING order): centre total pinned,
+  # low/high split model's own. Caller builds base-year labor from these --
+  # wage curve starts at base-year wage by construction.
   sector_hours <- setNames(rep(0, nrow(SECTOR_MAPPING)), SECTOR_MAPPING$ecec_type)
   for (sd in state_data) {
     E <- exp(sd$d_by_choice(deltas))

@@ -1,20 +1,21 @@
 # State-level demand inputs
 
-Builds the demand file the simulator reads — `out/<GEO>.csv`, six rows, annual
-hours by care type — from each state's population and NSCH non-parental rate,
+Builds the demand file the simulator reads — `config/state/demand/<GEO>.csv`,
+six rows, annual hours by care type — from each state's population and NSCH non-parental rate,
 divided with shares from the simulator's own base-year probabilities over the
 state's ACS households, with Unpaid Center-Based from each state's program
 counts.
 
 ```bash
-Rscript state_data/code/00_main.R --geo KY                  # build one
-Rscript state_data/code/00_main.R --all                     # build all 52
-Rscript state_data/code/00_main.R --all --check --interval  # with invariants and error bounds
+Rscript state_data/code/00_build_demand_targets.R --geo KY         # build one
+Rscript state_data/code/00_build_demand_targets.R --all            # build all 52
+Rscript state_data/code/00_build_demand_targets.R --all --check    # with invariants
 ```
 
-**[docs/SUMMARY_method.pdf](docs/SUMMARY_method.pdf) is the document to read.**
-It says what every number means, where it comes from, and how solid it is. Its
-source is beside it as a .tex. This file is the map, and the record of every
+**The method memo, `docs/SUMMARY_method.pdf`, is the document to read.** It
+says what every number means, where it comes from, and how solid it is. The
+memo and its .tex source are kept outside git; ask Anna for the current
+version. This file is the map, and the record of every
 source. `docs/SOURCES.csv` is the machine-readable register: one row per source and
 geography, with its URL, vintage, and retrieval date.
 
@@ -27,8 +28,8 @@ and the simulator's ACS households do not include it. Building it needs a partic
 for one, a wage, and households. New York is all 62 counties, city
 included. New York City is the five boroughs, built on its own. NY includes
 NYC. NY minus NYC is close to the rest of the state, within 0.6% of the hours
-in each care type. Both use the same rate, but each divides its care by the p0
-mix of its own households, so the difference is not exact.
+in each care type. Each divides its care by the p0 mix of its own households,
+so the difference is not exact.
 
 This directory writes demand only. The simulator's per-state supply and
 employment files, and how the simulator reads all three, are in
@@ -38,29 +39,22 @@ employment files, and how the simulator reads all three, are in
 
 Per geography, in six steps:
 
-The step numbers name quantities everywhere in `state_data/`. The default
-build runs them in the order 1, 4, then 2, 3, and 5 together, then 6.
+The step numbers name quantities everywhere in `state_data/`. The build runs
+them in the order 1, 4, then 2, 3, and 5 together, then 6.
 
 1. **Children in regular care** = population 0–4 × NSCH participation rate ×
    the NSECE universe ratio.
-2. **Formal and informal totals** — a result of steps 4 and 5 in the default
-   build, not an input.
+2. **Formal and informal totals** — a result of steps 4 and 5, not an input.
 3. **Informal care** — split by the **share model** (below).
 4. **Unpaid Center-Based** — each state's own **program counts**: public
    pre-K (CCD) + Head Start + Early Head Start, converted from funded slots to
    enrolled children, less the Head Start a district runs inside one of its own
-   pre-K schools, which CCD already counts. The `--shares nsece` build prints
-   the regional NSECE unpaid-center share beside it as a cross-check, not
-   used.
+   pre-K schools, which CCD already counts.
 5. **Centers and homes** — split by the share model. The share model divides
    step 1 less step 4 over the five other types, so steps 2, 3, and 5 come
    out of one division.
 6. **Annual hours** = children × the simulator's 10/40 grid × 50, split
    part-time / full-time by the share model.
-
-With `--shares nsece`, the build runs the steps in number order. Step 2 takes
-the regional formal share, step 4 takes the programs out of formal care, and
-step 5 splits the rest of formal care.
 
 **The share model.** Steps 2, 3, 5, and 6 take their shares from the
 simulator itself. `cluster/acs_p0_shares.R` sums the calibration's base-year
@@ -69,92 +63,104 @@ child weight: children 0–4 by care type and by 10 or 40 hours a week. So each
 state's mix follows its own income, parent employment, family type, and child
 ages, under the national preferences the simulator calibrates. NYC uses the
 households in its five counties. The summary is
-`raw/US_ACS__p0_children_by_care_type_and_hours__2019.csv`, built on the cluster
-from a full-sample interface. To compare with NSECE, build again with
-`--shares nsece`, which uses the regional NSECE constants instead:
-
-```bash
-Rscript state_data/code/00_main.R --all --shares nsece   # the regional NSECE build
-```
-
-NSECE carries only Census region, so every NSECE constant is regional: the
-region `states/<GEO>.R` declares (the four Census regions; DC is South). A
-regional cell under 30 unweighted records takes the national value. The
-simulator then re-anchors to this file: `adjust_alpha_for_state()` solves one
+`raw/US/US_ACS__p0_children_by_care_type_and_hours__2019.csv`, built on the cluster
+from a full-sample interface. The simulator then re-anchors to this file: `adjust_alpha_for_state()` solves one
 utility constant per care type until the state's base-year hours match it.
 With p0 shares, the file already carries the simulator's own mix, so the
 re-anchoring moves mainly the level (step 1) and Unpaid Center-Based (step 4).
 
-**Sensitivity.** The NSCH interval does not move every row in proportion.
-Program counts stay fixed, and the other five types absorb the change (the
-other formal types only, under `--shares nsece`). So `write_interval()` runs
-the build again at each bound. An error in a program count moves care between
-formal and informal in the default build, because the five other types share
-what the programs leave. Under `--shares nsece`, step 2 fixes the formal total,
-so the error moves care only inside formal care. The interval covers NSCH-rate sampling error only — not the universe
-ratio disagreement, the step 4 assumptions, or error in the shares (ACS
-sampling and calibration for p0; NSECE sampling for `--shares nsece`). With no
-Head Start deduction, total hours change by less than 0.1% in the five memo
-geographies; Unpaid Center-Based hours rise by up to 5.3% (VA). Both figures
-were measured on the NSECE build.
+**Regional NSECE comparison.** `code/05_compare_nsece_shares.R` divides the
+same total and program count by regional NSECE shares instead, steps in number
+order (step 2 takes the regional formal share, step 4 takes the programs out
+of formal care, step 5 splits the rest of formal care). NSECE carries only
+Census region; a regional cell under 30 unweighted records takes the national
+value. It writes `out/nsece_share_comparison.csv` and nothing the simulator
+reads.
+
+```bash
+Rscript state_data/code/05_compare_nsece_shares.R          # all 52 geographies
+```
+
+**Sensitivity.** The build does not write an error interval for the NSCH
+rate. A change in the rate does not move every row in proportion. Program
+counts stay fixed, and the other five types absorb the change. An error in a
+program count moves care between formal and informal, because the five other
+types share what the programs leave. With no Head Start deduction, total hours
+change by less than 0.1% in the five memo geographies; Unpaid Center-Based
+hours rise by up to 5.3% (VA). Both figures were measured on the regional
+NSECE build.
 
 ## Layout
 
 ```
-code/00_main.R                the method, the share model, the NSECE
-                               constants, and the CLI (--shares p0|nsece)
-cluster/acs_p0_shares.R       p0 children by geography, care type, and hours,
-                               from a full-sample interface (runs on the cluster)
-states/<GEO>.R               one per geography: program counts (funded
-                               slots) and Census region, hand-researched
-code/01_nsch_rate.R           derives each state's rate and standard error
-code/02_nsece_constants.R     derives every NSECE constant (runs on the cluster)
-code/03_head_start_in_schools.R measures the Head Start a district runs in its
-                               own pre-K school, for step 4
-code/04_replacement_register.R one row per NSECE constant: what it feeds, its
-                               geography today, and the replacement search
-code/05_register_check.R      validation: centre counts against five
-                               licensing registers (writes nothing the
-                               simulator reads)
-code/config_local.example.yaml copy to state_data/config_local.yaml (git-ignored)
-tests/                       the check suite
-docs/SUMMARY_method.tex      the method memo, and the .pdf built from it
-docs/SOURCES.csv             every source, where it came from, what it feeds
-raw/                         the input files
-raw/documentation/           reports behind hand-extracted numbers
-raw/local/                   files too large for git (git-ignored)
-cluster/                     scripts that derive raw/ summaries from
-                               cluster-only data (NHES, SIPP, NDCP)
-cluster/out/                 SIPP feasibility cell counts, per year
-out/<GEO>.csv                the output
-out/<GEO>_interval.csv       low and high bounds, from the NSCH rate
-out/nsch_rate.csv            the NSCH derivation, every wave and pool
-out/nsch_rate_base.csv       BASE_WAVE only -- what load_spec() reads
-out/nsece_universe.csv       the NSECE derivation, full precision
-out/head_start_in_schools.csv the school-overlap share per geography
-out/head_start_in_schools_review.csv every matched site, for review
-out/replacement_register.csv what could replace each NSECE constant
-out/replacement_register_cells.csv SIPP records per state x care type
-out/register_check.csv       build vs register centre children, KY NJ NY NYC VA
+code/shared_setup.R                     root path, region map, universe labels, CLI and
+                                        print helpers -- sourced by 00, 01, and 02; every
+                                        script runs from the repo root
+code/00_build_demand_targets.R          the method, the share model, the universe
+                                        ratio, and the CLI
+code/05_compare_nsece_shares.R          comparison: the build against regional NSECE
+                                        shares (writes nothing the simulator reads)
+code/06_compare_industry_counts.R      validation: the build against 2019 QCEW child
+                                        day care employment and nonemployer counts
+code/07_compare_nhes.R                 validation: the build against NHES-ECPP 2019, same
+                                        population and care-type rules, by Census region
+cluster/acs_p0_shares.R                 p0 children by geography, care type, and hours,
+                                        from a full-sample interface (runs on the cluster)
+cluster/acs_p0_shares_by_age.R          the same p0 summary split by child age, for the
+                                        NHES check by age (runs on the cluster)
+cluster/nsece_listed_home_share.py      listed-home share of Paid Home-Based children,
+                                        NSECE home provider file (runs on the cluster)
+states/<GEO>.R                          one per geography: a geo_spec() call with program
+                                        counts (funded slots) and Census region,
+                                        hand-researched
+code/01_nsch_participation_rate.R       derives each state's rate and standard error
+code/02_derive_nsece_constants.R        derives every NSECE constant (runs on the cluster)
+code/03_head_start_school_overlap.R     measures the Head Start a district runs in its
+                                        own pre-K school, for step 4
+code/04_compare_licensing_registers.R   validation: centre counts against five
+                                        licensing registers (writes nothing the
+                                        simulator reads)
+code/config_local.example.yaml          copy to state_data/config_local.yaml (git-ignored)
+tests/                                  the check suite
+docs/SUMMARY_method.tex                 the method memo and its .pdf (local only, git-ignored)
+docs/SOURCES.csv                        every source, where it came from, what it feeds
+raw/                                    the input files, one folder per scope
+raw/US/                                 national files and reports
+raw/KY/, raw/NJ/, raw/VA/               state register files and reports
+raw/NY/                                 New York State files and report (NYS_ and NY_)
+raw/NYC/                                New York City register file
+raw/local/                              files too large for git (git-ignored)
+out/nsch_participation_rate_by_wave.csv the NSCH derivation, every wave and pool
+out/nsch_participation_rate_2019.csv    BASE_WAVE only -- what load_spec() reads
+out/nsece_constants.csv                 the NSECE derivation, full precision
+out/head_start_school_overlap.csv       the school-overlap share per geography
+out/nsece_listed_home_share.csv         the listed-home share, national and by region
+out/licensing_register_comparison.csv   build vs register children, centres and homes, KY NJ NY NYC VA
+out/industry_count_comparison.csv       build vs QCEW and nonemployer counts, 52 geographies
+out/nhes_comparison.csv                 build vs NHES-ECPP 2019 by region and care type
+../config/state/demand/<GEO>.csv        the output: the demand targets the simulator
+                                        reads (the build writes only this copy)
 ```
 
 ## Adding a geography
 
-A state file is **data, not logic**. Copy the closest existing one.
+A state file is **data, not logic**: one `geo_spec()` call. Copy the closest existing one.
 
-1. Write `states/<GEO>.R`: a `SPEC_<GEO>` list with `fips`, `region`, and
-   `programs`. A sub-state geography also declares `county_fips`, which
-   selects its population, and `counties`, the same counties by name for the
-   files with no FIPS, like NYC. The simulator needs a matching entry in
-   `SUBSTATE_GEOGRAPHIES` (`src/shared_functions/constants.R`). Do NOT write `hs_in_schools_share`,
-   `nonparental_rate`, or `nonparental_rate_se` -- `load_spec()` fills all
-   three in live; see below.
-2. `GEOGRAPHIES` in `00_main.R` takes every code in `STATE_POSTAL_TO_FIPS`
-   and `SUBSTATE_GEOGRAPHIES`, so it needs no edit.
-3. Rerun `03_head_start_in_schools.R`, so `out/head_start_in_schools.csv`
-   carries a row for the geography. A sub-state geography takes its parent
-   state's NSCH rate (`parent_geo()`), so `01_nsch_rate.R` needs no change.
-4. `Rscript state_data/code/00_main.R --geo <GEO> --check`
+1. Write `states/<GEO>.R`: one `SPEC_<GEO> <- geo_spec(...)` call (helper in
+   `00_build_demand_targets.R`) with `geo`, `name`, `fips`, `region`, and the
+   three program counts `prek`, `head_start`, and `early_head_start`, each with its source
+   beside it. A sub-state geography also passes `county_fips`, which selects
+   its population, and `counties`, the same counties by name for the files
+   with no FIPS, like NYC (see `states/NYC.R`). The simulator needs a matching entry in
+   `SUBSTATE_GEOGRAPHIES` (`src/shared_functions/constants.R`). Do NOT write `hs_in_schools_share`
+   or `nonparental_rate` -- `load_spec()` fills both in live; see below.
+2. `GEOGRAPHIES` in `00_build_demand_targets.R` takes every code in
+   `STATE_POSTAL_TO_FIPS` and `SUBSTATE_GEOGRAPHIES`, so it needs no edit.
+3. Rerun `03_head_start_school_overlap.R`, so
+   `out/head_start_school_overlap.csv` carries a row for the geography. A
+   sub-state geography takes its parent state's NSCH rate (`parent_geo()`), so
+   `01_nsch_participation_rate.R` needs no change.
+4. `Rscript state_data/code/00_build_demand_targets.R --geo <GEO> --check`
 
 A geography needs three things:
 
@@ -170,23 +176,26 @@ filter k6q20 in (1,2), sc_age_years <= 4, weight by fwc, subset fipsst
 
 ### How `load_spec()` reads the two derived fields
 
-`hs_in_schools_share` and `nonparental_rate`/`nonparental_rate_se` are not
-hand-researched -- they are the output of `03_head_start_in_schools.R` and
-`01_nsch_rate.R`, each a single deterministic pass over raw data with no
-per-geography judgment call. Keeping a hand copy of a fully-derived number in
+`hs_in_schools_share` and `nonparental_rate` are not
+hand-researched -- they are the output of `03_head_start_school_overlap.R`
+and `01_nsch_participation_rate.R`, each a single deterministic pass over raw
+data with no per-geography judgment call. Keeping a hand copy of a fully-derived number in
 `states/<GEO>.R` bought nothing but a second place for it to drift, so
 `load_spec()` reads both live, after sourcing the state file:
 
-- `nonparental_rate` / `nonparental_rate_se` — that geography's row of
-  `out/nsch_rate_base.csv` (`01_nsch_rate.R`, `BASE_WAVE` only). NYC has no
-  NSCH records of its own, so `load_spec('NYC')` reads NY's row.
+- `nonparental_rate` — that geography's row of
+  `out/nsch_participation_rate_2019.csv` (`01_nsch_participation_rate.R`,
+  `BASE_WAVE` only). NYC has no NSCH records of its own, so `load_spec('NYC')`
+  reads NY's row.
 - `hs_in_schools_share` — that geography's row of
-  `out/head_start_in_schools.csv` (`03_head_start_in_schools.R`). NYC has its
-  own row here (its Head Start slots are its own), unlike the NSCH rate.
+  `out/head_start_school_overlap.csv` (`03_head_start_school_overlap.R`). NYC
+  has its own row here (its Head Start slots are its own), unlike the NSCH
+  rate.
 
 Both `out/` files ship committed, so a normal build never regenerates them.
-Rerun `01_nsch_rate.R` / `03_head_start_in_schools.R` only when the raw NSCH
-or Head Start site data changes, or when a new geography needs a row.
+Rerun `01_nsch_participation_rate.R` / `03_head_start_school_overlap.R` only
+when the raw NSCH or Head Start site data changes, or when a new geography
+needs a row.
 
 ## Sources
 
@@ -196,13 +205,13 @@ Nothing downloads at build time: each file is fetched by hand and held in
 ### File naming
 
 ```
-raw/                  <SCOPE>_<SOURCE_KEY>__<content>__<vintage>.<ext>
-raw/documentation/    reports and codebooks behind a hand-extracted number
+raw/<SCOPE>/                <SCOPE>_<SOURCE_KEY>__<content>__<vintage>.<ext>
 raw/local/            files too large for git (git-ignored, cluster only)
 cluster/              scripts that derive a raw/ summary from cluster data
 ```
 
-- `SCOPE` is `US` for a national file, or the state's postal code.
+- `SCOPE` is `US` for a national file, or the state's postal code. The
+  file goes in the folder of its scope; `NYS_` and `NY_` files go in `raw/NY/`.
 - `content` is lowercase snake_case.
 - **`vintage` is the year the data describes, never the download date** — ISO
   where a month matters, a school year as `2018-19`.
@@ -215,22 +224,21 @@ so.
 
 | Input | Source | Held | Vintage | Feeds |
 |---|---|---|---|---|
-| Population 0–4 | Census Population Estimates, county by age | `raw/US_PEP__…` | 2019 | step 1 |
-| Participation rate | NSCH topical file, question `k6q20` | `raw/US_NSCH__…` (2018, 2019, 2020) | 2019 | step 1 |
+| Population 0–4 | Census Population Estimates, county by age | `raw/US/US_PEP__…` | 2019 | step 1 |
+| Participation rate | NSCH topical file, question `k6q20` | `raw/US/US_NSCH__…` (2018, 2019, 2020) | 2019 | step 1 |
 | NSECE constants | NSECE household file, ICPSR 37941 dataset 0009 | cluster only (licensed) | 2019 | steps 2, 4, 5, 6 |
-| Public pre-K | NCES Common Core of Data, pre-K membership by county | `raw/US_CCD__…by_county…` | 2018–19 | step 4 |
+| Public pre-K | NCES Common Core of Data, pre-K membership by county | `raw/US/US_CCD__…by_county…` | 2018–19 | step 4 |
 | California and Michigan public pre-K | NIEER, *State of Preschool 2019*, state pages | constant | 2018–19 | step 4, CA and MI |
 | Head Start | NIEER, *State of Preschool 2019*, Appendix B | constant | 2018–19 | step 4 |
 | Early Head Start | NIEER, *The State(s) of Head Start and Early Head Start* (2023) | constant | 2018–19 | step 4 |
-| Slots to enrolled children | OHS PIR 2018–19: Services Snapshots, Report to Congress Appendix C | constant, `00_main.R` | 2018–19 | step 4 |
-| Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US_HSSL__…2026-09-23`, `raw/US_CCD__…`, `raw/US_EDGE__…` | 2026, 2018–19 | step 4 deduction; NYC shares |
+| Slots to enrolled children | OHS PIR 2018–19: Services Snapshots, Report to Congress Appendix C | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
+| Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US/US_HSSL__…2026-09-23`, `raw/US/US_CCD__…`, `raw/US/US_EDGE__…` | 2026, 2018–19 | step 4 deduction; NYC shares |
 | NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 | not held | 2018–19 | evaluated, not used |
-| Base-year wage ratio and state labour share | BLS OEWS May 2019, state: SOC 39-9011 (no-BA), 25-2011 + 25-2051 + 11-9031 (BA) | `raw/US_OEWS__occupational_employment_and_wages_by_state__2019-05.zip` → `resources/supply/US_OEWS__childcare_employment_and_wages_by_state__2019.csv` | 2019-05 | step 7 |
+| Base-year wage ratio and state labour share | IPUMS ACS 2018-2019 (5-year sample), childcare occupations (OCC 4600, 2300, 2330, 230), by measured education | IPUMS extract usa:33, cluster only (`raw/local/`) → `resources/supply/state_childcare_wage_ratios_acs.csv` | 2018–2019 | step 7 |
 | National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
-| SIPP care-type counts | SIPP annual public-use files, pooled | `raw/US_SIPP__…` | 2018–2023 | replacement register |
-| NHES hours universes | NHES-ECPP public-use, cut at 5 and 10 hrs/week | `raw/US_NHES__…` | 2019 | cross-source check |
-| Licensing registers | KY CCAoA (CHFS), NJ DCF, NY OCFS + NYC DOHMH, VA VDSS | `raw/KY_…`, `raw/NJ_…`, `raw/NYS_…`, `raw/NYC_…`, `raw/VA_…` | 2018-09 to 2026-09 | register check |
+| Industry counts | BLS QCEW private employment, NAICS 624410; Census Nonemployer Statistics, NAICS 6244 | `raw/US/US_QCEW__…`, `raw/US/US_NES__…` | 2019 | industry check |
+| Licensing registers | KY CCAoA (CHFS), NJ DCF + KIDS COUNT registered family child care count, NY OCFS + NYC DOHMH, VA VDSS + ELPG program counts | `raw/KY/KY_…`, `raw/NJ/NJ_…`, `raw/NY/NYS_…`, `raw/NYC/NYC_…`, `raw/VA/VA_…` | 2018-09 to 2026-09 | register check |
 
 A **file** is read by the code. A **constant** is read by hand once and written
 into `states/<GEO>.R` next to its provenance comment.
@@ -240,13 +248,15 @@ into `states/<GEO>.R` next to its provenance comment.
 `k6q20` asks whether the child receives at least 10 hours a week of care from
 someone other than a parent or guardian. The prompt names every arrangement
 type and never asks which one applies. Wording is in
-`raw/documentation/US_NSCH__topical_variable_list__2019.pdf`.
+`raw/US/US_NSCH__topical_variable_list__2019.pdf`.
 
-The build reads each rate and standard error from `out/nsch_rate_base.csv`.
-`01_nsch_rate.R` derives that file from the survey:
+The build reads each rate from `out/nsch_participation_rate_2019.csv`.
+`01_nsch_participation_rate.R` derives that file from the survey:
 
 ```bash
-Rscript state_data/code/01_nsch_rate.R  # out/nsch_rate.csv + out/nsch_rate_base.csv
+Rscript state_data/code/01_nsch_participation_rate.R
+# writes out/nsch_participation_rate_by_wave.csv and
+# out/nsch_participation_rate_2019.csv
 ```
 
 The error uses the **survey design** — strata `FIPSST × STRATUM`, PSU `HHID`,
@@ -256,20 +266,22 @@ The 2019 file is the Census re-release (`nsch_2019e_topical`, 2024), all 51
 states. An earlier copy held only six states; its 3,545 records match the
 re-release on every column the build reads, so no rate or error moved.
 
-The build uses the single 2019 wave (`BASE_WAVE` in `01_nsch_rate.R`). The 2018
-and 2020 files are held for reference only: 2018-19 and 2019-20 pools are
+The build uses the single 2019 wave (`BASE_WAVE` in
+`01_nsch_participation_rate.R`). The 2018 and 2020 files are held for reference only: 2018-19 and 2019-20 pools are
 printed beside the single-wave table, and 2020 sits out of every pool because
 NSCH 2020 was fielded through the pandemic, with care rates falling 5 to 18
 points in KY, NJ, and VA.
 
 State cells run 99–206 records (unweighted children, 2019). NSCH has no
-sub-state identifier, so NYC uses the New York State rate and standard error.
+sub-state identifier, so NYC takes the New York State rate times a p0
+factor: p0's non-parental share of NYC's children over the same
+share for the state (`nsch_rate_of()` in `00_build_demand_targets.R`).
 
 ### NSECE — the regional constants
 
-**Since 1 October 2026 the build uses these shares only with `--shares nsece`.**
-The default build does not read them.
-`NSECE_UNIVERSE_RATIO` (step 1) is used under both share sources.
+The build uses only `NSECE_UNIVERSE_RATIO` (step 1), in
+`00_build_demand_targets.R`. The regional shares live in
+`05_compare_nsece_shares.R`, which uses them for comparison only.
 
 The formal share, the unpaid-center share, the center-home split, the informal
 mix, and the weekly hours all come from the NSECE 2019 household file,
@@ -282,11 +294,11 @@ cluster at `/nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1`. Pass
 117 MB and several thousand columns wide.
 
 ```bash
-Rscript state_data/code/02_nsece_constants.R --nsece <dir>
+Rscript state_data/code/02_derive_nsece_constants.R --nsece <dir>
 ```
 
 It writes each constant with its unweighted record count to
-`out/nsece_universe.csv`, over two universes:
+`out/nsece_constants.csv`, over two universes:
 
 - **Universe A** — every child 0–4 with a regular non-parental arrangement,
   NSECE's own five-hour screener. It reproduces NSECE's published figures
@@ -301,11 +313,11 @@ A regional cell under 30 records takes the national value; only Unpaid
 Home-Based falls below it, in all four regions (Northeast 8, Midwest 11, South
 5, West 14 records).
 
-`out/nsece_universe.csv` is the only on-disk record of where the constants in
-`00_main.R` come from, and it arrives by hand because NSECE lives on the
-cluster. `check_constants_match_derivation.R` compares every constant back to
+`out/nsece_constants.csv` is the only on-disk record of where the constants in
+`00_build_demand_targets.R` come from, and it arrives by hand because NSECE
+lives on the cluster. `check_constants_match_derivation.R` compares every constant back to
 its universe-A row, value and record count, so the pair cannot drift apart
-unnoticed. **Refresh the file whenever `02_nsece_constants.R` is rerun.**
+unnoticed. **Refresh the file whenever `02_derive_nsece_constants.R` is rerun.**
 
 ### Program counts — step 4
 
@@ -314,11 +326,11 @@ funded slots are *published, state by state*, so this is the one care type
 whose count comes from a state source rather than from the share model.
 `program_children()` sums public pre-K (CCD) + Head Start + Early Head Start,
 then subtracts the Head Start a school district runs in one of its own pre-K
-schools, because CCD already counts those children — `03_head_start_in_schools.R`
+schools, because CCD already counts those children — `03_head_start_school_overlap.R`
 measures that overlap (VA 21.5%, NJ 11.4%, KY 6.8%, NYS 0.2%, NYC 0.0%). The
-`--shares nsece` build prints the regional NSECE share beside the result as a
-cross-check (program count over the NSECE count: PA 0.48 to DC 2.93); it does
-not use it.
+comparison script (`05_compare_nsece_shares.R`) sets the result beside the
+regional NSECE unpaid-center share (program count over the NSECE count: PA
+0.48 to DC 2.93).
 
 The counts are not a clean measure of the care type, and the memo says so:
 they measure enrolment and funded slots, not the primary arrangement (a pre-K
@@ -346,8 +358,8 @@ preschool special education.
 
 **NIEER — Head Start and Early Head Start.** Both figures are **funded
 enrollment slots**, which NIEER takes from ACF. They are not counts of unique
-children, and they are not observed by age. NIEER's methodology, held at
-`raw/documentation/US_NIEER__head_start_methodology__2023.pdf`:
+children, and they are not observed by age. NIEER's methodology (*The
+State(s) of Head Start and Early Head Start*, 2023, methods note):
 
 > Funded enrollment was not provided by single year of age. Therefore,
 > federally-funded enrollment by age was estimated based on the proportion of
@@ -396,7 +408,7 @@ only on request, which this build does not use.
 **Head Start and pre-K can count the same children.** A state can fund pre-K
 places inside Head Start, and a district can run Head Start in a school. Step 4
 deducts only the part CCD already counts: Head Start that a district runs in
-one of its own pre-K schools. `03_head_start_in_schools.R` finds it from four
+one of its own pre-K schools. `03_head_start_school_overlap.R` finds it from four
 national files — ACF service locations, CCD pre-K by school, the CCD school
 directory, and NCES EDGE geocodes — so every state is measured the same way.
 
@@ -420,24 +432,15 @@ NYC's Head Start and Early Head Start counts are the city's shares of New York
 State slots at open sites in that file, applied to the 2018–19 NIEER state
 figures: 7,064 of 20,518 Head Start slots (program types 1, 3, 5) and 4,426 of
 8,590 Early Head Start slots (types 2, 4, 6). The file is the same 2026-09-23
-export that `03_head_start_in_schools.R` reads, so this assumes the city's
+export that `03_head_start_school_overlap.R` reads, so this assumes the city's
 shares were the same in 2019. `tests/check_program_counts_match_sources.R`
 recomputes both.
 
-### Replacing NSECE — the register and the candidates
+### Replacing NSECE — the candidates
 
 NSECE is 2019-only, licensed, and carries no state, so every behavioural share
-here is regional. `04_replacement_register.R` enumerates the job of replacing
-it: one row per NSECE constant, what it feeds, the geography it has today, the
-smallest cell it rests on, and the state of the search. The constant list is
-**derived** from universe A of `out/nsece_universe.csv`, so a constant added to
-the build appears in the register with no candidate rather than being silently
-missed.
-
-```bash
-Rscript state_data/code/04_replacement_register.R          # table + out/replacement_register.csv
-Rscript state_data/code/04_replacement_register.R --check  # register covers every quantity
-```
+here is regional. I searched for a state source that can replace it. None of
+the public candidates can.
 
 **Every candidate is checked for a part-time / full-time marker first.** The
 simulator holds a child at 10 or 40 hrs/week and nothing between, so the build
@@ -446,10 +449,9 @@ on cannot feed the grid, whatever else it supplies — an hours source without
 the marker gives a mean, and a mean implies the wrong child count once it is
 placed on a two-point grid; a price source without it prices a part-time child
 at the full-time rate, and that error runs straight into the equilibrium,
-because price drives it. The register's `needs_pt_ft_marker` column says which
-constants carry the requirement: **5 of 11**, being the four hours constants and
-`price_band_share`. NSECE supplies the marker, cutting at 20 hrs/week, the same
-cut `1a_nsece_processing.R` uses.
+because price drives it. Five of the 11 NSECE constants need the marker: the
+four hours constants and `price_band_share`. NSECE supplies the marker, cutting
+at 20 hrs/week, the same cut `1a_nsece_processing.R` uses.
 
 **Nothing public measures hours at state level.**
 
@@ -458,190 +460,56 @@ cut `1a_nsece_processing.R` uses.
 | NSECE 2019 | no (region only) | yes | what the build uses |
 | NHES-ECPP 2019 public-use | **no** (region only) | **yes** | independent regional check, not a state source |
 | NHES-ECPP restricted-use | yes | yes | **needs an IES licence** — the one route that would work |
-| SIPP 2018–2023 | yes | **no** | ruled out below |
-| NDCP 2008–2022 | county | full-time only | no part-time price; full-time state-defined |
+| SIPP 2018–2023 | yes | **no** | rejected below |
+| NDCP 2008–2022 | county | full-time only | rejected below |
 | CCDF ACF-801 / Table 14 | yes | yes | subsidy children only, and `acf.gov` answers 202 with an empty body from both Windows and Bouchet |
 | NSECE restricted-use (ICPSR 38445) | unconfirmed | yes | ICPSR does not document its geography; would need to ask |
 
-#### SIPP — evaluated, and rejected
+**SIPP — rejected.** SIPP identifies every state and asks about child care, but
+it cannot replace the regional constants. In the pooled 2018–2023 public-use
+files, SIPP has no hours variable, its one price (`TPAYWK`) covers all of a
+parent's children together, and only 108 of the 306 state × care type cells
+(50 states and DC) reach 30 distinct children.
 
-SIPP identifies every state and asks about child care, so it is the obvious
-candidate to replace the regional constants with state ones. It cannot, and the
-reason is worth keeping because it will come up again.
+**NDCP — rejected as the price source.** Prices in the build are wholly
+national. The DOL Women's Bureau National Database of Childcare Prices gives
+county prices by provider type and age, but every price is a full-time weekly
+price, so the build's 10-hour point has no NDCP price. Each state also defines
+"full-time" itself (Maine 21–30 hours, Indiana 35, Michigan 45, New Jersey
+51.7), so a state NDCP price mixes that definition with real price variation.
 
-Tested against the 2018–2023 annual public-use files on the cluster
-(`shared/raw_data/SIPP/<year>/pu<year>.csv`), pooled, by
-`cluster/sipp_feasibility.py` (per-year cell sizes, `cluster/out/`) and
-`cluster/sipp_pass2.py` (the two `raw/US_SIPP__…` files). Three findings, in
-order of how badly each one binds:
+#### NHES-ECPP — real hours, but region only
 
-1. **No hours variable.** SIPP's child care battery is fourteen yes/no flags,
-   one per arrangement — `EDAYCARE`, `ENUR`, `EFAM`, `ENREL`, `EGRAN` and the
-   rest, with child-level recodes `RDAYCARE` and so on. Nothing asks how many
-   hours. The only quantity in the whole battery is `TPAYWK`. Step 6 needs
-   hours, so this alone rules SIPP out for the hours constants.
-2. **Price does not attach to a child.** `TPAYWK` sits on the reference
-   parent's record and covers all that parent's children together. Of 6,307
-   children 0–4 with a non-parental arrangement, 2,891 are in a household
-   reporting an amount — and none of those amounts can be split between two
-   children or between two arrangements.
-3. **Cells are too thin.** Pooling gives 8,319 **distinct** children 0–4 —
-   distinct, not person-years: 2,911 appear in more than one panel year, so
-   naive pooling double-counts them. Split by state and care type, 108 of the
-   306 state × type cells for the 50 states and DC reach 30 records, the bar
-   the build already applies to a thin NSECE regional cell. No state clears
-   more than four of the six types; 12 clear none, Vermont among them. Counts
-   are in `out/replacement_register_cells.csv`.
+NHES-ECPP 2019 (NCES) is the one public source that measures hours of care
+per arrangement, so it gives a part-time share at the build's 20 hrs/week cut.
+Its finest geography is the Census region (`CENREG`). The public-use file has
+no state and no county, so it cannot give state values. State exists only in
+the IES restricted-use file, which needs a licence.
 
-SIPP also never asks whether home-based care is paid, so it has no question
-corresponding to Unpaid Home-Based, and its `EPAY` is one household answer
-rather than a per-arrangement one.
-
-#### NDCP — the candidate price source, and why full-time matters
-
-Prices in the build are wholly national. The DOL Women's Bureau **National
-Database of Childcare Prices** is the obvious state source: median and 75th
-percentile prices by **county × provider type (center, family) × age**, 2008
-through 2022, covering 47 states.
-
-**It is reachable, but only from the cluster.** `www.dol.gov` returns 403 to a
-WAF from Windows and answers 200 from a Bouchet login node. The county file is
-92 MB (`NDCP2022.xlsx`), the state summary 417 KB.
-
-**Every NDCP price is a full-time weekly price, and there is no part-time
-series.** The build places a child at 10 or 40 hrs/week, so the 10-hour point
-has no NDCP price at all.
-
-**And "full-time" is not a fixed number of hours.** Each state's market rate
-survey sets its own definition, and the technical report's per-state notes show
-how far they spread:
-
-| State | What "full-time" means there |
-|---|---|
-| Maine | respondents gave a range; **21–30 hours** most frequent |
-| Indiana | weekly rates based on a **35-hour week** |
-| Michigan | weekly rates defined as **45 hours a week** |
-| New Jersey | providers averaged **51.7 hours a week**; no single definition |
-| MS, NE, MI | "respondents make their own determination" |
-| Iowa | a **five-hour** timeframe, so ICF treated the rates as half-day |
-
-So a state-varying NDCP price would carry variation in the *definition of
-full-time* alongside real price variation, and the two cannot be separated from
-the published file. Where a state reported hourly, ICF converted at **× 40
-hours/week** — which matches the simulator's full-time point, but only by
-coincidence.
-
-The conversion formulas, from the technical report:
-
-| Reported mode | Weekly price |
-|---|---|
-| Hourly | × 40 (hours/week) |
-| Half-day | × 10 (half-days/week) |
-| Daily | × 5 (days/week) |
-| Monthly | × 12/52 |
-| Yearly | ÷ 52 |
-
-The technical report is at
-`raw/documentation/US_NDCP__national_database_of_childcare_prices_technical_report__2022.pdf`.
-The state summary is `raw/US_NDCP__state_level_estimates_and_rankings__2022.xlsx`.
-The county file (92 MB) is too large for git: it is held on the cluster at
-`raw/local/US_NDCP__childcare_prices_by_county__2022.xlsx` inside the checkout,
-git-ignored. `cluster/inspect_ndcp.py` reads either file and reports the
-hours and part-time columns. Nothing in the build reads them yet.
-
-#### NHES-ECPP — the only source with real hours, and it stops at region
-
-The four hours constants are the hardest part of replacing NSECE, because the
-simulator's 10/40 grid needs a part-time / full-time cut and almost nothing
-measures hours of care. **NHES-ECPP is the exception, and it still does not
-reach state level.**
-
-The 2019 Early Childhood Program Participation public-use file (NCES,
-`ecpp_pu_pert.csv`, 7,092 children, 625 variables) carries hours per
-arrangement — `CPHRS` center-based, `RCHRS` relative, `NCHRS` non-relative,
-`CAREHOURX` the total, `MOSTHRSX` — and so gives a part-time share at the
-build's own 20 hrs/week cut.
-
-**On the five-hour screener the build actually uses** — NSECE universe A's
-analogue, 4,132 children:
-
-| Census region | n | mean hrs/week | share under 20 hrs/week |
-|---|---:|---:|---:|
-| Northeast | 787 | 32.3 | **0.311** |
-| South | 1,458 | 31.1 | **0.314** |
-| Midwest | 974 | 32.5 | **0.270** |
-| West | 913 | 31.4 | **0.330** |
-
-On *any* positive hours, a looser universe than the build screens on, the same
-shares read 0.339 NE, 0.311 S, 0.294 MW and 0.350 W. The two are easy to
-confuse — 0.311 appears in both, for different regions — so the register fills
-its own copy of these figures from the derivation file rather than carrying a
-transcription.
-
-**But its finest geography is `CENREG`, four Census regions — the same wall as
-NSECE.** The public-use file has no state and no county; the only sub-region
-variable is `ZIPLOCL`, an NCES locale code (12 city/suburb/town/rural
-categories), plus two ZIP-level poverty and minority indicators. State exists
-only in the IES **restricted-use** file, which needs a licence.
-
-So NHES-ECPP does not solve the state problem. It earns its place anyway, as
-the build's **first cross-source check**. It downloads from `nces.ed.gov`,
-which answers from Bouchet.
-
-**The universe ratio, measured twice.** `CAREHOURX` is continuous, so NHES can
-be cut at any threshold. That makes it the only source that can reproduce
-`NSECE_UNIVERSE_RATIO` — the constant whose whole job is converting NSCH's
-ten-hour universe to the five-hour one NSECE screens on. Weighted by `FEWT`,
-ages 0–4:
-
-| Universe | n | weighted | mean hrs/week | share under 20 hrs |
-|---|---:|---:|---:|---:|
-| any positive hours | 4,253 | 11,693,762 | 30.9 | 0.327 |
-| ≥ 5 hrs/week | 4,132 | 11,349,871 | 31.7 | 0.307 |
-| ≥ 10 hrs/week | 3,475 | 9,506,173 | 36.4 | 0.173 |
-
-| Ratio | Value |
-|---|---|
-| NSECE, universe A / universe B | **1.098** |
-| NHES, ≥5 / ≥10 | **1.194** |
-| NHES, any positive / ≥10 | 1.230 |
-
-**The two disagree by 8.7%.** NSECE says the five-hour universe is 9.8% larger
-than the ten-hour one; NHES says 19.4%. The ratio multiplies the step 1 control
-total. Program care is fixed by its source counts, so the change goes to the
-rest of formal care and to informal care, not to every row in proportion. With
-the NHES ratio, total hours rise 8.8–8.9% in the five memo geographies, and the
-Unpaid Center-Based child count does not change.
-
-The comparison is like-for-like on the one thing that matters: NSECE universe B
-is a **total**-hours cut at 10 (`filter(prim, total_hours >= 10)`), and
-`CAREHOURX` is total hours too. NHES does enter on looser terms — an
-arrangement "at least once a week" against NSECE's five-hour screener — but a
-looser entry inflates numerator and denominator together and would push NHES's
-ratio **down**, not up. So the construct difference does not explain the gap.
-
-`check_nsece_against_nhes.R` records the gap and fails if either source moves.
-It does not correct one to the other, because which number is right is not
-settled. Mean hours and the part-time share are printed for context only: NHES
-pools every arrangement into one figure while NSECE reports per care type, so
-those two are not the same quantity.
-
-The summary is `raw/US_NHES__ecpp_children_0_4_by_hours_universe__2019.csv`,
-derived by `cluster/nhes_summary.py` from the public-use file
-`raw/US_NHES__ecpp_public_use_file__2019.csv` (NCES `ecpp_pu_pert.csv`, 19 MB).
-The codebook is `raw/documentation/US_NHES__ecpp_public_use_codebook__2019.pdf`.
+Its continuous total hours (`CAREHOURX`) can be cut at any threshold, so NHES
+can measure the universe ratio that `NSECE_UNIVERSE_RATIO` carries. Weighted
+by `FEWT`, ages 0–4, NHES puts the five-hour universe at **1.194** times the
+ten-hour one. NSECE puts it at **1.098** (universe A over universe B), so the
+two disagree by 8.7%. With the NHES ratio, total hours rise 8.8–8.9% in the
+five memo geographies, and the Unpaid Center-Based child count does not
+change. Both ratios use a total-hours cut at 10. NHES enters an arrangement
+on a looser screen ("at least once a week"), but a looser screen pushes its
+ratio down, not up, so the construct difference does not explain the gap.
+The build keeps the NSECE ratio and does not correct one source to the other,
+because it is not settled which ratio is right.
 
 ### Licensing registers — the center-count check
 
 An earlier build (commit `31307ce`, 18 September 2026) took formal care from
 five geographies' licensing registers and then scaled them to the NSECE formal
-share. `05_register_check.R` reads the same registers with the same
-conversions, but without that scaling. So the registers are an independent
+share. `04_compare_licensing_registers.R` reads the same registers with the
+same conversions, but without that scaling. So the registers are an independent
 count of the children in licensed centers, and the check compares the build to
 them.
 
 ```bash
-Rscript state_data/code/05_register_check.R   # table + out/register_check.csv
+Rscript state_data/code/04_compare_licensing_registers.R
+# prints the table, writes out/licensing_register_comparison.csv
 ```
 
 **Capacity to children.** Each register gives licensed capacity. The script
@@ -651,10 +519,10 @@ converts capacity to children:
 | Geography | Register | Vintage | Rebase | Capacity to children |
 |---|---|---|---|---|
 | KY | CCAoA republication of the CHFS licensed and certified registers | 2018-09 | none | measured enrolled per provider: 42 per center, 9 per home (2019 workforce study, Table 20) |
-| NJ | DCF licensed centers | 2019-05 | none | NJ fill rate 0.6733 (MRS 2021, Figure 7); no home register exists |
+| NJ | DCF licensed centers; homes from the DCF registered family child care count (KIDS COUNT, 1,492 at 2019-12-31) | 2019-05; homes 2019-12 | none | centers: NJ fill rate 0.6733 (MRS 2021, Figure 7); homes: 5 children per provider (legal maximum) × under-5 slot share 0.7955 × fill 0.4402 (MRS 2021, p. 18 and Table 17, 2020 column) |
 | NY | OCFS (centers outside NYC, all homes) + NYC DOHMH group child care | 2026-09 | 2019/2025 by program type, OCFS modality series | national fill: centers 0.9029, homes 0.7954 |
 | NYC | the same two registers, five boroughs | 2026-09 | as NY | as NY |
-| VA | VDSS, every approval route | 2026-09 | statewide factor, VDSS 2020-06 matrix | centers 0.9029, homes 0.7954 x 0.7546 |
+| VA | VDSS, every approval route | 2026-09 | licensed and voluntary registered homes: 2019 / 2026 program count per type (ELPG); everything else: statewide factor, VDSS 2020-06 matrix | centers 0.9029, homes 0.7954 x 0.7546 |
 
 The home under-5 share is 0.7546, the NSECE listed-provider stratum. The
 September 18 build held 0.7567, a published figure that the later derivation
@@ -665,7 +533,16 @@ most Head Start and Early Head Start, and state pre-K places contracted to
 community centers. It does not hold public-school pre-K, which is
 license-exempt in all five geographies. So the check compares the register
 with Center-Based + Head Start + Early Head Start (enrolled, less the
-in-school share). Homes compare with all of Paid Home-Based.
+in-school share). Homes compare with Paid Home-Based × 0.7633, the listed-home
+share. Paid Home-Based holds every paid home with no prior relationship,
+licensed or not; a register holds licensed or registered homes only.
+`cluster/nsece_listed_home_share.py` measures the share from the NSECE 2019
+home provider file (ICPSR 37941-0007): children 0–5 in listed homes (588,260)
+over children with no prior relationship in listed homes (465,968) and in
+unlisted paid homes (304,754), care in the provider's home. 738 listed homes
+with withheld age counts take the listed stratum's under-school-age share,
+0.7546. By region it runs 0.64 to 0.92, but the Northeast has 27 unlisted paid
+providers, so the check uses the national share.
 
 **Read the gap by conversion.** KY and NJ convert capacity with their own
 measured enrollment, so their gap is the most reliable. NY, NYC, and VA use
@@ -676,86 +553,49 @@ there is smaller than the table shows.
 
 ### Reference documents
 
-`raw/documentation/` holds the reports behind hand-extracted numbers and the
-evidence for choices the method makes:
+Each report sits beside the data of its scope, in `raw/<SCOPE>/`. Only the
+documents behind numbers the build uses are held: the reports, plus the VA VDSS
+workbook that the register check's CSV comes from. On 2 October 2026 I
+removed the documents read only for context, method, or a rejected source,
+and the NHES codebook; earlier commits still hold them.
 
-| File | What it is |
-|---|---|
-| `US_NIEER__head_start_methodology__2023.pdf` | NIEER's method for Head Start funded slots by age |
-| `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap, state pre-K totals, CA and MI pre-K |
-| `US_NIEER__states_of_head_start_and_early_head_start__2023.pdf` | NIEER State(s) of Head Start: Early Head Start 2018–19 by state |
-| `US_OHS__services_snapshot_ehs__2018-19.pdf` | OHS EHS Services Snapshot, national, 2018–19: EHS funded slots, pregnant-women slots, cumulative enrollment |
-| `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots |
-| `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots and age mix, for the HS/EHS split |
-| `US_OHS__services_snapshot_all_programs__2018-19.pdf` | OHS Services Snapshot, all programs, 2018–19: confirms the program totals add up |
-| `US_OHS__services_snapshot_mshs__2018-19.pdf` | OHS Migrant and Seasonal Services Snapshot, 2018–19: confirms the program totals add up |
-| `US_OHS__program_facts_page__FY2019.html` | OHS Program Facts FY2019 (archived page): state funded enrollment, HS and EHS combined. Evaluated and rejected: no pregnant-women split |
-| `US_OHS__full_enrollment_initiative_pi_hs_18_04__2018.html` | OHS full-enrollment rule (97% threshold). Context for the enrolled-per-slot factors |
-| `US_AECF__kidscount_head_start_enrollment_by_age_table9786__2024.html` | KIDS COUNT Head Start enrollment by age. Evaluated and rejected: cumulative, pregnant women inside 0–2 |
-| `US_OHS__biennial_report_to_congress__FY2019.pdf` | Appendix C (national PIR) feeds the enrolled-per-slot factors. Its state HS + EHS funded enrollment was evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
-| `US_NSCH__topical_variable_list__2019.pdf` | NSCH 2019 variable list, incl. `k6q20` wording |
-| `US_NSECE__home_based_provider_chartbook__2021-05.pdf` | NSECE home-based provider chartbook |
-| `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019 |
-| `US_PWBM__data_processing_for_tax_module__2020-01.pdf` | PWBM tax-module data processing |
-| `VA_EDWP__authorized_vs_current_capacity__2024.pdf` | Virginia provider survey on authorized versus current capacity |
-| `KY_CCAKY__child_care_workforce_study__2019.pdf` | Child Care Aware of Kentucky workforce study |
-| `KY_CCAKY__cost_addendum_report__2018.pdf` | Child Care Aware of Kentucky cost addendum |
-| `KY_MRS17__market_rate_study_report__2017.pdf` | Kentucky market rate study, 2017 |
-| `KY_MRS20__market_rate_study_report__2020.pdf` | Kentucky market rate study, 2020 |
-| `NJ_MPS16__child_care_market_price_study__2016.pdf` | New Jersey market price study, 2016 |
-| `NJ_MRS21__child_care_market_rate_survey__2021.pdf` | New Jersey market rate survey, 2021 |
-| `NYS_MRS__market_rate_survey_report__2019.pdf` | New York State market rate survey, 2019 |
-| `NYS_MRS22__market_rate_survey_report__2022.pdf` | New York State market rate survey, 2022 |
-| `NYS_MRS24__market_rate_survey_report__2024.pdf` | New York State market rate survey, 2024 |
-| `NYS_NIEERHS__head_start_state_profile__2020-21.pdf` | NIEER Head Start profile, New York, 2020-21 |
-| `NYS_NIEER__state_preschool_yearbook_profile__2018-19.pdf` | NIEER state pre-K profile, New York, 2018-19 |
-| `NY_OCFS__child_care_facts_and_figures__2019.pdf` | New York OCFS child care facts and figures, 2019 |
-| `VA_MRS18__market_rate_survey_report__2018.pdf` | Virginia market rate survey, 2018 |
-| `VA_VDSS__child_care_capacity_and_demand_matrix__2020-06.xlsx` | Virginia VDSS capacity and demand matrix by locality |
-| `US_TBL__tax_microsimulation_model_documentation__2024.pdf` | Budget Lab tax microsimulation model documentation |
-| `US_CCDF__preliminary_data_table_<N>_...__2019.tsv` | CCDF FY2019 preliminary data tables 1, 3, 4, 5, 6, 9, 14 (setting, regulation, age, hours) |
-| `US_FACES__head_start_interaction_with_federal_state_local_systems_brief__2022.pdf` | FACES brief: Head Start and state and local systems |
-| `US_FACES__head_start_interaction_with_federal_state_local_systems_appendix__2022.pdf` | FACES appendix to the brief |
-| `US_NHES__ecpp_public_use_codebook__2019.pdf` | NHES-ECPP 2019 public-use codebook (`CAREHOURX`, `FEWT`, `CENREG`) |
-| `US_NIEER__state_preschool_yearbook__2018-19.pdf` | Shorter copy (197 pages) of the same *State of Preschool 2019* yearbook. Nothing reads it; the 369-page `US_NIEER__state_of_preschool_yearbook__2019.pdf` is the one the checks and specs cite |
-| `US_NSCH__enhancements_technical_document__2024.pdf` | NSCH survey enhancements technical document |
-| `US_NSCH__stata_codebook_dofile__2019.do` | NSCH 2019 Stata label and codebook do-file |
-| `US_NSECE__center_based_programs_characteristics_initial_findings__2012.pdf` | NSECE 2012 center-based program characteristics |
-| `US_NSECE__center_based_providers_counts_and_characteristics_chartbook__2012-2019.pdf` | NSECE center-based provider chartbook, 2012 and 2019 |
-| `US_NSECE__household_participation_counts_and_characteristics__2023.pdf` | NSECE household participation counts and characteristics |
-| `US_NSECE__snapshot_child_care_cost_burden__2022.pdf` | NSECE snapshot: child care cost burden |
-| `US_NSECE__snapshot_publicly_funded_participation__2024.pdf` | NSECE snapshot: publicly funded participation |
-| `US_NSECE__usage_and_out_of_pocket_cost_tabulations_2012_data__2018.pdf` | NSECE 2012 usage and out-of-pocket cost tabulations |
+| Folder | File | What it is |
+|---|---|---|
+| `raw/US/` | `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap, state pre-K totals, CA and MI pre-K |
+| `raw/US/` | `US_NIEER__states_of_head_start_and_early_head_start__2023.pdf` | NIEER State(s) of Head Start: Early Head Start 2018–19 by state |
+| `raw/US/` | `US_OHS__services_snapshot_ehs__2018-19.pdf` | OHS EHS Services Snapshot, national, 2018–19: EHS funded slots, pregnant-women slots, cumulative enrollment |
+| `raw/US/` | `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots |
+| `raw/US/` | `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots and age mix, for the HS/EHS split |
+| `raw/US/` | `US_OHS__biennial_report_to_congress__FY2019.pdf` | Appendix C (national PIR) feeds the enrolled-per-slot factors. Its state HS + EHS funded enrollment was evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
+| `raw/US/` | `US_NSCH__topical_variable_list__2019.pdf` | NSCH 2019 variable list, incl. `k6q20` wording |
+| `raw/US/` | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019 |
+| `raw/KY/` | `KY_CCAKY__child_care_workforce_study__2019.pdf` | Child Care Aware of Kentucky workforce study |
+| `raw/NJ/` | `NJ_MRS21__child_care_market_rate_survey__2021.pdf` | New Jersey market rate survey, 2021 |
+| `raw/NY/` | `NY_OCFS__child_care_facts_and_figures__2019.pdf` | New York OCFS child care facts and figures, 2019 |
+| `raw/VA/` | `VA_VDSS__child_care_capacity_and_demand_matrix__2020-06.xlsx` | Virginia VDSS capacity and demand matrix by locality |
 
 ## Checks
 
-Ten scripts, all read-only, all exit 1 on failure. `01_nsch_rate.R` and
-`03_head_start_in_schools.R` used to carry a `--check` that compared their
+Five scripts, all read-only, all exit 1 on failure.
+`01_nsch_participation_rate.R` and `03_head_start_school_overlap.R` used to
+carry a `--check` that compared their
 derivation to a hand copy of `nonparental_rate`/`nonparental_rate_se`/
-`hs_in_schools_share` in `states/<GEO>.R`. `load_spec()` (`00_main.R`) now
-reads all three live from the `out/` files those two scripts write, so there
-is no hand copy left to go stale, and neither script is a check any more --
-see "How `load_spec()` reads the two derived fields" below.
-
-`check_docs_describe_the_checks.R` guards this paragraph: it derives the suite
-from disk and fails if the count or the read-only split drifts.
+`hs_in_schools_share` in `states/<GEO>.R`. `load_spec()`
+(`00_build_demand_targets.R`) now reads the rate and the share live from the `out/` files those two scripts
+write, so there is no hand copy left to go stale, and neither script is a check any more --
+see "How `load_spec()` reads the two derived fields" above.
 
 ```bash
-Rscript state_data/tests/check_outputs_are_current.R       # out/ is what the code produces
-Rscript state_data/tests/check_memo_matches_build.R        # memo prints what out/ holds
-Rscript state_data/tests/check_memo_prose_numbers.R        # and so do its sentences
-Rscript state_data/tests/check_memo_names_real_files.R     # the memo names no repo file
+Rscript state_data/tests/check_outputs_are_current.R       # demand targets are what the code produces
 Rscript state_data/tests/check_sources_are_ascii.R         # no literal depends on locale
-Rscript state_data/tests/check_docs_describe_the_checks.R  # this paragraph is right
-Rscript state_data/tests/check_constants_match_derivation.R # constants match out/nsece_universe.csv
-Rscript state_data/tests/check_nsece_against_nhes.R        # NSECE against a second survey
+Rscript state_data/tests/check_constants_match_derivation.R # constants match out/nsece_constants.csv
 Rscript state_data/tests/check_program_counts_match_sources.R # program counts match their sources
 python  state_data/tests/check_summarise_shadowing.py      # scans for the shadowing trap
 ```
 
-**Run `check_outputs_are_current.R` first.** It is the only one that compares
-`out/` to the code. The memo checks compare the memo to `out/`, so a stale
-`out/` would pass them.
+**Run `check_outputs_are_current.R` first.** It is the only check that
+compares the demand targets in `config/state/demand/` to the code. The other
+checks read the committed files as they are, so a stale file can pass them.
 
 ## Known traps
 
@@ -780,8 +620,9 @@ python  state_data/tests/check_summarise_shadowing.py      # scans for the shado
 
 ## How the simulator reads this
 
-`00_main.R` writes each file twice: to `out/<GEO>.csv`, and to
-`config/state/demand/<GEO>.csv`, where the simulator reads it.
+`00_build_demand_targets.R` writes each file once, to
+`config/state/demand/<GEO>.csv`, where the simulator reads it. There is no
+copy in `out/`.
 `read_state_demand_targets()` in `src/shared_functions/adjust_alpha_for_state.R`
 takes the same six rows. One Center-Based target covers both of the
 simulator's center price bands, and both bands get one shared adjustment.
@@ -795,8 +636,8 @@ site file and the NY registers. A NYC run needs an interface built from a raw
 ACS pull that carries `COUNTYFIP`; without one, the run stops at
 initialization.
 
-`check_outputs_are_current.R` confirms that each simulator file equals its
-`out/` file and that the simulator's reader accepts it.
+`check_outputs_are_current.R` rebuilds each geography and confirms that its
+simulator file equals the rebuild and that the simulator's reader accepts it.
 
 ```bash
 Rscript src/main.R -r state_targets_smoke    # baseline for KY, NJ, NY, VA

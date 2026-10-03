@@ -1,36 +1,25 @@
 #------------------------------------------------------------------------------
-# NYC.R -- New York City, the five boroughs.
+# NYC.R -- New York City, the five boroughs. Sub-state geography, own build
+# because asked about on its own.
 #
-# Not a state. A sub-state geography that gets its own build because it is
-# asked about on its own. Region northeast.
+# CITY'S RATE = NY'S x p0 FACTOR. NSCH publishes no sub-state geography;
+# nsch_rate_of() (00_build_demand_targets.R) scales NY's
+# out/nsch_participation_rate_2019.csv row (parent_geo(),
+# src/shared_functions/constants.R) by p0's non-parental share in NYC / in NY. City also differs by population, program counts, own p0
+# mix; wage ratio from ACS childcare workers in five boroughs
+# (acs_childcare_wage_by_education_2019.py).
 #
-# THE CITY TAKES THE STATE'S NON-PARENTAL RATE. NSCH publishes no sub-state
-# geography, so there is no city rate to measure. load_spec() (00_main.R)
-# reads the parent state's row of out/nsch_rate_base.csv -- parent_geo() in
-# src/shared_functions/constants.R, NYC -> NY -- not hand-copied here. What distinguishes the city is its population and its program counts.
-#
-# THE NY BUILD INCLUDES THIS ONE. Same rate, so step 1 and program counts
-# subtract exactly -- but p0 mix a ratio per geography, so NY rows minus NYC
-# rows only approximate a rest-of-state build: within 0.6% of hours per care
-# type (memo check registers the figure).
+# NY BUILD INCLUDES THIS ONE. NY minus NYC = rest of state by definition for
+# step 1, program counts -- but p0 mix a ratio per geography, so difference
+# only approximates a rest-of-state build: within 0.6% of hours per care type.
 #------------------------------------------------------------------------------
 
+# NYC_* constants, borough lists: NY.R.
 source(file.path(STATE_DATA_ROOT, 'states', 'NY.R'))
 
-
-
-
-SPEC_NYC <- list(
-  geo      = 'NYC',
-  name     = 'New York City',
-  fips     = 36,
-  counties = NYC_BOROUGHS,
-  county_fips = NYC_COUNTY_FIPS,
-  region   = 'northeast',
-
-  programs = tibble::tribble(
-    ~program,          ~n_children,
-    'public pre-K',        NYC_PREK_CCD,
-    'Head Start',          NYC_HEAD_START,
-    'Early Head Start',    NYC_EARLY_HEAD_START)
-)
+SPEC_NYC <- geo_spec('NYC', 'New York City', fips = 36,
+  counties = NYC_BOROUGHS, county_fips = NYC_COUNTY_FIPS,
+  region = 'northeast',
+  prek             = NYC_PREK_CCD,
+  head_start       = NYC_HEAD_START,
+  early_head_start = NYC_EARLY_HEAD_START)

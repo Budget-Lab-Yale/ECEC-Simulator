@@ -38,7 +38,8 @@ A new optional runscript column: `state`.
   Crosswalked in code to FIPS codes (IPUMS `STATEFIP` is numeric FIPS) via a
   51-entry table (50 states + DC) in `constants.R`.
 - **Sub-state geographies.** `SUBSTATE_GEOGRAPHIES` in `constants.R` names
-  each one with its state FIPS and IPUMS county codes. NYC is STATEFIP 36 with
+  each one with its state FIPS and IPUMS county codes. It reads them from
+  `config/substate_geographies.csv`, which the ACS Python scripts also read. NYC is STATEFIP 36 with
   COUNTYFIP 005 (Bronx), 047 (Kings), 061 (New York), 081 (Queens), and 085
   (Richmond). Every NYC PUMA nests in one borough, so IPUMS identifies all
   five. `select_geo_hh_ids()` applies the county filter. A sub-state
@@ -255,9 +256,8 @@ labor_supply = colSums(L_req * state base-year hours)
 ```
 
 which is the definition `1a_nsece_processing.R` uses nationally, applied to the
-state's own base-year hours. The file now holds the OEWS-based figure instead,
-national L_0 × the state's share of national OEWS workers (below), and prints
-this demand-based figure beside it.
+state's own base-year hours. The file now holds the ACS-based figure instead:
+national L_0 × the state's share of national ACS childcare workers (below).
 
 **When demand is re-anchored, the simulator replaces that figure.** At state
 initialisation (`3a_initialize_simulation.R`), `adjust_alpha_for_state()`
@@ -269,57 +269,47 @@ a fixed national split would leave the base-year ratio off 1 for BA labour.
 From the model's own hours, `L / L_0 = 1` in the base year by construction.
 The file's `labor_supply` remains the fallback for a state with no demand file.
 
-**`wages` and the labour quantity come from BLS occupations.**
-`resources/supply/oews_childcare_2019.R` reads OEWS May 2019 (BLS
-`oesm19st.zip`, held at `state_data/raw/US_OEWS__occupational_employment_and_wages_by_state__2019-05.zip`)
-for every SOC occupation that cares for children under school age -- four:
+**`wages` and the labour quantity come from ACS childcare workers, by measured
+education.** `resources/supply/acs_childcare_wage_by_education_2019.py` reads
+IPUMS extract usa:33 (`resources/supply/acs_ipums_extract_2019.R`) on the
+cluster. It uses the 2018 and 2019 records of the 2015-2019 5-year sample, for
+about twice the 1-year records. The workers are the ACS occupations of the four
+SOC codes that care for children under school age:
 
-| SOC | Occupation | Simulator group |
-|---|---|---|
-| 39-9011 | Childcare Workers | no-BA |
-| 25-2011 | Preschool Teachers, Except Special Education | BA |
-| 25-2051 | Special Education Teachers, Preschool | BA |
-| 11-9031 | Education and Childcare Administrators, Preschool and Daycare | BA |
+| ACS OCC | SOC | Occupation | Kept |
+|---|---|---|---|
+| 4600 | 39-9011 | Childcare workers | every industry except private households (IND 9290) |
+| 2300 | 25-2010 | Preschool and kindergarten teachers | child day care services (IND 8470) |
+| 2330 | 25-2050 | Special education teachers | child day care services |
+| 230 | 11-9030 | Education and childcare administrators | child day care services |
 
-OEWS has no education detail, so the group is a mapping by occupation, not a
-measured degree split. Kindergarten, elementary, and other special-education
-teachers teach school-age children, and Teaching Assistants (25-9045) is one
-code from preschool to grade 12, mostly K-12, so none of them is included. BLS
-publishes 25-2051 pay as annual only; its hourly figure is the annual mean ÷
-2,080, OEWS's own rule. Each state's wage is the national NSECE wage × the
-state hourly mean ÷ the national hourly mean, BA weighted by employment over its
-three occupations. The national figure is the 50 states and DC, because the state
-file has no national row. Using a *ratio* keeps NSECE's wage definition, which
-the rest of the parameter set is built on. Ratios run 0.757 to 1.338 (no-BA)
-and 0.725 to 1.429 (BA). BLS publishes no 25-2051 row for DE, DC, HI, LA, ME,
-NH, VA, or WV and suppresses its employment in OR; it publishes no 11-9031 row
-for DC and suppresses 11-9031 employment in FL and OR. BA in those states rests
-on the other occupations. NY has the highest BA ratio: it holds 5,930 of the
-20,710 special-education preschool teachers, at $43.24 an hour against $31.79
-nationally. ACS industry-based ratios were the wage source until 1 October
-2026; they correlated with the three-occupation OEWS ratios at 0.70 for no-BA
-and 0.32 for BA. They and their
-scripts were removed that day.
+The ACS pools each of the last three across school levels, so they count only
+in child day care services. Private-household childcare workers are nannies and
+babysitters, the simulator's Other Paid, not a center or home provider. The
+group is the worker's own education: BA = `EDUC` ≥ 10 (four or more years of
+college). An occupation mapping does not work: BLS Employment Projections
+Table 5.3 (2023-24) puts 22.6% of childcare workers at BA or higher and 46.2%
+of preschool teachers below it. In the ACS 2019 1-year file, the BA share is
+15.6% for childcare workers and 36.3% for preschool teachers in child day care
+services.
+
+Hourly earnings are `INCEARN` ÷ (weeks × usual hours), with earnings ≤ 0,
+under 100 annual hours, and hourly outside $2-200 dropped. Each state's wage is
+the national NSECE wage × the state mean ÷ the national mean, by group. The
+ratio keeps NSECE's wage definition, which the rest of the parameter set is
+built on. Ratios run 0.754 (SD) to 1.291 (NH) for no-BA and 0.730 (KY) to
+1.386 (NV) for BA. A cell under 30 unweighted workers takes ratio 1: BA in AK,
+DC, DE, HI, ID, MT, ND, NM, WV, and WY. Standard errors use the 80 replicate
+weights; the median is 0.05 (no-BA) and 0.08 (BA). NYC is the five boroughs
+(`COUNTYFIP`), with its own ratio and labour share. The ratios correlate with
+the occupation-mapped OEWS May 2019 ratios they replaced (2 October 2026) at
+0.72 (no-BA) and 0.61 (BA).
 
 Each file's `labor_supply` is the national NSECE L_0 × the state's share of
-national OEWS workers in that group. The demand-based figure, labour
-requirements × the state's base-year hours, is printed beside it. A run with a
-demand file replaces both with the model's own base-year hours (below).
-
-**Validity check.** National NSECE labour supply over 2,080 hours, against
-national OEWS employment: no-BA 609,608 FTE against 561,530 workers (1.09), BA
-262,634 against 499,860 (0.53), total 0.82. OEWS counts wage and salary jobs
-only, so self-employed home-based providers are absent from it — the no-BA
-ratio above 1 fits that. The BA ratio says the occupation mapping puts more
-workers in BA than NSECE's degree measure does: many OEWS preschool teachers
-hold no degree, and the occupation includes teachers in public schools.
-
-**State by state, OEWS labour and demand-implied labour disagree.** The
-OEWS-based L_0 over the demand-based one runs from 0.57 (HI) to 2.57 (NE) for
-no-BA, mean 1.12 across the 52 files (p0-share demand files, 1 October 2026). A state's share of national childcare
-workers is often far from its share of the base-year care hours its demand file
-implies. Runs with a demand file do not feel this, because the simulator
-replaces L_0 with the model's own hours; it says the OEWS fallback is weak.
+national ACS workers in that group. A run with a demand file replaces it with
+the model's own base-year hours (above). The fallback is weak: against labour
+requirements × the state's base-year hours, the ACS-based L_0 ran from 0.69
+(HI) to 2.00 (NE) for no-BA and 0.34 (DC) to 2.26 (SD) for BA.
 
 `labor_requirements`, `elasticities` and `per_unit_residual` stay national.
 `per_unit_residual` is the one worth stating: the equilibrium solves
@@ -364,10 +354,12 @@ from the national CBO cell rates and each state's own age-sex composition:
 The national file has no 60–64 or 65+ rates from 2026 on, so each year's sum
 runs over the cells that have a rate, for the state and the nation alike.
 Composition is held at its nearest ACS year outside 2006–2024, so runs from
-2026 use the 2024 composition. Only the change in k since 2019 reaches the
-simulator: a state's growth path differs from the national one only through
-the change in its age-sex composition. Runs from 2026 get national growth ×
-k(2024)/k(2019): 0.989 (DC) to 1.013 (DE) across the 52 files, against 0.960 to
+2026 use the 2024 composition. The shares freeze, not k: k is recomputed every
+year, so it still moves after 2024 when CBO cell rates move differently. Only
+the change in k since 2019 reaches the simulator, as a rate ratio per cell:
+r_s,g(t) / r_s,g(2019) = r_US,g(t) / r_US,g(2019) × k(t) / k(2019). A state's
+growth path differs from the national one only through its age-sex
+composition. k(2024)/k(2019) runs 0.989 (DC) to 1.013 (DE) across the 52 files, against 0.960 to
 1.043 under the LAUS method it replaced (30 September to 1 October 2026; its
 input and download script were then removed). The state's own labour market
 does not enter. NYC takes New York's composition until a county-level one is
@@ -410,7 +402,7 @@ adjustment was applied (and the solved deltas), the supply-parameter source
 
 ```
 config/state/
-├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows); state_data/code/00_main.R
+├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows); state_data/code/00_build_demand_targets.R
 ├── supply/<ST>.yaml      # supply params, schema = supply_2019.yaml; resources/supply/state_supply_params.R
 └── employment/<ST>.csv   # epop projections, schema = epop_projections.csv; resources/epop/state_epop_projections.R
 ```
@@ -419,6 +411,7 @@ Each falls back to the national input when absent. Demand and employment are
 optional; a state with a demand file also needs its supply file (§7). All
 three are built, for the 50 states, DC, and NYC, by the scripts named above.
 `<ST>` is the USPS postal abbreviation, uppercase, or a sub-state code
-(`NYC`). NYC's supply file takes New York's wage ratio, and its employment
-file takes New York's age-sex composition: neither source has a city figure. How the demand targets are built is
+(`NYC`). NYC's supply file takes its own ACS wage ratio and labour share (the
+five boroughs); its employment file takes New York's age-sex composition,
+which has no city figure. How the demand targets are built is
 in `state_data/README.md`.

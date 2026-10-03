@@ -418,8 +418,7 @@ get_run_states <- function(runscript) {
 
   # Sub-state geography carries its state's FIPS; init adds county filter
   setNames(vapply(postal, function(p) {
-    if (p %in% names(SUBSTATE_GEOGRAPHIES)) SUBSTATE_GEOGRAPHIES[[p]]$statefip
-    else unname(STATE_POSTAL_TO_FIPS[p])
+    SUBSTATE_GEOGRAPHIES[[p]]$statefip %||% unname(STATE_POSTAL_TO_FIPS[p])
   }, numeric(1)), postal)
 }
 

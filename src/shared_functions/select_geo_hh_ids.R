@@ -1,21 +1,19 @@
 select_geo_hh_ids <- function(households, geo, fips) {
 
   #----------------------------------------------------------------------------
-  # Household ids for one run geography: a state by STATEFIP, or a sub-state
-  # geography (SUBSTATE_GEOGRAPHIES, constants.R) by STATEFIP + COUNTYFIP.
-  # Interface w/out countyfip cannot select a sub-state geography -- fails
-  # loudly rather than falling back to the whole state.
+  # Household ids for one run geography: state by STATEFIP, sub-state
+  # (SUBSTATE_GEOGRAPHIES, constants.R) by STATEFIP + COUNTYFIP. Sub-state w/out
+  # countyfip fails loudly, never falls back to whole state.
   #
   # Params:
-  #   - households (df): simulation households, w/ statefip (+ countyfip)
-  #   - geo (chr): runscript code, e.g. 'NY', 'NYC'
-  #   - fips (int): state FIPS for geo (get_run_states())
+  #   - households (df): Simulation households, w/ statefip (+ countyfip)
+  #   - geo (chr): Runscript code, e.g. 'NY', 'NYC'
+  #   - fips (int): geo's state FIPS (get_run_states())
   #
   # Returns: (vec) hh_id of every household in geo
   #----------------------------------------------------------------------------
 
-  hh <- households %>%
-    filter(statefip == fips)
+  hh <- filter(households, statefip == fips)
 
   substate <- SUBSTATE_GEOGRAPHIES[[geo]]
   if (!is.null(substate)) {

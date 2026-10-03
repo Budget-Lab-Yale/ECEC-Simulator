@@ -81,6 +81,7 @@ src/
 
 config/
 ├── default_paths.yaml        # File system paths & data dependencies
+├── substate_geographies.csv  # Sub-state geographies (NYC) by county FIPS; read by constants.R + ACS Python scripts
 ├── runscripts/               # Scenario definitions (CSV files)
 ├── policy_demand/            # Demand-side subsidy policies
 ├── policy_supply/            # Supply-side policies
@@ -105,22 +106,25 @@ region, and the simulator's ACS households do not include it.
 Unpaid Center-Based comes from each state's program counts (public pre-K, Head
 Start, and Early Head Start), less the Head Start that CCD already counts. The
 other five types divide the rest by the simulator's own base-year choice
-probabilities, summed over the state's ACS households (`--shares nsece` builds
-on regional NSECE shares instead).
+probabilities, summed over the state's ACS households
+(`state_data/code/05_compare_nsece_shares.R` compares the result with regional
+NSECE shares).
 
-- **[state_data/docs/SUMMARY_method.pdf](state_data/docs/SUMMARY_method.pdf)**
-  is the document to read — what every number means and how solid it is.
+- The **state method memo** (`state_data/docs/SUMMARY_method.pdf`) is the
+  document to read — what every number means and how solid it is. It is kept
+  outside git; ask Anna for the current version.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
-  provenance of every input, the ten checks that each exit non-zero on
+  provenance of every input, the five checks that each exit non-zero on
   failure, and the known traps.
 
-The build and the simulator are wired together. `state_data/code/00_main.R` writes
-each file a second time to `config/state/demand/<GEO>.csv`, and the
-simulator reads it from there (`adjust_alpha_for_state.R`). The simulator takes
+The build and the simulator are wired together.
+`state_data/code/00_build_demand_targets.R` writes each file once, to
+`config/state/demand/<GEO>.csv`, and the simulator reads it from there (`adjust_alpha_for_state.R`). The simulator takes
 six target groups: one Center-Based target covers both center price bands.
 A runscript can name `NYC` beside the states: the simulator selects its
 households by STATEFIP 36 and the five borough county FIPS
-(`SUBSTATE_GEOGRAPHIES` in `constants.R`). That needs an interface built from
+(`SUBSTATE_GEOGRAPHIES` in `constants.R`, read from
+`config/substate_geographies.csv`). That needs an interface built from
 a raw ACS pull that carries `COUNTYFIP`. `config/runscripts/state_targets_smoke.csv` runs the
 baseline for KY, NJ, NY, and VA; `state_targets_all.csv` runs it for all 50
 states, DC, and NYC. A state run needs an interface built after
@@ -231,6 +235,43 @@ State runs require an interface generated after state support was added
 older interfaces fail loudly at initialization. Known v1 limitations (state
 income taxes, national wage/CPI growth factors) are documented in the design
 doc.
+
+### When to recalibrate
+
+Most changes take effect at simulation start. These do **not** need a new
+calibration; reuse one with `-C <interface>`:
+
+- **State demand targets** (`config/state/demand/`). The re-anchoring fits the
+  national alphas to each state's targets at the start of every run.
+- **State supply files** (`config/state/supply/`), such as wage ratios. The
+  simulator also recomputes base-year labor from the model's own hours at the
+  start of each run.
+- **Employment paths** (`config/state/employment/`).
+- **Simulation code** (`src/3_simulation/`), policies, and runscripts.
+
+These **do** need a new calibration (`--setup-only` builds a new interface):
+
+- **The household data**: a new ACS pull, a different `--calib-sample`, or new
+  variables. Adding `COUNTYFIP` for NYC needed a new interface.
+- **Processing or calibration code** (`src/1_processing/`,
+  `src/2_calibration/`): NSECE processing, the choice set, the utility
+  specification, or the calibration targets.
+- **National supply parameters**, or anything estimated from NSECE.
+
+**The share model reads the calibration.** The demand build's p0 shares
+(`state_data/raw/US/US_ACS__p0_children_by_care_type_and_hours__2019.csv`) are
+summed from one calibration interface (now `202610011031`). After a new
+calibration, do these steps in order, or the demand targets keep the old
+calibration's mix:
+
+1. Run `state_data/cluster/acs_p0_shares.R <new interface> <out.csv>` on the
+   cluster, and replace the raw file with its output.
+2. Rebuild the demand targets: `Rscript state_data/code/00_build_demand_targets.R --all --check`.
+3. Rebuild the supply files: `Rscript resources/supply/state_supply_params.R`.
+
+A fresh clone also needs `cache/price_models/price_qrf_models.rds`, which is
+not in git and which `-C` does not copy. Copy it from an existing checkout
+before the first run.
 
 ## Output Structure
 

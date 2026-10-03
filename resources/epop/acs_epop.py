@@ -2,18 +2,17 @@
 """
 State employment-population ratios by sex and age bin, from IPUMS ACS.
 
-resources/epop/epop_projections.csv is national: 26 columns, 13 age bins x two
-sexes, 1994-2100. config/state/employment/<ST>.csv takes the same schema and
-nothing has ever been written to it. This produces the state series the
-simulator would read.
+resources/epop/epop_projections.csv is national: 26 columns, 12 age bins +
+16plus x two sexes, 1994-2100. config/state/employment/<ST>.csv takes same
+schema; state_epop_projections.R builds it from this file's output.
 
-ACS is the right instrument rather than CPS: the CPS-Monthly extract on the
-cluster carries no STATEFIP, and CPS-ASEC's sample is too thin for
-state x sex x 13 age bins. ACS gives ~3M persons a year, 2006-2024.
+ACS, not CPS: CPS-Monthly extract on cluster carries no STATEFIP, CPS-ASEC
+sample too thin for state x sex x 12 age bins. ACS gives ~3M persons a year,
+2006-2024.
 
-IPUMS ships fixed-width .dat.gz with column positions in the DDI .xml, so the
-layout is read from the DDI rather than hard-coded -- a hard-coded offset would
-silently misread if the extract were ever rebuilt with different variables.
+IPUMS ships fixed-width .dat.gz w/ column positions in DDI .xml -- layout read
+from DDI, not hard-coded; hard-coded offset would silently misread if extract
+ever rebuilt w/ different variables.
 
 Writes one long CSV: year, state_fips, sex, age_bin, employed_wt, pop_wt, n.
 """
@@ -38,10 +37,11 @@ def shared_root():
                 return m.group(1)
     raise SystemExit('no roots.input in %s' % cfg)
 
+
 ACS_ROOT = os.path.join(shared_root(), 'raw_data', 'ACS', 'acs_common_v2')
 NEED = ['STATEFIP', 'AGE', 'SEX', 'EMPSTAT', 'PERWT']
 
-# The national file's bins, in its column order.
+# National file's bins, in its column order
 BINS = [(16, 17, '16_17'), (18, 19, '18_19'), (20, 24, '20_24'),
         (25, 29, '25_29'), (30, 34, '30_34'), (35, 39, '35_39'),
         (40, 44, '40_44'), (45, 49, '45_49'), (50, 54, '50_54'),
@@ -49,8 +49,7 @@ BINS = [(16, 17, '16_17'), (18, 19, '18_19'), (20, 24, '20_24'),
 
 
 def bin_of(age):
-    if age < 16:
-        return None
+    """BINS name holding age, or None (under 16, over 200)."""
     for lo, hi, name in BINS:
         if lo <= age <= hi:
             return name
@@ -59,17 +58,15 @@ def bin_of(age):
 
 def layout(xml_path):
     """StartPos and width for each needed variable, from the IPUMS DDI."""
-    ns = {'d': 'ddi:codebook:2_5'}
     root = ET.parse(xml_path).getroot()
     out = {}
+    local = lambda e: e.tag.rsplit('}', 1)[-1]   # tag w/out namespace
     for v in root.iter():
-        if not v.tag.endswith('}var') and v.tag != 'var':
-            continue
         name = v.get('ID')
-        if name not in NEED:
+        if local(v) != 'var' or name not in NEED:
             continue
         for loc in v:
-            if loc.tag.endswith('}location') or loc.tag == 'location':
+            if local(loc) == 'location':
                 s = int(loc.get('StartPos'))
                 w = int(loc.get('width'))
                 out[name] = (s - 1, s - 1 + w)   # 0-based slice
@@ -77,6 +74,8 @@ def layout(xml_path):
 
 
 def run_year(year, out_rows):
+    """Append one year's state x sex x age-bin cells to out_rows; skip year
+    if extract or DDI missing."""
     d = os.path.join(ACS_ROOT, 'us%da' % year)
     dat = os.path.join(d, 'usa_%da.dat.gz' % year)
     xml = os.path.join(d, 'usa_%da.xml' % year)
@@ -89,27 +88,20 @@ def run_year(year, out_rows):
         print('%d: DDI lacks %s -- skipped' % (year, missing), flush=True)
         return
 
+    sl = {v: slice(*lay[v]) for v in NEED}
     acc = defaultdict(lambda: [0.0, 0.0, 0])   # employed_wt, pop_wt, n
     nrow = 0
     with gzip.open(dat, 'rt', errors='replace') as fh:
         for line in fh:
             nrow += 1
             try:
-                age = int(line[lay['AGE'][0]:lay['AGE'][1]])
+                age, st, sx, es, pw = (int(line[sl[v]]) for v in
+                                       ('AGE', 'STATEFIP', 'SEX', 'EMPSTAT', 'PERWT'))
             except ValueError:
                 continue
             b = bin_of(age)
-            if b is None:
-                continue
-            try:
-                st = int(line[lay['STATEFIP'][0]:lay['STATEFIP'][1]])
-                sx = int(line[lay['SEX'][0]:lay['SEX'][1]])
-                es = int(line[lay['EMPSTAT'][0]:lay['EMPSTAT'][1]])
-                # PERWT carries 2 implied decimals in IPUMS ACS
-                w = int(line[lay['PERWT'][0]:lay['PERWT'][1]]) / 100.0
-            except ValueError:
-                continue
-            if sx not in (1, 2) or w <= 0:
+            w = pw / 100.0   # PERWT: 2 implied decimals
+            if b is None or sx not in (1, 2) or w <= 0:
                 continue
             k = (st, 'm' if sx == 1 else 'f', b)
             a = acc[k]
@@ -124,10 +116,12 @@ def run_year(year, out_rows):
 
 
 def main():
-    years = [int(x) for x in sys.argv[1:-1]] if len(sys.argv) > 2 else []
+    """argv: [year ...] out.csv -- no years = 2006-2024. out.csv required:
+    w/out it argv[-1] is this script's own path, overwritten."""
+    if len(sys.argv) < 2 or sys.argv[-1].endswith('.py') or sys.argv[-1].isdigit():
+        raise SystemExit('usage: acs_epop.py [year ...] <out.csv>')
+    years = [int(x) for x in sys.argv[1:-1]] or list(range(2006, 2025))
     out = sys.argv[-1]
-    if not years:
-        years = list(range(2006, 2025))
     rows = []
     for y in years:
         run_year(y, rows)

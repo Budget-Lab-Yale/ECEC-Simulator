@@ -358,10 +358,10 @@ initialize_simulation <- function() {
     cat('--no-price-wedge flag set: disabling price heterogeneity (all wedges = 1.0)\n')
   }
 
-  # National cache in state runs too -- each state context takes its own rows
-  # of it (below). Income percentiles then rank every household on the national
-  # distribution, as QRF price models were trained; ranking within a state put
-  # households in wrong bins, and small states (AK) gave tied quantile breaks.
+  # National cache in state runs too, each state context takes its rows (below):
+  # income percentiles rank on national distribution, as QRF models trained.
+  # Within-state ranking mis-binned households, gave small states (AK) tied
+  # quantile breaks.
   cached_price_wedge <- NULL
   if (!wedge_disabled) {
     cached_price_wedge <- compute_price_wedge_cache(
@@ -457,17 +457,19 @@ initialize_simulation <- function() {
         supply_source <- 'nsece'
       }
 
-      # Base-year labor from the model's own base-year hours. The demand
-      # contraction pins combined centre hours, not the low/high split, so labor
-      # built from a fixed national split would miss the model's own base-year
-      # labor. Built from the re-anchored model's sector hours -- the same
-      # colSums(L_req * Qd) the solver uses -- the wage curve starts at the
-      # base-year wage by construction.
+      # Base-year labor from re-anchored model's sector hours (same
+      # colSums(L_req * Qd) solver uses) -- wage curve starts at base-year wage
+      # by construction. Contraction pins combined centre hours, not low/high
+      # split, so a fixed national split would miss model's own labor.
       if (!is.null(demand_adjustment)) {
         L_file <- st_supply_params$L
         st_supply_params$L <- colSums(st_supply_params$L_req * demand_adjustment$sector_hours)
         cat(sprintf('  Base-year labor: model base-year hours -> no_ba %.4g, ba %.4g (supply file %.4g, %.4g)\n',
                     st_supply_params$L[1], st_supply_params$L[2], L_file[1], L_file[2]))
+      } else {
+        # Fallback -- no demand targets, so no model hours to anchor on
+        cat(sprintf('  Base-year labor: FALLBACK, %s labor_supply -> no_ba %.4g, ba %.4g\n',
+                    supply_source, st_supply_params$L[1], st_supply_params$L[2]))
       }
 
       # Employment growth: state epop file when present, else national CBO
@@ -477,7 +479,7 @@ initialize_simulation <- function() {
         cat('  Employment growth: state epop file (', st_epop_path, ')\n', sep = '')
       }
 
-      # This state's rows of the national price wedge cache
+      # State's rows of national price wedge cache
       st_price_wedge <- if (is.null(cached_price_wedge)) NULL else
         cached_price_wedge %>% filter(hh_id %in% state_hh_ids)
 

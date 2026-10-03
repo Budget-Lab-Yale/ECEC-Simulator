@@ -19,14 +19,11 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(ROOT)
-# code/ and cluster/ hold the build since the September reorganisation; the
-# list once stopped at states/ and tests/, so the build itself went unscanned.
-# resources/ holds the supply and employment builders the state files use.
-files = sorted(glob.glob(os.path.join(ROOT, '*.R')) +
-               glob.glob(os.path.join(ROOT, 'code', '*.R')) +
-               glob.glob(os.path.join(ROOT, 'cluster', '*.R')) +
-               glob.glob(os.path.join(ROOT, 'states', '*.R')) +
-               glob.glob(os.path.join(ROOT, 'tests', '*.R')) +
+# code/, cluster/ hold the build since the September reorganisation (list once
+# stopped at states/, tests/ -- build went unscanned); resources/ holds supply,
+# employment builders state files use.
+files = sorted([f for d in ('', 'code', 'cluster', 'states', 'tests')
+                for f in glob.glob(os.path.join(ROOT, d, '*.R'))] +
                glob.glob(os.path.join(REPO, 'resources', '**', '*.R'), recursive=True) +
                sys.argv[1:])   # extra files, e.g. to test the scanner itself
 

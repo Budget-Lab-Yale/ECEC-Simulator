@@ -74,6 +74,7 @@ src/
 
 config/
 ├── default_paths.yaml        # File system paths & data dependencies
+├── substate_geographies.csv  # Sub-state geographies (NYC) by county FIPS -> SUBSTATE_GEOGRAPHIES + ACS Python scripts
 ├── runscripts/               # Scenario definitions (CSV files)
 ├── policy_demand/            # Demand-side subsidy policies
 ├── policy_supply/            # Supply-side policies

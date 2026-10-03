@@ -1,21 +1,18 @@
 #------------------------------------------------------------------------------
 # NY.R -- New York State, all 62 counties, city included.
 #
-# Region northeast. Build reads here: program counts and Census region, each
-# hand-researched. NSCH rate w/ standard error, and Head Start's
-# in-own-school share, are read live from out/ by load_spec() -- not
-# hand-copied here. Every other constant national or regional -- see
-# 00_main.R.
+# Fields, what load_spec() adds: geo_spec() in 00_build_demand_targets.R.
 #
 # NYC.R builds the five boroughs on their own, from the constants here. The two
 # outputs OVERLAP by design: each is a deliverable in its own right.
 #------------------------------------------------------------------------------
 
-
-# The five boroughs -- county names as Census PEP writes them, FIPS in same
-# order. Only definition; NYC.R, 03_head_start_in_schools.R, checks read these.
+# The five boroughs -- county names as Census PEP writes them; 5-digit FIPS in
+# same order from SUBSTATE_GEOGRAPHIES (constants.R), the one definition of
+# NYC. NYC.R, 03_head_start_school_overlap.R, checks read these.
 NYC_BOROUGHS    <- c('Bronx', 'Kings', 'New York', 'Queens', 'Richmond')
-NYC_COUNTY_FIPS <- c('36005', '36047', '36061', '36081', '36085')
+NYC_COUNTY_FIPS <- with(SUBSTATE_GEOGRAPHIES$NYC,
+                        sprintf('%02d%03d', statefip, countyfip))
 
 
 # Public-school pre-K, CCD 2018-19: 54,451 children across all 62 counties,
@@ -38,18 +35,7 @@ NYC_EHS_SLOTS <- 4426;  NY_EHS_SLOTS <- 8590
 NYC_HEAD_START       <- round(NY_HEAD_START * NYC_HS_SLOTS / NY_HS_SLOTS)              # 12,691
 NYC_EARLY_HEAD_START <- round(NY_EARLY_HEAD_START * NYC_EHS_SLOTS / NY_EHS_SLOTS)  # 5,891
 
-
-
-
-SPEC_NY <- list(
-  geo    = 'NY',
-  name   = 'New York State',
-  fips   = 36,
-  region = 'northeast',
-
-  programs = tibble::tribble(
-    ~program,          ~n_children,
-    'public pre-K',        NY_PREK_CCD,
-    'Head Start',          NY_HEAD_START,
-    'Early Head Start',    NY_EARLY_HEAD_START)
-)
+SPEC_NY <- geo_spec('NY', 'New York State', fips = 36, region = 'northeast',
+  prek             = NY_PREK_CCD,
+  head_start       = NY_HEAD_START,
+  early_head_start = NY_EARLY_HEAD_START)

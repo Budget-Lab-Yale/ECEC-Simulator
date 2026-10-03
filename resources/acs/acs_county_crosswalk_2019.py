@@ -32,7 +32,26 @@ import sys
 
 SAMPLE_2019_1YR = 201901
 FIELDS = ['SERIAL', 'CBSERIAL', 'STATEFIP', 'COUNTYFIP', 'PUMA']
-NYC = {5, 47, 61, 81, 85}   # Bronx, Kings, New York, Queens, Richmond
+
+
+def substate_counties(geo):
+    """(statefip, {countyfip}) for geo from config/substate_geographies.csv --
+    one definition shared w/ SUBSTATE_GEOGRAPHIES in constants.R. Looks
+    beside repo checkout holding this script, then in cwd (repo root)."""
+    rel = os.path.join('config', 'substate_geographies.csv')
+    here = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', rel)
+    path = here if os.path.exists(here) else rel
+    with open(path, newline='') as f:
+        rows = [r for r in csv.DictReader(f) if r['geo'] == geo]
+    fips = {int(r['statefip']) for r in rows}
+    if len(fips) != 1:
+        raise SystemExit('%s: %s needs rows w/ one statefip, found %s'
+                         % (path, geo, sorted(fips)))
+    return fips.pop(), {int(r['countyfip']) for r in rows}
+
+
+# Bronx, Kings, New York, Queens, Richmond
+NYC_STATEFIP, NYC = substate_counties('NYC')
 
 
 def ddi_layout(d):
@@ -42,7 +61,8 @@ def ddi_layout(d):
     if len(xml) != 1 or len(dat) != 1:
         raise SystemExit('want one .xml and one .dat.gz in %s, found %s %s'
                          % (d, xml, dat))
-    t = open(xml[0], encoding='utf-8', errors='replace').read()
+    with open(xml[0], encoding='utf-8', errors='replace') as f:
+        t = f.read()
     lay = {}
     for m in re.finditer(r'<var\b[^>]*\bID="([^"]+)"[^>]*>(.*?)</var>', t, re.S):
         loc = re.search(r'<location\b[^>]*StartPos="(\d+)"[^>]*width="(\d+)"',
@@ -58,16 +78,18 @@ def ddi_layout(d):
 
 
 def build(d, out_path):
+    """Write one row per SAMPLE 201901 household (FIELDS) to out_path; stop
+    if a SERIAL carries two geographies."""
     lay, dat = ddi_layout(d)
+    a, b = lay['SAMPLE']
     seen = {}
     n_lines = 0
     with gzip.open(dat, 'rt', errors='replace') as f:
         for line in f:
             n_lines += 1
-            a, b = lay['SAMPLE']
             if int(line[a:b]) != SAMPLE_2019_1YR:
                 continue
-            row = {v: int(line[lay[v][0]:lay[v][1]]) for v in FIELDS}
+            row = {v: int(line[slice(*lay[v])]) for v in FIELDS}
             prev = seen.get(row['SERIAL'])
             if prev is None:
                 seen[row['SERIAL']] = row
@@ -80,7 +102,7 @@ def build(d, out_path):
         for k in sorted(seen):
             w.writerow(seen[k])
     nyc = sum(1 for r in seen.values()
-              if r['STATEFIP'] == 36 and r['COUNTYFIP'] in NYC)
+              if r['STATEFIP'] == NYC_STATEFIP and r['COUNTYFIP'] in NYC)
     ided = sum(1 for r in seen.values() if r['COUNTYFIP'] != 0)
     print('read %d person records; %d households in SAMPLE %d'
           % (n_lines, len(seen), SAMPLE_2019_1YR))
@@ -90,6 +112,8 @@ def build(d, out_path):
 
 
 def validate(xwalk_path, sim_path):
+    """Check every YEAR 2019 simulator household joins crosswalk on SERIAL w/
+    same CBSERIAL, STATEFIP; exit nonzero otherwise."""
     xw = {}
     with gzip.open(xwalk_path, 'rt') as f:
         for r in csv.DictReader(f):
@@ -110,7 +134,7 @@ def validate(xwalk_path, sim_path):
     absent = [s for s in hh if s not in xw]
     cb_bad = [s for s in hh if s in xw and xw[s][0] != hh[s][0]]
     st_bad = [s for s in hh if s in xw and xw[s][1] != hh[s][1]]
-    nyc = sum(1 for s in hh if s in xw and xw[s][1] == 36 and xw[s][2] in NYC)
+    nyc = sum(1 for s in hh if s in xw and xw[s][1] == NYC_STATEFIP and xw[s][2] in NYC)
     print('simulator households (YEAR 2019): %d' % n)
     print('  SERIAL absent from crosswalk:   %d' % len(absent))
     print('  CBSERIAL disagrees:             %d' % len(cb_bad))

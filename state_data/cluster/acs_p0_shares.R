@@ -1,9 +1,9 @@
 #------------------------------------------------------------------------------
 # acs_p0_shares.R -- simulator's base-year care mix, summed per geography.
 #
-# Share model for state_data/code/00_main.R (SHARE_SOURCE = 'p0'): each
-# geography's care mix from simulator's own base-year choice probabilities (p0)
-# over that geography's ACS households. p0 = calibration's p_observed, stored in
+# Share model for state_data/code/00_build_demand_targets.R: each
+# geography's care mix from simulator's own base-year choice probabilities
+# (p0) over that geography's ACS households. p0 = calibration's p_observed, stored in
 # estimation/alpha_<type>_2019.rds w/ child weights, row_ids (hh_id).
 #
 # Per geography g, care type t, hours h (pt = 10 hrs/week, ft = 40):
@@ -39,12 +39,9 @@ source('src/shared_functions/select_geo_hh_ids.R')
 choice_indicator <- function(catalog, child) {
 
   #----------------------------------------------------------------------------
-  # Choice x (type, hours) 0/1 matrix for one child of a catalog.
+  # Choice x (type, hours) 0/1 matrix for child 1 or 2 of a catalog.
   #
-  # Params:
-  #   - catalog (tibble): get_choice_catalog() output
-  #   - child (int): 1 or 2
-  #
+  # Params: catalog (tibble): get_choice_catalog() output, child (int)
   # Returns: (matrix) n_choices x K, colnames 'type|hours'
   #----------------------------------------------------------------------------
 
@@ -62,13 +59,11 @@ choice_indicator <- function(catalog, child) {
 geo_children <- function(ad, n_children, geo_hh) {
 
   #----------------------------------------------------------------------------
-  # Weighted children by (type, hours) for every geography, one pu type.
+  # Weighted children by (type, hours) for every geography, one pu type. NA
+  # child weight counts 0.
   #
-  # Params:
-  #   - ad (list): alpha data for one pu type (p0, child_weights, row_ids)
-  #   - n_children (int): 1 or 2
-  #   - geo_hh (named list): geo -> hh_id vector
-  #
+  # Params: ad (list): alpha data (p0, child_weights, row_ids), n_children
+  #   (int), geo_hh (named list): geo -> hh_id vector
   # Returns: (tibble) geo, key, children
   #----------------------------------------------------------------------------
 
@@ -97,6 +92,14 @@ geo_children <- function(ad, n_children, geo_hh) {
 
 
 main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
+
+  #----------------------------------------------------------------------------
+  # Entry point: p0 children by geography, care type, hours, to CSV. Geography
+  # select_geo_hh_ids() rejects is skipped, said so.
+  #
+  # Params: args (chr): c(interface_dir, out.csv)
+  # Returns: (tibble, invisible) geo, ecec_type, hours_choice, children
+  #----------------------------------------------------------------------------
 
   if (length(args) != 2) {
     stop('usage: Rscript state_data/cluster/acs_p0_shares.R <interface_dir> <out.csv>')

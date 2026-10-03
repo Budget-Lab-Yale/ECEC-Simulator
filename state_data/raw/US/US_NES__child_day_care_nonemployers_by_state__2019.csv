@@ -1,0 +1,57 @@
+level,state,county,name,naics2017,nonemployer_establishments,receipts_thousands
+state,01,,Alabama,6244,6523,79570
+state,02,,Alaska,6244,1091,23040
+state,04,,Arizona,6244,10234,136450
+state,21,,Kentucky,6244,5430,65299
+state,56,,Wyoming,6244,995,18696
+state,05,,Arkansas,6244,4325,54585
+state,06,,California,6244,85147,1671294
+state,08,,Colorado,6244,7559,135271
+state,09,,Connecticut,6244,6221,108398
+state,10,,Delaware,6244,998,24017
+state,11,,District of Columbia,6244,899,15419
+state,12,,Florida,6244,32095,443734
+state,13,,Georgia,6244,20763,256116
+state,15,,Hawaii,6244,896,17924
+state,16,,Idaho,6244,2135,35292
+state,17,,Illinois,6244,31222,545746
+state,18,,Indiana,6244,10337,176595
+state,19,,Iowa,6244,9510,218679
+state,20,,Kansas,6244,6155,133797
+state,22,,Louisiana,6244,9969,113159
+state,23,,Maine,6244,1874,42414
+state,24,,Maryland,6244,11715,251341
+state,25,,Massachusetts,6244,8105,235210
+state,26,,Michigan,6244,16465,264076
+state,27,,Minnesota,6244,12382,366288
+state,28,,Mississippi,6244,7963,92710
+state,29,,Missouri,6244,10334,153444
+state,30,,Montana,6244,1515,26789
+state,31,,Nebraska,6244,5263,110463
+state,32,,Nevada,6244,5349,64455
+state,33,,New Hampshire,6244,1099,19043
+state,34,,New Jersey,6244,13617,185596
+state,35,,New Mexico,6244,1960,23493
+state,36,,New York,6244,49173,781011
+state,37,,North Carolina,6244,12750,169676
+state,38,,North Dakota,6244,2285,57165
+state,39,,Ohio,6244,17607,297157
+state,40,,Oklahoma,6244,4906,84858
+state,41,,Oregon,6244,6388,108617
+state,42,,Pennsylvania,6244,11963,170922
+state,44,,Rhode Island,6244,1383,29372
+state,45,,South Carolina,6244,7197,83287
+state,46,,South Dakota,6244,2303,63153
+state,47,,Tennessee,6244,11897,153356
+state,48,,Texas,6244,51032,643677
+state,49,,Utah,6244,4201,65065
+state,50,,Vermont,6244,1183,31800
+state,51,,Virginia,6244,13458,225812
+state,53,,Washington,6244,7242,192541
+state,54,,West Virginia,6244,1732,26783
+state,55,,Wisconsin,6244,7855,156192
+county,36,005,"Bronx County, New York",6244,11480,188822
+county,36,047,"Kings County, New York",6244,8509,124049
+county,36,061,"New York County, New York",6244,3953,56687
+county,36,081,"Queens County, New York",6244,8268,114869
+county,36,085,"Richmond County, New York",6244,937,13880

@@ -1,34 +1,15 @@
 #------------------------------------------------------------------------------
 # WY.R -- Wyoming
 #
-# Region west. Build reads here: program counts and Census region, each
-# hand-researched. NSCH rate w/ standard error, and Head Start's
-# in-own-school share, are read live from out/ by load_spec() -- not
-# hand-copied here. Every other constant national or regional -- see
-# 00_main.R.
+# Fields, what load_spec() adds: geo_spec() in 00_build_demand_targets.R.
 #
 # Added Sep 2026 w/ 52-geography build (50 states, DC, NYC).
 #------------------------------------------------------------------------------
 
-WY_PREK             <- 705      # CCD 2018-19, public-school pre-K
-WY_HEAD_START       <- 1412     # NIEER State of Preschool 2019, ages 3-4
-WY_EARLY_HEAD_START <- 473      # NIEER State(s) of Head Start (2023), 2018-19 bar
+SPEC_WY <- geo_spec('WY', 'Wyoming', fips = 56, region = 'west',
+  prek             = 705,    # CCD 2018-19, public-school pre-K
 
-# Head Start: NIEER Appendix B row, funded slots ages 3 and 4 -- federal,
-# AIAN, Migrant & Seasonal where present: 512 + 701 + 110 + 89.
-
-
-
-SPEC_WY <- list(
-  geo    = 'WY',
-  name   = 'Wyoming',
-  fips   = 56,
-  region = 'west',
-
-  programs = tibble::tribble(
-    ~program,          ~n_children,
-    'public pre-K',        WY_PREK,
-    'Head Start',          WY_HEAD_START,
-    'Early Head Start',    WY_EARLY_HEAD_START)
-)
-
+  # Head Start: NIEER Appendix B row, funded slots ages 3 and 4 -- federal,
+  # AIAN, Migrant & Seasonal where present: 512 + 701 + 110 + 89.
+  head_start       = 1412,   # NIEER State of Preschool 2019, ages 3-4
+  early_head_start = 473)    # NIEER State(s) of Head Start (2023), 2018-19 bar

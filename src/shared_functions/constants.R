@@ -201,23 +201,31 @@ STATE_POSTAL_TO_FIPS <- c(
   WV = 54, WI = 55, WY = 56
 )
 
-# Sub-state geographies a runscript may name beside the states. Each selects
-# households on STATEFIP and IPUMS COUNTYFIP (3-digit, within state; 0 = county
-# not identified). NYC = five boroughs: Bronx 005, Kings 047, New York 061,
-# Queens 081, Richmond 085 -- every NYC PUMA nests in one borough, so IPUMS
-# identifies all five. Needs a raw ACS pull carrying COUNTYFIP.
-#
-# `parent`: the state whose figures a sub-state geography takes where no
-# source has its own -- NSCH rate (state_data build), childcare wage ratio
-# (state_supply_params.R), age-sex composition (state_epop_projections.R).
-# One table, so a new sub-state geography is one entry here.
-SUBSTATE_GEOGRAPHIES <- list(
-  NYC = list(statefip = 36L, countyfip = c(5L, 47L, 61L, 81L, 85L), parent = 'NY')
-)
+# Sub-state geographies a runscript may name beside states, selected on
+# STATEFIP + IPUMS COUNTYFIP (3-digit, within state; 0 = not identified).
+# Needs raw ACS pull carrying COUNTYFIP. NYC = Bronx 005, Kings 047, New York
+# 061, Queens 081, Richmond 085 -- every NYC PUMA nests in one borough, IPUMS
+# identifies all five.
+# `parent`: state whose figures it takes where no source has its own -- NSCH
+# rate (state_data build), childcare wage ratio (state_supply_params.R),
+# age-sex composition (state_epop_projections.R) -- state owning `statefip`.
+# Counties read from config/substate_geographies.csv (geo, statefip, countyfip;
+# one row per county), shared w/ Python ACS scripts
+# (acs_county_crosswalk_2019.py, acs_childcare_wage_by_education_2019.py).
+# New geography = its county rows there. Path relative to repo root.
+SUBSTATE_GEOGRAPHIES <- local({
+  sg <- utils::read.csv(file.path('config', 'substate_geographies.csv'),
+                        colClasses = c('character', 'integer', 'integer'))
+  lapply(split(sg, factor(sg$geo, levels = unique(sg$geo))), function(g) {
+    fips <- unique(g$statefip)
+    if (length(fips) != 1) stop('substate_geographies.csv: ', g$geo[1], ' spans states')
+    list(statefip = fips, countyfip = g$countyfip,
+         parent = names(STATE_POSTAL_TO_FIPS)[match(fips, STATE_POSTAL_TO_FIPS)])
+  })
+})
 
-# Geography whose figures `geo` takes: its parent state if sub-state, else
-# itself.
-#   - geo (chr): postal code or sub-state code
+# Geography whose figures `geo` takes: parent state if sub-state, else itself.
+#   - geo (chr): Postal or sub-state code
 # Returns: (chr) postal code
 parent_geo <- function(geo) {
   p <- SUBSTATE_GEOGRAPHIES[[geo]]$parent
@@ -228,12 +236,11 @@ parent_geo <- function(geo) {
 # (adjust_alpha_for_state): delta_t += log(H_target / H_model), iterated until
 # the max abs log-gap falls below tolerance
 STATE_DEMAND_CONTRACTION_TOL      <- 1e-8
-# 500 was enough while every care type had its own target. Grouping the two
-# centre bands under one shared delta leaves a slow common-level mode that the
-# Berry update walks down linearly: the synthetic six-target test converges in
-# 1,147 iterations. Each iteration is cheap, so the cap is generous rather than
-# tuned. A run that actually needs thousands is telling you something about the
-# targets, which is why it still fails loudly instead of returning.
+# 500 sufficed while every care type had own target. Shared centre-band delta
+# leaves a slow common-level mode Berry update walks down linearly: synthetic
+# six-target test converges in 1,147 iterations. Iterations cheap -- cap
+# generous, not tuned. A run needing thousands signals bad targets, so still
+# fails loudly.
 STATE_DEMAND_CONTRACTION_MAX_ITER <- 5000L
 
 
