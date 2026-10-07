@@ -396,4 +396,84 @@ stopifnot(identical(select_geo_hh_ids(select(hh, -countyfip), 'NY', 36), 1:6))
 cat('PASS: whole-state run needs no countyfip\n')
 
 
+#------------------------------
+# Employment rate growth factor: cached paths, input contract
+#------------------------------
+
+source('src/shared_functions/get_employment_rate_growth_factor.R')
+
+# Base-year macro row: 1e6 people per age, married + unmarried
+emp_macro <- as_tibble(c(list(year = 2019),
+                         setNames(as.list(rep(4e5, 44)), paste0('married_', 16:59)),
+                         setNames(as.list(rep(6e5, 44)), paste0('unmarried_', 16:59))))
+
+# Synthetic epop file: all rates 70, except F 16_17 (2 ages) 40 -> 60 and
+# F 20_24 (5 ages) 80 -> 70 in 2025
+emp_cells <- as.vector(outer(c('epop_m_', 'epop_f_'),
+                             unlist(EMPLOYMENT_AGE_BINS, use.names = FALSE), paste0))
+emp_epop <- as_tibble(c(list(year = 2019:2026),
+                        setNames(rep(list(rep(70, 8)), length(emp_cells)), emp_cells)))
+emp_epop$epop_f_16_17 <- c(40, rep(60, 7))
+emp_epop$epop_f_20_24 <- c(80, rep(70, 7))
+emp_path <- tempfile(fileext = '.csv')
+write_csv(emp_epop, emp_path)
+
+g <- get_employment_rate_growth_factor(emp_macro, 2019, 2025, epop_path = emp_path)
+stopifnot(identical(names(g), EMPLOYMENT_TARGETING_GROUPS))
+# Aggregate first: (2*60 + 2*70 + 5*70) / (2*40 + 2*70 + 5*80) -- not mean of cell ratios
+stopifnot(abs(g[['F_u25']] - (2*60 + 2*70 + 5*70) / (2*40 + 2*70 + 5*80)) < 1e-12,
+          all(abs(g[-1] - 1) < 1e-12))
+cat('PASS: growth = ratio of population-weighted fine-bin aggregates\n')
+
+stopifnot(all(get_employment_rate_growth_factor(emp_macro, 2019, 2019,
+                                                epop_path = 'no/such/file.csv') == 1))
+cat('PASS: target_year <= base_year returns 1.0 without reading file\n')
+
+n_cache <- length(ls(EPOP_GROWTH_CACHE))
+invisible(get_employment_rate_growth_factor(emp_macro, 2019, 2026, epop_path = emp_path))
+stopifnot(length(ls(EPOP_GROWTH_CACHE)) == n_cache)
+emp_macro2 <- mutate(emp_macro, married_16 = 9e5)
+g2 <- get_employment_rate_growth_factor(emp_macro2, 2019, 2025, epop_path = emp_path)
+stopifnot(length(ls(EPOP_GROWTH_CACHE)) == n_cache + 1, g2[['F_u25']] != g[['F_u25']])
+cat('PASS: cache reused per file x base year, new macro weights -> new entry\n')
+
+for (f in c(NA, 'config/state/employment/NY.csv')) {
+  g_real <- get_employment_rate_growth_factor(
+    emp_macro, 2019, 2026, epop_path = if (is.na(f)) NULL else f)
+  stopifnot(all(is.finite(g_real) & g_real > 0))
+}
+cat('PASS: national and state epop files give finite growth for 2026\n')
+
+# Input contract: each broken input stops
+emp_write <- function(d) { p <- tempfile(fileext = '.csv'); write_csv(d, p); p }
+expect_error(get_employment_rate_growth_factor(emp_macro, 2019, 2025, epop_path = 'no/such/file.csv'),
+             'not found', 'missing epop file stops')
+expect_error(get_employment_rate_growth_factor(emp_macro, 2019, 2025,
+                                               epop_path = emp_write(select(emp_epop, -epop_m_30_34))),
+             'lacks column.*epop_m_30_34', 'missing epop column stops')
+expect_error(get_employment_rate_growth_factor(emp_macro, 2019, 2025,
+                                               epop_path = emp_write(mutate(emp_epop, epop_f_40_44 = replace(epop_f_40_44, year == 2025, NA)))),
+             'NA or non-positive epop rate.*2025.*F_35_45', 'NA target-year rate stops')
+expect_error(get_employment_rate_growth_factor(emp_macro, 2019, 2025,
+                                               epop_path = emp_write(mutate(emp_epop, epop_m_55_59 = replace(epop_m_55_59, year == 2019, 0)))),
+             'base-year.*M_45plus', 'non-positive base-year rate stops')
+expect_error(get_employment_rate_growth_factor(emp_macro, 2019, 2030, epop_path = emp_path),
+             'no year 2030', 'missing target year stops')
+expect_error(get_employment_rate_growth_factor(mutate(emp_macro, year = 2018), 2018, 2025,
+                                               epop_path = emp_path),
+             'no base year 2018', 'missing base year stops')
+expect_error(get_employment_rate_growth_factor(mutate(emp_macro, year = 2020), 2019, 2025,
+                                               epop_path = emp_path),
+             '0 rows for base year', 'missing macro base-year row stops')
+expect_error(get_employment_rate_growth_factor(select(emp_macro, -unmarried_42), 2019, 2025,
+                                               epop_path = emp_path),
+             'lack unmarried_42', 'missing macro age column stops')
+expect_error(get_employment_rate_growth_factor(mutate(emp_macro, married_25 = NA), 2019, 2025,
+                                               epop_path = emp_path),
+             'NA population.*25_29', 'NA macro population stops')
+expect_error(get_employment_rate_growth_factor(mutate(emp_macro, across(c(married_18, married_19, unmarried_18, unmarried_19), ~ 0)),
+                                               2019, 2025, epop_path = emp_path),
+             'non-positive population weight.*18_19', 'zero fine-bin weight stops')
+
+
 cat('\nAll state-analysis tests passed.\n')

@@ -213,18 +213,24 @@ nationally (see `docs/state_level_analysis.md` for the full design):
 
 - Processing and calibration run unchanged at the national level; households
   are filtered to the state at simulation initialization (before any
-  `--sim-sample` subsampling).
+  `--sim-sample` subsampling). ACS processing reweights children 0-4 to the
+  Census single-year age mix (`resources/acs/US_PEP__national_population_by_single_year_of_age_0_4__2019.csv`).
 - **Demand**: if `config/state/demand/<ST>.csv` exists (base-year 2019 annual
   hours by care type, 7 non-parental types), the calibrated alpha matrices
   are re-anchored via a per-care-type contraction so state base-year
   aggregates match; otherwise the state uses national alphas, filter only.
 - **Supply**: `config/state/supply/<ST>.yaml` (same schema as
   `estimation/supply/supply_2019.yaml`) replaces the NSECE-derived parameters
-  when present.
-- **Employment growth**: `config/state/employment/<ST>.csv` (same schema as
-  `resources/epop/epop_projections.csv`) replaces the national CBO epop
-  projections when present; base-year employment rates always come from the
-  state-filtered data.
+  when present. `resources/supply/state_supply_params.R` builds it: state
+  wages (ACS median childcare wage ratios), staffing scaled by state licensing
+  ratios, and the non-labor residual scaled by BEA Regional Price Parities;
+  elasticities stay national.
+- **Employment growth**: `config/state/employment/<ST>.csv` (the 16-59 cells
+  of `resources/epop/epop_projections.csv`) replaces the national CBO epop
+  projections when present (`resources/epop/state_epop_projections.R`: each
+  geography's own ACS rates relative to the nation, applied to national CBO
+  rates); base-year employment rates always come from the state-filtered
+  data, weighted by 2019 caregiver weights.
 - Multiple states run as independent equilibria (a within-year loop); all
   summary tibbles gain a `state` column and per-state output is written under
   `simulation/{scenario_id}/states/<ST>/`. Run provenance (deltas, supply and

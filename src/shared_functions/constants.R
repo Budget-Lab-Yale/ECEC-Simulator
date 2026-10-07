@@ -155,6 +155,23 @@ DEFAULT_PAID_CARE_ELASTICITY_TARGET <- -0.5
 EMPLOYMENT_TARGETING_GROUPS <- c('F_u25', 'M_u25', 'F_25_35', 'M_25_35',
                                   'F_35_45', 'M_35_45', 'F_45plus', 'M_45plus')
 
+# Broad age bin -> fine epop age bins ('<lo>_<hi>', ages inclusive). Single
+# fine-to-broad map for get_employment_rate_growth_factor() (aggregation) and
+# resources/epop/state_epop_projections.R (cells written per state). Ages
+# 60+ not used -- 45plus group covers 45-59 only.
+EMPLOYMENT_AGE_BINS <- list(
+  'u25'    = c('16_17', '18_19', '20_24'),
+  '25_35'  = c('25_29', '30_34'),
+  '35_45'  = c('35_39', '40_44'),
+  '45plus' = c('45_49', '50_54', '55_59')
+)
+
+# Group names = sex x broad bin, same order as EMPLOYMENT_TARGETING_GROUPS
+stopifnot(identical(
+  as.vector(outer(c('F', 'M'), names(EMPLOYMENT_AGE_BINS), paste, sep = '_')),
+  EMPLOYMENT_TARGETING_GROUPS
+))
+
 
 
 #------------------------------------------------------------------------------

@@ -44,7 +44,8 @@ PRICE_BOUNDARY <- 4.75
 PT_FT_CUT <- 20
 
 # Primary-arrangement ranking, as simulator: paid before unpaid, center before
-# home, hours only as tie-break.
+# home. Hours summed within type first, so each type one row -- rank alone
+# picks, desc(hours) in arrange() never breaks a tie.
 CATEGORY_PRIORITY <- c('K-8', 'High-Priced Center-Based',
                        'Low-Priced Center-Based', 'Unpaid Center-Based',
                        'Paid Home-Based', 'Other Paid', 'Unpaid Home-Based',

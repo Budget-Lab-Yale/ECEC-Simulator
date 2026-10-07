@@ -499,6 +499,10 @@ run_nsece_processing <- function() {
           careloc           = HH9_CARELOC,
           priorrel,
           hours             = HH9_HRS_WEEK_PROV,
+          # Topcoded direct charges household pays provider (2019 NSECE User's Guide --
+          # Household, OPRE 2023-170, p. 271). Excludes amounts others pay provider;
+          # does NOT subtract subsidy paid to household (that is HH9_WEEKLY_COST_CARE_TC).
+          # Name kept for callers -- "net" of third-party payments only.
           net_weekly_cost = HH9_WEEKLY_PAYMENT_TC,
           subsidy_weekly    = HH9_SUBSIDY
         ) %>%
@@ -543,7 +547,11 @@ run_nsece_processing <- function() {
           net_hourly_cost        = if_else(hours > 0, net_weekly_cost / hours, NA),
           net_hourly_cost_status = if_else(hours == 0, 'MISS', net_weekly_cost_status),
 
-          # Base provider groups from TOC (paper treats 4=center, 6=K-8)
+          # Base provider groups from TOC (paper treats 4=center, 6=K-8). TOC 5
+          # ("Other organizational ECE") stays Other: NSECE User's Guide --
+          # Household (2019) reserves TOC 4 for every center program under 72
+          # months; TOC 5 = drop-in, lessons, church care during services,
+          # recreation, after-school
           is_k8     = type_raw == 6,
           is_center = type_raw == 4,
           is_home   = type_raw %in% c(1, 2, 3),
@@ -614,7 +622,9 @@ run_nsece_processing <- function() {
 
           if (nrow(category_hours) > 0) {
 
-            # Borowsky method: privilege paid over unpaid (priority first), then hours as tie-break
+            # Borowsky method: privilege paid over unpaid (priority first). Hours already summed
+            # within category, so each category is one row and priority alone picks; desc(hours)
+            # never breaks a tie
             return(
               category_hours %>%
                 mutate(priority = match(ecec_choice, category_priority)) %>%

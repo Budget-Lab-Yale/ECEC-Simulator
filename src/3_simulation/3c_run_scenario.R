@@ -1928,6 +1928,11 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
                 mutate(per_weight_pc = per_weight_pc / n_draws_per_record)
             }
 
+            if ('per_weight_pc_base' %in% names(df_expanded)) {
+              df_expanded <- df_expanded %>%
+                mutate(per_weight_pc_base = per_weight_pc_base / n_draws_per_record)
+            }
+
             # -- Assertions: weight conservation through Gumbel expansion ----
             # Total weight must be preserved (each record is replicated n_draws
             # times with weight divided by n_draws — the sum should be unchanged).

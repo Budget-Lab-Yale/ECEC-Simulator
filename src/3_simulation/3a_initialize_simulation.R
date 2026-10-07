@@ -449,6 +449,15 @@ initialize_simulation <- function() {
       # Supply: state yaml override when present, else NSECE-derived params
       supply_override_path <- file.path('config', 'state', 'supply', paste0(st, '.yaml'))
       if (file.exists(supply_override_path)) {
+        # Override carries no labor_supply -- base-year labor below needs
+        # re-anchored demand
+        if (is.null(demand_adjustment)) {
+          stop('State ', st, ': supply override ', supply_override_path,
+               ' exists but demand target file ', demand_targets_path,
+               ' does not. Base-year labor comes from re-anchored demand.',
+               ' Build it: Rscript state_data/code/00_build_demand_targets.R,',
+               ' or remove the override to run on national parameters.')
+        }
         cat('  Supply params: state override (', supply_override_path, ')\n', sep = '')
         st_supply_params <- parse_supply_params_yaml(supply_override_path)
         supply_source <- supply_override_path
@@ -458,18 +467,18 @@ initialize_simulation <- function() {
       }
 
       # Base-year labor from re-anchored model's sector hours (same
-      # colSums(L_req * Qd) solver uses) -- wage curve starts at base-year wage
-      # by construction. Contraction pins combined centre hours, not low/high
-      # split, so a fixed national split would miss model's own labor.
+      # colSums(L_req * Qd) solver uses) -- only state L_0 definition; wage
+      # curve starts at base-year wage by construction. Contraction pins
+      # combined centre hours, not low/high split, so a fixed national split
+      # would miss model's own labor. No demand file, no override -> national
+      # NSECE params unchanged.
       if (!is.null(demand_adjustment)) {
-        L_file <- st_supply_params$L
         st_supply_params$L <- colSums(st_supply_params$L_req * demand_adjustment$sector_hours)
-        cat(sprintf('  Base-year labor: model base-year hours -> no_ba %.4g, ba %.4g (supply file %.4g, %.4g)\n',
-                    st_supply_params$L[1], st_supply_params$L[2], L_file[1], L_file[2]))
+        cat(sprintf('  Base-year labor: model base-year hours -> no_ba %.4g, ba %.4g\n',
+                    st_supply_params$L[1], st_supply_params$L[2]))
       } else {
-        # Fallback -- no demand targets, so no model hours to anchor on
-        cat(sprintf('  Base-year labor: FALLBACK, %s labor_supply -> no_ba %.4g, ba %.4g\n',
-                    supply_source, st_supply_params$L[1], st_supply_params$L[2]))
+        cat(sprintf('  Base-year labor: national NSECE labor_supply -> no_ba %.4g, ba %.4g\n',
+                    st_supply_params$L[1], st_supply_params$L[2]))
       }
 
       # Employment growth: state epop file when present, else national CBO

@@ -662,6 +662,35 @@ run_acs_processing <- function() {
       select(hh_id, child_id, tax_unit_id, tax_unit_id_legacy, child_weight, age, male) %>%
       arrange(hh_id, child_id)
 
+    # Align single-year age mix of children 0-4 with Census. ACS 2019 holds too
+    # few infants (persons age 0 = 0.926 x Census) and too many four-year-olds
+    # (1.016 x); ACS controls weights to Census only for ages 0-4 as a group.
+    # Factor per age = Census share / ACS share within 0-4, so 0-4 weighted
+    # total unchanged; ages 5-12 untouched. Census: PEP vintage 2019, national
+    # resident population, 1 July 2019.
+    census_0_4 <- read_csv(
+      'resources/acs/US_PEP__national_population_by_single_year_of_age_0_4__2019.csv',
+      show_col_types = FALSE
+    ) %>%
+      transmute(age = AGE, census_share = TOT_POP / sum(TOT_POP))
+    age_factors <- children %>%
+      filter(age <= 4) %>%
+      group_by(age) %>%
+      summarise(acs_wt = sum(child_weight), .groups = 'drop') %>%
+      mutate(acs_share = acs_wt / sum(acs_wt)) %>%
+      inner_join(census_0_4, by = 'age') %>%
+      transmute(age, age_factor = census_share / acs_share)
+    if (nrow(age_factors) != 5) {
+      stop('Child age reweight: expected ages 0-4 in both ACS children and ',
+           'Census file, found ', nrow(age_factors), '. Check the Census file.')
+    }
+    cat('  Child age factors (Census / ACS share, ages 0-4):',
+        paste(sprintf('%d=%.3f', age_factors$age, age_factors$age_factor), collapse = ' '), '\n')
+    children <- children %>%
+      left_join(age_factors, by = 'age') %>%
+      mutate(child_weight = child_weight * coalesce(age_factor, 1)) %>%
+      select(-age_factor)
+
 
     #---------------------------------------
     # Household members (all persons in HH)

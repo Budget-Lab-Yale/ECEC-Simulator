@@ -3,8 +3,8 @@
 State employment-population ratios by sex and age bin, from IPUMS ACS.
 
 resources/epop/epop_projections.csv is national: 26 columns, 12 age bins +
-16plus x two sexes, 1994-2100. config/state/employment/<ST>.csv takes same
-schema; state_epop_projections.R builds it from this file's output.
+16plus x two sexes, 1994-2100. config/state/employment/<ST>.csv keeps 16-59
+cells; state_epop_projections.R builds it from this file's output.
 
 ACS, not CPS: CPS-Monthly extract on cluster carries no STATEFIP, CPS-ASEC
 sample too thin for state x sex x 12 age bins. ACS gives ~3M persons a year,
@@ -15,6 +15,9 @@ from DDI, not hard-coded; hard-coded offset would silently misread if extract
 ever rebuilt w/ different variables.
 
 Writes one long CSV: year, state_fips, sex, age_bin, employed_wt, pop_wt, n.
+Sub-state geographies (config/substate_geographies.csv -- NYC) add rows w/
+state_fips = geo code (e.g. NYC), selected by STATEFIP + COUNTYFIP; their
+people also stay in their state's rows.
 """
 
 import csv
@@ -39,7 +42,23 @@ def shared_root():
 
 
 ACS_ROOT = os.path.join(shared_root(), 'raw_data', 'ACS', 'acs_common_v2')
-NEED = ['STATEFIP', 'AGE', 'SEX', 'EMPSTAT', 'PERWT']
+NEED = ['STATEFIP', 'COUNTYFIP', 'AGE', 'SEX', 'EMPSTAT', 'PERWT']
+
+
+def substate_geographies():
+    """{geo: (statefip, {countyfip})} from config/substate_geographies.csv."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        '..', '..', 'config', 'substate_geographies.csv')
+    out = {}
+    with open(path, newline='') as f:
+        for r in csv.DictReader(f):
+            st, cos = out.get(r['geo'], (int(r['statefip']), set()))
+            cos.add(int(r['countyfip']))
+            out[r['geo']] = (st, cos)
+    return out
+
+
+SUBSTATE = substate_geographies()
 
 # National file's bins, in its column order
 BINS = [(16, 17, '16_17'), (18, 19, '18_19'), (20, 24, '20_24'),
@@ -95,20 +114,22 @@ def run_year(year, out_rows):
         for line in fh:
             nrow += 1
             try:
-                age, st, sx, es, pw = (int(line[sl[v]]) for v in
-                                       ('AGE', 'STATEFIP', 'SEX', 'EMPSTAT', 'PERWT'))
+                age, st, co, sx, es, pw = (int(line[sl[v]]) for v in
+                                           ('AGE', 'STATEFIP', 'COUNTYFIP', 'SEX',
+                                            'EMPSTAT', 'PERWT'))
             except ValueError:
                 continue
             b = bin_of(age)
             w = pw / 100.0   # PERWT: 2 implied decimals
             if b is None or sx not in (1, 2) or w <= 0:
                 continue
-            k = (st, 'm' if sx == 1 else 'f', b)
-            a = acc[k]
-            a[1] += w                      # population 16+
-            if es == 1:                    # 1 = employed
-                a[0] += w
-            a[2] += 1
+            geos = [st] + [g for g, (gs, cos) in SUBSTATE.items() if gs == st and co in cos]
+            for geo in geos:
+                a = acc[(geo, 'm' if sx == 1 else 'f', b)]
+                a[1] += w                  # population 16+
+                if es == 1:                # 1 = employed
+                    a[0] += w
+                a[2] += 1
 
     for (st, sx, b), (e, p, n) in acc.items():
         out_rows.append([year, st, sx, b, round(e, 2), round(p, 2), n])

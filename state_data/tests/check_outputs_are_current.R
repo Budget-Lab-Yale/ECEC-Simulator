@@ -32,7 +32,7 @@ for (g in GEOGRAPHIES) {
   }
 
   quiet <- utils::capture.output(res <- build_geo(load_spec(g)))
-  built <- setNames(res$annual_hours, res$ecec_type)
+  built <- setNames(res$care$annual_hours, res$care$ecec_type)
   have  <- read_csv(f, show_col_types = FALSE)
   onf   <- setNames(have$annual_hours, have$ecec_type)
 

@@ -8,6 +8,9 @@
 # from, key by key. Nothing transcribed here: constants from sourcing
 # 05_compare_nsece_shares.R, which sources 00_ (both main() guarded).
 #
+# Also PROGRAM_AGE5_SHARE (00_) against NHES-ECPP 2019 where the local file
+# exists.
+#
 #   Rscript state_data/tests/check_constants_match_derivation.R
 #
 # Exit status is 1 on any mismatch, any missing key, any extra key.
@@ -159,6 +162,29 @@ if (length(extra)) {
   failures <- failures + 1
   cat('FAIL universe A carries quantities no constant reads:',
       paste(extra, collapse = ', '), '\n')
+}
+
+# PROGRAM_AGE5_SHARE (00_) -- NHES-ECPP 2019, recomputed by its recipe:
+# children not yet in kindergarten, center program now, ages 3+ at
+# 2018-12-31, share 5+, weight FEWT, by CENREG. File git-ignored (raw/local/)
+# -- absent, block says so, counts nothing.
+NHES_FILE   <- file.path(STATE_DATA_ROOT, 'raw', 'local',
+                         'US_NHES__ecpp_public_use_file__2019.csv')
+NHES_REGION <- c(northeast = 1, south = 2, midwest = 3, west = 4)
+if (file.exists(NHES_FILE)) {
+  nh <- read_csv(NHES_FILE, show_col_types = FALSE)
+  base <- nh$CPNNOWX == 1 & nh$AGE2018 >= 3
+  prog <- list(prek = nh$CPPLACEX == 2, head_start = nh$CPHEADST == 1)
+  for (p in names(prog)) for (rg in names(NHES_REGION)) {
+    x <- nh[base & prog[[p]] & nh$CENREG == NHES_REGION[[rg]], ]
+    want <- sum(x$FEWT[x$AGE2018 >= 5]) / sum(x$FEWT)
+    near(sprintf('PROGRAM_AGE5_SHARE$%s[%s]', p, rg),
+         PROGRAM_AGE5_SHARE[[p]][[rg]], want, 1e-12)
+    report(nrow(x) >= 30, sprintf('PROGRAM_AGE5_SHARE$%s[%s].n >= 30', p, rg),
+           nrow(x), 30)
+  }
+} else {
+  cat('\n(skipped PROGRAM_AGE5_SHARE -- no', NHES_FILE, ')\n')
 }
 
 cat(sprintf('\n%d comparison(s), %d failure(s)\n', checked, failures))

@@ -25,25 +25,26 @@
 #   prints table, writes out/nsece_share_comparison.csv
 #------------------------------------------------------------------------------
 
-# build_geo(), load_spec(), GEOGRAPHIES, ECEC_TYPES; main() guarded
+# build_of(), grid_annual_hours(), GEOGRAPHIES, ECEC_TYPES, WEEKS_PER_YEAR;
+# main() guarded
 source('state_data/code/00_build_demand_targets.R')
 
 
 
 #==== NSECE CONSTANTS =========================================================
 
-# NATIONAL annual hours per child -- weekly mean in primary arrangement x 50.
-# Fallback for thin regional cell. Center-Based = mean over both paid-center
+# NATIONAL annual hours per child -- weekly mean in primary arrangement x
+# WEEKS_PER_YEAR (50, constants.R). Fallback for thin regional cell. Center-Based = mean over both paid-center
 # price bands.
 NSECE_ANNUAL_HOURS <- c(
-  'Center-Based'        = (0.07008002232267292 * 50 * 27.454813402111718 +
-                           0.06556113476684644 * 50 * 40.405040897598035) /
+  'Center-Based'        = (0.07008002232267292 * WEEKS_PER_YEAR * 27.454813402111718 +
+                           0.06556113476684644 * WEEKS_PER_YEAR * 40.405040897598035) /
                           (0.07008002232267292 + 0.06556113476684644),
-  'Unpaid Center-Based' = 50 * 28.733041207982050,
-  'Paid Home-Based'     = 50 * 38.389082189644240,
-  'Other Unpaid'        = 50 * 38.587712836110920,
-  'Other Paid'          = 50 * 31.085307060488336,
-  'Unpaid Home-Based'   = 50 * 42.447909360764570)
+  'Unpaid Center-Based' = WEEKS_PER_YEAR * 28.733041207982050,
+  'Paid Home-Based'     = WEEKS_PER_YEAR * 38.389082189644240,
+  'Other Unpaid'        = WEEKS_PER_YEAR * 38.587712836110920,
+  'Other Paid'          = WEEKS_PER_YEAR * 31.085307060488336,
+  'Unpaid Home-Based'   = WEEKS_PER_YEAR * 42.447909360764570)
 
 # Step 2. Share of children in regular care whose primary type is formal
 # (FORMAL_TYPES), by Census region. Records: NE 456, MW 539, S 1,062, W 757.
@@ -241,8 +242,8 @@ nsece_allocation <- function(region, np_total, program) {
              (np_total - formal) * regional_mix(region))[ECEC_TYPES]
 
   pt   <- regional_or_national(NSECE_PART_TIME_REGION, region, 'pt_share', NSECE_PART_TIME)
-  grid <- (pt * GRID_PT_HOURS + (1 - pt) * GRID_FT_HOURS) * 50
-  raw  <- regional_or_national(dplyr::mutate(NSECE_HOURS_REGION, annual = 50 * weekly),
+  grid <- grid_annual_hours(pt)
+  raw  <- regional_or_national(dplyr::mutate(NSECE_HOURS_REGION, annual = WEEKS_PER_YEAR * weekly),
                                region, 'annual', NSECE_ANNUAL_HOURS)
   tibble::tibble(ecec_type    = ECEC_TYPES,
                  children     = unname(kids),
@@ -263,20 +264,20 @@ compare_shares_geo <- function(geo) {
   # Returns: (tibble) one row per care type
   #----------------------------------------------------------------------------
 
-  spec <- load_spec(geo)
-  utils::capture.output(res <- build_geo(spec))
-  d <- attr(res, 'diagnostics')
-  alt <- nsece_allocation(spec$region, d$nonparental_total, d$program_net)
+  res     <- build_of(geo)
+  np      <- res$participation$nonparental_total
+  program <- res$programs$total
+  alt <- nsece_allocation(res$region, np, program)
 
-  formal_nsece <- NSECE_FORMAL_SHARE[[spec$region]] * d$nonparental_total
-  tibble::tibble(geo = geo, region = spec$region, ecec_type = ECEC_TYPES,
-                 children_p0     = res$children,
+  formal_nsece <- NSECE_FORMAL_SHARE[[res$region]] * np
+  tibble::tibble(geo = geo, region = res$region, ecec_type = ECEC_TYPES,
+                 children_p0     = res$care$children,
                  children_nsece  = alt$children,
-                 hours_p0        = res$annual_hours,
+                 hours_p0        = res$care$annual_hours,
                  hours_nsece     = alt$annual_hours,
                  hours_nsece_raw = alt$raw_hours,
                  programs_over_nsece_unpaid =
-                   d$program_net / (formal_nsece * NSECE_UNPAID_CENTRE_SHARE[[spec$region]]))
+                   program / (formal_nsece * NSECE_UNPAID_CENTRE_SHARE[[res$region]]))
 }
 
 

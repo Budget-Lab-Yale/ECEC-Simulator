@@ -1,3 +1,9 @@
+# In-memory cache of epop growth paths -- one entry per epop file x base year
+# x base-year population weights (see get_employment_rate_growth_factor())
+EPOP_GROWTH_CACHE <- new.env(parent = emptyenv())
+
+
+
 get_employment_rate_growth_factor <- function(macro_projections, base_year, target_year,
                                              column = NULL, epop_path = NULL) {
 
@@ -5,11 +11,22 @@ get_employment_rate_growth_factor <- function(macro_projections, base_year, targ
   # Calculates employment rate growth factors by sex x age bin from base_year
   # to target_year.
   #
-  # Uses CBO epop projections aggregated to broad age bins using population
-  # weights from macro projections.
+  # Uses CBO epop projections (or a state override) aggregated to broad age
+  # bins (EMPLOYMENT_AGE_BINS) with base-year population weights from macro
+  # projections: aggregate fine-bin rates first, then divide target-year
+  # aggregate by base-year aggregate. File read + growth paths for every year
+  # built once per epop file x base year x weights, cached in
+  # EPOP_GROWTH_CACHE; later calls look up target_year row.
+  #
+  # Input contract -- stop() if: epop file missing, required column missing,
+  # base or target year row missing, needed rate NA or non-positive, base-year
+  # macro row missing, married_/unmarried_ age column missing or NA, fine-bin
+  # weight non-positive. target_year <= base_year returns 1.0 for all groups
+  # without reading anything.
   #
   # Params:
-  #   - macro_projections (df): Macro projections table (for population weights)
+  #   - macro_projections (df): Macro projections table (for population weights;
+  #       married_<age>, unmarried_<age> for ages 16-59 in base_year row)
   #   - base_year (int): Base year (e.g., 2019 for NSECE)
   #   - target_year (int): Target year to project to
   #   - column (chr): Unused, for backwards compatibility
@@ -18,130 +35,169 @@ get_employment_rate_growth_factor <- function(macro_projections, base_year, targ
   #       uses the national CBO file)
   #
   # Returns:
-  #   Named numeric vector with 8 growth factors:
+  #   Named numeric vector with 8 growth factors (EMPLOYMENT_TARGETING_GROUPS):
   #   c(F_u25, M_u25, F_25_35, M_25_35, F_35_45, M_35_45, F_45plus, M_45plus)
   #----------------------------------------------------------------------------
 
-  # Define group names to match EMPLOYMENT_TARGETING_GROUPS
-  group_names <- c('F_u25', 'M_u25', 'F_25_35', 'M_25_35',
-                   'F_35_45', 'M_35_45', 'F_45plus', 'M_45plus')
+  group_names <- EMPLOYMENT_TARGETING_GROUPS
 
   # Return 1.0 for all groups if target year <= base year
   if (target_year <= base_year) {
-    return(setNames(rep(1.0, 8), group_names))
+    return(setNames(rep(1.0, length(group_names)), group_names))
   }
 
-  # Load epop projections (national CBO file unless a state override is given)
+  # National CBO file unless state override given
   epop_path <- epop_path %||% 'resources/epop/epop_projections.csv'
   if (!file.exists(epop_path)) {
-    warning('get_employment_rate_growth_factor: epop projections not found at ', epop_path,
-            '. Returning 1.0 for all groups.')
-    return(setNames(rep(1.0, 8), group_names))
+    stop('get_employment_rate_growth_factor: epop projections not found at ',
+         epop_path, ' -- build it (resources/epop/emp_projections.R national, ',
+         'resources/epop/state_epop_projections.R per state)')
   }
+
+  # Fine-bin population weights, base year -- cheap, recomputed per call so
+  # cache key reflects exactly the macro table passed
+  weights <- get_epop_fine_bin_weights(macro_projections, base_year)
+
+  # Cache key: normalized path, file mtime, base year, weights to full precision
+  path_norm <- normalizePath(epop_path, winslash = '/', mustWork = TRUE)
+  key <- paste(path_norm,
+               format(file.info(path_norm)$mtime, '%Y%m%d%H%M%OS6'),
+               base_year,
+               paste(sprintf('%.17g', weights), collapse = ','),
+               sep = '|')
+
+  paths <- EPOP_GROWTH_CACHE[[key]]
+  if (is.null(paths)) {
+    paths <- build_epop_growth_paths(epop_path, base_year, weights)
+    assign(key, paths, envir = EPOP_GROWTH_CACHE)
+  }
+
+  # Look up target year
+  row <- match(target_year, paths$year)
+  if (is.na(row)) {
+    stop('get_employment_rate_growth_factor: no year ', target_year, ' in ',
+         epop_path, ' (covers ', min(paths$year), '-', max(paths$year), ')')
+  }
+  growth <- paths$growth[row, group_names]
+  if (any(!is.finite(growth))) {
+    stop('get_employment_rate_growth_factor: NA or non-positive epop rate in ',
+         epop_path, ' for year ', target_year, ', group(s) ',
+         paste(group_names[!is.finite(growth)], collapse = ', '))
+  }
+
+  return(growth)
+}
+
+
+
+get_epop_fine_bin_weights <- function(macro_projections, base_year) {
+
+  #----------------------------------------------------------------------------
+  # Base-year population per fine epop age bin (EMPLOYMENT_AGE_BINS), summed
+  # over married_<age> + unmarried_<age>. Stops on missing row, column, NA,
+  # or non-positive bin total.
+  #
+  # Params:
+  #   - macro_projections (df): Macro projections table
+  #   - base_year (int): Year whose population weights the bins
+  #
+  # Returns:
+  #   Named numeric vector, one weight per fine bin ('16_17', ..., '55_59')
+  #----------------------------------------------------------------------------
+
+  fine_bins <- unlist(EMPLOYMENT_AGE_BINS, use.names = FALSE)
+
+  pop_row <- macro_projections %>% filter(year == !!base_year)
+  if (nrow(pop_row) != 1) {
+    stop('get_employment_rate_growth_factor: macro projections have ',
+         nrow(pop_row), ' rows for base year ', base_year, ' (need exactly 1)')
+  }
+
+  sapply(fine_bins, function(bin) {
+    ages <- as.integer(strsplit(bin, '_')[[1]])
+    cols <- paste0(rep(c('married_', 'unmarried_'), each = ages[2] - ages[1] + 1),
+                   ages[1]:ages[2])
+    missing <- setdiff(cols, names(pop_row))
+    if (length(missing)) {
+      stop('get_employment_rate_growth_factor: macro projections lack ',
+           paste(missing, collapse = ', '))
+    }
+    vals <- unlist(pop_row[, cols], use.names = FALSE)
+    if (anyNA(vals)) {
+      stop('get_employment_rate_growth_factor: NA population in macro ',
+           'projections for base year ', base_year, ', bin ', bin)
+    }
+    total <- sum(vals)
+    if (!(total > 0)) {
+      stop('get_employment_rate_growth_factor: non-positive population weight ',
+           'for base year ', base_year, ', bin ', bin)
+    }
+    total
+  })
+}
+
+
+
+build_epop_growth_paths <- function(epop_path, base_year, weights) {
+
+  #----------------------------------------------------------------------------
+  # Reads epop file once; per sex x broad bin, population-weighted mean of
+  # fine-bin rates each year, divided by base-year mean. Base-year rates must
+  # all be positive; a year with any NA or non-positive needed rate gets NA
+  # growth (caller stops if that year requested).
+  #
+  # Params:
+  #   - epop_path (chr): Epop projections CSV (year + epop_<m|f>_<bin> cols)
+  #   - base_year (int): Base year
+  #   - weights (num): Named fine-bin weights (get_epop_fine_bin_weights())
+  #
+  # Returns:
+  #   list(year = int vector, growth = matrix years x EMPLOYMENT_TARGETING_GROUPS)
+  #----------------------------------------------------------------------------
 
   epop <- read_csv(epop_path, show_col_types = FALSE)
 
-  # Define mapping from broad bins to fine epop bins
-  bin_map <- list(
-    u25 = c('16_17', '18_19', '20_24'),
-    '25_35' = c('25_29', '30_34'),
-    '35_45' = c('35_39', '40_44'),
-    '45plus' = c('45_49', '50_54', '55_59')
-  )
-
-  # Get population weights by age bin from macro_projections
-  pop_row <- macro_projections %>% filter(year == !!base_year)
-  bin_ages <- list(
-    '16_17' = 16:17, '18_19' = 18:19, '20_24' = 20:24,
-    '25_29' = 25:29, '30_34' = 30:34, '35_39' = 35:39,
-    '40_44' = 40:44, '45_49' = 45:49, '50_54' = 50:54, '55_59' = 55:59
-  )
-  pop_weights <- if (nrow(pop_row) == 0) {
-    warning(paste0('get_employment_rate_growth_factor: no population data for year ', base_year))
-    setNames(rep(0, length(bin_ages)), names(bin_ages))
-  } else {
-    sapply(names(bin_ages), function(bin) {
-      total <- 0
-      for (age in bin_ages[[bin]]) {
-        for (prefix in c('married_', 'unmarried_')) {
-          col <- paste0(prefix, age)
-          if (col %in% names(pop_row)) {
-            val <- pop_row[[col]]
-            if (!is.na(val)) total <- total + val
-          }
-        }
-      }
-      total
-    })
+  fine_bins <- unlist(EMPLOYMENT_AGE_BINS, use.names = FALSE)
+  required <- c('year', as.vector(outer(c('epop_f_', 'epop_m_'), fine_bins, paste0)))
+  missing <- setdiff(required, names(epop))
+  if (length(missing)) {
+    stop('get_employment_rate_growth_factor: ', epop_path, ' lacks column(s) ',
+         paste(missing, collapse = ', '))
+  }
+  if (anyDuplicated(epop$year)) {
+    stop('get_employment_rate_growth_factor: duplicate years in ', epop_path)
   }
 
-  # Compute growth factors for each sex x age bin group
-  growth_factors <- numeric(8)
-  names(growth_factors) <- group_names
+  base_idx <- match(base_year, epop$year)
+  if (is.na(base_idx)) {
+    stop('get_employment_rate_growth_factor: no base year ', base_year, ' in ', epop_path)
+  }
+
+  growth <- matrix(NA_real_, nrow = nrow(epop), ncol = length(EMPLOYMENT_TARGETING_GROUPS),
+                   dimnames = list(NULL, EMPLOYMENT_TARGETING_GROUPS))
 
   for (sex in c('F', 'M')) {
-    sex_prefix <- if_else(sex == 'F', 'epop_f_', 'epop_m_')
+    sex_prefix <- if (sex == 'F') 'epop_f_' else 'epop_m_'
 
-    for (bin_name in names(bin_map)) {
-      fine_bins <- bin_map[[bin_name]]
-      cols <- paste0(sex_prefix, fine_bins)
+    for (bin_name in names(EMPLOYMENT_AGE_BINS)) {
+      bins <- EMPLOYMENT_AGE_BINS[[bin_name]]
+      rates <- as.matrix(epop[, paste0(sex_prefix, bins)])
+      w <- weights[bins]
 
-      # Filter to columns that exist in the epop data
-      cols_exist <- cols[cols %in% names(epop)]
-      if (length(cols_exist) == 0) {
-        warning(paste0('No epop columns found for ', sex, '_', bin_name))
-        next
+      base_vals <- rates[base_idx, ]
+      if (any(is.na(base_vals) | base_vals <= 0)) {
+        stop('get_employment_rate_growth_factor: NA or non-positive base-year (',
+             base_year, ') rate in ', epop_path, ' for ', sex, '_', bin_name)
       }
+      base_epop <- weighted.mean(base_vals, w)
 
-      # Get epop values for base and target years
-      base_row <- epop %>% filter(year == base_year)
-      target_row <- epop %>% filter(year == target_year)
-
-      if (nrow(base_row) == 0 || nrow(target_row) == 0) {
-        warning(paste0('Missing epop data for base_year=', base_year,
-                       ' or target_year=', target_year))
-        next
-      }
-
-      base_vals <- as.numeric(base_row[, cols_exist])
-      target_vals <- as.numeric(target_row[, cols_exist])
-
-      # Get population weights for these bins (corresponding to fine_bins that exist)
-      fine_bins_exist <- fine_bins[cols %in% names(epop)]
-      weights <- pop_weights[fine_bins_exist]
-
-      # Replace NA values with 0 in weights
-      weights[is.na(weights)] <- 0
-
-      # Handle case where all weights are 0 or NA
-      if (sum(weights, na.rm = TRUE) <= 0) {
-        # Use equal weights if no population data
-        weights <- rep(1, length(weights))
-      }
-
-      # Compute weighted average epop for base and target years
-      # Handle NA values in epop data (e.g., missing cells for older age bins)
-      valid_idx <- !is.na(base_vals) & !is.na(target_vals)
-      if (sum(valid_idx) == 0) {
-        warning(paste0('All epop values are NA for ', sex, '_', bin_name))
-        next
-      }
-
-      base_epop <- weighted.mean(base_vals[valid_idx], weights[valid_idx], na.rm = TRUE)
-      target_epop <- weighted.mean(target_vals[valid_idx], weights[valid_idx], na.rm = TRUE)
-
-      # Compute growth factor
-      group_name <- paste0(sex, '_', bin_name)
-      if (base_epop > 0) {
-        growth_factors[group_name] <- target_epop / base_epop
-      } else {
-        growth_factors[group_name] <- 1.0
-      }
+      # Aggregate first, then ratio -- not mean of fine-cell growth factors
+      agg <- apply(rates, 1, function(r) {
+        if (any(is.na(r) | r <= 0)) NA_real_ else weighted.mean(r, w)
+      })
+      growth[, paste0(sex, '_', bin_name)] <- agg / base_epop
     }
   }
 
-  # Fill any remaining NA values with 1.0
-  growth_factors[is.na(growth_factors)] <- 1.0
-
-  return(growth_factors)
+  list(year = as.integer(epop$year), growth = growth)
 }

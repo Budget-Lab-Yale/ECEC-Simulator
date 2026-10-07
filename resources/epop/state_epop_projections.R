@@ -4,34 +4,34 @@
 # emp_projections.R builds the NATIONAL file, resources/epop/epop_projections.csv:
 # 26 columns, 12 age bins + 16plus x two sexes, 1994-2100, historical from
 # Haver and projected on CBO LTBO labour-force participation.
-# config/state/employment/<ST>.csv takes the same schema.
+# config/state/employment/<ST>.csv keeps year + the 20 cells simulator reads
+# (SIM_CELLS: ages 16-59 x two sexes) -- get_employment_rate_growth_factor()
+# reads no other column.
 #
-# METHOD -- composition x CBO cell rates, scaled to the national rate. Per state
-# s, year t, sex x age cell c:
+# METHOD -- each geography's own ACS cell rates, carried by national growth.
+# Per geography g, year t, sex x age cell c:
 #
-#   E_s(t)      = sum_c share_sc(t) x CBO_c(t)   rate state would have if its
-#                                                 people had national cell rates
-#   N(t)        = sum_c share_nc(t) x CBO_c(t)   same, national composition
-#   k_s(t)      = N(t) / E_s(t)
-#   rate_sc(t)  = CBO_c(t) x k_s(t)              every cell scaled uniformly, so
-#                                                 state aggregate = N(t)
+#   local_gc(y) = (employed_gc(y-1) + employed_gc(y)) /
+#                 (pop_gc(y-1) + pop_gc(y))            ACS, two years pooled
+#   relative_gc(y) = local_gc(y) / local_USc(y)       vs ACS nation, same cell
+#   rate_gc(t)  = national_c(t) x relative_gc(a),
+#                 a = t clamped to 2007..2024 (ACS years)
 #
-# share_sc = ACS population 16+ in cell c / state population 16+
-# (US_ACS__epop_by_state_sex_age__2006-2024.csv, acs_epop.py); national
-# composition = sum over states. So a state w/ national composition gets k = 1
-# and the national path exactly.
+# So geography's own position against nation, measured in ACS, applied to
+# national (CPS, CBO) cell rate; after 2024 position held. ACS vs CPS level
+# differences cancel -- only state deviation from nation is local. Two-year
+# pooling halves single-year sampling noise in small state x sex x age cells.
+# (US_ACS__epop_by_state_sex_age__2006-2024.csv, acs_epop.py; NYC rows by
+# STATEFIP + COUNTYFIP.)
 #
 # WHAT REACHES THE SIMULATOR. Simulator reads this for employment-rate GROWTH
 # only -- base-year levels come from state-filtered ACS (docs/
-# state_level_analysis.md, section 8). A cell's growth = CBO growth x
-# k_s(t) / k_s(2019): state paths differ from national only through change in
-# state age-sex composition. State labour-market signal does not enter.
+# state_level_analysis.md, section 8). A cell's growth 2019 -> t (t > 2024) =
+# national_c(t) / national_c(2019) x relative_gc(2024) / relative_gc(2019):
+# national growth x change in state's position 2019-2024.
 #
-# OUTSIDE 2006-2024 composition held at nearest ACS year -- runs from 2026
-# use 2024 composition.
-#
-# NYC. ACS composition file is state-level; NYC takes New York's composition,
-# so New York's path, until a county-level composition is built.
+# Not written: 60_64, 65plus (national file blank from 2026, simulator
+# ignores), 16plus (aggregate, simulator ignores).
 #
 # Usage:
 #   Rscript resources/epop/state_epop_projections.R [--check]
@@ -44,51 +44,61 @@ suppressPackageStartupMessages({
 
 EPOP_DIR  <- file.path('resources', 'epop')
 NATIONAL  <- file.path(EPOP_DIR, 'epop_projections.csv')
-ACS_POP   <- file.path(EPOP_DIR, 'US_ACS__epop_by_state_sex_age__2006-2024.csv')
+ACS_EPOP  <- file.path(EPOP_DIR, 'US_ACS__epop_by_state_sex_age__2006-2024.csv')
 OUT_DIR   <- file.path('config', 'state', 'employment')
 
-# STATE_POSTAL_TO_FIPS, SUBSTATE_GEOGRAPHIES, parent_geo()
+# STATE_POSTAL_TO_FIPS, SUBSTATE_GEOGRAPHIES, EMPLOYMENT_AGE_BINS
 source('src/shared_functions/constants.R')
 
+# Cells get_employment_rate_growth_factor() reads -- EMPLOYMENT_AGE_BINS fine
+# bins, both sexes
+SIM_CELLS <- as.vector(outer(c('epop_m_', 'epop_f_'),
+                             unlist(EMPLOYMENT_AGE_BINS, use.names = FALSE),
+                             paste0))
+
 STATES    <- names(STATE_POSTAL_TO_FIPS)   # 50 + DC -- demand build covers all 51
-SUBSTATES <- names(SUBSTATE_GEOGRAPHIES)   # NYC -- takes parent state's composition
+SUBSTATES <- names(SUBSTATE_GEOGRAPHIES)   # NYC -- own ACS rows (COUNTYFIP)
 
 
 
-composition_shares <- function(acs, years) {
+local_rates <- function(acs) {
 
   #----------------------------------------------------------------------------
-  # Population share of each sex x age cell in each state, 16+, for every
-  # simulator year -- ACS years as observed, held at nearest ACS year outside.
-  # geo 'US' = sum over states.
+  # Two-year pooled ACS employment rate and population share per geography,
+  # year, cell. First ACS year has no prior year -- dropped.
   #
   # Params:
-  #   - acs (tibble): year, state_fips, sex, age_bin, pop_wt
-  #   - years (int vec): simulator years
+  #   - acs (tibble): year, state_fips (FIPS or sub-state code), sex, age_bin,
+  #     employed_wt, pop_wt
   #
-  # Returns: (tibble) geo, year, col (epop_<sex>_<age_bin>), share
+  # Returns: (tibble) geo (incl. 'US' = 50 states + DC), year, col
+  #          (epop_<sex>_<age_bin>), rate (percent), share (of geography's 16+
+  #          population, year)
   #----------------------------------------------------------------------------
 
   fips_to_postal <- setNames(names(STATE_POSTAL_TO_FIPS), STATE_POSTAL_TO_FIPS)
   st <- acs %>%
-    mutate(geo = unname(fips_to_postal[as.character(state_fips)])) %>%
+    mutate(state_fips = as.character(state_fips),
+           geo = ifelse(state_fips %in% SUBSTATES, state_fips,
+                        unname(fips_to_postal[state_fips])),
+           col = paste0('epop_', sex, '_', age_bin)) %>%
     filter(!is.na(geo))
   us <- st %>%
-    group_by(year, sex, age_bin) %>%
-    summarise(pop_wt = sum(pop_wt), .groups = 'drop') %>%
+    filter(geo %in% STATES) %>%
+    group_by(year, col) %>%
+    summarise(employed_wt = sum(employed_wt), pop_wt = sum(pop_wt), .groups = 'drop') %>%
     mutate(geo = 'US')
-
-  obs <- bind_rows(select(st, geo, year, sex, age_bin, pop_wt), us) %>%
-    group_by(geo, year) %>%
-    mutate(share = pop_wt / sum(pop_wt)) %>%
+  bind_rows(select(st, geo, year, col, employed_wt, pop_wt), us) %>%
+    arrange(geo, col, year) %>%
+    group_by(geo, col) %>%
+    mutate(rate  = 100 * (employed_wt + lag(employed_wt)) / (pop_wt + lag(pop_wt)),
+           pop2  = pop_wt + lag(pop_wt)) %>%
     ungroup() %>%
-    transmute(geo, acs_year = year, col = paste0('epop_', sex, '_', age_bin), share)
-
-  acs_years <- range(obs$acs_year)
-  tibble(year = years,
-         acs_year = pmin(pmax(years, acs_years[1]), acs_years[2])) %>%
-    inner_join(obs, by = 'acs_year', relationship = 'many-to-many') %>%
-    select(geo, year, col, share)
+    filter(!is.na(rate)) %>%
+    group_by(geo, year) %>%
+    mutate(share = pop2 / sum(pop2)) %>%
+    ungroup() %>%
+    select(geo, year, col, rate, share)
 }
 
 
@@ -96,7 +106,7 @@ composition_shares <- function(acs, years) {
 build <- function(check_only = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Writes OUT_DIR/<ST>.csv for STATES + SUBSTATES; prints diagnostics.
+  # Writes OUT_DIR/<GEO>.csv for STATES + SUBSTATES; prints diagnostics.
   #
   # Params:
   #   - check_only (logical): TRUE skips all writes
@@ -104,7 +114,7 @@ build <- function(check_only = FALSE) {
   # Returns: (tibble) diagnostics, invisibly
   #----------------------------------------------------------------------------
 
-  for (f in c(NATIONAL, ACS_POP)) {
+  for (f in c(NATIONAL, ACS_EPOP)) {
     if (!file.exists(f)) {
       cat('MISSING INPUT: ', f, '\n', sep = '')
       quit(status = 1)
@@ -112,78 +122,61 @@ build <- function(check_only = FALSE) {
   }
 
   natl <- read_csv(NATIONAL, show_col_types = FALSE)
-  cell_cols <- grep('^epop_[mf]_(?!16plus)', names(natl), value = TRUE, perl = TRUE)
-  comp <- composition_shares(read_csv(ACS_POP, show_col_types = FALSE), natl$year)
+  if (length(setdiff(SIM_CELLS, names(natl)))) stop(NATIONAL, ' lacks simulator cells')
+  natl <- natl[, c('year', SIM_CELLS)]
+  cell_cols <- SIM_CELLS
+  loc <- local_rates(read_csv(ACS_EPOP, show_col_types = FALSE))
+  acs_years <- range(loc$year)
 
-  missing_cols <- setdiff(cell_cols, unique(comp$col))
-  if (length(missing_cols)) stop('ACS composition lacks cells: ', paste(missing_cols, collapse = ', '))
-  missing_geo <- setdiff(c(STATES, 'US'), unique(comp$geo))
-  if (length(missing_geo)) stop('no ACS composition for: ', paste(missing_geo, collapse = ', '))
+  missing_geo <- setdiff(c(STATES, SUBSTATES), unique(loc$geo))
+  if (length(missing_geo)) stop('no ACS rows for: ', paste(missing_geo, collapse = ', '),
+                                ' -- rerun acs_epop.py')
+  missing_cols <- setdiff(cell_cols, unique(loc$col))
+  if (length(missing_cols)) stop('ACS lacks cells: ', paste(missing_cols, collapse = ', '))
+  bad <- loc %>% filter(col %in% cell_cols, !is.finite(rate))
+  if (nrow(bad)) stop('non-finite ACS rate in ', nrow(bad), ' cells, e.g. ',
+                      bad$geo[1], ' ', bad$col[1], ' ', bad$year[1])
 
-  # National CBO cell rates, long
-  cbo <- natl %>%
-    select(year, all_of(cell_cols)) %>%
-    pivot_longer(-year, names_to = 'col', values_to = 'cbo')
-
-  # E_g(t) = composition-implied rate, every geography incl. US. National
-  # file leaves 60_64 and 65plus blank from 2026 (CBO projects neither) --
-  # sum runs over cells w/ a rate that year, shares renormalised over them,
-  # same cells for state and nation. Blank cells stay blank in the output.
-  implied <- comp %>%
-    inner_join(cbo, by = c('year', 'col')) %>%
-    filter(!is.na(cbo)) %>%
-    group_by(geo, year) %>%
-    summarise(rate = sum(share * cbo) / sum(share), .groups = 'drop')
-  natl_rate <- implied %>% filter(geo == 'US') %>% select(year, natl_rate = rate)
-  k <- implied %>%
-    filter(geo != 'US') %>%
-    left_join(natl_rate, by = 'year') %>%
-    mutate(k = natl_rate / rate)
-
-  # State aggregate = national rate by construction: k x E_s = N. No check --
-  # a missing geography stops above (missing_geo), a missing year below
-  # (anyNA(kk)).
-
+  anchor  <- pmin(pmax(natl$year, acs_years[1]), acs_years[2])
   diags <- list()
 
-  for (st in c(STATES, SUBSTATES)) {
-    ks <- filter(k, geo == parent_geo(st))
-    kk <- ks$k[match(natl$year, ks$year)]
-    if (anyNA(kk)) stop(st, ': no scale factor for some simulator years')
-
-    # Every cell column, plus 16plus columns: national x k. Simulator reads
-    # fine bins only (get_employment_rate_growth_factor.R); 16plus kept for
-    # schema.
+  lus <- filter(loc, geo == 'US')
+  for (g in c(STATES, SUBSTATES)) {
+    lg  <- filter(loc, geo == g)
     out <- natl
-    for (col in c(cell_cols, 'epop_m_16plus', 'epop_f_16plus')) {
-      out[[col]] <- natl[[col]] * kk
+    for (col in cell_cols) {
+      lc <- filter(lg, col == !!col)
+      lu <- filter(lus, col == !!col)
+      relative <- lc$rate[match(anchor, lc$year)] / lu$rate[match(anchor, lu$year)]
+      out[[col]] <- natl[[col]] * relative
     }
+    if (anyNA(out[out$year >= acs_years[1], cell_cols])) stop(g, ': missing rate in some years')
 
     if (!check_only) {
       dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-      write_csv(out, file.path(OUT_DIR, paste0(st, '.csv')), na = '')
+      write_csv(out, file.path(OUT_DIR, paste0(g, '.csv')), na = '')
     }
 
-    y19 <- ks$year == 2019
-    y24 <- ks$year == 2024
-    diags[[st]] <- tibble::tibble(
-      state        = st,
-      implied_2019 = round(ks$rate[y19], 2),
-      natl_2019    = round(ks$natl_rate[y19], 2),
-      k_2019       = round(ks$k[y19], 4),
-      k_2024       = round(ks$k[y24], 4),
-      adjustment   = round(ks$k[y24] / ks$k[y19], 4))
+    # Growth 2019 -> 2026 of 16-59 rate (2024 shares), geography over nation
+    young <- cell_cols
+    w <- sapply(young, function(cl) filter(lg, col == cl, year == acs_years[2])$share)
+    agg <- function(d, y) sum(unlist(d[d$year == y, young]) * w) / sum(w)
+    diags[[g]] <- tibble::tibble(
+      geo        = g,
+      rate_2019  = round(agg(out, 2019), 2),
+      rate_2024  = round(agg(out, 2024), 2),
+      growth_vs_national_2026 =
+        round((agg(out, 2026) / agg(out, 2019)) / (agg(natl, 2026) / agg(natl, 2019)), 4))
   }
 
   dg <- bind_rows(diags)
-
-  cat('== state epop, ', nrow(dg), ' geographies: ACS composition x CBO cells, ',
-      'scaled to the national rate\n\n', sep = '')
+  cat('== state epop, ', nrow(dg), ' geographies: own ACS cell rates (two-year ',
+      'pooled), national growth outside ', acs_years[1], '-', acs_years[2], '\n\n', sep = '')
   print(as.data.frame(dg), row.names = FALSE)
-  cat('\nadjustment = k(2024) / k(2019): the multiplier on national growth in',
-      'the runs\n')
+  cat('\ngrowth_vs_national_2026 = 16-59 rate growth 2019 -> 2026, geography',
+      'over nation (2024 population shares)\n')
   if (!check_only) {
-    cat('wrote ', OUT_DIR, '/<ST>.csv\n', sep = '')
+    cat('wrote ', OUT_DIR, '/<GEO>.csv\n', sep = '')
   }
   invisible(dg)
 }

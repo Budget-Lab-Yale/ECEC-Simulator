@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # shared_setup.R -- names every state_data script shares. Light: no packages,
 # no data, no simulator source -- 01 and 02 (cluster, licensed NSECE) source it
-# standalone; 00_build_demand_targets.R sources it for itself and 03-04. Run
+# standalone; 00_build_demand_targets.R sources it for itself, 03, 05, 07. Run
 # from repo root.
 #------------------------------------------------------------------------------
 
@@ -20,9 +20,9 @@ UNIVERSE_B <- 'B: NSCH-matched, 10+ hrs/week'
 
 
 # raw/ subfolder of a raw or documentation file: scope prefix of its name
-# (US_, KY_, NJ_, NY_, NYC_, VA_), NYS_ filed under NY.
-#   - f (chr): file name, e.g. 'KY_CCAOA__licensed_providers_by_county__2018-09.csv'
-# Returns: (chr) folder name, e.g. 'KY'
+# (US_, NYC_, <ST>_), NYS_ filed under NY.
+#   - f (chr): file name, e.g. 'US_PEP__population_children_age_0_4_by_county__2019.csv'
+# Returns: (chr) folder name, e.g. 'US'
 raw_scope <- function(f) {
   s <- sub('_.*$', '', basename(f))
   if (s == 'NYS') 'NY' else s

@@ -209,6 +209,32 @@ build_sector_hours_map <- function(n_children) {
 
 
 
+weighted_child_hours <- function(P, M1, M2, w1, w2) {
+
+  #----------------------------------------------------------------------------
+  # Weighted aggregate hours by column of per-child hours maps:
+  # sum_i w_ci * (P %*% M_c)[i, ], summed over children. Weights fold into P
+  # first -- crossprod(w, P) is 1 x n_choices, so no n_units x n_types
+  # intermediate. Algebraically same as colSums(P %*% M * w).
+  #
+  # Params:
+  #   - P (matrix): n_units x n_choices choice probabilities
+  #   - M1, M2 (matrix): n_choices x n_cols hours maps per child (M2 NULL for
+  #       1-child units)
+  #   - w1, w2 (num vec): Per-unit child weights (w2 NULL for 1-child units)
+  #
+  # Returns: (named num vec) Hours by column of M1
+  #----------------------------------------------------------------------------
+
+  h <- crossprod(w1, P) %*% M1
+  if (!is.null(M2)) {
+    h <- h + crossprod(w2, P) %*% M2
+  }
+  setNames(as.vector(h), colnames(M1))
+}
+
+
+
 adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
                                    targets_csv_path, state_postal) {
 
@@ -291,10 +317,7 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
       E <- exp(sd$d_by_choice(deltas))
       U <- sweep(sd$p0, 2, E, '*')
       P <- U / rowSums(U)
-      H <- H + colSums(P %*% sd$C1 * sd$w1)
-      if (!is.null(sd$C2)) {
-        H <- H + colSums(P %*% sd$C2 * sd$w2)
-      }
+      H <- H + weighted_child_hours(P, sd$C1, sd$C2, sd$w1, sd$w2)
     }
     H
   }
@@ -355,10 +378,8 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
     E <- exp(sd$d_by_choice(deltas))
     U <- sweep(sd$p0, 2, E, '*')
     P <- U / rowSums(U)
-    sector_hours <- sector_hours + colSums(P %*% sd$S1 * sd$w1)
-    if (!is.null(sd$S2)) {
-      sector_hours <- sector_hours + colSums(P %*% sd$S2 * sd$w2)
-    }
+    sector_hours <- sector_hours +
+      weighted_child_hours(P, sd$S1, sd$S2, sd$w1, sd$w2)
   }
 
   cat('  State demand adjustment (', state_postal, '): converged in ',

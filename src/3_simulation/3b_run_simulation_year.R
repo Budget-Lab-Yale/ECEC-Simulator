@@ -199,8 +199,9 @@ run_simulation_year_core <- function(sim_ctx, year) {
     # Targets are group-specific primary-caregiver employment rates:
     #   target_g(year) = emp_rate_g(2019) * overall_emp_growth(year vs 2019)
     # Note: RF probabilities (p_employment.pt, p_employment.ft) are from 2019
-    # calibration and don't change by simulation year, so we can compute baseline
-    # rates from any year's parent_units data.
+    # calibration and don't change by simulation year, and the baseline weights
+    # each caregiver by the un-aged 2019 weight (per_weight_pc_base), so any
+    # year's parent_units data gives the same 2019 baseline rates.
     demand_base_year <- as.integer(sim_ctx$base_demand_params$year %||% 2019)
 
     if (is.null(sim_ctx$baseline_emp_rates_2019)) {
@@ -602,6 +603,11 @@ age_demographics <- function(processed_acs, macro_projections, target_year, acs_
   # Returns: (list) microdata tables with updated weights
   #----------------------------------------------------------------------------
 
+  # Keep base-year (un-aged) parent weights beside aged ones -- employment
+  # targeting baseline (compute_baseline_employment_rates) weights by base year
+  processed_acs$parent_units <- processed_acs$parent_units %>%
+    mutate(per_weight1_base = per_weight1, per_weight2_base = per_weight2)
+
   # Skip base year
   if (target_year <= acs_base_year) {
     return(processed_acs)
@@ -903,7 +909,8 @@ prepare_parent_units <- function(parent_units, children, households, donor_pool,
     pseudofamily_split(
       n_child           = 'n_children_original',
       child_weight_stub = 'child_weight',
-      other_weights     = c('per_weight1', 'per_weight2')
+      other_weights     = c('per_weight1', 'per_weight2',
+                            'per_weight1_base', 'per_weight2_base')
     )
 
   # n_children (effective) is min(n_children_original, 2) for choice set sizing
@@ -936,7 +943,8 @@ prepare_parent_units <- function(parent_units, children, households, donor_pool,
       pc_married = if_else(primary_caregiver == 1, married1, married2),
       pc_married = replace_na(pc_married, 0L),
       per_weight_pc = if_else(primary_caregiver == 1, per_weight1, per_weight2),
-      pc_age = if_else(primary_caregiver == 1, age1, age2),
+      per_weight_pc_base = if_else(primary_caregiver == 1, per_weight1_base, per_weight2_base),
+      pc_age =if_else(primary_caregiver == 1, age1, age2),
       pc_age_bin = case_when(
         pc_age < 25 ~ 'u25',
         pc_age < 35 ~ '25_35',
@@ -969,7 +977,8 @@ prepare_parent_units <- function(parent_units, children, households, donor_pool,
                   n_children, n_children_original, child_category, n_parents,
                   hhm_id1, hhm_id2,
                   per_weight1, per_weight2, primary_caregiver, male1, male2,
-                  pc_male, pc_married, per_weight_pc, pc_age, pc_age_bin, pc_group,
+                  pc_male, pc_married, per_weight_pc, per_weight_pc_base,
+                  pc_age, pc_age_bin, pc_group,
                   age1, age2, married1, married2,
                   tax_unit_id1, tax_unit_id2, filing_status1, filing_status2,
                   hours_secondary, oasi_tax_max, region,
@@ -1651,7 +1660,7 @@ compute_baseline_employment_rates <- function(parent_units_list) {
     df <- parent_units_list[[nm]]
     if (is.null(df) || nrow(df) == 0) return(NULL)
     df %>%
-      select(pc_group, per_weight1, per_weight2, primary_caregiver, p_employment.pt, p_employment.ft, any_of('per_weight_pc')) %>%
+      select(pc_group, per_weight1, per_weight2, primary_caregiver, p_employment.pt, p_employment.ft, any_of(c('per_weight_pc', 'per_weight_pc_base'))) %>%
       mutate(pu_type = nm)
   }))
 
@@ -1675,6 +1684,13 @@ compute_baseline_employment_rates <- function(parent_units_list) {
   } else {
     all_pu <- all_pu %>%
       mutate(weight = if_else(primary_caregiver == 1, replace_na(per_weight1, 0), replace_na(per_weight2, 0)))
+  }
+
+  # Base-year (un-aged) caregiver weight where carried (age_demographics()),
+  # so baseline is a base-year rate whatever year's parent units it reads
+  if ('per_weight_pc_base' %in% names(all_pu)) {
+    all_pu <- all_pu %>%
+      mutate(weight = if_else(!is.na(per_weight_pc_base), per_weight_pc_base, weight))
   }
 
   # Compute weighted employment rate by group

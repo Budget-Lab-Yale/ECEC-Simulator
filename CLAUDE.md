@@ -83,9 +83,9 @@ config/
 ├── policy_transfer/          # Choice-dependent cash transfer policies
 ├── employer_subsidy/         # Employer wage subsidy configs (YAML)
 ├── wage_floor/               # Wage floor configs (YAML)
-├── state/                    # State-level analysis inputs (demand/, supply/, employment/ per <ST>)
-├── demand/                   # Calibrated demand parameters (timestamped)
-└── supply/                   # Calibrated supply parameters (timestamped)
+└── state/                    # State-level analysis inputs (demand/, supply/, employment/ per <ST>)
+# Calibrated demand/supply parameters are written to the output root
+# (default_paths.yaml) under <timestamp>/estimation/, not config/
 
 tests/                        # testthat test suite
 cache/                        # Cached donor pools & ETRs
@@ -146,7 +146,7 @@ Policies are pluggable R functions. See existing files for full signatures:
 ## Testing
 
 - Unit tests in `tests/` directory (testthat framework)
-- Run all tests: `Rscript tests/run_tests.R`
+- Run the tests: `Rscript tests/test_state_analysis.R`, and each `Rscript state_data/tests/check_*.R`
 - Diagnostic scripts prefixed with `analyze_`, `compare_`, `debug_`
 
 

@@ -14,7 +14,16 @@ SPEC_CA <- geo_spec('CA', 'California', fips = 6, region = 'west',
   # CA, MI only geographies w/out a CCD count. Excludes preschool special ed (52,307), which
   # CCD counts elsewhere -- so CA reads low against CCD states. CSPP incl.
   # contracted non-school centers.
-  prek             = 245614,   # NIEER 2018-19, CSPP + TK (no CCD rows)
+  #
+  # TK LEFT OUT. TK = first year of two-year kindergarten for children born
+  # Sep 2 - Dec 2; district may admit later birthdays since 2015 (NIEER CA
+  # background, printed p.58) -- nearly every TK child 5 by mid-year, outside
+  # population 0-4.
+  # program_children() still takes West 5+ share off CSPP.
+  #
+  # hs_in_prek 0: NIEER Table 4 HS increment 70,632 vs Appendix B 70,631 --
+  # no CA overlap reported.
+  prek             = 140920,   # NIEER 2018-19, CSPP only (no CCD rows)
 
   # Head Start: NIEER Appendix B row -- federal, AIAN, Migrant & Seasonal funded
   # slots, ages 3-4. tests/check_program_counts_match_sources.R checks the sum.
