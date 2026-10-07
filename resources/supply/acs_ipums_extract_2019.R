@@ -23,16 +23,22 @@
 #   OCCSOC, INDNAICS    Detailed codes, so childcare workers (39-9011) separate
 #                       from preschool teachers (25-2011), who are paid more
 #                       and more often degree-holding and lifted both means.
-#   REPWTP              80 replicate weights: a standard error on every state
-#                       wage ratio, as the NSCH rate already carries.
 #   PUMA, COUNTYFIP     Sub-state geography. NYC is county-defined; this is the
 #                       first extract that could give NYC its own wage.
 #   GQ                  Excludes group quarters from a household-based measure.
 #
+#   GRADEATT            Grade attending -- flags children 0-4 already in
+#                       kindergarten (NHES-ECPP leaves them out).
+#
 # SAMPLES
-#   us2019a   2019 ACS 1-year: the base year exactly.
-#   us2019c   2015-2019 ACS 5-year: roughly five times the records, for the
-#             thin cells. Vermont had 13 no-degree childcare workers in 2018.
+#   us2019a   2019 ACS 1-year: the base year exactly; county crosswalk,
+#             kindergarten flags.
+#   us2019c   2015-2019 ACS 5-year, 2018 + 2019 records used -- wage ratios.
+#   us2020c   2016-2020 ACS 5-year. Not used since 2026-10-06 (wage ratios
+#             take us2019c alone); kept so extract usa:34 stays as drawn.
+#
+# Supersedes usa:33 (us2019a, us2019c, REPWTP) -- replicate weights dropped,
+# no standard errors computed.
 
 suppressPackageStartupMessages(library(ipumsr))
 
@@ -42,16 +48,16 @@ if (!nzchar(Sys.getenv('IPUMS_API_KEY'))) {
 
 ext <- define_extract_micro(
   collection  = 'usa',
-  description = 'ECEC-Simulator state childcare wages and labour, 2019',
-  samples     = c('us2019a', 'us2019c'),
+  description = 'ECEC-Simulator state childcare wages and labour, 2018-2020',
+  samples     = c('us2019a', 'us2019c', 'us2020c'),
   variables   = list(
     'STATEFIP', 'PUMA', 'COUNTYFIP', 'GQ',
     'AGE', 'SEX', 'EMPSTAT', 'LABFORCE',
     'CLASSWKR', 'OCC', 'OCCSOC', 'IND', 'INDNAICS',
     'UHRSWORK', 'WKSWORK1', 'WKSWORK2',
     'INCWAGE', 'INCBUS00', 'INCEARN',
-    'EDUC',
-    'PERWT', 'REPWTP'),
+    'EDUC', 'GRADEATT',
+    'PERWT'),
   data_format = 'fixed_width')
 
 sub <- submit_extract(ext)

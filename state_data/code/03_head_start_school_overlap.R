@@ -20,8 +20,16 @@
 #      Schools"). Binding test: grantee renting a school classroom runs a
 #      separate program, children never in school's membership.
 #
-# Site file a 2026 export; share applied to 2018-19 enrolled Head Start (NIEER
-# slots x HS_ENROLLED_PER_SLOT, 00_build_demand_targets.R), assuming share held.
+# Site file a 2026 export; share applied to 2018-19 Head Start children in
+# centers, ages 0-4 (NIEER slots x HS_ENROLLED_PER_SLOT, less home-based, FCC,
+# 5+ shares -- program_children(), 00_build_demand_targets.R), assuming share
+# held. program_children() deducts this share, except where spec sets
+# hs_in_prek (MI, DC) -- NIEER share replaces it there.
+#
+# GAP: site file lists only OPEN sites in 2026. A district grantee closed or
+# 'Not Reported' by then drops out -- DC: DC Public Schools 250 slots 'Not
+# Reported', 114 open slots in all vs NIEER 2,150, so DC share reads 0 while
+# NIEER Table 4 puts all 2,150 in DC pre-K.
 #
 # Writes out/head_start_school_overlap.csv (one row per geography; load_spec()
 # reads hs_in_schools_share live from it).

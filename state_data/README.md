@@ -27,9 +27,10 @@ covers only the 50 states and DC, NSECE places Puerto Rico in no Census region,
 and the simulator's ACS households do not include it. Building it needs a participation rate, a region or a stand-in
 for one, a wage, and households. New York is all 62 counties, city
 included. New York City is the five boroughs, built on its own. NY includes
-NYC. NY minus NYC is close to the rest of the state, within 0.6% of the hours
-in each care type. Each divides its care by the p0 mix of its own households,
-so the difference is not exact.
+NYC. NY minus NYC is close to a rest-of-state build made the same way, within
+0.7% of the hours in each care type. The rate and the p0 mix of each are
+ratios over its own households, so the difference is not exact
+(`tests/check_nyc_rest_of_state.R`).
 
 This directory writes demand only. The simulator's per-state supply and
 employment files, and how the simulator reads all three, are in
@@ -49,7 +50,12 @@ them in the order 1, 4, then 2, 3, and 5 together, then 6.
 4. **Unpaid Center-Based** — each state's own **program counts**: public
    pre-K (CCD) + Head Start + Early Head Start, converted from funded slots to
    enrolled children, less the Head Start a district runs inside one of its own
-   pre-K schools, which CCD already counts.
+   pre-K schools, which CCD already counts. CCD misses community-based public
+   pre-K, so pre-K is the larger of CCD and an all-settings count: NIEER Table
+   2 state pre-K (no special education) for a state, Florida's school-year VPK
+   count (no summer VPK), the city's own DOE count for NYC
+   (`nieer_prek_inputs()`; 19 geographies take it). The Head Start overlap matches the count taken:
+   NIEER's share where NIEER reports one, the site match otherwise.
 5. **Centers and homes** — split by the share model. The share model divides
    step 1 less step 4 over the five other types, so steps 2, 3, and 5 come
    out of one division.
@@ -97,19 +103,29 @@ code/shared_setup.R                     root path, region map, universe labels, 
                                         print helpers -- sourced by 00, 01, and 02; every
                                         script runs from the repo root
 code/00_build_demand_targets.R          the method, the share model, the universe
-                                        ratio, and the CLI
+                                        ratio, and the CLI; build_geo() returns one
+                                        list per geography (care counts, part-time
+                                        counts, and hours by type; program counts at
+                                        each step; participation inputs and
+                                        conversion factors), and the demand CSV and
+                                        05 and 07 read that list (build_of())
 code/05_compare_nsece_shares.R          comparison: the build against regional NSECE
                                         shares (writes nothing the simulator reads)
-code/06_compare_industry_counts.R      validation: the build against 2019 QCEW child
-                                        day care employment and nonemployer counts
 code/07_compare_nhes.R                 validation: the build against NHES-ECPP 2019, same
                                         population and care-type rules, by Census region
+code/08_nieer_prek_sensitivity.R        sensitivity: demand targets with NIEER pre-K and
+                                        NIEER Head Start overlap in place of CCD and the
+                                        site match (writes nothing the simulator reads)
 cluster/acs_p0_shares.R                 p0 children by geography, care type, and hours,
                                         from a full-sample interface (runs on the cluster)
-cluster/acs_p0_shares_by_age.R          the same p0 summary split by child age, for the
-                                        NHES check by age (runs on the cluster)
-cluster/nsece_listed_home_share.py      listed-home share of Paid Home-Based children,
-                                        NSECE home provider file (runs on the cluster)
+cluster/acs_p0_shares_by_age.R          the same p0 summary split by child age and
+                                        kindergarten, for the NHES check (runs on the cluster)
+cluster/nsece_shares_by_age.R           NSECE care-type shares of children 0-4 by age,
+                                        simulator's classification -- puts the model's
+                                        training survey beside NHES (runs on the cluster)
+cluster/acs_kindergarten_flags_2019.py  ACS 2019 children 0-4 already in kindergarten
+                                        (IPUMS usa:34 GRADEATT), dropped from the NHES
+                                        check because NHES leaves them out
 states/<GEO>.R                          one per geography: a geo_spec() call with program
                                         counts (funded slots) and Census region,
                                         hand-researched
@@ -117,27 +133,30 @@ code/01_nsch_participation_rate.R       derives each state's rate and standard e
 code/02_derive_nsece_constants.R        derives every NSECE constant (runs on the cluster)
 code/03_head_start_school_overlap.R     measures the Head Start a district runs in its
                                         own pre-K school, for step 4
-code/04_compare_licensing_registers.R   validation: centre counts against five
-                                        licensing registers (writes nothing the
-                                        simulator reads)
+code/shared_nsece_ages.R                NSECE 2019 centre enrollment by age 0-4 and the
+                                        age-to-licensing-band map -- sourced by
+                                        resources/supply/state_supply_params.R
 code/config_local.example.yaml          copy to state_data/config_local.yaml (git-ignored)
 tests/                                  the check suite
 docs/SUMMARY_method.tex                 the method memo and its .pdf (local only, git-ignored)
 docs/SOURCES.csv                        every source, where it came from, what it feeds
 raw/                                    the input files, one folder per scope
 raw/US/                                 national files and reports
-raw/KY/, raw/NJ/, raw/VA/               state register files and reports
-raw/NY/                                 New York State files and report (NYS_ and NY_)
-raw/NYC/                                New York City register file
+raw/NYC/                                New York City report (Health Code staffing rules)
 raw/local/                              files too large for git (git-ignored)
 out/nsch_participation_rate_by_wave.csv the NSCH derivation, every wave and pool
-out/nsch_participation_rate_2019.csv    BASE_WAVE only -- what load_spec() reads
+out/nsch_participation_rate_base.csv    BASE_WAVE (2016-19 pool) -- what load_spec() reads
 out/nsece_constants.csv                 the NSECE derivation, full precision
+out/nsece_shares_by_age.csv             NSECE care-type shares of children 0-4 by age
+                                        (cluster/nsece_shares_by_age.R)
 out/head_start_school_overlap.csv       the school-overlap share per geography
-out/nsece_listed_home_share.csv         the listed-home share, national and by region
-out/licensing_register_comparison.csv   build vs register children, centres and homes, KY NJ NY NYC VA
-out/industry_count_comparison.csv       build vs QCEW and nonemployer counts, 52 geographies
-out/nhes_comparison.csv                 build vs NHES-ECPP 2019 by region and care type
+out/nhes_comparison.csv                 build vs NHES-ECPP 2019 by region and care type;
+                                        US rows add NHES at the ACS age mix
+out/nhes_comparison_by_age.csv          the same, ages 0-2 and 3-4
+out/nhes_age_mix.csv                    single-year age mix of children 0-4 not in
+                                        kindergarten: NHES, model ACS, Census PEP 2019
+out/nieer_sensitivity/<GEO>.csv         NIEER sensitivity demand targets, simulator schema
+out/nieer_sensitivity_summary.csv       hours by geography and care type, main vs NIEER
 ../config/state/demand/<GEO>.csv        the output: the demand targets the simulator
                                         reads (the build writes only this copy)
 ```
@@ -151,7 +170,10 @@ A state file is **data, not logic**: one `geo_spec()` call. Copy the closest exi
    three program counts `prek`, `head_start`, and `early_head_start`, each with its source
    beside it. A sub-state geography also passes `county_fips`, which selects
    its population, and `counties`, the same counties by name for the files
-   with no FIPS, like NYC (see `states/NYC.R`). The simulator needs a matching entry in
+   with no FIPS, like NYC (see `states/NYC.R`). Pass `hs_in_prek` (NIEER
+   Table 4) only where the pre-K figure is NIEER's state pre-K or the Head
+   Start site file is too thin to measure the state (see "Head Start and pre-K
+   can count the same children"). The simulator needs a matching entry in
    `SUBSTATE_GEOGRAPHIES` (`src/shared_functions/constants.R`). Do NOT write `hs_in_schools_share`
    or `nonparental_rate` -- `load_spec()` fills both in live; see below.
 2. `GEOGRAPHIES` in `00_build_demand_targets.R` takes every code in
@@ -184,8 +206,8 @@ data with no per-geography judgment call. Keeping a hand copy of a fully-derived
 `load_spec()` reads both live, after sourcing the state file:
 
 - `nonparental_rate` — that geography's row of
-  `out/nsch_participation_rate_2019.csv` (`01_nsch_participation_rate.R`,
-  `BASE_WAVE` only). NYC has no NSCH records of its own, so `load_spec('NYC')`
+  `out/nsch_participation_rate_base.csv` (`01_nsch_participation_rate.R`,
+  `BASE_WAVE`, the 2016-19 pool). NYC has no NSCH records of its own, so `load_spec('NYC')`
   reads NY's row.
 - `hs_in_schools_share` — that geography's row of
   `out/head_start_school_overlap.csv` (`03_head_start_school_overlap.R`). NYC
@@ -228,17 +250,18 @@ so.
 | Participation rate | NSCH topical file, question `k6q20` | `raw/US/US_NSCH__…` (2018, 2019, 2020) | 2019 | step 1 |
 | NSECE constants | NSECE household file, ICPSR 37941 dataset 0009 | cluster only (licensed) | 2019 | steps 2, 4, 5, 6 |
 | Public pre-K | NCES Common Core of Data, pre-K membership by county | `raw/US/US_CCD__…by_county…` | 2018–19 | step 4 |
-| California and Michigan public pre-K | NIEER, *State of Preschool 2019*, state pages | constant | 2018–19 | step 4, CA and MI |
+| California and Michigan public pre-K | NIEER, *State of Preschool 2019*, state pages (CA: State Preschool Program only) | constant | 2018–19 | step 4, CA and MI |
 | Head Start | NIEER, *State of Preschool 2019*, Appendix B | constant | 2018–19 | step 4 |
 | Early Head Start | NIEER, *The State(s) of Head Start and Early Head Start* (2023) | constant | 2018–19 | step 4 |
 | Slots to enrolled children | OHS PIR 2018–19: Services Snapshots, Report to Congress Appendix C | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
 | Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US/US_HSSL__…2026-09-23`, `raw/US/US_CCD__…`, `raw/US/US_EDGE__…` | 2026, 2018–19 | step 4 deduction; NYC shares |
-| NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 | not held | 2018–19 | evaluated, not used |
-| Base-year wage ratio and state labour share | IPUMS ACS 2018-2019 (5-year sample), childcare occupations (OCC 4600, 2300, 2330, 230), by measured education | IPUMS extract usa:33, cluster only (`raw/local/`) → `resources/supply/state_childcare_wage_ratios_acs.csv` | 2018–2019 | step 7 |
+| NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 less Appendix B | `raw/US/US_NIEER__state_of_preschool_yearbook__2019.pdf`, constant | 2018–19 | step 4 deduction, MI and DC |
+| Head Start program options | OHS PIR 2018–19 Services Snapshots (HS, EHS, AIAN): home-based and family child care funded slots | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
+| Five-year-olds in programs | NHES-ECPP 2019 public-use file, children not yet in kindergarten, age at 2018-12-31, by Census region | `raw/local/US_NHES__…` (git-ignored) → constant, `00_build_demand_targets.R` | 2019 | step 4 |
+| Base-year wage ratio | IPUMS ACS, 2018-2019 records of the 2015-2019 5-year file, childcare occupations (OCC 4600, 2300, 2330, 230), by measured education; weighted medians | IPUMS extract usa:34, cluster only (`raw/local/`) → `resources/supply/state_childcare_wage_ratios_acs.csv` | 2018–2019 | step 7 |
 | National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
-| Industry counts | BLS QCEW private employment, NAICS 624410; Census Nonemployer Statistics, NAICS 6244 | `raw/US/US_QCEW__…`, `raw/US/US_NES__…` | 2019 | industry check |
-| Licensing registers | KY CCAoA (CHFS), NJ DCF + KIDS COUNT registered family child care count, NY OCFS + NYC DOHMH, VA VDSS + ELPG program counts | `raw/KY/KY_…`, `raw/NJ/NJ_…`, `raw/NY/NYS_…`, `raw/NYC/NYC_…`, `raw/VA/VA_…` | 2018-09 to 2026-09 | register check |
+| Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-band map) | 2019 | supply centre staffing index weights |
 
 A **file** is read by the code. A **constant** is read by hand once and written
 into `states/<GEO>.R` next to its provenance comment.
@@ -250,13 +273,13 @@ someone other than a parent or guardian. The prompt names every arrangement
 type and never asks which one applies. Wording is in
 `raw/US/US_NSCH__topical_variable_list__2019.pdf`.
 
-The build reads each rate from `out/nsch_participation_rate_2019.csv`.
+The build reads each rate from `out/nsch_participation_rate_base.csv`.
 `01_nsch_participation_rate.R` derives that file from the survey:
 
 ```bash
 Rscript state_data/code/01_nsch_participation_rate.R
 # writes out/nsch_participation_rate_by_wave.csv and
-# out/nsch_participation_rate_2019.csv
+# out/nsch_participation_rate_base.csv
 ```
 
 The error uses the **survey design** — strata `FIPSST × STRATUM`, PSU `HHID`,
@@ -266,16 +289,20 @@ The 2019 file is the Census re-release (`nsch_2019e_topical`, 2024), all 51
 states. An earlier copy held only six states; its 3,545 records match the
 re-release on every column the build reads, so no rate or error moved.
 
-The build uses the single 2019 wave (`BASE_WAVE` in
-`01_nsch_participation_rate.R`). The 2018 and 2020 files are held for reference only: 2018-19 and 2019-20 pools are
-printed beside the single-wave table, and 2020 sits out of every pool because
-NSCH 2020 was fielded through the pandemic, with care rates falling 5 to 18
-points in KY, NJ, and VA.
+The build pools the four pre-COVID waves, 2016-2019 (`BASE_WAVE` in
+`01_nsch_participation_rate.R`). One wave is about half noise: in 2019 the
+state rates spread 7.8 points (standard deviation) with a median design error
+of 5.8 points, so only 46% of the spread is real. The pool cuts the median
+error to 2.8 points (86% real). The four waves are flat -- state means 54.0,
+54.5, 54.2, and 54.9% -- so the pool moves the level little (54.4% against
+54.9%). No pre-COVID window centred on 2019 exists: 2020-2022 were fielded
+through or after the pandemic (state means 48.2, 48.7, and 51.7%), and from
+2023 NSCH drops the question. The 2020-2022 files are held for that check
+only.
 
-State cells run 99–206 records (unweighted children, 2019). NSCH has no
-sub-state identifier, so NYC takes the New York State rate times a p0
-factor: p0's non-parental share of NYC's children over the same
-share for the state (`nsch_rate_of()` in `00_build_demand_targets.R`).
+State cells run 505–954 records (unweighted children, 2016-19 pooled). NSCH has no
+sub-state identifier, so NYC takes the New York State rate as is
+(`nsch_rate_of()` in `00_build_demand_targets.R`).
 
 ### NSECE — the regional constants
 
@@ -324,13 +351,30 @@ unnoticed. **Refresh the file whenever `02_derive_nsece_constants.R` is rerun.**
 **Why step 4 uses program counts.** Public pre-K enrolment and Head Start
 funded slots are *published, state by state*, so this is the one care type
 whose count comes from a state source rather than from the share model.
-`program_children()` sums public pre-K (CCD) + Head Start + Early Head Start,
-then subtracts the Head Start a school district runs in one of its own pre-K
-schools, because CCD already counts those children — `03_head_start_school_overlap.R`
-measures that overlap (VA 21.5%, NJ 11.4%, KY 6.8%, NYS 0.2%, NYC 0.0%). The
-comparison script (`05_compare_nsece_shares.R`) sets the result beside the
-regional NSECE unpaid-center share (program count over the NSECE count: PA
-0.48 to DC 2.93).
+`program_children()` keeps only children who are in a center, are 0–4, and
+are counted once. `build_geo()` prints each line:
+
+```
+program children = public pre-K + Head Start + Early Head Start   (enrolled children)
+                 - Head Start and EHS children in the home-based or family child care option
+                 - pre-K and Head Start children aged 5 or older
+                 - Head Start children whom the pre-K count already holds
+```
+
+| Geography | Enrolled | Not in a center | Age 5+ | Head Start in pre-K | Program children | Previous build (own-school deduction only) |
+|---|---|---|---|---|---|---|
+| KY | 42,919 | 1,245 | 12,442 | 635 | 28,596 | 42,121 |
+| NJ | 55,918 | 1,433 | 6,822 | 1,199 | 46,464 | 54,618 |
+| NY | 99,911 | 4,554 | 10,171 | 67 | 85,120 | 99,838 |
+| NYC | 44,107 | 2,229 | 4,690 | 0 | 37,188 | 44,107 |
+| VA | 47,105 | 1,063 | 14,236 | 1,899 | 29,906 | 44,720 |
+
+Every figure is a count of children from administrative sources (Head Start
+funded slots converted to enrolled children), not a survey estimate. The
+age 5+ column is the one place a survey enters: it applies an NHES share
+(below) to those counts. The comparison script
+(`05_compare_nsece_shares.R`) sets the result beside the regional NSECE
+unpaid-center share.
 
 The counts are not a clean measure of the care type, and the memo says so:
 they measure enrolment and funded slots, not the primary arrangement (a pre-K
@@ -341,14 +385,18 @@ where a state source exists at all.
 
 **CCD — public pre-K.** Pre-K membership, school by school, summed by county,
 for 2018–19, on or near October 1. It counts a **grade**, not an age, so it
-includes some five-year-olds, and it counts more than state pre-K programs
-alone — in Kentucky 28,465 against the 21,351 NIEER reports for the Kentucky
-Preschool Program, because the grade also holds district-funded places and
-preschool special education.
+includes some five-year-olds (removed below, "Ages 0–4"), and it counts more
+than state pre-K programs alone — in Kentucky 28,465 against the 21,351 NIEER
+reports for the Kentucky Preschool Program, because the grade also holds
+district-funded places and preschool special education.
 
-- **California has no CCD pre-K rows** for 2018–19. Its pre-K count is NIEER's:
-  State Preschool Program 140,920 + transitional kindergarten 104,694 = 245,614.
-  It excludes preschool special education (52,307), which CCD counts elsewhere.
+- **California has no CCD pre-K rows** for 2018–19. Its pre-K count is NIEER's
+  State Preschool Program, 140,920 children. It excludes preschool special
+  education (52,307), which CCD counts elsewhere. I leave out transitional
+  kindergarten (104,694): TK is for children born 2 September to 2 December,
+  so nearly every TK child is 5 by the middle of the year (NIEER CA page,
+  printed p.58). The build used 245,614 (State Preschool + TK) before
+  5 October 2026.
 - **Michigan reports no CCD pre-K count** for 2018–19: 1,064 of its 1,219 pre-K
   school rows are flagged "Not reported", and the rest add up to 0. Its pre-K
   count is NIEER's: Great Start Readiness Program, 37,140 children (MI
@@ -369,8 +417,8 @@ State(s) of Head Start and Early Head Start*, 2023, methods note):
 > 4-year-olds. Similarly, since EHS is intended to serve infants and toddlers,
 > we considered 3-year-olds enrolled in EHS to be under 3 years old.
 
-So the Head Start count includes some five-year-olds by construction, and
-nothing held here can size them. The specs added in September 2026 (32 states
+So the Head Start count includes some five-year-olds by construction. NHES
+sizes them ("Ages 0–4" below). The specs added in September 2026 (32 states
 and DC) take their counts from the same three sources, read by the functions in
 `tests/check_program_counts_match_sources.R`: CCD pre-K by county, the NIEER
 Appendix B Head Start row (federal, AIAN, and Migrant and Seasonal slots, ages
@@ -405,27 +453,122 @@ only on request, which this build does not use.
 - The enrolled count is at the end of the program year. CCD counts children
   on or near October 1.
 
+**Center care only.** Head Start funds four program options. Two are not
+center care, so I remove them from both Head Start counts:
+
+- **Home-based option.** A home visitor comes once a week. The child stays in
+  the parent's care. The child stays inside the NSCH total, in whatever care
+  type the p0 mix gives.
+- **Family child care option.** The child is in a provider's home. The p0 mix
+  places these children among the five other care types.
+
+National funded slots, 2018–19 Services Snapshots: Head Start 11,043
+home-based + 1,277 family child care of 675,734; Early Head Start 57,221 +
+5,722 of 166,693 − 5,988 pregnant women; AIAN 1,493 + 16, split by the AIAN
+age mix as above. The shares are **1.9% of Head Start and 38.0% of Early Head
+Start**. No public file gives the options by state. The center-based and
+locally designed options stay. Childcare-partner centers (Appendix C A.10,
+48,006 positions, all programs) also stay: the child is in a center, and Head
+Start services carry no fee.
+
+**Ages 0–4.** The population is children 0–4. The pre-K grade and the Head
+Start 3–4 slots also hold children who turn 5 during the program year. I
+measure the share of program children aged 5 or older at the middle of the
+program year with NHES-ECPP 2019 (`raw/local/`, git-ignored): children not yet
+in kindergarten, in a center program now (`CPNNOWX` = 1), age 3 or older at
+31 December 2018 (`AGE2018`), weighted by `FEWT`, by Census region.
+
+| Region | Pre-K (program in a public school, `CPPLACEX` = 2) | Head Start (`CPHEADST` = 1) |
+|---|---|---|
+| Northeast | 14.9% (13 of 78 records) | 5.9% (3 of 36) |
+| South | 36.1% (56 of 155) | 18.8% (18 of 85) |
+| Midwest | 24.2% (34 of 123) | 7.0% (5 of 52) |
+| West | 16.8% (26 of 127) | 6.7% (7 of 74) |
+| National | 24.4% (129 of 483) | 10.7% (33 of 247) |
+
+Records are unweighted children; the shares are weighted. Every cell has 30
+records or more, so the build uses the regional value (the NSECE rule). The
+regions follow kindergarten cutoff dates: a
+child who is 4 on an August or September cutoff turns 5 early in the year,
+and the South has the most early cutoffs. Early Head Start has no
+five-year-olds (EHS snapshot: 109 four-year-olds of 224,436 children, no
+five-year-olds). The PIR's own 1.1% of Head Start children aged 5 uses age at
+the school-entry cutoff, the start of the year, so it does not match the
+population. `check_constants_match_derivation.R` recomputes all eight shares
+from the NHES file where it exists.
+
 **Head Start and pre-K can count the same children.** A state can fund pre-K
 places inside Head Start, and a district can run Head Start in a school. Step 4
-deducts only the part CCD already counts: Head Start that a district runs in
-one of its own pre-K schools. `03_head_start_school_overlap.R` finds it from four
-national files — ACF service locations, CCD pre-K by school, the CCD school
-directory, and NCES EDGE geocodes — so every state is measured the same way.
+deducts the Head Start children that the pre-K figure already holds. The
+deduction is one share of a state's Head Start slots, chosen by the source of
+the state's pre-K figure:
 
-NIEER's own overlap count is not used. *State of Preschool 2019*, Table 4
-(p.28), gives 3- and 4-year-olds in pre-K plus special education, without and
-with Head Start, each child counted once; NIEER's methodology (p.193) says it
-subtracts Head Start children in state pre-K where a state reports them. The
-difference between the two columns is Head Start net of the overlap. Special
-education cancels: Virginia reports no overlap, and its difference is exactly
-its gross Head Start, 11,579. The overlap is with state pre-K, in every
-setting; CCD counts public schools only, so Table 4 is the wrong correction for
-step 4. Of the 18 states read by hand before September 2026, seven report an
-overlap: CT, IL, KY, MA, NJ, NY, WV. Deducting where reported and nowhere else
-would treat states differently for a reason that is not about care. NIEER marks
-the others "some Head Start children may also be counted in state pre-K" and
-deducts nothing for them. A gap of two children or fewer is rounding in the
-table (five states read ±1).
+- **In the district's own school** (every geography with a CCD pre-K figure).
+  `03_head_start_school_overlap.R` finds Head Start that a district runs in
+  one of its own pre-K schools, from four national files — ACF service
+  locations, CCD pre-K by school, the CCD school directory, and NCES EDGE
+  geocodes — so every state is measured the same way.
+- **In state pre-K** (`hs_in_prek` in the spec; MI and DC, in place of the
+  own-school share). MI's pre-K figure is NIEER's own count; DC's site file
+  covers too few slots to match. *State of
+  Preschool 2019*, Table 4 (p.28), gives 3- and 4-year-olds in pre-K plus
+  special education, without and with Head Start, each child counted once;
+  NIEER's methodology (p.193) says it subtracts Head Start children in state
+  pre-K where a state reports them. Appendix B Head Start less the Table 4
+  increment is the Head Start count in state pre-K. Special education cancels:
+  Virginia reports no overlap, and its increment is exactly its Head Start,
+  11,579. A gap of two children or fewer is rounding.
+
+Table 4 counts the overlap with state pre-K in every setting, and CCD counts
+public schools only. A Head Start child in a community center with state pre-K
+funds is in Head Start and not in CCD, so the build counts that child once.
+So I use Table 4 only where the pre-K figure covers the same children:
+
+- **Michigan.** The pre-K figure is NIEER's GSRP total, every setting. Table 4
+  puts 5,840 of 23,432 Head Start slots in GSRP (24.9%).
+- **DC.** The site file cannot measure DC: it holds 114 open Head Start slots
+  against 2,150 in NIEER, because the DC Public Schools grant reads "Not
+  Reported" in the 2026 export. Open slots over NIEER slots run 0.41 to 1.22
+  in the 50 states, so the cut is 0.25 (`SITE_FILE_MIN_COVER`). Table 4 puts
+  all 2,150 DC Head Start children in DC pre-K.
+- California reports no overlap (increment 70,632 against 70,631).
+
+`tests/check_program_counts_match_sources.R` reads Table 4 and enforces the
+rule: `hs_in_prek` equals the Table 4 figure where the rule applies, and 0
+everywhere else.
+
+Eighteen states report an overlap in Table 4 (NY 11,136, MI 5,840, NJ 4,621,
+NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
+2,077, NE 1,946, AL 1,746, MS 931, CT 843, ME 800, KY 783, MD 436 slots).
+In KY the reported 783 is close to the 833 slots `03_` finds in district
+schools. In NJ and NY the reported figure is far above the own-school figure,
+because most of it is Head Start in community UPK and Abbott sites, which CCD
+does not count.
+
+**Overlaps not removed.** Each needs a count that no held file gives:
+
+- **West Virginia collaborative pre-K.** WV CCD (15,479) is above all WV state
+  pre-K (13,534), so CCD can hold the collaborative classrooms run by Head
+  Start grantees. Table 4 reports 4,358 Head Start slots in WV pre-K; the
+  own-school share covers 1,108. The rest, up to 3,250 slots, can be a double
+  count. To remove it, I need a state count of Head Start children in WV
+  district membership.
+- **Head Start children with an IEP.** 13.2% of Head Start children have an
+  IEP (HS snapshot, 99,961). A district that serves such a child can enter
+  the child in its pre-K membership. No file gives that count.
+- **Preschool special education with services only.** CCD's pre-K grade can
+  hold children who get only itinerant services (for example, speech therapy)
+  and are in no regular care arrangement. IDEA educational-environment counts
+  by state are not held.
+- **Paid care alongside the program.** A pre-K or Head Start child whose
+  family also pays for a center is Center-Based under the primary-type rule.
+  The program count puts the child in Unpaid Center-Based. Childcare-partner
+  families who pay a subsidy copay for extra hours are the same case.
+- **Kindergarten cutoff inside a region.** The 5+ share is regional. New York
+  State's cutoff is 1 December, and NYC enrolls by calendar year, so few NYC
+  pre-K children are 5 at 31 December. The Northeast share (14.9%) removes
+  3,982 NYC pre-K children; a cutoff-based share near 0 would keep most of
+  them. A state cutoff table would fix this.
 
 **The NYC share.** ACF's service-location file gives funded slots by site.
 NYC's Head Start and Early Head Start counts are the city's shares of New York
@@ -498,81 +641,25 @@ ratio down, not up, so the construct difference does not explain the gap.
 The build keeps the NSECE ratio and does not correct one source to the other,
 because it is not settled which ratio is right.
 
-### Licensing registers — the center-count check
-
-An earlier build (commit `31307ce`, 18 September 2026) took formal care from
-five geographies' licensing registers and then scaled them to the NSECE formal
-share. `04_compare_licensing_registers.R` reads the same registers with the
-same conversions, but without that scaling. So the registers are an independent
-count of the children in licensed centers, and the check compares the build to
-them.
-
-```bash
-Rscript state_data/code/04_compare_licensing_registers.R
-# prints the table, writes out/licensing_register_comparison.csv
-```
-
-**Capacity to children.** Each register gives licensed capacity. The script
-removes school-age capacity, rebases a 2026 export to the base year, and
-converts capacity to children:
-
-| Geography | Register | Vintage | Rebase | Capacity to children |
-|---|---|---|---|---|
-| KY | CCAoA republication of the CHFS licensed and certified registers | 2018-09 | none | measured enrolled per provider: 42 per center, 9 per home (2019 workforce study, Table 20) |
-| NJ | DCF licensed centers; homes from the DCF registered family child care count (KIDS COUNT, 1,492 at 2019-12-31) | 2019-05; homes 2019-12 | none | centers: NJ fill rate 0.6733 (MRS 2021, Figure 7); homes: 5 children per provider (legal maximum) × under-5 slot share 0.7955 × fill 0.4402 (MRS 2021, p. 18 and Table 17, 2020 column) |
-| NY | OCFS (centers outside NYC, all homes) + NYC DOHMH group child care | 2026-09 | 2019/2025 by program type, OCFS modality series | national fill: centers 0.9029, homes 0.7954 |
-| NYC | the same two registers, five boroughs | 2026-09 | as NY | as NY |
-| VA | VDSS, every approval route | 2026-09 | licensed and voluntary registered homes: 2019 / 2026 program count per type (ELPG); everything else: statewide factor, VDSS 2020-06 matrix | centers 0.9029, homes 0.7954 x 0.7546 |
-
-The home under-5 share is 0.7546, the NSECE listed-provider stratum. The
-September 18 build held 0.7567, a published figure that the later derivation
-replaced.
-
-**What a register center holds.** A licensed center holds private paid care,
-most Head Start and Early Head Start, and state pre-K places contracted to
-community centers. It does not hold public-school pre-K, which is
-license-exempt in all five geographies. So the check compares the register
-with Center-Based + Head Start + Early Head Start (enrolled, less the
-in-school share). Homes compare with Paid Home-Based × 0.7633, the listed-home
-share. Paid Home-Based holds every paid home with no prior relationship,
-licensed or not; a register holds licensed or registered homes only.
-`cluster/nsece_listed_home_share.py` measures the share from the NSECE 2019
-home provider file (ICPSR 37941-0007): children 0–5 in listed homes (588,260)
-over children with no prior relationship in listed homes (465,968) and in
-unlisted paid homes (304,754), care in the provider's home. 738 listed homes
-with withheld age counts take the listed stratum's under-school-age share,
-0.7546. By region it runs 0.64 to 0.92, but the Northeast has 27 unlisted paid
-providers, so the check uses the national share.
-
-**Read the gap by conversion.** KY and NJ convert capacity with their own
-measured enrollment, so their gap is the most reliable. NY, NYC, and VA use
-the national NSECE fill rate. Kentucky's own survey puts its centers at 57%
-full against the national 90%. So in NY, NYC, and VA the register figure is
-probably high. The build is below the register in all five, so each true gap
-there is smaller than the table shows.
-
 ### Reference documents
 
 Each report sits beside the data of its scope, in `raw/<SCOPE>/`. Only the
-documents behind numbers the build uses are held: the reports, plus the VA VDSS
-workbook that the register check's CSV comes from. On 2 October 2026 I
+documents behind numbers the build uses are held. On 2 October 2026 I
 removed the documents read only for context, method, or a rejected source,
 and the NHES codebook; earlier commits still hold them.
+On 5 October 2026 I removed the licensing-register and industry-count (QCEW,
+nonemployer) comparisons, with their data and reports; commit `6dff713` holds them.
 
 | Folder | File | What it is |
 |---|---|---|
-| `raw/US/` | `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap, state pre-K totals, CA and MI pre-K |
+| `raw/US/` | `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap (MI and DC deduction), state pre-K totals, CA and MI pre-K, CA TK birth dates |
 | `raw/US/` | `US_NIEER__states_of_head_start_and_early_head_start__2023.pdf` | NIEER State(s) of Head Start: Early Head Start 2018–19 by state |
-| `raw/US/` | `US_OHS__services_snapshot_ehs__2018-19.pdf` | OHS EHS Services Snapshot, national, 2018–19: EHS funded slots, pregnant-women slots, cumulative enrollment |
-| `raw/US/` | `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots |
-| `raw/US/` | `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots and age mix, for the HS/EHS split |
+| `raw/US/` | `US_OHS__services_snapshot_ehs__2018-19.pdf` | OHS EHS Services Snapshot, national, 2018–19: EHS funded slots, pregnant-women slots, home-based and family child care slots, cumulative enrollment |
+| `raw/US/` | `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots, home-based and family child care slots |
+| `raw/US/` | `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots, home-based and family child care slots, and age mix, for the HS/EHS split |
 | `raw/US/` | `US_OHS__biennial_report_to_congress__FY2019.pdf` | Appendix C (national PIR) feeds the enrolled-per-slot factors. Its state HS + EHS funded enrollment was evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
 | `raw/US/` | `US_NSCH__topical_variable_list__2019.pdf` | NSCH 2019 variable list, incl. `k6q20` wording |
-| `raw/US/` | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019 |
-| `raw/KY/` | `KY_CCAKY__child_care_workforce_study__2019.pdf` | Child Care Aware of Kentucky workforce study |
-| `raw/NJ/` | `NJ_MRS21__child_care_market_rate_survey__2021.pdf` | New Jersey market rate survey, 2021 |
-| `raw/NY/` | `NY_OCFS__child_care_facts_and_figures__2019.pdf` | New York OCFS child care facts and figures, 2019 |
-| `raw/VA/` | `VA_VDSS__child_care_capacity_and_demand_matrix__2020-06.xlsx` | Virginia VDSS capacity and demand matrix by locality |
+| `raw/US/` | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019: Exhibit 1 enrollment by age 0–4, the supply staffing index weights |
 
 ## Checks
 
@@ -590,6 +677,7 @@ Rscript state_data/tests/check_outputs_are_current.R       # demand targets are 
 Rscript state_data/tests/check_sources_are_ascii.R         # no literal depends on locale
 Rscript state_data/tests/check_constants_match_derivation.R # constants match out/nsece_constants.csv
 Rscript state_data/tests/check_program_counts_match_sources.R # program counts match their sources
+Rscript state_data/tests/check_nyc_rest_of_state.R          # NY minus NYC near a rest-of-state build
 python  state_data/tests/check_summarise_shadowing.py      # scans for the shadowing trap
 ```
 
@@ -631,8 +719,8 @@ NYC gets a simulator file too. The simulator selects NYC households by
 STATEFIP 36 and COUNTYFIP 005, 047, 061, 081, and 085 (`SUBSTATE_GEOGRAPHIES`
 in `src/shared_functions/constants.R`). The build selects NYC's population on
 the same five codes (`county_fips` in `states/NY.R`). The county names in
-`counties` are kept only for the two files that carry no FIPS: the Head Start
-site file and the NY registers. A NYC run needs an interface built from a raw
+`counties` are kept only for the one file that carries no FIPS: the Head Start
+site file. A NYC run needs an interface built from a raw
 ACS pull that carries `COUNTYFIP`; without one, the run stops at
 initialization.
 

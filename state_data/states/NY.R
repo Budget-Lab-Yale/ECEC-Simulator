@@ -20,6 +20,14 @@ NYC_COUNTY_FIPS <- with(SUBSTATE_GEOGRAPHIES$NYC,
 NY_PREK_CCD  <- 54451
 NYC_PREK_CCD <- 26717   # CCD, five boroughs
 
+# NYC pre-K, every setting (district schools, Pre-K Centers, NYC Early
+# Education Centers, charters), registered October 2018: full-day UPK 66,854
+# (30,313 in DOE Pre-K Centers / district schools) + half-day 2,044 + 3-K
+# 5,091. NYC Council Finance Division, DOE Fiscal 2020 Preliminary Budget
+# report (March 2019), pp. 30-31, Tables 21-22; PDF in raw/NYC/. Plays role
+# NIEER Table 4 plays for a state (NIEER publishes states only).
+NYC_PREK_ALL_SETTINGS <- 66854 + 2044 + 5091   # 73,989
+
 # Head Start ages 3-4, NIEER 2018-19. GROSS of pre-K overlap.
 NY_HEAD_START  <- 36863
 

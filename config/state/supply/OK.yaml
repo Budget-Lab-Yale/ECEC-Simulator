@@ -1,28 +1,25 @@
 year: 2019.0
 labor_requirements:
   unpaid_center_based:
-    no_ba: 0.0517061
-    ba: 0.0564691
+    no_ba: 0.0491207
+    ba: 0.0536455
   low_price_center_based:
-    no_ba: 0.1780861
-    ba: 0.0348792
+    no_ba: 0.1691814
+    ba: 0.0331352
   high_price_center_based:
-    no_ba: 0.1548266
-    ba: 0.0755459
+    no_ba: 0.147085
+    ba: 0.0717685
   paid_home_based:
-    no_ba: 0.1600461
-    ba: 0.0380721
+    no_ba: 0.1553232
+    ba: 0.0369486
 wages:
-  no_ba: 11.1840653
-  ba: 18.1056153
-labor_supply:
-  no_ba: 1.6550995e+07
-  ba: 4855332.46264
+  no_ba: 11.5013009
+  ba: 21.5266372
 elasticities:
   no_ba: 4.0
   ba: 2.0
 per_unit_residual:
   unpaid_center_based: .na.real
-  low_price_center_based: 0.4788889
-  high_price_center_based: 4.7246782
-  paid_home_based: 2.8273432
+  low_price_center_based: 0.427801
+  high_price_center_based: 4.2206495
+  paid_home_based: 2.5257222

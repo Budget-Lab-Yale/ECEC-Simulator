@@ -225,8 +225,10 @@ parameters for the state. Same schema as
 `<output_root>/estimation/supply/supply_2019.yaml`, which calibration writes
 (committed copy: `resources/supply/US_NSECE__national_supply_parameters__2019.yaml`):
 `labor_requirements`, `wages`, `labor_supply`, `elasticities`,
-`per_unit_residual`. The override is **all-or-nothing** — all five blocks are
-read, so a file supplying one of them must supply the rest.
+`per_unit_residual`. The override is **all-or-nothing** — the simulator reads
+every block from the state file. The one exception is `labor_supply`: the state
+file does not hold it, and the simulator sets it from the state's base-year
+hours (below).
 
 **A state with a demand file needs its supply file, and the files are built
 rather than hand-written.** `resources/supply/state_supply_params.R` writes one
@@ -248,32 +250,36 @@ KY, NJ, NY and VA on 2026-09-24 measured the consequence: the ratio came out
 and the BA wage solved *below* the no-BA wage in every state, because its
 elasticity is 2 rather than 4 and the same ratio bites twice as hard.
 
-So each file carries the national parameters with `labor_supply` re-based to
-the state. Until 1 October 2026 the file held
+So a state run re-bases `L_0` to the state. **The simulator computes it; the
+supply file does not hold it.** At state initialisation
+(`3a_initialize_simulation.R`), `adjust_alpha_for_state()` returns the model's
+own base-year hours by supply sector at the solved deltas, and the simulator
+sets
 
 ```
-labor_supply = colSums(L_req * state base-year hours)
+L_0 = colSums(L_req * sector_hours)
 ```
 
-which is the definition `1a_nsece_processing.R` uses nationally, applied to the
-state's own base-year hours. The file now holds the ACS-based figure instead:
-national L_0 × the state's share of national ACS childcare workers (below).
+This is the definition `1a_nsece_processing.R` uses nationally, applied to the
+state's own base-year hours. The contraction pins combined center hours but
+not the low/high split, and the two bands differ sharply in BA labour per hour
+(0.035 against 0.076), so a value built from a fixed national split would
+leave the base-year ratio off 1 for BA labour. From the model's own hours,
+`L / L_0 = 1` in the base year by construction.
 
-**When demand is re-anchored, the simulator replaces that figure.** At state
-initialisation (`3a_initialize_simulation.R`), `adjust_alpha_for_state()`
-returns the model's own base-year hours by supply sector at the solved deltas,
-and the simulator sets `L_0 = colSums(L_req * sector_hours)`. The contraction
-pins combined center hours but not the low/high split, and the two bands differ
-sharply in BA labour per hour (0.035 against 0.076), so a file value built from
-a fixed national split would leave the base-year ratio off 1 for BA labour.
-From the model's own hours, `L / L_0 = 1` in the base year by construction.
-The file's `labor_supply` remains the fallback for a state with no demand file.
+This is the only state definition of `L_0`, so a state supply file needs a
+demand file. A state run with `config/state/supply/<ST>.yaml` but no
+`config/state/demand/<ST>.csv` stops with an error that names the missing file
+and `state_data/code/00_build_demand_targets.R`. A state with neither file runs
+on the national parameters. Until 5 October 2026 the supply file also held an
+ACS-based `labor_supply` (national L_0 × the state's share of national ACS
+childcare workers) as a fallback. No run used it, because every geography has
+a demand file, and the build no longer computes it.
 
-**`wages` and the labour quantity come from ACS childcare workers, by measured
-education.** `resources/supply/acs_childcare_wage_by_education_2019.py` reads
-IPUMS extract usa:33 (`resources/supply/acs_ipums_extract_2019.R`) on the
-cluster. It uses the 2018 and 2019 records of the 2015-2019 5-year sample, for
-about twice the 1-year records. The workers are the ACS occupations of the four
+**`wages` come from ACS childcare workers, by measured education.** `resources/supply/acs_childcare_wage_by_education_2019.py` reads
+IPUMS extract usa:34 (`resources/supply/acs_ipums_extract_2019.R`) on the
+cluster. It uses one sample: the 2018 and 2019 records of the 2015-2019
+5-year file. The workers are the ACS occupations of the four
 SOC codes that care for children under school age:
 
 | ACS OCC | SOC | Occupation | Kept |
@@ -293,33 +299,45 @@ of preschool teachers below it. In the ACS 2019 1-year file, the BA share is
 15.6% for childcare workers and 36.3% for preschool teachers in child day care
 services.
 
-Hourly earnings are `INCEARN` ÷ (weeks × usual hours), with earnings ≤ 0,
-under 100 annual hours, and hourly outside $2-200 dropped. Each state's wage is
-the national NSECE wage × the state mean ÷ the national mean, by group. The
-ratio keeps NSECE's wage definition, which the rest of the parameter set is
-built on. Ratios run 0.754 (SD) to 1.291 (NH) for no-BA and 0.730 (KY) to
-1.386 (NV) for BA. A cell under 30 unweighted workers takes ratio 1: BA in AK,
-DC, DE, HI, ID, MT, ND, NM, WV, and WY. Standard errors use the 80 replicate
-weights; the median is 0.05 (no-BA) and 0.08 (BA). NYC is the five boroughs
-(`COUNTYFIP`), with its own ratio and labour share. The ratios correlate with
-the occupation-mapped OEWS May 2019 ratios they replaced (2 October 2026) at
-0.72 (no-BA) and 0.61 (BA).
+Hourly earnings follow the simulator's ACS rule (`1b_acs_processing.R`):
+household residents, (`INCWAGE` + `INCBUS00`) ÷ (weeks × usual hours), kept
+when earnings, weeks, and hours are all positive. Weeks are `WKSWORK1`; the
+2018 records give only `WKSWORK2` intervals, and each takes the weighted mean
+`WKSWORK1` of workers in the same interval (about 6, 21, 33, 42, 48, and 52
+weeks). The ratio is the state's weighted median hourly earnings over the
+national median, by group. Medians, not means: a few high-weight records can
+swing the mean of a small cell.
 
-Each file's `labor_supply` is the national NSECE L_0 × the state's share of
-national ACS workers in that group. A run with a demand file replaces it with
-the model's own base-year hours (above). The fallback is weak: against labour
-requirements × the state's base-year hours, the ACS-based L_0 ran from 0.69
-(HI) to 2.00 (NE) for no-BA and 0.34 (DC) to 2.26 (SD) for BA.
+Small cells borrow from the state's labour market, not the national wage.
+A cell with at least 30 unweighted records keeps its own childcare ratio. A
+smaller cell takes the state's all-worker median ratio for the same education
+group. 9 of the 102 state cells are under 30, all BA: AK, DC, DE, ID, MT, ND,
+NM, WV, and WY. Ratios run 0.767 (WV) to 1.439 (VT) for no-BA and 0.755 (SD)
+to 1.313 (VT) for BA. NYC is the five boroughs
+(`COUNTYFIP`), with its own ratio.
 
-`labor_requirements`, `elasticities` and `per_unit_residual` stay national.
-`per_unit_residual` is the one worth stating: the equilibrium solves
+`labor_requirements` scale by a state licensing staffing index. For
+centres: required staff per child (1 ÷ licensed children per staff by age),
+averaged over ages 0–4 with the NSECE 2019 centre enrolment mix, relative to
+the PEP-weighted mean over the 50 states and DC; it scales all three centre
+sectors. For homes: 1 ÷ licensed maximum children per family child care home,
+relative to the mean over states that license homes (1 where a state does
+not); it scales `paid_home_based`. Rules: HHS ACF 2014 licensing study (CAP
+2018 Table 1; PN3 2020 Table 6); NYC centres use the city Health Code
+(Article 47, June 2019). Centre index runs 0.731 (LA) to 1.499 (DC); home
+index 0.425 (AR) to 1.698 (DE).
+
+`per_unit_residual` scales by the BEA Regional Price Parity (all items,
+2019; NYC takes the New York metro area). The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
 residual in **dollars** covering everything that is not labour — rent, food,
-insurance, administration, margin. State wages move `unit_cost`, and the
-state's price moves with it by the full labour-cost difference while the
-non-labour margin stays at its national dollar value. That is the conservative
-choice: nothing measured here says the non-labour margin varies by state, and
-rent plainly does not scale with childcare wages.
+insurance, administration, margin — and the RPP carries the state price level
+into it.
+
+`elasticities` stay national (no-BA 4, BA 2). The national values are
+assumptions (Borowsky et al. 2022, NBER w30140, section 4.4); no state
+estimate exists, and two candidate proxies (labour-market slack, outside-option
+wage ratio) disagreed on the direction of most states' deviation.
 
 ## 8. Employment-rate growth (CBO epop)
 
@@ -328,44 +346,33 @@ Simulation-year employment targets are
 
 - **Base rates**: computed from the state-filtered parent-unit data
   (automatic once filtering is in place; no file needed).
-- **Growth factors**: from `config/state/employment/<ST>.csv` **in the same
-  format as `resources/epop/epop_projections.csv`** (columns `year`,
-  `epop_m_16_17`, …, `epop_f_65plus`) if present; otherwise the national
-  epop file. The existing aggregation (fine bins → 8 targeting groups using
+- **Growth factors**: from `config/state/employment/<ST>.csv`, which keeps
+  the `year` column and the 20 cells of `resources/epop/epop_projections.csv`
+  that the simulator reads (`epop_m_16_17`, …, `epop_f_55_59`), if present;
+  otherwise the national epop file. The existing aggregation (fine bins → 8 targeting groups using
   `macro_projections` population weights) is reused with the file path
   swapped.
 
 **The employment files are built, not hand-written.**
 `resources/epop/state_epop_projections.R` writes one per state, DC, and NYC
-from the national CBO cell rates and each state's own age-sex composition:
+from each geography's own ACS employment rates and the national cell rates:
 
-1. **Composition.** The share of the state's population 16+ in each sex × age
-   cell, from the ACS (`resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`).
-   The national composition is the sum over the states.
-2. **Implied rate.** The rate the state would have if each cell had the CBO
-   national rate: Σ cell share × CBO cell rate. The same sum with the national
-   composition gives the national rate.
-3. **Uniform scale.** Every cell is the CBO cell rate × k, where k = national
-   rate ÷ state implied rate. So the state's aggregate equals the national
-   rate, and a state with the national composition gets the national path.
-   The script checks this on every build, for every state and year, and stops
-   if any aggregate misses the national rate.
+1. **Local rate.** For each sex × age cell (12 groups, 16+), the geography's
+   ACS employment rate, pooled over two years (y−1 and y) to halve sampling
+   noise (`resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`,
+   `acs_epop.py`; NYC rows select the five boroughs by `COUNTYFIP`).
+2. **Relative rate.** Local rate ÷ the national ACS rate in the same cell and
+   years (sum over the 50 states and DC). ACS-CPS level differences cancel.
+3. **Path.** Cell rate(t) = national cell rate(t) × relative rate(t), with t
+   held at 2024 after 2024 (and at 2007 before 2007).
 
-The national file has no 60–64 or 65+ rates from 2026 on, so each year's sum
-runs over the cells that have a rate, for the state and the nation alike.
-Composition is held at its nearest ACS year outside 2006–2024, so runs from
-2026 use the 2024 composition. The shares freeze, not k: k is recomputed every
-year, so it still moves after 2024 when CBO cell rates move differently. Only
-the change in k since 2019 reaches the simulator, as a rate ratio per cell:
-r_s,g(t) / r_s,g(2019) = r_US,g(t) / r_US,g(2019) × k(t) / k(2019). A state's
-growth path differs from the national one only through its age-sex
-composition. k(2024)/k(2019) runs 0.989 (DC) to 1.013 (DE) across the 52 files, against 0.960 to
-1.043 under the LAUS method it replaced (30 September to 1 October 2026; its
-input and download script were then removed). The state's own labour market
-does not enter. NYC takes New York's composition until a county-level one is
-built.
+Only the change since 2019 reaches the simulator: growth = national growth ×
+relative rate(2024) ÷ relative rate(2019). The state files leave out the
+60–64, 65+, and 16+ cells, which the simulator does not read.
 Base-year employment *levels* always come from the state-filtered data; only
-the growth path is taken from the file.
+the growth path is taken from the file. The level is the mean of the model's
+2019 employment probabilities, weighted by each primary caregiver's un-aged
+2019 weight (`per_weight_pc_base`), so it is a 2019 rate in every run year.
 
 ## 9. Sampling
 
@@ -387,10 +394,9 @@ adjustment was applied (and the solved deltas), the supply-parameter source
    supplements). Significant for state-level affordability results; to be
    revisited.
 2. **Partial supply anchoring.** Each state supply yaml re-bases labour
-   supply to the state's base-year hours and takes state wages (§7);
-   labour requirements, elasticities, and the non-labour residual stay
-   national. Base-year *quantities* match; equilibrium *prices* and price
-   *responses* reflect national supply apart from wages. The demand and
+   supply to the state's base-year hours and takes state wages, staffing,
+   and non-labour residual (§7); elasticities stay national. Base-year
+   *quantities* match; price *responses* use national elasticities. The demand and
    supply files are not forced to jointly reproduce an observed state
    equilibrium.
 3. **National growth factors** for wages/CPI (`macro_projections`) and
@@ -404,14 +410,15 @@ adjustment was applied (and the solved deltas), the supply-parameter source
 config/state/
 ├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows); state_data/code/00_build_demand_targets.R
 ├── supply/<ST>.yaml      # supply params, schema = supply_2019.yaml; resources/supply/state_supply_params.R
-└── employment/<ST>.csv   # epop projections, schema = epop_projections.csv; resources/epop/state_epop_projections.R
+└── employment/<ST>.csv   # epop projections, year + 16-59 cells of epop_projections.csv; resources/epop/state_epop_projections.R
 ```
 
 Each falls back to the national input when absent. Demand and employment are
-optional; a state with a demand file also needs its supply file (§7). All
+optional; a state with a demand file also needs its supply file, and a supply
+file without a demand file stops the run (§7). All
 three are built, for the 50 states, DC, and NYC, by the scripts named above.
 `<ST>` is the USPS postal abbreviation, uppercase, or a sub-state code
-(`NYC`). NYC's supply file takes its own ACS wage ratio and labour share (the
+(`NYC`). NYC's supply file takes its own ACS wage ratio (the
 five boroughs); its employment file takes New York's age-sex composition,
 which has no city figure. How the demand targets are built is
 in `state_data/README.md`.
