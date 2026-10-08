@@ -5,8 +5,10 @@
 # 26 columns, 12 age bins + 16plus x two sexes, 1994-2100, historical from
 # Haver and projected on CBO LTBO labour-force participation.
 # config/state/employment/<ST>.csv keeps year + the 20 cells simulator reads
-# (SIM_CELLS: ages 16-59 x two sexes) -- get_employment_rate_growth_factor()
-# reads no other column.
+# (SIM_CELLS: ages 16-59 x two sexes) + pop_<bin>: geography's ACS population
+# per fine bin, both sexes (single year, clamped to ACS years) --
+# get_employment_rate_growth_factor() weights fine bins into broad groups w/
+# base-year row (2026-10-07; national file has none -> national macro weights).
 #
 # METHOD -- each geography's own ACS cell rates, carried by national growth.
 # Per geography g, year t, sex x age cell c:
@@ -140,6 +142,21 @@ build <- function(check_only = FALSE) {
   anchor  <- pmin(pmax(natl$year, acs_years[1]), acs_years[2])
   diags <- list()
 
+  # Fine-bin population weights per geography (pop_<bin>, both sexes, ACS
+  # single year at anchor) -- simulator combines fine bins into broad groups w/
+  # these in place of national macro weights (get_employment_rate_growth_factor())
+  fips_to_postal <- setNames(names(STATE_POSTAL_TO_FIPS), STATE_POSTAL_TO_FIPS)
+  fine_bins <- unlist(EMPLOYMENT_AGE_BINS, use.names = FALSE)
+  pop <- read_csv(ACS_EPOP, show_col_types = FALSE) %>%
+    mutate(state_fips = as.character(state_fips),
+           geo = ifelse(state_fips %in% SUBSTATES, state_fips,
+                        unname(fips_to_postal[state_fips]))) %>%
+    filter(!is.na(geo), age_bin %in% fine_bins) %>%
+    group_by(geo, year, age_bin) %>%
+    summarise(pop = sum(pop_wt), .groups = 'drop')
+  pop_years <- range(pop$year)
+  pop_anchor <- pmin(pmax(natl$year, pop_years[1]), pop_years[2])
+
   lus <- filter(loc, geo == 'US')
   for (g in c(STATES, SUBSTATES)) {
     lg  <- filter(loc, geo == g)
@@ -151,6 +168,12 @@ build <- function(check_only = FALSE) {
       out[[col]] <- natl[[col]] * relative
     }
     if (anyNA(out[out$year >= acs_years[1], cell_cols])) stop(g, ': missing rate in some years')
+    pg <- filter(pop, geo == g)
+    for (b in fine_bins) {
+      pb <- filter(pg, age_bin == b)
+      out[[paste0('pop_', b)]] <- pb$pop[match(pop_anchor, pb$year)]
+    }
+    if (anyNA(out[, paste0('pop_', fine_bins)])) stop(g, ': missing ACS population in some fine bins')
 
     if (!check_only) {
       dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

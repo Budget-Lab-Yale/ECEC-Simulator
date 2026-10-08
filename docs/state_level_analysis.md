@@ -77,9 +77,13 @@ processing (national)  →  calibration (national)
               - recompute alphas to hit state demand targets   (§5)
               - override supply params if state yaml present    (§7)
               - resolve state epop file if present              (§8)
-              - take the state's rows of the national price
-                wedge cache (income percentiles stay national,
-                as the price models were trained)
+              - take the state's rows of the price wedge cache
+                (income percentiles rank within each state, in
+                calibration and simulation alike; the price model
+                trains on NSECE incomes ranked within Census region,
+                the finest NSECE geography, without region as a
+                predictor -- the state market price carries the
+                geographic price level)
         →  each simulation year: loop over states               (§6)
               - per-state equilibrium (baseline + counterfactuals)
               - per-state warm-start prices
@@ -349,9 +353,11 @@ Simulation-year employment targets are
 - **Growth factors**: from `config/state/employment/<ST>.csv`, which keeps
   the `year` column and the 20 cells of `resources/epop/epop_projections.csv`
   that the simulator reads (`epop_m_16_17`, …, `epop_f_55_59`), if present;
-  otherwise the national epop file. The existing aggregation (fine bins → 8 targeting groups using
-  `macro_projections` population weights) is reused with the file path
-  swapped.
+  otherwise the national epop file. The file also carries `pop_<bin>`
+  columns, the geography's ACS population per fine bin (both sexes); the
+  aggregation (fine bins → 8 targeting groups) weights by the base-year row
+  of those columns. The national file has none and keeps the
+  `macro_projections` population weights.
 
 **The employment files are built, not hand-written.**
 `resources/epop/state_epop_projections.R` writes one per state, DC, and NYC
@@ -399,8 +405,7 @@ adjustment was applied (and the solved deltas), the supply-parameter source
    *quantities* match; price *responses* use national elasticities. The demand and
    supply files are not forced to jointly reproduce an observed state
    equilibrium.
-3. **National growth factors** for wages/CPI (`macro_projections`) and
-   national population weights inside the epop aggregation.
+3. **National growth factors** for wages/CPI (`macro_projections`).
 4. **Small-state precision** — no minimum-N guard yet.
 5. **`Other Paid` price** remains the national calibrated base price.
 

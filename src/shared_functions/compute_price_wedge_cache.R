@@ -25,12 +25,13 @@ compute_price_wedge_cache <- function(parent_units, children, households, qrf_mo
   #
   # Uses baseline AGI for income percentile calculation rather than
   # employment-choice-specific AGI (which would require full tax imputation).
-  # Computes percentile thresholds internally to match QRF training (1:100 bins).
+  # Computes percentile thresholds internally to match QRF training (1:100 bins),
+  # within each state.
   #
   # Params:
   #   - parent_units (tibble): base parent units with baseline_agi1, baseline_agi2
   #   - children (tibble): children data with ages
-  #   - households (tibble): households data with region
+  #   - households (tibble): households data with region, statefip
   #   - qrf_models (list): trained QRF models from train_price_qrf_models()
   #       with center_low_price, center_high_price, home_price, other_paid_price models
   #
@@ -57,32 +58,52 @@ compute_price_wedge_cache <- function(parent_units, children, households, qrf_mo
     mutate(weight = (per_weight1 + coalesce(per_weight2, per_weight1)) / 2) %>%
     select(hh_id, parent_unit_id, n_parents, baseline_agi1, baseline_agi2, weight) %>%
     left_join(child_ages, by = c('hh_id', 'parent_unit_id')) %>%
-    left_join(households %>% select(hh_id, region), by = 'hh_id') %>%
+    left_join(households %>% select(hh_id, region, any_of('statefip')), by = 'hh_id') %>%
     mutate(
       # Use sum of baseline AGI for income percentile
       baseline_agi = baseline_agi1 + replace_na(baseline_agi2, 0)
     )
 
-  # Compute income percentile thresholds from the data (99 values for 100 bins)
-  # This matches the QRF training which used seq(0.01, 0.99, 0.01)
-  income_pctiles <- wtd.quantile(
-    x      = cache_df$baseline_agi + runif(nrow(cache_df)),  # small jitter for ties
-    weight = cache_df$weight,
-    probs  = seq(0.01, 0.99, 0.01)
-  )
+  # Income percentile thresholds (99 values for 100 bins, as QRF training
+  # seq(0.01, 0.99, 0.01)), ranked within state. QRF trains on NSECE incomes
+  # ranked within Census region (finest NSECE geography, 1a_nsece_processing.R)
+  # -- both rank family in own area. Region not a predictor (2026-10-07): area
+  # price level comes from market price only, not the wedge. Baseline AGI, drawn once -- policy doesn't
+  # move ranks. Calibration, re-anchoring, simulation (national + state runs)
+  # share this cache -- sub-state geography (NYC) ranks within its state. No
+  # statefip (pre-state interface) -> one national ranking.
+  agi_jittered <- cache_df$baseline_agi + runif(nrow(cache_df))  # small jitter for ties
+  rank_group <- if ('statefip' %in% names(cache_df) && !all(is.na(cache_df$statefip))) {
+    cache_df$statefip
+  } else {
+    cat('  Price wedge: no statefip, ranking income nationally\n')
+    rep(0L, nrow(cache_df))
+  }
+  if (anyNA(rank_group)) {
+    stop('compute_price_wedge_cache: ', sum(is.na(rank_group)), ' parent units lack statefip. ',
+         'Check households table statefip (1b_acs_processing.R).')
+  }
 
-  cache_df <- cache_df %>%
-    mutate(
-      income_pctile = cut(baseline_agi, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
-        as.character() %>% as.integer(),
-      region_factor = factor(region, levels = qrf_models$center_low_price$region_levels)
+  # Bin = 1 + breaks strictly below AGI -- same bins as cut(right = TRUE) when
+  # breaks unique; also takes tied breaks (small state, one heavy record spans
+  # several percentiles), where cut() stops
+  income_pctile <- rep(NA_integer_, nrow(cache_df))
+  for (g in unique(rank_group)) {
+    i <- which(rank_group == g)
+    income_pctiles <- wtd.quantile(
+      x      = agi_jittered[i],
+      weight = cache_df$weight[i],
+      probs  = seq(0.01, 0.99, 0.01)
     )
+    income_pctile[i] <- findInterval(cache_df$baseline_agi[i], income_pctiles, left.open = TRUE) + 1L
+  }
+
+  cache_df$income_pctile <- income_pctile
 
   n_total <- nrow(cache_df)
 
   # Identify complete cases for imputation
   complete_mask <- !is.na(cache_df$income_pctile) &
-                   !is.na(cache_df$region_factor) &
                    !is.na(cache_df$n_parents) &
                    !is.na(cache_df$child_age)
 
@@ -97,7 +118,7 @@ compute_price_wedge_cache <- function(parent_units, children, households, qrf_mo
   if (n_complete > 0) {
     # Prepare prediction data frame for complete cases only
     pred_df <- cache_df[complete_mask, ] %>%
-      select(income_pctile, region = region_factor, n_parents, child_age)
+      select(income_pctile, n_parents, child_age)
 
     # Draw a SINGLE random percentile for each parent unit (consistent across care types)
     # This ensures that if a family is at the 80th percentile for center prices,

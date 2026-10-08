@@ -86,7 +86,8 @@ run_nsece_processing <- function() {
     #   - target_col (chr): Name of the target column to predict
     #   - name (chr): Display name for logging progress
     #
-    # Returns: (ranger) Trained QRF model with region_levels attached
+    # Returns: (ranger) Trained QRF model. Region ranks income only -- not a
+    #   predictor (2026-10-07): geographic price level comes from market price
     #--------------------------------------------------------------------------
 
     # Filter out NAs
@@ -105,21 +106,18 @@ run_nsece_processing <- function() {
     train_df <- df %>%
       sample_n(size = sample_size, weight = weight, replace = replace_flag) %>%
       rename(target = !!sym(target_col)) %>%
-      select(target, income_pctile, region, n_parents, child_age)
+      select(target, income_pctile, n_parents, child_age)
 
     # Train ranger with quantreg = TRUE for quantile regression forest
     qrf <- ranger(
-      formula       = target ~ income_pctile + region + n_parents + child_age,
+      formula       = target ~ income_pctile + n_parents + child_age,
       data          = train_df,
       num.trees     = 500,
-      mtry          = 4,
+      mtry          = 3,
       min.node.size = 10,
       quantreg      = TRUE,
       keep.inbag    = TRUE
     )
-
-    # Store factor levels for prediction alignment
-    qrf$region_levels <- levels(train_df$region)
 
     qrf
   }
@@ -1251,18 +1249,19 @@ run_nsece_processing <- function() {
       supply_price_home        <- supply_prices['Paid Home-Based']
 
 
-      # Get income percentiles (child-weighted) for the NSECE sample
-      income_pctiles <- processed_nsece_hh$children %>%
+      # Income percentiles (child-weighted) within Census region -- finest
+      # NSECE geography. ACS side ranks within state (compute_price_wedge_cache.R):
+      # family ranked in own area, area price level set by market price
+      pctile_base <- processed_nsece_hh$children %>%
         left_join(processed_nsece_hh$households, by = 'hh_id') %>%
-        filter(age < 5, income > 0) %>%
-        reframe(
-          income_pctile = wtd.quantile(
-            x      = income + runif(n()),
-            weight = child_weight,
-            probs  = seq(0.01, 0.99, 0.01)
-          )
-        ) %>%
-        deframe()
+        filter(age < 5, income > 0, !is.na(region))
+      income_pctiles <- lapply(split(pctile_base, pctile_base$region), function(d) {
+        wtd.quantile(
+          x      = d$income + runif(nrow(d)),
+          weight = d$child_weight,
+          probs  = seq(0.01, 0.99, 0.01)
+        )
+      })
 
       # Build base provider data with required joins
       provider_base <- processed_nsece_hh$providers %>%
@@ -1284,8 +1283,15 @@ run_nsece_processing <- function() {
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         mutate(
-          income_pctile = cut(income, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
-            as.character() %>% as.integer(),
+          # Bin = 1 + region's breaks strictly below income (= cut(right = TRUE))
+          income_pctile = {
+            p <- rep(NA_integer_, n())
+            for (r in names(income_pctiles)) {
+              i <- which(as.character(region) == r)
+              p[i] <- findInterval(income[i], income_pctiles[[r]], left.open = TRUE) + 1L
+            }
+            p
+          },
           region = factor(region),
           child_age = age
         )

@@ -358,10 +358,9 @@ initialize_simulation <- function() {
     cat('--no-price-wedge flag set: disabling price heterogeneity (all wedges = 1.0)\n')
   }
 
-  # National cache in state runs too, each state context takes its rows (below):
-  # income percentiles rank on national distribution, as QRF models trained.
-  # Within-state ranking mis-binned households, gave small states (AK) tied
-  # quantile breaks.
+  # One cache over all households in state runs too, each state context takes
+  # its rows (below) -- same rows, seed, within-state income ranking as
+  # calibration cache, so base-year draws match alphas.
   cached_price_wedge <- NULL
   if (!wedge_disabled) {
     cached_price_wedge <- compute_price_wedge_cache(
@@ -488,7 +487,7 @@ initialize_simulation <- function() {
         cat('  Employment growth: state epop file (', st_epop_path, ')\n', sep = '')
       }
 
-      # State's rows of national price wedge cache
+      # State's rows of price wedge cache (income ranked within state)
       st_price_wedge <- if (is.null(cached_price_wedge)) NULL else
         cached_price_wedge %>% filter(hh_id %in% state_hh_ids)
 

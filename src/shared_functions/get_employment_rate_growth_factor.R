@@ -55,8 +55,11 @@ get_employment_rate_growth_factor <- function(macro_projections, base_year, targ
   }
 
   # Fine-bin population weights, base year -- cheap, recomputed per call so
-  # cache key reflects exactly the macro table passed
-  weights <- get_epop_fine_bin_weights(macro_projections, base_year)
+  # cache key reflects exactly the macro table passed. State file carrying
+  # pop_<bin> columns (state_epop_projections.R) -> its own base-year
+  # population in place of national macro weights
+  weights <- get_epop_file_weights(epop_path, base_year) %||%
+    get_epop_fine_bin_weights(macro_projections, base_year)
 
   # Cache key: normalized path, file mtime, base year, weights to full precision
   path_norm <- normalizePath(epop_path, winslash = '/', mustWork = TRUE)
@@ -134,6 +137,44 @@ get_epop_fine_bin_weights <- function(macro_projections, base_year) {
     }
     total
   })
+}
+
+
+
+get_epop_file_weights <- function(epop_path, base_year) {
+
+  #----------------------------------------------------------------------------
+  # Fine-bin population weights from epop file's own pop_<bin> columns, base
+  # year row. NULL when file has no pop_ columns (national file). Stops on
+  # partial set, missing base year, NA, or non-positive weight.
+  #
+  # Params:
+  #   - epop_path (chr): Epop projections CSV
+  #   - base_year (int): Base year
+  #
+  # Returns:
+  #   Named numeric vector, one weight per fine bin, or NULL
+  #----------------------------------------------------------------------------
+
+  fine_bins <- unlist(EMPLOYMENT_AGE_BINS, use.names = FALSE)
+  cols <- paste0('pop_', fine_bins)
+  hdr <- names(read_csv(epop_path, n_max = 0, show_col_types = FALSE))
+  if (!any(cols %in% hdr)) return(NULL)
+  if (!all(cols %in% hdr)) {
+    stop('get_employment_rate_growth_factor: ', epop_path, ' has only some pop_ columns -- lacks ',
+         paste(setdiff(cols, hdr), collapse = ', '))
+  }
+  epop <- read_csv(epop_path, show_col_types = FALSE)
+  row <- epop[epop$year == base_year, cols]
+  if (nrow(row) != 1) {
+    stop('get_employment_rate_growth_factor: no base year ', base_year, ' row in ', epop_path)
+  }
+  w <- setNames(unlist(row, use.names = FALSE), fine_bins)
+  if (any(!is.finite(w) | w <= 0)) {
+    stop('get_employment_rate_growth_factor: NA or non-positive pop_ weight in ', epop_path,
+         ' for base year ', base_year)
+  }
+  w
 }
 
 

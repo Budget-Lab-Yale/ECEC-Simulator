@@ -38,8 +38,9 @@
 #
 # ACS AGE MIX (--by region, US rows). NHES age (AGE2018, 2018-12-31) and
 # model's ACS children differ in single-year age mix. nhes_acs_mix = NHES
-# single-year rates (ages 0-4) weighted by ACS single-year shares of model's
-# children (P0_BY_AGE_FILE, states + DC, kindergarten out). Both single-year
+# records reweighted once to ACS single-year shares of model's children
+# (P0_BY_AGE_FILE, states + DC, kindergarten out of denominator) -- care
+# shares, part-time shares from same weights. Both single-year
 # mixes, plus Census PEP 2019 single-year mix (PEP_SINGLE_AGE_FILE), written
 # to out/nhes_age_mix.csv.
 #
@@ -195,23 +196,29 @@ acs_age_mix <- function() {
 nhes_acs_mix <- function(x, mix) {
 
   #----------------------------------------------------------------------------
-  # US share of children 0-4 by type: NHES single-year rates weighted by ACS
-  # single-year mix.
+  # US share of children 0-4 by type, part-time share within type: NHES
+  # records reweighted once to ACS single-year mix (FEWT x ACS share / NHES
+  # share at child's age), both measures from same weights.
   #
   # Params:
   #   - x (tibble): nhes_children() output
   #   - mix (named num): acs_age_mix()
   #
-  # Returns: (tibble) region ('US'), type, measure ('share'), nhes_acs_mix
+  # Returns: (tibble) region ('US'), type, measure (share | part_time),
+  #   nhes_acs_mix
   #----------------------------------------------------------------------------
 
-  ages <- names(mix)
+  own <- tapply(x$FEWT, x$age, sum)
+  own <- own / sum(own)
+  a <- as.character(x$age)
+  w <- x$FEWT * mix[a] / own[a]
   dplyr::bind_rows(lapply(TYPES, function(t) {
-    r <- sum(vapply(ages, function(a) {
-      xa <- x[x$age == as.numeric(a), ]
-      sum(xa$FEWT[xa$type == t]) / sum(xa$FEWT)
-    }, 0) * mix[ages])
-    tibble::tibble(region = 'US', type = t, measure = 'share', nhes_acs_mix = r)
+    i <- x$type == t
+    out <- tibble::tibble(region = 'US', type = t, measure = 'share',
+                          nhes_acs_mix = sum(w[i]) / sum(w))
+    if (t == 'Parent Only') return(out)
+    dplyr::bind_rows(out, tibble::tibble(region = 'US', type = t, measure = 'part_time',
+                                         nhes_acs_mix = sum(w[i & x$part_time]) / sum(w[i])))
   }))
 }
 
@@ -338,9 +345,12 @@ main_nhes_check <- function(args = commandArgs(trailingOnly = TRUE)) {
   cat('\n== single-year age mix of children 0-4 (%)\n')
   show_df(dplyr::transmute(ages, age, nhes = p(nhes), acs = p(acs), census = p(census)))
   if (by == 'region') {
-    cat('\n== US share of children 0-4, NHES at ACS age mix (%)\n')
-    show_df(d %>% dplyr::filter(region == 'US', measure == 'share') %>%
-              dplyr::transmute(type, nhes_acs_mix = p(nhes_acs_mix), model = p(model)))
+    for (m in c('share', 'part_time')) {
+      cat('\n== US', if (m == 'share') 'share of children 0-4' else 'part-time share within type',
+          '(%), NHES records reweighted to ACS age mix\n')
+      show_df(d %>% dplyr::filter(region == 'US', measure == m) %>%
+                dplyr::transmute(type, nhes_acs_mix = p(nhes_acs_mix), model = p(model)))
+    }
   }
 
   f <- file.path(STATE_DATA_ROOT, 'out',
