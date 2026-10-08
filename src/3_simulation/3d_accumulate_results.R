@@ -586,6 +586,61 @@ select_earnings_for_employment_choice <- function(df, stub) {
 }
 
 
+compute_parent_fiscal_base <- function(df) {
+
+  #----------------------------------------------------------------------------
+  # Selects parental earnings and decomposes the tax concepts used in fiscal
+  # aggregation. Keeping these values together ensures the exported earnings
+  # base uses the same choices, weights, and payroll convention as tax revenue.
+  #
+  # Params:
+  #   - df (df): Data frame with employment_choice, earnings1/2.{none,pt,ft},
+  #       and oasi_tax_max columns
+  #
+  # Returns: (df) Row-level earnings bases and tax components
+  #----------------------------------------------------------------------------
+
+  if (!'oasi_tax_max' %in% names(df)) {
+    stop('Fiscal accounting requires oasi_tax_max to compute employer payroll taxes.')
+  }
+
+  cap <- df$oasi_tax_max
+  if (length(cap) != nrow(df) || any(!is.finite(cap)) || any(cap <= 0)) {
+    stop('Fiscal accounting encountered invalid oasi_tax_max (must be positive finite for all rows).')
+  }
+
+  e1 <- select_earnings_for_employment_choice(df, 'earnings1')
+  e2 <- select_earnings_for_employment_choice(df, 'earnings2')
+
+  e1 <- pmax(0, coalesce(e1, 0))
+  e2 <- pmax(0, coalesce(e2, 0))
+
+  parent_earnings <- e1 + e2
+  oasi_taxable_earnings <- pmin(e1, cap) + pmin(e2, cap)
+  employee_payroll <- (MEDICARE_TAX_RATE * parent_earnings) +
+    (OASI_TAX_RATE * oasi_taxable_earnings)
+
+  if (!'taxes' %in% names(df)) {
+    stop('Fiscal accounting requires taxes to decompose parent tax revenue.')
+  }
+  income_tax_and_policy_credit <- df$taxes - employee_payroll
+
+  out <- tibble(
+    parent_earnings = parent_earnings,
+    medicare_taxable_earnings = parent_earnings,
+    oasi_taxable_earnings = oasi_taxable_earnings,
+    income_tax_and_policy_credit = income_tax_and_policy_credit,
+    employee_payroll = employee_payroll,
+    employer_payroll = employee_payroll
+  )
+  if (any(!is.finite(as.matrix(out)))) {
+    stop('Fiscal accounting produced a non-finite parent earnings or tax component.')
+  }
+
+  out
+}
+
+
 compute_employer_payroll_tax <- function(df) {
 
   #----------------------------------------------------------------------------
@@ -661,6 +716,10 @@ aggregate_year_fiscal_cost <- function(result, year) {
 
   validate_cols(combined, c('demand_subsidy', 'supply_subsidy', 'employer_subsidy',
                             'cdctc_cost', 'transfer_cost', 'tax_revenue',
+                            'parent_earnings', 'medicare_taxable_earnings',
+                            'oasi_taxable_earnings',
+                            'income_tax_and_policy_credit_revenue',
+                            'employee_payroll_revenue', 'employer_payroll_revenue',
                             'n_parent_units_weighted',
                             'n_children_weighted'), 'Fiscal aggregation')
 
@@ -679,6 +738,13 @@ aggregate_year_fiscal_cost <- function(result, year) {
       total_cdctc_cost_raw = sum(cdctc_cost),
       total_transfer_cost_raw = sum(transfer_cost),
       total_tax_revenue_raw = sum(tax_revenue),
+      total_parent_earnings_raw = sum(parent_earnings),
+      total_medicare_taxable_earnings_raw = sum(medicare_taxable_earnings),
+      total_oasi_taxable_earnings_raw = sum(oasi_taxable_earnings),
+      total_income_tax_and_policy_credit_revenue_raw =
+        sum(income_tax_and_policy_credit_revenue),
+      total_employee_payroll_revenue_raw = sum(employee_payroll_revenue),
+      total_employer_payroll_revenue_raw = sum(employer_payroll_revenue),
       n_parent_units_weighted = sum(n_parent_units_weighted),
       n_children_weighted = sum(n_children_weighted),
       .groups = 'drop'
@@ -691,6 +757,13 @@ aggregate_year_fiscal_cost <- function(result, year) {
       total_cdctc_cost = total_cdctc_cost_raw / 1e9,
       total_transfer_cost = total_transfer_cost_raw / 1e9,
       total_tax_revenue = total_tax_revenue_raw / 1e9,
+      total_parent_earnings = total_parent_earnings_raw / 1e9,
+      total_medicare_taxable_earnings = total_medicare_taxable_earnings_raw / 1e9,
+      total_oasi_taxable_earnings = total_oasi_taxable_earnings_raw / 1e9,
+      total_income_tax_and_policy_credit_revenue =
+        total_income_tax_and_policy_credit_revenue_raw / 1e9,
+      total_employee_payroll_revenue = total_employee_payroll_revenue_raw / 1e9,
+      total_employer_payroll_revenue = total_employer_payroll_revenue_raw / 1e9,
 
       # Per-family metrics (using parent unit weight)
       demand_subsidy_per_family = total_demand_subsidy_raw / n_parent_units_weighted,
@@ -712,7 +785,22 @@ aggregate_year_fiscal_cost <- function(result, year) {
       .before = everything()
     ) %>%
     select(-total_demand_subsidy_raw, -total_supply_subsidy_raw, -total_employer_subsidy_raw,
-           -total_cdctc_cost_raw, -total_transfer_cost_raw, -total_tax_revenue_raw)
+           -total_cdctc_cost_raw, -total_transfer_cost_raw, -total_tax_revenue_raw,
+           -total_parent_earnings_raw, -total_medicare_taxable_earnings_raw,
+           -total_oasi_taxable_earnings_raw,
+           -total_income_tax_and_policy_credit_revenue_raw,
+           -total_employee_payroll_revenue_raw,
+           -total_employer_payroll_revenue_raw) %>%
+    {
+      tax_identity_residual <- .$total_tax_revenue -
+        (.$total_income_tax_and_policy_credit_revenue +
+           .$total_employee_payroll_revenue +
+           .$total_employer_payroll_revenue)
+      if (any(abs(tax_identity_residual) > 1e-8)) {
+        stop('Fiscal aggregation tax-component identity failed.')
+      }
+      .
+    }
 }
 
 
@@ -836,14 +924,27 @@ aggregate_fiscal_cost <- function(parent_units_df, n_children, supply_subsidy = 
                   demand_subsidy = numeric(), supply_subsidy = numeric(),
                   employer_subsidy = numeric(), cdctc_cost = numeric(),
                   transfer_cost = numeric(), tax_revenue = numeric(),
+                  parent_earnings = numeric(), medicare_taxable_earnings = numeric(),
+                  oasi_taxable_earnings = numeric(),
+                  income_tax_and_policy_credit_revenue = numeric(),
+                  employee_payroll_revenue = numeric(),
+                  employer_payroll_revenue = numeric(),
                   n_children_weighted = numeric(), n_parent_units_weighted = numeric()))
   }
 
+  parent_fiscal_base <- compute_parent_fiscal_base(parent_units_df)
   fiscal_data <- parent_units_df %>%
     mutate(
       parent_unit_weight = (per_weight1 + coalesce(per_weight2, per_weight1)) / 2,
       total_child_weight = child_weight.1 + coalesce(child_weight.2, 0),
-      taxes_revenue = taxes + compute_employer_payroll_tax(parent_units_df)
+      parent_earnings = parent_fiscal_base$parent_earnings,
+      medicare_taxable_earnings = parent_fiscal_base$medicare_taxable_earnings,
+      oasi_taxable_earnings = parent_fiscal_base$oasi_taxable_earnings,
+      income_tax_and_policy_credit_revenue =
+        parent_fiscal_base$income_tax_and_policy_credit,
+      employee_payroll_revenue = parent_fiscal_base$employee_payroll,
+      employer_payroll_revenue = parent_fiscal_base$employer_payroll,
+      taxes_revenue = taxes + employer_payroll_revenue
     )
 
   # Compute child-specific supply/employer subsidies
@@ -880,6 +981,10 @@ aggregate_fiscal_cost <- function(parent_units_df, n_children, supply_subsidy = 
   validate_cols(fiscal_data, c('subsidy', 'taxes', 'taxes_revenue', 'cdctc',
                                'transfer', 'parent_unit_weight', 'total_supply_subsidy',
                                'total_employer_subsidy', 'total_child_weight',
+                               'parent_earnings', 'medicare_taxable_earnings',
+                               'oasi_taxable_earnings',
+                               'income_tax_and_policy_credit_revenue',
+                               'employee_payroll_revenue', 'employer_payroll_revenue',
                                'ecec_hours.1'), 'Fiscal aggregation')
 
   # -- Assertions: row count preserved through joins ----
@@ -897,6 +1002,16 @@ aggregate_fiscal_cost <- function(parent_units_df, n_children, supply_subsidy = 
       cdctc_cost = sum(cdctc * parent_unit_weight),
       transfer_cost = sum(transfer * parent_unit_weight),
       tax_revenue = sum(taxes_revenue * parent_unit_weight),
+      parent_earnings = sum(parent_earnings * parent_unit_weight),
+      medicare_taxable_earnings =
+        sum(medicare_taxable_earnings * parent_unit_weight),
+      oasi_taxable_earnings = sum(oasi_taxable_earnings * parent_unit_weight),
+      income_tax_and_policy_credit_revenue =
+        sum(income_tax_and_policy_credit_revenue * parent_unit_weight),
+      employee_payroll_revenue =
+        sum(employee_payroll_revenue * parent_unit_weight),
+      employer_payroll_revenue =
+        sum(employer_payroll_revenue * parent_unit_weight),
       n_parent_units_weighted = sum(parent_unit_weight),
       n_children_weighted = sum(total_child_weight),
       .groups = 'drop'
