@@ -4,7 +4,7 @@
 # NY, NYC each built on own households -- NY includes city, so the two runs
 # overlap. Rest of state built here same way as NYC: NY's NSCH rate, PEP
 # counties outside five boroughs, NY
-# program counts less NYC's, Head Start in-own-school children NY less NYC,
+# program counts less NYC's,
 # p0 rows NY less NYC. p0 mix a ratio per geography -- difference only
 # approximates a rest-of-state build. Memo quotes max gap per care type.
 #
@@ -14,9 +14,9 @@
 #-----------------------------------------------------------------------------
 suppressPackageStartupMessages({library(dplyr)})
 
-# Relative, per care type. Build from interface 202610051221: 0.69%, Unpaid
-# Center-Based -- children match exactly, gap = part-time share (NY, NYC, rest
-# each own p0 ratio). 0.62% earlier same day, p0 files before that interface.
+# Relative, per care type. 2026-10-07 build (national 5+ share, NYC 0): 0.88%,
+# Unpaid Center-Based -- children match exactly, gap = part-time share (NY, NYC, rest
+# each own p0 ratio).
 MAX_GAP <- 0.01
 
 source('state_data/code/00_build_demand_targets.R')
@@ -39,21 +39,21 @@ p0_rows <- function(geo, types = NULL, hint = '') {
 pep <- read_chr(raw_path('US_PEP__population_children_age_0_4_by_county__2019.csv'))
 ny_counties <- paste0(pep$STATE, pep$COUNTY)[num(pep$STATE) == ny$fips]
 
-hs_netted <- function(s) {
-  s$programs$n_children[s$programs$program == 'Head Start'] * s$hs_in_schools_share
-}
-
 rest <- ny
 rest$geo         <- 'NYR'
 rest$name        <- 'New York outside NYC'
 rest$county_fips <- setdiff(ny_counties, nyc$county_fips)
 rest$programs$n_children <- ny$programs$n_children - nyc$programs$n_children
-rest$hs_in_schools_share <- (hs_netted(ny) - hs_netted(nyc)) /
-  rest$programs$n_children[rest$programs$program == 'Head Start']
 rest$nonparental_rate <- ny$nonparental_rate
 # All-settings pre-K: NY's NIEER count less NYC's DOE count; NIEER overlap
 # share NY's, as NYC's (copied w/ ny)
 rest$prek_all_settings <- ny$prek_all_settings - nyc$prek_all_settings
+# Five-year-olds: national share outside NYC -- NY's applies it to rest only
+rest$age5_share <- AGE5_NHES_NATIONAL
+# Register paid care: NY's register less NYC's (both registers state law + DOHMH)
+if (!is.null(ny$register_paid) && !is.null(nyc$register_paid))
+  rest$register_paid <- list(centre = ny$register_paid$centre - nyc$register_paid$centre,
+                             home   = ny$register_paid$home - nyc$register_paid$home)
 
 r_ny   <- build_geo(ny)
 r_nyc  <- build_geo(nyc)

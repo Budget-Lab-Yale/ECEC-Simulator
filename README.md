@@ -110,9 +110,9 @@ probabilities, summed over the state's ACS households
 (`state_data/code/05_compare_nsece_shares.R` compares the result with regional
 NSECE shares).
 
-- The **state method memo** (`state_data/docs/SUMMARY_method.pdf`) is the
-  document to read — what every number means and how solid it is. It is kept
-  outside git; ask Anna for the current version.
+- The **state method memos** (`state_data/docs/<date>_summary.pdf`, one per
+  update, newest first by name) are the documents to read — what every number means and how solid it is. They are kept
+  outside git; ask Anna for the current versions.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
   provenance of every input, the five checks that each exit non-zero on
   failure, and the known traps.

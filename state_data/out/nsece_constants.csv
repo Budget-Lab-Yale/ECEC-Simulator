@@ -6,6 +6,55 @@ universe,quantity,key,value,n
 "B: NSCH-matched, 10+ hrs/week",centre_home_split,national,0.7912308613187419,804
 "B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,national,0.2977399548837041,1250
 "A: NSECE, any regular care",children_all_over_10plus,national,1.0980541895845115,2814
+"A: NSECE, any regular care",short_share_of_part_time,national,0.3402579024009446,675
+"A: NSECE, any regular care",short_share_of_part_time_region,midwest,0.3717471432796255,156
+"A: NSECE, any regular care",short_share_of_part_time_region,northeast,0.3014598266552965,98
+"A: NSECE, any regular care",short_share_of_part_time_region,south,0.3267596055514679,204
+"A: NSECE, any regular care",short_share_of_part_time_region,west,0.3495482178592005,217
+"A: NSECE, any regular care",short_share_of_part_time_type,High-Priced Center-Based,0.34026291520030005,98
+"A: NSECE, any regular care",short_share_of_part_time_type,Low-Priced Center-Based,0.1982741512689668,41
+"A: NSECE, any regular care",short_share_of_part_time_type,Other Paid,0.3450647075011508,126
+"A: NSECE, any regular care",short_share_of_part_time_type,Other Unpaid,0.49468691331718007,260
+"A: NSECE, any regular care",short_share_of_part_time_type,Paid Home-Based,0,17
+"A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Center-Based,0.16565477196981104,130
+"A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Home-Based,0.22797889709464056,3
+"A: NSECE, any regular care",any_over_primary,centre,1,1122
+"A: NSECE, any regular care",any_over_primary,Paid Home-Based,1.0782844204595183,208
+"A: NSECE, any regular care",share_of_children_region,US:Center-Based,0.13564115708951938,655
+"A: NSECE, any regular care",share_of_children_region,US:Other Paid,0.07749062862462218,536
+"A: NSECE, any regular care",share_of_children_region,US:Other Unpaid,0.12978809656459717,920
+"A: NSECE, any regular care",share_of_children_region,US:Paid Home-Based,0.0331076946788622,198
+"A: NSECE, any regular care",share_of_children_region,US:Parent Only,0.5453750654998054,3708
+"A: NSECE, any regular care",share_of_children_region,US:Unpaid Center-Based,0.07104617794166028,467
+"A: NSECE, any regular care",share_of_children_region,US:Unpaid Home-Based,0.007551179600933409,38
+"A: NSECE, any regular care",share_of_children_region,midwest:Center-Based,0.11532446518945758,108
+"A: NSECE, any regular care",share_of_children_region,midwest:Other Paid,0.0820355607573944,100
+"A: NSECE, any regular care",share_of_children_region,midwest:Other Unpaid,0.11844166939066858,159
+"A: NSECE, any regular care",share_of_children_region,midwest:Paid Home-Based,0.050093531197337886,67
+"A: NSECE, any regular care",share_of_children_region,midwest:Parent Only,0.5499527922188585,635
+"A: NSECE, any regular care",share_of_children_region,midwest:Unpaid Center-Based,0.07275980785511257,94
+"A: NSECE, any regular care",share_of_children_region,midwest:Unpaid Home-Based,0.011392173391170497,11
+"A: NSECE, any regular care",share_of_children_region,northeast:Center-Based,0.19261239489574836,121
+"A: NSECE, any regular care",share_of_children_region,northeast:Other Paid,0.07092873673650738,63
+"A: NSECE, any regular care",share_of_children_region,northeast:Other Unpaid,0.1498825541149426,140
+"A: NSECE, any regular care",share_of_children_region,northeast:Paid Home-Based,0.026280541332665303,33
+"A: NSECE, any regular care",share_of_children_region,northeast:Parent Only,0.4479197128986319,430
+"A: NSECE, any regular care",share_of_children_region,northeast:Unpaid Center-Based,0.093178902558221,91
+"A: NSECE, any regular care",share_of_children_region,northeast:Unpaid Home-Based,0.01919715746328341,8
+"A: NSECE, any regular care",share_of_children_region,south:Center-Based,0.13795666239398602,282
+"A: NSECE, any regular care",share_of_children_region,south:Other Paid,0.08664205118123793,221
+"A: NSECE, any regular care",share_of_children_region,south:Other Unpaid,0.12457409990399501,329
+"A: NSECE, any regular care",share_of_children_region,south:Paid Home-Based,0.03103565550285095,55
+"A: NSECE, any regular care",share_of_children_region,south:Parent Only,0.5440269044530053,1370
+"A: NSECE, any regular care",share_of_children_region,south:Unpaid Center-Based,0.07338735729542804,170
+"A: NSECE, any regular care",share_of_children_region,south:Unpaid Home-Based,0.002377269269496717,5
+"A: NSECE, any regular care",share_of_children_region,west:Center-Based,0.1120691194289531,144
+"A: NSECE, any regular care",share_of_children_region,west:Other Paid,0.0634422130341862,152
+"A: NSECE, any regular care",share_of_children_region,west:Other Unpaid,0.13458781858217275,292
+"A: NSECE, any regular care",share_of_children_region,west:Paid Home-Based,0.026258165703770372,43
+"A: NSECE, any regular care",share_of_children_region,west:Parent Only,0.6075104265856891,1273
+"A: NSECE, any regular care",share_of_children_region,west:Unpaid Center-Based,0.05135567873048325,112
+"A: NSECE, any regular care",share_of_children_region,west:Unpaid Home-Based,0.004776577934745145,14
 "A: NSECE, any regular care",part_time_share,Center-Based,0.24156066533388276,655
 "A: NSECE, any regular care",part_time_share,Other Paid,0.2861976571150922,536
 "A: NSECE, any regular care",part_time_share,Other Unpaid,0.2923798292528169,920

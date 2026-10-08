@@ -112,6 +112,14 @@ if (is.null(r)) {
   near('NSECE_UNIVERSE_RATIO', NSECE_UNIVERSE_RATIO, r$value)
 }
 
+# Step 1. Short share of part-time children -- state five-hour factor.
+r <- lookup('short_share_of_part_time', 'national')
+if (is.null(r)) {
+  fail('FAIL short_share_of_part_time[national]               no csv row\n')
+} else {
+  near('NSECE_SHORT_SHARE_OF_PT', NSECE_SHORT_SHARE_OF_PT, r$value)
+}
+
 # Steps 2, 3, 4. Regional shares.
 check_vec(NSECE_FORMAL_SHARE,        'formal_share')
 check_vec(NSECE_UNPAID_CENTRE_SHARE, 'unpaid_centre_share')
@@ -153,10 +161,14 @@ check_tbl(NSECE_PART_TIME_REGION, 'pt_share', 'part_time_share_region')
 
 # Nothing in universe A left unaccounted for. Quantity build stopped reading
 # = as much a drift signal as one it reads wrongly.
-used <- c('children_all_over_10plus', 'formal_share', 'unpaid_centre_share',
+used <- c('children_all_over_10plus', 'short_share_of_part_time', 'formal_share', 'unpaid_centre_share',
           'centre_home_split', 'informal_mix', 'part_time_share',
           'weekly_hours', 'price_band_share', 'informal_mix_region',
-          'weekly_hours_region', 'part_time_share_region')
+          'weekly_hours_region', 'part_time_share_region',
+          # read live from the CSV by 05_ short_share_split(), no constant
+          'short_share_of_part_time_region', 'short_share_of_part_time_type',
+          # read live by 04_ (ANY_OVER_PRIMARY), 06_ (regional benchmark)
+          'any_over_primary', 'share_of_children_region')
 extra <- setdiff(unique(a$quantity), used)
 if (length(extra)) {
   failures <- failures + 1
@@ -164,27 +176,30 @@ if (length(extra)) {
       paste(extra, collapse = ', '), '\n')
 }
 
-# PROGRAM_AGE5_SHARE (00_) -- NHES-ECPP 2019, recomputed by its recipe:
+# AGE5_NHES_NATIONAL (00_) -- NHES-ECPP 2019, recomputed by its recipe:
 # children not yet in kindergarten, center program now, ages 3+ at
-# 2018-12-31, share 5+, weight FEWT, by CENREG. File git-ignored (raw/local/)
+# 2018-12-31, share 5+, weight FEWT, national. File git-ignored (raw/local/)
 # -- absent, block says so, counts nothing.
-NHES_FILE   <- file.path(STATE_DATA_ROOT, 'raw', 'local',
-                         'US_NHES__ecpp_public_use_file__2019.csv')
-NHES_REGION <- c(northeast = 1, south = 2, midwest = 3, west = 4)
+NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'local',
+                       'US_NHES__ecpp_public_use_file__2019.csv')
 if (file.exists(NHES_FILE)) {
   nh <- read_csv(NHES_FILE, show_col_types = FALSE)
   base <- nh$CPNNOWX == 1 & nh$AGE2018 >= 3
   prog <- list(prek = nh$CPPLACEX == 2, head_start = nh$CPHEADST == 1)
-  for (p in names(prog)) for (rg in names(NHES_REGION)) {
-    x <- nh[base & prog[[p]] & nh$CENREG == NHES_REGION[[rg]], ]
+  for (p in names(prog)) {
+    x <- nh[base & prog[[p]], ]
     want <- sum(x$FEWT[x$AGE2018 >= 5]) / sum(x$FEWT)
-    near(sprintf('PROGRAM_AGE5_SHARE$%s[%s]', p, rg),
-         PROGRAM_AGE5_SHARE[[p]][[rg]], want, 1e-12)
-    report(nrow(x) >= 30, sprintf('PROGRAM_AGE5_SHARE$%s[%s].n >= 30', p, rg),
-           nrow(x), 30)
+    near(sprintf('AGE5_NHES_NATIONAL[%s]', p), AGE5_NHES_NATIONAL[[p]], want, 1e-12)
+    report(nrow(x) >= 30, sprintf('AGE5_NHES_NATIONAL[%s].n >= 30', p), nrow(x), 30)
   }
 } else {
-  cat('\n(skipped PROGRAM_AGE5_SHARE -- no', NHES_FILE, ')\n')
+  cat('\n(skipped AGE5_NHES_NATIONAL -- no', NHES_FILE, ')\n')
+}
+
+# Five-year-old shares (00_ program_age5_share()): every share in [0, 1]
+for (g in c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))) {
+  s <- program_age5_share(load_spec(g))
+  report(all(s >= 0 & s <= 1), sprintf('age5 share in [0, 1] (%s)', g), max(s), 1)
 }
 
 cat(sprintf('\n%d comparison(s), %d failure(s)\n', checked, failures))

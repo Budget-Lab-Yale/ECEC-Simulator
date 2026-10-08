@@ -400,6 +400,96 @@ as_long <- function(t, quantity, key, value, n = children) {
 
 
 
+any_over_primary <- function(arr, kids, prim) {
+
+  #----------------------------------------------------------------------------
+  # Children 0-4 w/ ANY regular arrangement in a setting over children w/ it as
+  # PRIMARY (CATEGORY_PRIORITY), weighted -- 04_compare_licensing_registers.R
+  # puts build's primary-type counts on a register's every-enrolled-child
+  # basis. Settings: centre (three center types), Paid Home-Based.
+  #
+  # Params:
+  #   - arr (tibble): build_arrangements() rows
+  #   - kids (tibble): build_children() rows (child_weight)
+  #   - prim (tibble): primary_arrangement() rows joined to kids
+  #
+  # Returns: (tibble) universe, quantity, key, value, n
+  #----------------------------------------------------------------------------
+
+  sets <- list(centre = c(PAID_CENTRE, 'Unpaid Center-Based'),
+               'Paid Home-Based' = 'Paid Home-Based')
+  bind_rows(lapply(names(sets), function(k) {
+    any_ids <- arr %>% filter(ecec_choice %in% sets[[k]]) %>% distinct(hh_id, child_id) %>%
+      inner_join(kids, by = c('hh_id', 'child_id'))
+    p <- prim %>% filter(ecec_choice %in% sets[[k]])
+    tibble(universe = UNIVERSE_A, quantity = 'any_over_primary', key = k,
+           value = sum(any_ids$child_weight) / sum(p$child_weight), n = nrow(any_ids))
+  }))
+}
+
+
+
+share_of_children_region <- function(arr, kids, prim) {
+
+  #----------------------------------------------------------------------------
+  # Share of ALL children 0-4 by primary type, Parent Only included, by region
+  # + national -- 06_compare_state_shares.R benchmark. Kindergarten children
+  # (any K-8 arrangement) out of numerator and denominator, as NHES. Paid
+  # center price bands pooled as build's Center-Based.
+  #
+  # Params:
+  #   - arr (tibble): build_arrangements() rows
+  #   - kids (tibble): build_children() rows (child_weight, region)
+  #   - prim (tibble): primary_arrangement() rows joined to kids
+  #
+  # Returns: (tibble) universe, quantity, key ('<region>:<type>'), value, n
+  #----------------------------------------------------------------------------
+
+  k_ids <- arr %>% filter(ecec_choice == 'K-8') %>% distinct(hh_id, child_id)
+  all_k <- kids %>% anti_join(k_ids, by = c('hh_id', 'child_id'))
+  typ <- prim %>%
+    anti_join(k_ids, by = c('hh_id', 'child_id')) %>%
+    transmute(hh_id, child_id,
+              type = if_else(ecec_choice %in% PAID_CENTRE, 'Center-Based', ecec_choice))
+  d <- all_k %>%
+    left_join(typ, by = c('hh_id', 'child_id')) %>%
+    mutate(type = coalesce(type, 'Parent Only'))
+  d <- bind_rows(d, mutate(d, region = 'US')) %>% filter(!is.na(region))
+  d %>%
+    group_by(region) %>%
+    mutate(tot = sum(child_weight)) %>%
+    group_by(region, type) %>%
+    summarise(value = sum(child_weight) / first(tot), n = n(), .groups = 'drop') %>%
+    transmute(universe = UNIVERSE_A, quantity = 'share_of_children_region',
+              key = paste(region, type, sep = ':'), value, n)
+}
+
+
+
+short_share_by <- function(prim, by, quantity) {
+
+  #----------------------------------------------------------------------------
+  # Short share of part-time (children under 10 total hrs/week over children
+  # w/ primary hours < PT_FT_CUT), weighted, one row per group of `by`.
+  #
+  # Params:
+  #   - prim (tibble): universe A primary-arrangement rows
+  #   - by (chr): grouping column, 'region' | 'ecec_choice'
+  #   - quantity (chr): quantity label
+  #
+  # Returns: (tibble) universe, quantity, key, value, n
+  #----------------------------------------------------------------------------
+
+  prim %>%
+    filter(hours < PT_FT_CUT, !is.na(.data[[by]])) %>%
+    group_by(key = .data[[by]]) %>%
+    summarise(value = sum(child_weight[total_hours < 10]) / sum(child_weight),
+              n = n(), .groups = 'drop') %>%
+    transmute(universe = UNIVERSE_A, quantity = quantity, key, value, n)
+}
+
+
+
 show_table <- function(title, x, digits) {
 
   #----------------------------------------------------------------------------
@@ -528,6 +618,21 @@ main <- function() {
            key = 'national',
            value = sum(prim$child_weight) / sum(b_kids$child_weight),
            n = nrow(prim)),
+    # SHORT SHARE OF PART-TIME. Children under 10 total hrs/week over
+    # children part-time in simulator's sense (primary hours < PT_FT_CUT).
+    # Every under-10 child part-time -- primary hours <= total hours. Step 1
+    # applies it to simulator's predicted part-time children per geography.
+    tibble(universe = UNIVERSE_A, quantity = 'short_share_of_part_time',
+           key = 'national',
+           value = sum(prim$child_weight[!keep]) /
+                   sum(prim$child_weight[prim$hours < PT_FT_CUT]),
+           n = sum(prim$hours < PT_FT_CUT)),
+    # Same share by region, by primary care type -- 05_compare_nsece_shares.R
+    # tests whether either split moves step 1; build keeps national.
+    short_share_by(prim, 'region', 'short_share_of_part_time_region'),
+    short_share_by(prim, 'ecec_choice', 'short_share_of_part_time_type'),
+    any_over_primary(arr, kids, prim),
+    share_of_children_region(arr, kids, prim),
     both('ptft_nat', 'part_time_share', ecec_choice, pt_share),
     both('ptft', 'part_time_share_region', paste(region, ecec_choice, sep = ':'),
          pt_share),

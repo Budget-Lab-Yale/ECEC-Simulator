@@ -37,10 +37,9 @@ state_data/raw/local/
 __pycache__/
 
 # Anna's state memo and LaTeX drafts -- kept local, never committed
-state_data/docs/SUMMARY_method.tex
-state_data/docs/SUMMARY_method.pdf
+state_data/docs/*_summary.tex
+state_data/docs/*_summary.pdf
 state_data/docs/archive/
-state_data/docs/try_fit.*
 
 # Editor settings (memo LaTeX) -- local only
 .vscode/

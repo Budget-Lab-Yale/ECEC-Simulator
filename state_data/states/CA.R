@@ -20,9 +20,7 @@ SPEC_CA <- geo_spec('CA', 'California', fips = 6, region = 'west',
   # background, printed p.58) -- nearly every TK child 5 by mid-year, outside
   # population 0-4.
   # program_children() still takes West 5+ share off CSPP.
-  #
-  # hs_in_prek 0: NIEER Table 4 HS increment 70,632 vs Appendix B 70,631 --
-  # no CA overlap reported.
+
   prek             = 140920,   # NIEER 2018-19, CSPP only (no CCD rows)
 
   # Head Start: NIEER Appendix B row -- federal, AIAN, Migrant & Seasonal funded

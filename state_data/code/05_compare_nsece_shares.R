@@ -22,7 +22,9 @@
 # tests/check_constants_match_derivation.R compares them back.
 #
 # Usage: Rscript state_data/code/05_compare_nsece_shares.R [--geo KY[,NJ] | --all]
-#   prints table, writes out/nsece_share_comparison.csv
+#   prints table, writes out/nsece_share_comparison.csv; short_share_split()
+#   writes out/short_share_sensitivity.csv (step 1 w/ regional, type short
+#   shares)
 #------------------------------------------------------------------------------
 
 # build_of(), grid_annual_hours(), GEOGRAPHIES, ECEC_TYPES, WEEKS_PER_YEAR;
@@ -282,6 +284,54 @@ compare_shares_geo <- function(geo) {
 
 
 
+short_share_split <- function() {
+
+  #----------------------------------------------------------------------------
+  # Step 1 w/ NSECE short share by region or by primary care type in place of
+  # national NSECE_SHORT_SHARE_OF_PT. Children in care scale w/ relative
+  # factor = geography's predicted ratio / 50 states + DC ratio, so change
+  # here = change in children in care. Writes out/short_share_sensitivity.csv.
+  #
+  # Returns: (tibble) geo, region_pct, type_pct (change vs national share, %)
+  #----------------------------------------------------------------------------
+
+  k <- read_chr(file.path(STATE_DATA_ROOT, 'out', 'nsece_constants.csv'))
+  # Thin cell (under NSECE_MIN_RECORDS) takes national share, as rest of 05_
+  sh <- function(q) {
+    r <- k[k$quantity == q, ]
+    setNames(ifelse(num(r$n) < NSECE_MIN_RECORDS, NSECE_SHORT_SHARE_OF_PT, num(r$value)), r$key)
+  }
+  s_reg <- sh('short_share_of_part_time_region')
+  s_typ <- sh('short_share_of_part_time_type')
+  if (!length(s_reg) || !length(s_typ)) stop('nsece_constants.csv lacks split short shares -- rerun 02_')
+
+  # In care, short children of one geography under a per-row short share
+  parts <- function(g, s_of) {
+    d <- p0_rows(g)
+    ic <- sum(num(d$children[d$ecec_type != 'Parent Only']))
+    pt <- d[d$hours_choice == 'pt', ]
+    c(ic = ic, short = sum(num(pt$children) * s_of(g, pt$ecec_type)))
+  }
+  nat <- function(g, t) rep(NSECE_SHORT_SHARE_OF_PT, length(t))
+  reg <- function(g, t) rep(s_reg[[get_spec(parent_geo(g))$region]], length(t))
+  typ <- function(g, t) unname(s_typ[t])
+  rel <- function(s_of) {
+    p <- sapply(GEOGRAPHIES, parts, s_of = s_of)
+    n <- rowSums(p[, names(STATE_POSTAL_TO_FIPS)])
+    (p['ic', ] / (p['ic', ] - p['short', ])) / (n[['ic']] / (n[['ic']] - n[['short']]))
+  }
+  base <- rel(nat)
+  out <- tibble::tibble(geo = GEOGRAPHIES,
+                        region_pct = 100 * (rel(reg) / base - 1),
+                        type_pct   = 100 * (rel(typ) / base - 1))
+  cat(sprintf('\nShort share by region / type: children in care change at most %.2f%% / %.2f%%\n',
+              max(abs(out$region_pct)), max(abs(out$type_pct))))
+  readr::write_csv(out, file.path(STATE_DATA_ROOT, 'out', 'short_share_sensitivity.csv'))
+  invisible(out)
+}
+
+
+
 main_compare_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   #----------------------------------------------------------------------------
@@ -312,6 +362,7 @@ main_compare_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
   f <- file.path(STATE_DATA_ROOT, 'out', 'nsece_share_comparison.csv')
   readr::write_csv(out, f)
   cat('wrote', f, '\n')
+  short_share_split()
   invisible(out)
 }
 

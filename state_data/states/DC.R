@@ -12,11 +12,4 @@ SPEC_DC <- geo_spec('DC', 'District of Columbia', fips = 11, region = 'south',
   # Head Start: NIEER Appendix B row, funded slots ages 3 and 4 -- federal,
   # AIAN, Migrant & Seasonal where present: 1032 + 1118.
   head_start       = 2150,    # NIEER State of Preschool 2019, ages 3-4
-  early_head_start = 1577,    # NIEER State(s) of Head Start (2023), 2018-19 bar
-
-  # HS children also in DC pre-K. Site file can't measure DC's own-school
-  # share: 114 open HS slots vs 2,150 (DC Public Schools grant 'Not Reported'
-  # in 2026 export) -- under SITE_FILE_MIN_COVER, so NIEER's figure stands in.
-  # NIEER State of Preschool 2019, Table 4 (p.28): DC pre-K + special ed same
-  # w/ and w/out HS (3s 6,360, 4s 7,237) -- all 2,150 counted in pre-K.
-  hs_in_prek       = 2150)
+  early_head_start = 1577)    # NIEER State(s) of Head Start (2023), 2018-19 bar

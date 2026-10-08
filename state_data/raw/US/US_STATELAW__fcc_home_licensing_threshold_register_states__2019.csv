@@ -1,0 +1,6 @@
+geo,threshold,basis,hours_rule,law,check
+KY,4,unrelated,,"KRS 199.8982(1): certification required caring for 4 to 6 children unrelated to provider; 3 or fewer optional","same text in 2011 and 2025 statute versions (law.justia.com/codes/kentucky/2011/199-00/199-8982/, law.justia.com/codes/kentucky/chapter-199/section-199-8982/)"
+NY,3,unrelated,more than 3 hours per day per child,"NY Social Services Law 390; 18 NYCRR 413.2: family day care home = 3 to 6 children, more than 3 hours per day per child, registration required; SSL 390 excludes care by relatives, so unrelated children count","same definition in 2013 bill text (nysenate.gov 2013-S1518) and current 18 NYCRR 413.2"
+NYC,3,unrelated,more than 3 hours per day per child,"as NY (state law applies in NYC)","as NY"
+VA,5,unrelated,,"Code of Virginia: family day home license required for 5 to 12 children, exclusive of provider's own children and children residing in home","lowered 6 to 5 between 2014 and 2017 (NCECQA 2017 FCC licensing brief p.9); 5 in current rule (childcare.virginia.gov licensed family day home)"
+NJ,,none,,"no mandatory licensing of family child care homes; registration voluntary (6 or more children licensed as centers)","NCECQA 2014 threshold table note 6; NCECQA 2017 FCC licensing brief p.7"

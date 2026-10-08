@@ -18,11 +18,4 @@ SPEC_MI <- geo_spec('MI', 'Michigan', fips = 26, region = 'midwest',
   # Head Start: NIEER Appendix B row, funded slots ages 3 and 4 -- federal,
   # AIAN, Migrant & Seasonal where present: 11431 + 10924 + 225 + 132 + 416 + 304.
   head_start       = 23432,   # NIEER State of Preschool 2019, ages 3-4
-  early_head_start = 7178,    # NIEER State(s) of Head Start (2023), 2018-19 bar
-
-  # HS children also in GSRP. prek above = GSRP in every setting, so each HS
-  # child NIEER reports in GSRP counted twice. NIEER State of Preschool 2019,
-  # Table 4 (p.28): HS adds 15,986 - 3,888 = 12,098 three-year-olds and
-  # 43,962 - 38,468 = 5,494 four-year-olds = 17,592; Appendix B HS 23,432 less
-  # 17,592 = 5,840.
-  hs_in_prek       = 5840)
+  early_head_start = 7178)    # NIEER State(s) of Head Start (2023), 2018-19 bar

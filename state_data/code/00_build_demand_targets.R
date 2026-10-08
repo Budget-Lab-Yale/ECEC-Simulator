@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # 00_build_demand_targets.R -- state-level demand inputs for the simulator:
 # config/state/demand/<GEO>.csv, six rows, annual hours by care type. Method
-# memo (docs/SUMMARY_method.pdf, kept local) defines each number.
+# memos (docs/<date>_summary.pdf, kept local) define each number.
 #
 # METHOD, per geography. Step numbers name quantities across state_data/
 # (README, SOURCES.csv) -- fixed, though p0 runs them in
@@ -62,6 +62,19 @@ ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
 # Step 1. Weighted children in ANY regular non-parental care over weighted
 # children at 10+ hrs/week (what NSCH asks). 2,814 children.
 NSECE_UNIVERSE_RATIO <- 1.0980541895845115
+
+# STATE FIVE-HOUR RATIO (2026-10-07). NSECE public file has no state --
+# geography's ratio = NSECE_UNIVERSE_RATIO x rel, rel = predicted ratio of
+# geography / predicted national ratio (50 states + DC). Predicted ratio from
+# simulator's p0 (P0_SHARES_FILE):
+#   children in care / (children in care - short share x part-time children)
+# children in care = all non-parental rows, part-time = hours choice 'pt'.
+# National level stays NSECE's; only composition differences enter.
+#
+# Short share: NSECE children under 10 total hrs/week over children part-time
+# in simulator's sense (primary hours < 20). Every under-10 child part-time.
+# 02_derive_nsece_constants.R, quantity short_share_of_part_time.
+NSECE_SHORT_SHARE_OF_PT <- 0.3402579024009446
 
 # SIMULATOR'S HOURS GRID -- PT_CARE_HOURS, FT_CARE_HOURS, WEEKS_PER_YEAR from
 # src/shared_functions/constants.R, no copy here. Simulator places a child at
@@ -351,34 +364,21 @@ HS_HOME_FCC_SHARE  <- (11043 + 1277 + (1493 + 16) * (1 - AIAN_EHS_FRAC)) /
 EHS_HOME_FCC_SHARE <- (57221 + 5722 + (1493 + 16) * AIAN_EHS_FRAC) /
                       (EHS_FUNDED - EHS_FUNDED_PREGNANT + AIAN_EHS_SLOTS)   # 0.380
 
-# FIVE-YEAR-OLDS. Population = children 0-4; pre-K grade, Head Start 3-4 slots
-# hold children who turn 5 during program year (NIEER folds 5s into 4s; CCD
-# counts a grade, not an age). Share of program children 5+ at mid program
-# year: NHES-ECPP 2019 (raw/local/, git-ignored), age at 2018-12-31
-# (AGE2018), children not yet in kindergarten, center program now
-# (CPNNOWX = 1), ages 3+, weight FEWT, by Census region (CENREG):
-#   pre-K       program in a public elementary / secondary school (CPPLACEX = 2)
-#   Head Start  program is Head Start / EHS (CPHEADST = 1)
-# Records (5+ of all): pre-K NE 13/78, S 56/155, MW 34/123, W 26/127; Head
-# Start NE 3/36, S 18/85, MW 5/52, W 7/74 -- every cell >= 30, so regional
-# (NSECE rule). JK1 SE, 80 replicates: pre-K 4.2-4.9 pts, HS 3.4-5.2 pts.
-# National: pre-K 0.2440, HS 0.1074. Region tracks kindergarten cutoffs
-# (South: Aug/Sep 1). EHS holds no 5s (EHS snapshot: 5-year-old row blank,
-# 109 four-year-olds of 224,436 children). PIR's own 1.1% Head Start
-# 5-year-olds dates age at school-entry cutoff, start of year -- not
-# population's date. check_constants_match_derivation.R recomputes from NHES.
-PROGRAM_AGE5_SHARE <- list(
-  prek       = c(northeast = 0.14905344091596437, south = 0.36088869070119439,
-                 midwest   = 0.24161835448151603, west  = 0.16785291825795023),
-  head_start = c(northeast = 0.059379191819765968, south = 0.18779471483253429,
-                 midwest   = 0.0703325789396268,   west  = 0.067367851811474644))
-
-# SITE FILE COVER. 03_'s own-school share = ratio inside 2026 site file, open
-# sites only. Open HS slots / NIEER 2018-19 slots runs 0.41-1.22 in 50
-# states; DC 0.05 (DC Public Schools grant 'Not Reported'). Below this cover
-# share unmeasurable -- spec's hs_in_prek (NIEER Table 4) stands in w/ a CCD
-# pre-K figure too. tests/check_program_counts_match_sources.R enforces.
-SITE_FILE_MIN_COVER <- 0.25
+# FIVE-YEAR-OLDS (2026-10-07). Population = children 0-4; pre-K grade, Head
+# Start 3-4 slots hold children who turn 5 during program year (NIEER folds 5s
+# into 4s; CCD counts a grade, not an age). One national share 5+ per program
+# at 2018-12-31: NHES-ECPP 2019 (raw/local/, git-ignored), age AGE2018, not
+# yet in kindergarten, center program now (CPNNOWX = 1), ages 3+, FEWT; pre-K
+# CPPLACEX = 2 (483 records), HS CPHEADST = 1 (247). Same share on CCD, NIEER
+# counts -- larger-of rule unaffected by order. Documented source rule
+# overrides: NYC DOE enrols by calendar year (2019 kindergarten guide: born in
+# 2014 -> pre-K 2018-19 all 4 on Dec 31); HS age follows public-school date
+# (45 CFR 1302.12(b)) -> NYC 0 both programs. NY: national share on rest of
+# state only -- NY less NYC = rest-of-state build (check_nyc_rest_of_state.R).
+# EHS holds no 5s (EHS snapshot: 5-year-old row blank).
+# check_constants_match_derivation.R recomputes NHES values.
+AGE5_NHES_NATIONAL <- c(prek = 0.24395365244042602, head_start = 0.10740813090244962)
+AGE5_CALENDAR_YEAR <- 'NYC'
 
 # ALL-SETTINGS PRE-K (2026-10-06). CCD counts pre-K in public schools only,
 # missing community-based public pre-K. All-settings count: NIEER Table 2
@@ -386,10 +386,10 @@ SITE_FILE_MIN_COVER <- 0.25
 # education (2026-10-06: many special-education children get services at
 # home or in regular child care, not a center seat). Spec's
 # prek_all_settings overrides: NYC own DOE count (NIEER publishes states
-# only), FL school-year VPK (Table 2 adds summer VPK). program_children()
-# takes larger of CCD, all-settings count, then Head Start overlap matching
-# count it took. CA, MI pre-K figure already NIEER's. Table 4 still sets
-# NIEER overlap share (its Head Start increment).
+# only). program_children()
+# takes larger of CCD, all-settings count. CA, MI pre-K figure already
+# NIEER's. Table 4 sets NIEER overlap shares (its Head Start increment), pooled
+# into one share (pooled_overlap_share()).
 NIEER_T2_FILE   <- 'US_NIEER__state_prek_enrollment_age_3_4__2018-19.csv'
 NIEER_T4_FILE   <- 'US_NIEER__prek_and_head_start_enrollment_age_3_4__2018-19.csv'
 PREK_FROM_NIEER <- c('CA', 'MI')
@@ -457,6 +457,97 @@ get_spec <- function(geo) {
 
 
 
+program_age5_share <- function(spec) {
+
+  #----------------------------------------------------------------------------
+  # Pre-K, Head Start share aged 5+ (header, FIVE-YEAR-OLDS): national NHES
+  # share; 0 in AGE5_CALENDAR_YEAR; parent state of such a geography applies
+  # national share to rest of state only. spec$age5_share overrides (tests:
+  # rest of state).
+  #
+  # Params:
+  #   - spec (list): from load_spec()
+  #
+  # Returns: (named num) prek, head_start
+  #----------------------------------------------------------------------------
+
+  if (!is.null(spec$age5_share)) return(spec$age5_share)
+  if (spec$geo %in% AGE5_CALENDAR_YEAR) return(c(prek = 0, head_start = 0))
+
+  # Pre-K count program_children() takes (larger of CCD, all settings); HS slots
+  counts <- function(s) {
+    n <- setNames(s$programs$n_children, s$programs$program)
+    c(prek = max(n[['public pre-K']], s$prek_all_settings %||% 0), head_start = n[['Head Start']])
+  }
+  share <- AGE5_NHES_NATIONAL
+  for (sg in AGE5_CALENDAR_YEAR) {
+    if (parent_geo(sg) == spec$geo && sg != spec$geo) {
+      share <- share * (1 - counts(get_spec(sg)) / counts(spec))
+    }
+  }
+  share
+}
+
+
+
+
+overlap_branch <- function(spec) {
+
+  #----------------------------------------------------------------------------
+  # Pre-K count taken (step 0) for one geography, and whether its NIEER HS
+  # overlap share enters pooled_overlap_share() -- see program_children().
+  #
+  # Params:
+  #   - spec (list): from load_spec()
+  #
+  # Returns: (list) prek_source ('ccd' | 'all_settings' | 'nieer'), branch
+  #   ('nieer' = in pool | 'fallback'), share_nieer (num or NA)
+  #----------------------------------------------------------------------------
+
+  n <- setNames(spec$programs$n_children, spec$programs$program)
+  prek_source <- if (parent_geo(spec$geo) %in% PREK_FROM_NIEER) {
+    'nieer'
+  } else if ((spec$prek_all_settings %||% 0) > n[['public pre-K']]) {
+    'all_settings'
+  } else {
+    'ccd'
+  }
+  share_nieer <- spec$nieer_hs_share %||% NA_real_
+  branch <- if (prek_source == 'all_settings' && !is.na(share_nieer)) 'nieer' else 'fallback'
+  list(prek_source = prek_source, branch = branch, share_nieer = share_nieer)
+}
+
+
+
+# Cache -- pooled_overlap_share() loads every state spec once per session.
+POOLED_OVERLAP <- new.env()
+
+pooled_overlap_share <- function() {
+
+  #----------------------------------------------------------------------------
+  # HS overlap share, every geography: HS-slot-weighted mean NIEER share over
+  # states + DC on NIEER branch (overlap_branch(): all-settings count taken,
+  # Table 4 unduplicated). Sub-state geographies out -- NYC takes NY's share,
+  # would count NY twice.
+  #
+  # Returns: (num)
+  #----------------------------------------------------------------------------
+
+  if (!is.null(POOLED_OVERLAP$rate)) return(POOLED_OVERLAP$rate)
+  x <- vapply(names(STATE_POSTAL_TO_FIPS), function(g) {
+    s <- load_spec(g)
+    ob <- overlap_branch(s)
+    if (ob$branch != 'nieer') return(c(0, 0))
+    hs <- s$programs$n_children[s$programs$program == 'Head Start']
+    c(hs, hs * ob$share_nieer)
+  }, numeric(2))
+  if (sum(x[1, ]) <= 0) stop('pooled_overlap_share(): no geography on NIEER branch')
+  POOLED_OVERLAP$rate <- sum(x[2, ]) / sum(x[1, ])
+  POOLED_OVERLAP$rate
+}
+
+
+
 program_children <- function(spec) {
 
   #----------------------------------------------------------------------------
@@ -465,33 +556,15 @@ program_children <- function(spec) {
   #   a. slots -> enrolled: EHS loses pregnant-women share, HS, EHS scale by
   #      enrolled per slot
   #   b. center care only: HS, EHS lose home-based, FCC option shares
-  #   c. ages 0-4: pre-K, HS lose regional 5+ share (PROGRAM_AGE5_SHARE)
+  #   c. ages 0-4: pre-K, HS lose 5+ share (program_age5_share())
   #   0. pre-K count = larger of spec's (CCD) figure, prek_all_settings
   #      (header, ALL-SETTINGS PRE-K); CA, MI keep their NIEER figure
   #   d. each child once: deduct HS children pre-K count already holds. Share
-  #      of HS slots = ONE measure, matching pre-K count taken:
-  #        - all-settings count, NIEER reports overlap (nieer_hs_share): NIEER
-  #          share -- same source, same universe; NYC takes NY's
-  #        - in own school (hs_in_schools_share), CCD count, or all-settings
-  #          count where NIEER reports none: HS a school district runs in
-  #          one of its own pre-K schools -- class sits in school's CCD
-  #          membership AND federal count. 03_head_start_school_overlap.R
-  #          measures it from national files (ACF service locations x CCD
-  #          pre-K by school x CCD district names x EDGE geocodes), every
-  #          state same way.
-  #        - in state pre-K (hs_in_prek, spec), replaces own-school share:
-  #          NIEER-reported HS children also in state pre-K -- only where
-  #          spec's pre-K figure IS NIEER's state pre-K, every setting (MI;
-  #          same source, same universe), or where site file covers under
-  #          SITE_FILE_MIN_COVER of NIEER's slots, so own-school share
-  #          unmeasurable (DC).
-  #
-  # NOT DEDUCTED w/ a CCD pre-K figure: HS a district runs outside its own
-  # pre-K schools, or in a DIFFERENT district's school, or a grantee renting a
-  # school classroom -- none enters that school's membership. Nor NIEER's
-  # HS-in-state-pre-K count (Table 4): it covers state pre-K in every
-  # setting, CCD public schools only. W/ all-settings count, no NIEER
-  # overlap: own-school share is a lower bound on overlap.
+  #      of HS slots = pooled_overlap_share(), one share every geography.
+  #      Assumes overlap everywhere resembles NIEER-reporting states'.
+  #      2026-10-08: replaced site matching (03_head_start_school_overlap.R),
+  #      own NIEER shares, DC/MI direct counts -- each moved Unpaid
+  #      Center-Based hours <= 4.7%, total hours <= 0.05%.
   #
   # Params:
   #   - spec (list): from load_spec()
@@ -506,25 +579,20 @@ program_children <- function(spec) {
   #     netted      removed, step d (Head Start only nonzero); net =
   #                 children less netted
   #   gross (sum of children), total (sum of net -- Unpaid Center-Based);
-  #   prek_source ('ccd' | 'all_settings' | 'nieer'); share (step d),
-  #   share_school, share_prek, share_nieer; factors (list): conversion
+  #   prek_source ('ccd' | 'all_settings' | 'nieer'); branch ('nieer' |
+  #   'fallback'); share (step d), share_nieer; factors
+  #   (list): conversion
   #   factors applied -- ehs_pregnant_share, enrolled_per_slot, home_fcc_share,
-  #   age5_share (by program, spec's region)
+  #   age5_share (by program)
   #----------------------------------------------------------------------------
 
   slots <- setNames(spec$programs$n_children, spec$programs$program)
   hs_slots <- slots[['Head Start']]
 
   # 0. pre-K count
-  all_settings <- spec$prek_all_settings %||% 0
-  prek_source <- if (parent_geo(spec$geo) %in% PREK_FROM_NIEER) {
-    'nieer'
-  } else if (all_settings > slots[['public pre-K']]) {
-    'all_settings'
-  } else {
-    'ccd'
-  }
-  if (prek_source == 'all_settings') slots['public pre-K'] <- all_settings
+  ob <- overlap_branch(spec)
+  prek_source <- ob$prek_source
+  if (prek_source == 'all_settings') slots['public pre-K'] <- spec$prek_all_settings
 
   # a. enrolled children
   e <- slots
@@ -540,42 +608,23 @@ program_children <- function(spec) {
   centre <- p
 
   # c. ages 0-4
-  a5 <- c('public pre-K' = PROGRAM_AGE5_SHARE$prek[[spec$region]],
-          'Head Start'   = PROGRAM_AGE5_SHARE$head_start[[spec$region]],
+  s5 <- program_age5_share(spec)
+  a5 <- c('public pre-K' = s5[['prek']], 'Head Start' = s5[['head_start']],
           'Early Head Start' = 0)
   age5 <- p * a5[names(p)]
   p <- p - age5
   gross <- sum(p)
 
   # d. HS children pre-K count already holds
-  share_school <- spec$hs_in_schools_share
-  if (is.null(share_school) || !is.finite(share_school) || share_school < 0 ||
-      share_school > 1) {
-    stop(spec$geo, ': spec lacks a valid hs_in_schools_share -- run ',
-         '03_head_start_school_overlap.R -- load_spec() reads it from ',
-         'out/head_start_school_overlap.csv')
-  }
-  share_prek <- (spec$hs_in_prek %||% 0) / hs_slots
-  if (!is.finite(share_prek) || share_prek < 0 || share_prek > 1) {
-    stop(spec$geo, ': hs_in_prek must lie between 0 and the Head Start slots')
-  }
-  share_nieer <- spec$nieer_hs_share %||% NA_real_
-  share <- if (share_prek > 0) {
-    share_prek
-  } else if (prek_source == 'all_settings' && !is.na(share_nieer)) {
-    share_nieer
-  } else {
-    share_school
-  }
+  share <- pooled_overlap_share()
   netted <- c('public pre-K' = 0, 'Head Start' = unname(p['Head Start']) * share,
               'Early Head Start' = 0)[names(p)]
 
   list(slots = slots, enrolled = e, not_centre = not_centre, centre = centre,
        age5 = age5, children = p, netted = netted, net = p - netted,
        gross = gross, total = gross - netted[['Head Start']],
-       prek_source = prek_source,
-       share = share, share_school = share_school, share_prek = share_prek,
-       share_nieer = share_nieer,
+       prek_source = prek_source, branch = ob$branch,
+       share = share, share_nieer = ob$share_nieer,
        factors = list(ehs_pregnant_share = EHS_PREGNANT_SHARE,
                       enrolled_per_slot  = c('public pre-K' = 1,
                                              'Head Start' = HS_ENROLLED_PER_SLOT,
@@ -603,7 +652,7 @@ build_geo <- function(spec) {
   #   care (tibble): ecec_type, children, part_time (children), annual_hours
   #     -- ECEC_TYPES order
   #   participation (list), step 1: children_0_4 (PEP), nsch_rate (geography's
-  #     rate; NYC = NY's), nsch_children (10+ hrs/week), universe_ratio (NSECE_UNIVERSE_RATIO),
+  #     rate; NYC = NY's), nsch_children (10+ hrs/week), universe_ratio (spec's, universe_ratio_of()),
   #     nonparental_total (rounded, any regular care)
   #   programs (list), step 4: program_children() -- counts by program at
   #     each step, total, overlap shares, conversion factors
@@ -620,12 +669,12 @@ build_geo <- function(spec) {
   ##    simulator's any-regular-arrangement universe
   n_children <- population_0_4(spec$fips, spec$county_fips)
   nsch_total <- n_children * spec$nonparental_rate
-  np_total   <- round(nsch_total * NSECE_UNIVERSE_RATIO)
+  np_total   <- round(nsch_total * spec$universe_ratio)
   cat('  children 0-4          ', big_n(n_children), '\n')
   cat('  x non-parental rate   ', sprintf('%.1f%%', 100 * spec$nonparental_rate),
       ' -> ', big_n(round(nsch_total)), ' at 10+ hrs/week\n', sep = '')
   cat(sprintf('  x universe ratio      %.4f -> %s in any regular care\n',
-              NSECE_UNIVERSE_RATIO, big_n(np_total)))
+              spec$universe_ratio, big_n(np_total)))
 
   ## 4 first -- p0 divides only what programs leave
   pc      <- program_children(spec)
@@ -641,11 +690,11 @@ build_geo <- function(spec) {
       ' (home-based, FCC options: ',
       by_prog(pc$not_centre, c('Head Start', 'Early Head Start')), ')\n', sep = '')
   cat('  less age 5+           ', big_n(round(sum(pc$age5))),
-      ' (', by_prog(pc$age5, c('public pre-K', 'Head Start')), '; ',
-      spec$region, ' shares)\n', sep = '')
+      ' (', by_prog(pc$age5, c('public pre-K', 'Head Start')), sprintf('; shares %.1f%%, %.1f%%',
+      100 * pc$factors$age5_share[['public pre-K']], 100 * pc$factors$age5_share[['Head Start']]),
+      ')\n', sep = '')
   cat('  less HS in pre-K      ', big_n(round(pc$netted[['Head Start']])),
-      sprintf(' (%.1f%% of HS: own school %.1f%%, in state pre-K %.1f%%)\n',
-              100 * pc$share, 100 * pc$share_school, 100 * pc$share_prek), sep = '')
+      sprintf(' (%.1f%% of HS, %s)\n', 100 * pc$share, pc$branch), sep = '')
   cat('  program children      ', big_n(round(program)), '\n', sep = '')
 
   ## 2-5. NSCH sets total, programs set Unpaid Center-Based, p0's mix of the
@@ -662,6 +711,24 @@ build_geo <- function(spec) {
   }
   children <- c((np_total - program) * sh$rest_mix,
                 'Unpaid Center-Based' = program)[ECEC_TYPES]
+
+  ## Licensing register, where one exists: sets Center-Based, Paid Home-Based
+  ## (build terms, 04_ register_paid_care()); other types of rest keep p0 mix
+  rp <- spec$register_paid
+  if (!is.null(rp)) {
+    set  <- c('Center-Based' = rp$centre, 'Paid Home-Based' = rp$home)
+    set  <- set[is.finite(set)]
+    free <- setdiff(names(sh$rest_mix), names(set))
+    left <- np_total - program - sum(set)
+    if (any(set < 0) || left < 0) {
+      stop(spec$geo, ': register paid care (', paste(names(set), big_n(round(set)), collapse = ', '),
+           ') does not fit the non-parental total less programs (',
+           big_n(round(np_total - program)), '). Check out/register_paid_care.csv.')
+    }
+    children[names(set)] <- set
+    children[free] <- left * sh$rest_mix[free] / sum(sh$rest_mix[free])
+    cat('  register sets         ', paste(names(set), big_n(round(set)), collapse = ', '), '\n', sep = '')
+  }
 
   formal   <- sum(children[FORMAL_TYPES])
   informal <- np_total - formal
@@ -691,7 +758,7 @@ build_geo <- function(spec) {
        participation = list(children_0_4      = n_children,
                             nsch_rate         = spec$nonparental_rate,
                             nsch_children     = nsch_total,
-                            universe_ratio    = NSECE_UNIVERSE_RATIO,
+                            universe_ratio    = spec$universe_ratio,
                             nonparental_total = np_total),
        programs = pc,
        shares = list(rest_mix  = sh$rest_mix,
@@ -764,6 +831,46 @@ out_row <- function(file, geo, script) {
 
 
 
+universe_ratio_of <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # Geography's five-hour ratio: NSECE_UNIVERSE_RATIO x its relative factor
+  # (header, STATE FIVE-HOUR RATIO). NYC has its own p0 rows.
+  #
+  # Params:
+  #   - geo (chr)
+  #
+  # Returns: (num) ratio
+  #----------------------------------------------------------------------------
+
+  rel <- predicted_five_hour_ratio(geo) /
+    predicted_five_hour_ratio(names(STATE_POSTAL_TO_FIPS))
+  NSECE_UNIVERSE_RATIO * rel
+}
+
+
+
+predicted_five_hour_ratio <- function(geos) {
+
+  #----------------------------------------------------------------------------
+  # Simulator-predicted children 5+ hrs over children 10+ hrs, pooled over
+  # geos (header, STATE FIVE-HOUR RATIO).
+  #
+  # Params:
+  #   - geos (chr vec): geographies pooled -- one for a geography, 50 states +
+  #       DC for nation
+  #
+  # Returns: (num) ratio; stops if a geography has no p0 rows
+  #----------------------------------------------------------------------------
+
+  d <- dplyr::bind_rows(lapply(geos, p0_rows))
+  in_care <- sum(num(d$children[d$ecec_type != 'Parent Only']))
+  pt      <- sum(num(d$children[d$hours_choice == 'pt']))
+  in_care / (in_care - NSECE_SHORT_SHARE_OF_PT * pt)
+}
+
+
+
 nsch_rate_of <- function(geo) {
 
   #----------------------------------------------------------------------------
@@ -786,32 +893,26 @@ nsch_rate_of <- function(geo) {
 
 
 geo_spec <- function(geo, name, fips, region, prek, head_start,
-                     early_head_start, hs_in_prek = 0, ...) {
+                     early_head_start, ...) {
 
   #----------------------------------------------------------------------------
   # SPEC_<GEO> for states/<GEO>.R: hand-researched inputs only. load_spec()
-  # adds NSCH rate, SE, Head Start in-own-school share from out/.
+  # adds NSCH rate, universe ratio, NIEER pre-K inputs.
   #
   # Params:
   #   - geo, name (chr); fips (num): state FIPS
-  #   - region (chr): lower-case Census region -- 05_compare_nsece_shares.R,
-  #     PROGRAM_AGE5_SHARE key on it
+  #   - region (chr): lower-case Census region -- 05_compare_nsece_shares.R
   #   - prek (num): public pre-K children (CCD; NIEER state pre-K where CCD
   #     has no count)
   #   - head_start (num): Head Start funded slots, ages 3-4 (NIEER)
   #   - early_head_start (num): Early Head Start funded slots (NIEER)
-  #   - hs_in_prek (num): Head Start slots NIEER reports also in state pre-K
-  #     (Appendix B HS less Table 4 HS increment) -- ONLY where `prek` is
-  #     NIEER's state pre-K, every setting, or site file covers under
-  #     SITE_FILE_MIN_COVER of NIEER's HS slots; else 0
   #   - ...: fields placed between fips, region (NYC: counties, county_fips)
   #
-  # Returns: (list) geo, name, fips, ..., region, hs_in_prek, programs
+  # Returns: (list) geo, name, fips, ..., region, programs
   #          (tibble: program, n_children)
   #----------------------------------------------------------------------------
 
   list(geo = geo, name = name, fips = fips, ..., region = region,
-       hs_in_prek = hs_in_prek,
        programs = tibble::tribble(
          ~program,           ~n_children,
          'public pre-K',     prek,
@@ -825,9 +926,9 @@ load_spec <- function(geo) {
 
   #----------------------------------------------------------------------------
   # Sources states/<GEO>.R into global env, returns SPEC_<GEO> plus
-  # nonparental_rate (parent state's for NYC), hs_in_schools_share read live from
-  # out/, prek_all_settings, nieer_hs_share (nieer_prek_inputs()) --
-  # machine-derived, so a hand copy would only drift.
+  # nonparental_rate (parent state's for NYC), universe_ratio,
+  # prek_all_settings, nieer_hs_share (nieer_prek_inputs()) -- machine-derived,
+  # so a hand copy would only drift.
   #
   # Params:
   #   - geo (chr): e.g. 'KY', 'NYC'
@@ -838,13 +939,43 @@ load_spec <- function(geo) {
   spec <- get_spec(geo)
 
   spec$nonparental_rate    <- nsch_rate_of(geo)
+  spec$universe_ratio      <- universe_ratio_of(geo)
   nieer <- nieer_prek_inputs(spec)
   spec$prek_all_settings   <- nieer$all_settings
   spec$nieer_hs_share      <- nieer$nieer_hs_share
-  # Unlike NSCH rate, NYC has its own row here.
-  spec$hs_in_schools_share <- out_row('head_start_school_overlap.csv', geo,
-                                      '03_head_start_school_overlap.R')$share[[1]]
+  spec$register_paid       <- register_paid_of(geo)
   spec
+}
+
+
+
+# Paid care from licensing registers, build terms (04_ writes it): geo,
+# centre (Center-Based children), home (Paid Home-Based children, NA where no
+# mandatory home register). Geography w/out a row keeps p0 mix.
+REGISTER_PAID_FILE <- 'register_paid_care.csv'
+# Off -- register override in progress, not yet in targets (2026-10-09 memo).
+# TRUE sets KY NJ NY NYC VA paid care from the file.
+USE_REGISTER_PAID <- FALSE
+
+register_paid_of <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # Geography's register paid care, or NULL (no register, or file not yet
+  # written -- run 04_compare_licensing_registers.R first).
+  #
+  # Params:
+  #   - geo (chr)
+  #
+  # Returns: (list|NULL) centre, home (num)
+  #----------------------------------------------------------------------------
+
+  if (!USE_REGISTER_PAID) return(NULL)
+  f <- file.path(STATE_DATA_ROOT, 'out', REGISTER_PAID_FILE)
+  if (!file.exists(f)) return(NULL)
+  d <- read_chr(f)
+  d <- d[d$geo == geo, ]
+  if (!nrow(d)) return(NULL)
+  list(centre = num(d$centre), home = num(d$home))
 }
 
 

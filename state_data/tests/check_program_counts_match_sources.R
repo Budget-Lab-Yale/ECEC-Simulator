@@ -14,9 +14,6 @@
 #   Early Head Start   = NIEER State(s) of Head Start and Early Head Start
 #                        (2023), state profile, funded-enrollment chart,
 #                        2018-2019 bar -- smaller of the two bars.
-#   HS in state pre-K  = spec hs_in_prek: NIEER Appendix B HS less Table 4
-#                        HS increment where pre-K figure is NIEER's (CA, MI)
-#                        or site file too thin to measure (DC); 0 elsewhere.
 #   NYC shares         = NYC's share of New York's OPEN funded slots in the
 #                        Head Start service-location file 03_ reads, HS types
 #                        and EHS types separately.
@@ -105,40 +102,12 @@ ehs_bar <- function(state) {
 nieer <- pdftools::pdf_text(NIEER)
 nieer_p <- nieer[grepl('FEDERAL HEAD START', nieer) &
                  grepl('Funded enrollment', nieer)]
-nieer_t4 <- unlist(strsplit(nieer[grepl('TABLE 4', nieer, fixed = TRUE) &
-  grepl('PRESCHOOL SPECIAL EDUCATION, AND FEDERAL AND STATE HEAD START', nieer,
-        fixed = TRUE)], '\n'))
-
-
-
-t4_hs_increment <- function(state) {
-
-  #----------------------------------------------------------------------------
-  # Head Start children Table 4 adds to pre-K + special ed, ages 3, 4: (3s
-  # w/ HS - 3s w/out) + (4s w/ HS - 4s w/out). Row matched on full name at
-  # line start, footnote marks allowed -- 'Virginia' never takes 'West
-  # Virginia'.
-  #
-  # Params: state (chr): full name. Returns: (num) NA if no row
-  #----------------------------------------------------------------------------
-
-  hit <- grep(paste0('^\\s*', state, '[^A-Za-z0-9 ]*\\s{2,}[0-9]'), nieer_t4, value = TRUE)
-  if (length(hit) != 1) return(NA)
-  cells <- strsplit(trimws(sub(paste0('^\\s*', state, '[^A-Za-z0-9 ]*'), '', hit)),
-                    '\\s+')[[1]]
-  v <- as.numeric(gsub(',', '', cells[!grepl('%$', cells)]))
-  if (length(v) != 4) return(NA)
-  (v[3] - v[1]) + (v[4] - v[2])
-}
 hs_txt <- pdftools::pdf_text(NIEER_HS)
 hs_dat <- pdftools::pdf_data(NIEER_HS)
 hs_hdr <- gsub('\\s', '', substr(hs_txt, 1, 200))   # 'S TAT E P R O F I L E' spaced out
 
 ccd <- read_chr(CCD)
 ccd$n <- num(ccd$pk_enrollment)
-
-# open HS slots per geography in site file (03_ output)
-overlap <- read.csv(file.path(STATE_DATA_ROOT, 'out', 'head_start_school_overlap.csv'))
 
 hssl <- read_chr(HSSL)
 hssl <- hssl[hssl$status == 'Open' & hssl$state == 'NY', ]
@@ -205,24 +174,6 @@ for (g in GEOGRAPHIES) {
     fails <- fails + 1
   } else {
     say(g, 'Early Head Start', p[['Early Head Start']], want)
-  }
-
-  # HS in state pre-K: spec HS less Table 4 HS increment, a gap <= NIEER_TOL
-  # read as 0. Required where pre-K figure = NIEER's (no CCD count) or site
-  # file covers under SITE_FILE_MIN_COVER of spec HS slots; else spec must
-  # carry 0 (program_children()).
-  inc <- t4_hs_increment(nm)
-  have <- s$hs_in_prek %||% 0
-  cover <- overlap$hs_slots[overlap$geo == g] / p[['Head Start']]
-  if (is.na(inc)) {
-    cat('  [FAIL]', g, 'row not found in NIEER Table 4\n')
-    fails <- fails + 1
-  } else if (sum(ccd$n[ccd$state == g], na.rm = TRUE) > 0 &&
-             cover >= SITE_FILE_MIN_COVER) {
-    say(g, 'HS in state pre-K', have, 0)
-  } else {
-    want <- p[['Head Start']] - inc
-    say(g, 'HS in state pre-K', have, if (want <= NIEER_TOL) 0 else want)
   }
 }
 

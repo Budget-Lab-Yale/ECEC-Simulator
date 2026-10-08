@@ -10,13 +10,11 @@
 #
 # ONE RULE, every state:
 #   pre-K        main build's all-settings count (NIEER Table 2 state pre-K,
-#                ages 3 + 4, every setting; FL school-year VPK), even where
+#                ages 3 + 4, every setting), even where
 #                CCD is larger
-#   HS overlap   hs_in_prek = NIEER Head Start slots (spec, Appendix B) -
-#                Table 4 Head Start increment, clamped to [0, slots] -- only
-#                where Table 4 marks an unduplicated count (dagger, 18
-#                states); 0 elsewhere (NIEER does not report overlap there)
-#   site match   off (hs_in_schools_share = 0)
+#   HS overlap   main build's rule for an all-settings count: NIEER share
+#                where Table 4 marks an unduplicated count (dagger), else
+#                fallback (pooled_overlap_share())
 # CA, MI keep main spec -- pre-K figure already NIEER's. NYC keeps main spec
 # -- NIEER has no city count.
 #
@@ -25,7 +23,7 @@
 # effect moves <= 0.8% KY, VA; 1.2-2.1% NJ; 2.8-4.5% NY (demand subsidy
 # -5.5%, child poverty effect +0.2-0.3 pp); child UBI scenarios <= 0.2%.
 # Main build since takes larger of CCD, NIEER: national Unpaid Center-Based
-# hours 10.0% above this NIEER-everywhere version (Table 2 counts, FL school-year).
+# hours 10.0% above this NIEER-everywhere version (Table 2 counts).
 #
 # Usage: Rscript state_data/code/08_nieer_prek_sensitivity.R
 #   reads raw/US/US_NIEER__prek_and_head_start_enrollment_age_3_4__2018-19.csv
@@ -41,29 +39,20 @@ SENS_DIR <- file.path(STATE_DATA_ROOT, 'out', 'nieer_sensitivity')
 
 
 
-nieer_spec <- function(spec, t4) {
+nieer_spec <- function(spec) {
 
   #----------------------------------------------------------------------------
   # Main spec -> NIEER sensitivity spec (header, ONE RULE).
   #
   # Params:
   #   - spec (list): load_spec() result
-  #   - t4 (tibble): NIEER Table 4 rows, one per state
   #
-  # Returns: (list) spec w/ NIEER pre-K, hs_in_prek, own-school share 0
+  # Returns: (list) spec w/ CCD pre-K 0, so build takes all-settings count
   #----------------------------------------------------------------------------
 
   if (spec$geo %in% KEEP_MAIN_SPEC) return(spec)
-  r <- t4[t4$state == spec$geo, ]
-  if (nrow(r) != 1) stop(spec$geo, ': no NIEER Table 4 row in ', NIEER_T4_FILE)
-
-  hs <- spec$programs$n_children[spec$programs$program == 'Head Start']
-  prek <- r$prek_sped_age3 + r$prek_sped_age4
-  increment <- (r$prek_sped_hs_age3 + r$prek_sped_hs_age4) - prek
-  # Count: main build's all-settings count (Table 2 state pre-K; FL school-year)
-  spec$programs$n_children[spec$programs$program == 'public pre-K'] <- spec$prek_all_settings
-  spec$hs_in_prek <- if (r$hs_unduplicated == 1) min(max(hs - increment, 0), hs) else 0
-  spec$hs_in_schools_share <- 0
+  # CCD 0 -> build takes all-settings count (Table 2 state pre-K)
+  spec$programs$n_children[spec$programs$program == 'public pre-K'] <- 0
   spec
 }
 
@@ -77,15 +66,13 @@ main <- function() {
   # Returns: (tibble) summary, invisibly
   #----------------------------------------------------------------------------
 
-  t4 <- read_chr(raw_path(NIEER_T4_FILE)) %>%
-    dplyr::mutate(dplyr::across(-state, as.numeric))
   dir.create(SENS_DIR, showWarnings = FALSE, recursive = TRUE)
 
   rows <- lapply(GEOGRAPHIES, function(g) {
     spec <- load_spec(g)
     capture.output({
       main_res <- build_geo(spec)
-      sens_res <- build_geo(nieer_spec(spec, t4))
+      sens_res <- build_geo(nieer_spec(spec))
     })
     readr::write_csv(dplyr::select(sens_res$care, ecec_type, annual_hours),
                      file.path(SENS_DIR, paste0(g, '.csv')))
