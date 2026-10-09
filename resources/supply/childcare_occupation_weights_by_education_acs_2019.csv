@@ -1,0 +1,9 @@
+sample,educ_group,occupation,soc,n,workers_wt,weight
+acs5_2015_2019,no_ba,administrator,11-9031,2138,45137,0.032169
+acs5_2015_2019,no_ba,preschool_teacher,25-2011,14959,338809,0.241468
+acs5_2015_2019,no_ba,sped_teacher,25-2051,11,187,0.000133
+acs5_2015_2019,no_ba,childcare_worker,39-9011,46884,1018991,0.72623
+acs5_2015_2019,ba,administrator,11-9031,2465,49557,0.116084
+acs5_2015_2019,ba,preschool_teacher,25-2011,9644,193869,0.454125
+acs5_2015_2019,ba,sped_teacher,25-2051,86,1632,0.003823
+acs5_2015_2019,ba,childcare_worker,39-9011,8682,181849,0.425969

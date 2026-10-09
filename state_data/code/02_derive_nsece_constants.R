@@ -36,22 +36,19 @@ suppressPackageStartupMessages({
 # Not 00_build_demand_targets.R -- too heavy for a cluster job on licensed data.
 source('state_data/code/shared_setup.R')
 
-# Center price split, $/hr -- 1a_nsece_processing.R's boundary.
-PRICE_BOUNDARY <- 4.75
-
 # Part-time below this many hrs/wk. src/shared_functions/constants.R sets
 # pt = 10, ft = 40; 1a_nsece_processing.R cuts between them at `hours < 20`.
 PT_FT_CUT <- 20
 
 # Primary-arrangement ranking, as simulator: paid before unpaid, center before
 # home. Hours summed within type first, so each type one row -- rank alone
-# picks, desc(hours) in arrange() never breaks a tie.
-CATEGORY_PRIORITY <- c('K-8', 'High-Priced Center-Based',
-                       'Low-Priced Center-Based', 'Unpaid Center-Based',
+# picks, desc(hours) in arrange() never breaks a tie. Paid centres one type --
+# build has one Center-Based row, price tiers (1a) don't enter its constants.
+CATEGORY_PRIORITY <- c('K-8', 'Center-Based', 'Unpaid Center-Based',
                        'Paid Home-Based', 'Other Paid', 'Unpaid Home-Based',
                        'Other Unpaid')
 
-PAID_CENTRE <- c('High-Priced Center-Based', 'Low-Priced Center-Based')
+PAID_CENTRE <- 'Center-Based'
 FORMAL      <- c(PAID_CENTRE, 'Unpaid Center-Based', 'Paid Home-Based')
 INFORMAL    <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 
@@ -189,14 +186,10 @@ build_arrangements <- function(d) {
       is_home_based = is_home & !in_child_home & !has_prior_rel,
       is_other_kind = (!is_center & !is_k8) &
                         (!is_home | in_child_home | has_prior_rel),
-      is_low  = is_center & is_paid & !is.na(hourly) & hourly <  PRICE_BOUNDARY,
-      is_high = is_center & is_paid & !is.na(hourly) & hourly >= PRICE_BOUNDARY,
       ecec_choice = case_when(
         is_k8                              ~ 'K-8',
         is_center & !is_paid               ~ 'Unpaid Center-Based',
-        is_center & is_paid & is_low       ~ 'Low-Priced Center-Based',
-        is_center & is_paid & is_high      ~ 'High-Priced Center-Based',
-        is_center & is_paid                ~ NA_character_,
+        is_center & is_paid                ~ 'Center-Based',
         is_home_based & !is_paid           ~ 'Unpaid Home-Based',
         is_home_based &  is_paid           ~ 'Paid Home-Based',
         is_other_kind & !is_paid           ~ 'Other Unpaid',
@@ -238,7 +231,7 @@ primary_arrangement <- function(arr) {
 
 
 
-summarise_universe <- function(kids, label, all_children = NULL) {
+summarise_universe <- function(kids, label) {
 
   #----------------------------------------------------------------------------
   # NSECE constants on universe `kids`.
@@ -246,19 +239,12 @@ summarise_universe <- function(kids, label, all_children = NULL) {
   # Params:
   #   - kids (tibble): primary-arrangement rows w/ child_weight, region
   #   - label (chr): universe label
-  #   - all_children (tibble|NULL): every child 0-4, in care or not --
-  #       price-band shares' denominator, as 00_build_demand_targets.R
-  #       states them
   #
-  # Returns: (list of tibbles) formal, mix, hours, bands (NULL w/out
-  #   all_children), split, mix_r, hours_r, unpaid, ptft, ptft_nat
+  # Returns: (list of tibbles) formal, mix, hours, split, mix_r, hours_r,
+  #   unpaid, ptft, ptft_nat
   #----------------------------------------------------------------------------
 
   w <- function(x, wt) sum(x * wt) / sum(wt)
-  # Paid centers pooled into one Center-Based row -- no price-band blend.
-  pooled <- kids %>%
-    mutate(ecec_choice = if_else(ecec_choice %in% PAID_CENTRE,
-                                 'Center-Based', ecec_choice))
   in_region <- filter(kids, !is.na(region))
 
   formal <- in_region %>%
@@ -280,19 +266,6 @@ summarise_universe <- function(kids, label, all_children = NULL) {
     summarise(universe = label, children = n(),
               weekly = w(hours, child_weight), .groups = 'drop') %>%
     mutate(annual = weekly * 50)
-
-  # Center price bands. Only their RATIO enters blended Center-Based hours (the
-  # denominator cancels), but 00_build_demand_targets.R, memo print the shares
-  # themselves.
-  bands <- NULL
-  if (!is.null(all_children)) {
-    denom <- sum(all_children$child_weight)
-    bands <- kids %>%
-      filter(ecec_choice %in% PAID_CENTRE) %>%
-      group_by(ecec_choice) %>%
-      summarise(universe = label, children = n(),
-                share = sum(child_weight) / denom, .groups = 'drop')
-  }
 
   # Step 4 cross-check only -- step 4 uses program counts. Weighted Unpaid
   # Center-Based over weighted formal, by region.
@@ -317,12 +290,12 @@ summarise_universe <- function(kids, label, all_children = NULL) {
 
   # Part-time share on primary arrangement's hours -- simulator's own cut, so
   # build, simulator agree child for child.
-  ptft_nat <- pooled %>%
+  ptft_nat <- kids %>%
     group_by(ecec_choice) %>%
     summarise(universe = label, children = n(),
               pt_share = w(hours < PT_FT_CUT, child_weight), .groups = 'drop')
 
-  ptft <- pooled %>%
+  ptft <- kids %>%
     filter(!is.na(region)) %>%
     group_by(region, ecec_choice) %>%
     summarise(universe = label, children = n(),
@@ -339,13 +312,13 @@ summarise_universe <- function(kids, label, all_children = NULL) {
     ungroup() %>%
     select(universe, region, ecec_choice, children, share)
 
-  hrs_r <- pooled %>%
+  hrs_r <- kids %>%
     filter(!is.na(region)) %>%
     group_by(region, ecec_choice) %>%
     summarise(universe = label, children = n(),
               weekly = w(hours, child_weight), .groups = 'drop')
 
-  list(formal = formal, mix = mix, hours = hrs, bands = bands, split = split,
+  list(formal = formal, mix = mix, hours = hrs, split = split,
        mix_r = mix_r, hours_r = hrs_r, unpaid = unpaid, ptft = ptft,
        ptft_nat = ptft_nat)
 }
@@ -400,42 +373,12 @@ as_long <- function(t, quantity, key, value, n = children) {
 
 
 
-any_over_primary <- function(arr, kids, prim) {
-
-  #----------------------------------------------------------------------------
-  # Children 0-4 w/ ANY regular arrangement in a setting over children w/ it as
-  # PRIMARY (CATEGORY_PRIORITY), weighted -- 04_compare_licensing_registers.R
-  # puts build's primary-type counts on a register's every-enrolled-child
-  # basis. Settings: centre (three center types), Paid Home-Based.
-  #
-  # Params:
-  #   - arr (tibble): build_arrangements() rows
-  #   - kids (tibble): build_children() rows (child_weight)
-  #   - prim (tibble): primary_arrangement() rows joined to kids
-  #
-  # Returns: (tibble) universe, quantity, key, value, n
-  #----------------------------------------------------------------------------
-
-  sets <- list(centre = c(PAID_CENTRE, 'Unpaid Center-Based'),
-               'Paid Home-Based' = 'Paid Home-Based')
-  bind_rows(lapply(names(sets), function(k) {
-    any_ids <- arr %>% filter(ecec_choice %in% sets[[k]]) %>% distinct(hh_id, child_id) %>%
-      inner_join(kids, by = c('hh_id', 'child_id'))
-    p <- prim %>% filter(ecec_choice %in% sets[[k]])
-    tibble(universe = UNIVERSE_A, quantity = 'any_over_primary', key = k,
-           value = sum(any_ids$child_weight) / sum(p$child_weight), n = nrow(any_ids))
-  }))
-}
-
-
-
 share_of_children_region <- function(arr, kids, prim) {
 
   #----------------------------------------------------------------------------
   # Share of ALL children 0-4 by primary type, Parent Only included, by region
   # + national -- 06_compare_state_shares.R benchmark. Kindergarten children
-  # (any K-8 arrangement) out of numerator and denominator, as NHES. Paid
-  # center price bands pooled as build's Center-Based.
+  # (any K-8 arrangement) out of numerator and denominator, as NHES.
   #
   # Params:
   #   - arr (tibble): build_arrangements() rows
@@ -449,8 +392,7 @@ share_of_children_region <- function(arr, kids, prim) {
   all_k <- kids %>% anti_join(k_ids, by = c('hh_id', 'child_id'))
   typ <- prim %>%
     anti_join(k_ids, by = c('hh_id', 'child_id')) %>%
-    transmute(hh_id, child_id,
-              type = if_else(ecec_choice %in% PAID_CENTRE, 'Center-Based', ecec_choice))
+    transmute(hh_id, child_id, type = ecec_choice)
   d <- all_k %>%
     left_join(typ, by = c('hh_id', 'child_id')) %>%
     mutate(type = coalesce(type, 'Parent Only'))
@@ -535,8 +477,8 @@ main <- function() {
 
   keep   <- prim$total_hours >= 10
   b_kids <- prim[keep, ]
-  a <- summarise_universe(prim,   UNIVERSE_A, kids)
-  b <- summarise_universe(b_kids, UNIVERSE_B, kids)
+  a <- summarise_universe(prim,   UNIVERSE_A)
+  b <- summarise_universe(b_kids, UNIVERSE_B)
 
   # Targets are in HOURS, so report share of hours below ten-hour line too.
   hA <- sum(prim$child_weight * prim$hours)
@@ -569,23 +511,6 @@ main <- function() {
                mutate(annual_A = weekly_A * 50, annual_B = weekly_B * 50,
                       pct = 100 * (weekly_B / weekly_A - 1)),
              2)
-
-  bands <- ab('bands', 'ecec_choice', c(n_A = 'children', A = 'share'),
-              c(n_B = 'children', B = 'share'))
-  show_table(paste0('CENTRE PRICE-BAND SHARES -- weights for the blended centre hours\n',
-                    '   (shares of ALL children 0-4; NSECE publishes 0.07008 high, 0.06556 low)'),
-             bands, 5)
-  # Price-band-share-weighted annual hours of the two paid-center bands.
-  blend <- function(col) {
-    u <- (if (col == 'B') b else a)$hours
-    h <- setNames(u$weekly * 50, u$ecec_choice)
-    s <- setNames(bands[[col]], bands$ecec_choice)
-    (s[['High-Priced Center-Based']] * h[['High-Priced Center-Based']] +
-     s[['Low-Priced Center-Based']]  * h[['Low-Priced Center-Based']]) /
-      (s[['High-Priced Center-Based']] + s[['Low-Priced Center-Based']])
-  }
-  cat(sprintf('   blended Center-Based annual hours: A %.1f   B %.1f  (%+.1f%%)\n',
-              blend('A'), blend('B'), 100 * (blend('B') / blend('A') - 1)))
 
   show_table('CENTRE-HOME SPLIT OF PAID FORMAL CARE, by region (step 5, universe A)',
              a$split, 4)
@@ -631,7 +556,6 @@ main <- function() {
     # tests whether either split moves step 1; build keeps national.
     short_share_by(prim, 'region', 'short_share_of_part_time_region'),
     short_share_by(prim, 'ecec_choice', 'short_share_of_part_time_type'),
-    any_over_primary(arr, kids, prim),
     share_of_children_region(arr, kids, prim),
     both('ptft_nat', 'part_time_share', ecec_choice, pt_share),
     both('ptft', 'part_time_share_region', paste(region, ecec_choice, sep = ':'),
@@ -642,7 +566,6 @@ main <- function() {
       as_long(u$hours_r, 'weekly_hours_region', paste(region, ecec_choice, sep = ':'), weekly))),
     both('split',  'centre_home_split',   region, centre_share, n_centre + n_home),
     both('unpaid', 'unpaid_centre_share', region, unpaid_share),
-    both('bands',  'price_band_share',    ecec_choice, share),
     both('formal', 'formal_share',        region, formal_share),
     both('mix',    'informal_mix',        ecec_choice, share),
     both('hours',  'weekly_hours',        ecec_choice, weekly))

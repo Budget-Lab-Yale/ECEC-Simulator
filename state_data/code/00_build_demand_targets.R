@@ -712,24 +712,6 @@ build_geo <- function(spec) {
   children <- c((np_total - program) * sh$rest_mix,
                 'Unpaid Center-Based' = program)[ECEC_TYPES]
 
-  ## Licensing register, where one exists: sets Center-Based, Paid Home-Based
-  ## (build terms, 04_ register_paid_care()); other types of rest keep p0 mix
-  rp <- spec$register_paid
-  if (!is.null(rp)) {
-    set  <- c('Center-Based' = rp$centre, 'Paid Home-Based' = rp$home)
-    set  <- set[is.finite(set)]
-    free <- setdiff(names(sh$rest_mix), names(set))
-    left <- np_total - program - sum(set)
-    if (any(set < 0) || left < 0) {
-      stop(spec$geo, ': register paid care (', paste(names(set), big_n(round(set)), collapse = ', '),
-           ') does not fit the non-parental total less programs (',
-           big_n(round(np_total - program)), '). Check out/register_paid_care.csv.')
-    }
-    children[names(set)] <- set
-    children[free] <- left * sh$rest_mix[free] / sum(sh$rest_mix[free])
-    cat('  register sets         ', paste(names(set), big_n(round(set)), collapse = ', '), '\n', sep = '')
-  }
-
   formal   <- sum(children[FORMAL_TYPES])
   informal <- np_total - formal
   split    <- children[['Center-Based']] /
@@ -943,39 +925,7 @@ load_spec <- function(geo) {
   nieer <- nieer_prek_inputs(spec)
   spec$prek_all_settings   <- nieer$all_settings
   spec$nieer_hs_share      <- nieer$nieer_hs_share
-  spec$register_paid       <- register_paid_of(geo)
   spec
-}
-
-
-
-# Paid care from licensing registers, build terms (04_ writes it): geo,
-# centre (Center-Based children), home (Paid Home-Based children, NA where no
-# mandatory home register). Geography w/out a row keeps p0 mix.
-REGISTER_PAID_FILE <- 'register_paid_care.csv'
-# Off -- register override in progress, not yet in targets (2026-10-09 memo).
-# TRUE sets KY NJ NY NYC VA paid care from the file.
-USE_REGISTER_PAID <- FALSE
-
-register_paid_of <- function(geo) {
-
-  #----------------------------------------------------------------------------
-  # Geography's register paid care, or NULL (no register, or file not yet
-  # written -- run 04_compare_licensing_registers.R first).
-  #
-  # Params:
-  #   - geo (chr)
-  #
-  # Returns: (list|NULL) centre, home (num)
-  #----------------------------------------------------------------------------
-
-  if (!USE_REGISTER_PAID) return(NULL)
-  f <- file.path(STATE_DATA_ROOT, 'out', REGISTER_PAID_FILE)
-  if (!file.exists(f)) return(NULL)
-  d <- read_chr(f)
-  d <- d[d$geo == geo, ]
-  if (!nrow(d)) return(NULL)
-  list(centre = num(d$centre), home = num(d$home))
 }
 
 

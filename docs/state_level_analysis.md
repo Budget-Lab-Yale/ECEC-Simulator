@@ -132,13 +132,14 @@ Other Unpaid,...
   **`Parent Only` is the numeraire** (its delta is 0, and its "hours" are
   residual by construction).
 - **Every group is a singleton except `Center-Based`**, which covers both
-  `Low-Priced Center-Based` and `High-Priced Center-Based`. No state publishes
-  the within-state price dispersion that split needs, so state sources support
-  the SUM. The pair therefore shares ONE delta: that constrains their combined
-  hours and leaves their modelled ratio untouched, because a common additive
-  utility shift cancels out of the odds between them.
-- All 6 rows are required (v1 assumes a complete file; partial targeting is
-  a possible later extension). A file naming `Low-Priced Center-Based` or
+  `Low-Priced Center-Based` and `High-Priced Center-Based`. The tiers fall
+  below or at/above the provider-file median posted price for the Census region
+  and age band (`1a_nsece_processing.R`); the public-use NSECE files do not
+  identify state, and no state source counts the tiers. The pair shares ONE
+  delta: it calibrates total paid-center hours with no tier-share target. A
+  common shift keeps each family's odds between the tiers, but the aggregate
+  split can still move as families reweight, so the model determines it.
+- All 6 rows are required. A file naming `Low-Priced Center-Based` or
   `High-Priced Center-Based` is REJECTED -- it has invented a split.
 - **If the file is absent**: no adjustment — the state run uses filtered
   households with national alphas.
@@ -265,11 +266,10 @@ L_0 = colSums(L_req * sector_hours)
 ```
 
 This is the definition `1a_nsece_processing.R` uses nationally, applied to the
-state's own base-year hours. The contraction pins combined center hours but
-not the low/high split, and the two bands differ sharply in BA labour per hour
-(0.035 against 0.076), so a value built from a fixed national split would
-leave the base-year ratio off 1 for BA labour. From the model's own hours,
-`L / L_0 = 1` in the base year by construction.
+state's own base-year hours. The two center bands differ sharply in BA
+labour per hour (0.035 against 0.076), so `L_0` must use the same band hours
+the contraction reaches. From the model's own hours, `L / L_0 = 1` in the
+base year by construction.
 
 This is the only state definition of `L_0`, so a state supply file needs a
 demand file. A state run with `config/state/supply/<ST>.yaml` but no
@@ -280,45 +280,40 @@ ACS-based `labor_supply` (national L_0 × the state's share of national ACS
 childcare workers) as a fallback. No run used it, because every geography has
 a demand file, and the build no longer computes it.
 
-**`wages` come from ACS childcare workers, by measured education.** `resources/supply/acs_childcare_wage_by_education_2019.py` reads
-IPUMS extract usa:34 (`resources/supply/acs_ipums_extract_2019.R`) on the
-cluster. It uses one sample: the 2018 and 2019 records of the 2015-2019
-5-year file. The workers are the ACS occupations of the four
-SOC codes that care for children under school age:
+**`wages` come from BLS OES May 2019 childcare occupations.**
+`resources/supply/oes_childcare_wage_ratios_2019.R` reads the OES state,
+national, and MSA files (extract in
+`state_data/raw/US/US_OES__childcare_occupation_wages__2019.csv`). OES is an
+employer survey with SOC-coded occupations, so its samples are larger and its
+occupation codes cleaner than the ACS self-reports. OES has no education, so
+each education group mixes the occupation wages at national ACS weights:
 
-| ACS OCC | SOC | Occupation | Kept |
+```
+ratio(g, s) = sum_o w(o, g) h(o, s) / sum_o w(o, g) h(o, US)
+```
+
+`h` is the OES hourly median and `w(o, g)` the national share of group `g`'s
+childcare workers in occupation `o` (ACS 2015-2019 five-year, all five years,
+person weights; `resources/supply/acs_childcare_occupation_weights_2019.py`,
+output `resources/supply/childcare_occupation_weights_by_education_acs_2019.csv`;
+same worker definition as the former ACS wage ratios):
+
+| SOC | Occupation | no-BA | BA |
 |---|---|---|---|
-| 4600 | 39-9011 | Childcare workers | every industry except private households (IND 9290) |
-| 2300 | 25-2010 | Preschool and kindergarten teachers | child day care services (IND 8470) |
-| 2330 | 25-2050 | Special education teachers | child day care services |
-| 230 | 11-9030 | Education and childcare administrators | child day care services |
+| 39-9011 | Childcare workers | 0.726 | 0.426 |
+| 25-2011 | Preschool teachers, except special education | 0.241 | 0.454 |
+| 25-2051 | Special education teachers, preschool | 0.000 | 0.004 |
+| 11-9031 | Education and childcare administrators, preschool and daycare | 0.032 | 0.116 |
 
-The ACS pools each of the last three across school levels, so they count only
-in child day care services. Private-household childcare workers are nannies and
-babysitters, the simulator's Other Paid, not a center or home provider. The
-group is the worker's own education: BA = `EDUC` ≥ 10 (four or more years of
-college). An occupation mapping does not work: BLS Employment Projections
-Table 5.3 (2023-24) puts 22.6% of childcare workers at BA or higher and 46.2%
-of preschool teachers below it. In the ACS 2019 1-year file, the BA share is
-15.6% for childcare workers and 36.3% for preschool teachers in child day care
-services.
-
-Hourly earnings follow the simulator's ACS rule (`1b_acs_processing.R`):
-household residents, (`INCWAGE` + `INCBUS00`) ÷ (weeks × usual hours), kept
-when earnings, weeks, and hours are all positive. Weeks are `WKSWORK1`; the
-2018 records give only `WKSWORK2` intervals, and each takes the weighted mean
-`WKSWORK1` of workers in the same interval (about 6, 21, 33, 42, 48, and 52
-weeks). The ratio is the state's weighted median hourly earnings over the
-national median, by group. Medians, not means: a few high-weight records can
-swing the mean of a small cell.
-
-Small cells borrow from the state's labour market, not the national wage.
-A cell with at least 30 unweighted records keeps its own childcare ratio. A
-smaller cell takes the state's all-worker median ratio for the same education
-group. 9 of the 102 state cells are under 30, all BA: AK, DC, DE, ID, MT, ND,
-NM, WV, and WY. Ratios run 0.767 (WV) to 1.439 (VT) for no-BA and 0.755 (SD)
-to 1.313 (VT) for BA. NYC is the five boroughs
-(`COUNTYFIP`), with its own ratio.
+OES publishes no hourly median for 25-2051 (annual pay only), so its weight
+folds into 25-2011. The weights stay national, so a state's ratio moves with
+its OES wages only, not with small state education samples. An occupation
+with a suppressed state wage drops from both sums for that state, and the
+other weights renormalize: DC has no 11-9031 wage. A group with no occupation
+left would take the state's all-occupations median ratio; none does. Ratios
+run 0.764 (AL) to 1.298 (DC) for no-BA and 0.746 (AL) to 1.278 (DC) for BA.
+OES 2019 has no metropolitan divisions, so NYC takes the New
+York-Newark-Jersey City MSA (35620), suburbs included.
 
 `labor_requirements` scale by a state licensing staffing index. For
 centres: required staff per child (1 ÷ licensed children per staff by age),
@@ -331,12 +326,13 @@ not); it scales `paid_home_based`. Rules: HHS ACF 2014 licensing study (CAP
 (Article 47, June 2019). Centre index runs 0.731 (LA) to 1.499 (DC); home
 index 0.425 (AR) to 1.698 (DE).
 
-`per_unit_residual` scales by the BEA Regional Price Parity (all items,
-2019; NYC takes the New York metro area). The equilibrium solves
+`per_unit_residual` stays national. The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
 residual in **dollars** covering everything that is not labour — rent, food,
-insurance, administration, margin — and the RPP carries the state price level
-into it.
+insurance, administration, margin. No reliable sector-specific geographic
+adjustment exists (the all-items Regional Price Parity measures consumer
+prices, not child care costs), so it stays national; state prices still
+differ through wages and staffing.
 
 `elasticities` stay national (no-BA 4, BA 2). The national values are
 assumptions (Borowsky et al. 2022, NBER w30140, section 4.4); no state
@@ -400,8 +396,8 @@ adjustment was applied (and the solved deltas), the supply-parameter source
    supplements). Significant for state-level affordability results; to be
    revisited.
 2. **Partial supply anchoring.** Each state supply yaml re-bases labour
-   supply to the state's base-year hours and takes state wages, staffing,
-   and non-labour residual (§7); elasticities stay national. Base-year
+   supply to the state's base-year hours and takes state wages and staffing
+   (§7); the non-labour residual and elasticities stay national. Base-year
    *quantities* match; price *responses* use national elasticities. The demand and
    supply files are not forced to jointly reproduce an observed state
    equilibrium.
@@ -423,7 +419,7 @@ optional; a state with a demand file also needs its supply file, and a supply
 file without a demand file stops the run (§7). All
 three are built, for the 50 states, DC, and NYC, by the scripts named above.
 `<ST>` is the USPS postal abbreviation, uppercase, or a sub-state code
-(`NYC`). NYC's supply file takes its own ACS wage ratio (the
-five boroughs); its employment file takes New York's age-sex composition,
+(`NYC`). NYC's supply file takes the OES New York MSA wage ratio; its
+employment file takes New York's age-sex composition,
 which has no city figure. How the demand targets are built is
 in `state_data/README.md`.

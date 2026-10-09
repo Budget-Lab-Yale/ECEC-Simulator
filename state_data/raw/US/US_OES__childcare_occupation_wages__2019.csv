@@ -1,0 +1,212 @@
+geo,area,area_title,occ_code,occ_title,tot_emp,h_median,a_median
+US,US,U.S.,00-0000,All Occupations,146875480,19.14,39810
+US,US,U.S.,11-9031,"Education and Childcare Administrators, Preschool and Daycare",52360,23.18,48210
+US,US,U.S.,25-2011,"Preschool Teachers, Except Special Education",431350,14.67,30520
+US,US,U.S.,39-9011,Childcare Workers,561520,11.65,24230
+AL,01,Alabama,00-0000,All Occupations,1974170,16.73,34800
+AL,01,Alabama,11-9031,"Education and Childcare Administrators, Preschool and Daycare",470,18.07,37580
+AL,01,Alabama,25-2011,"Preschool Teachers, Except Special Education",4050,10.29,21390
+AL,01,Alabama,39-9011,Childcare Workers,6140,9.19,19120
+AK,02,Alaska,00-0000,All Occupations,317090,23.34,48540
+AK,02,Alaska,11-9031,"Education and Childcare Administrators, Preschool and Daycare",150,25.64,53330
+AK,02,Alaska,25-2011,"Preschool Teachers, Except Special Education",1110,15.15,31500
+AK,02,Alaska,39-9011,Childcare Workers,1670,13.21,27470
+AZ,04,Arizona,00-0000,All Occupations,2866820,18.46,38410
+AZ,04,Arizona,11-9031,"Education and Childcare Administrators, Preschool and Daycare",1170,18.96,39430
+AZ,04,Arizona,25-2011,"Preschool Teachers, Except Special Education",8180,13.87,28850
+AZ,04,Arizona,39-9011,Childcare Workers,9550,11.97,24890
+AR,05,Arkansas,00-0000,All Occupations,1217420,15.84,32940
+AR,05,Arkansas,11-9031,"Education and Childcare Administrators, Preschool and Daycare",610,18.52,38520
+AR,05,Arkansas,25-2011,"Preschool Teachers, Except Special Education",3690,14.34,29830
+AR,05,Arkansas,39-9011,Childcare Workers,6000,9.8000000000000007,20380
+CA,06,California,00-0000,All Occupations,17382400,21.24,44180
+CA,06,California,11-9031,"Education and Childcare Administrators, Preschool and Daycare",7420,24.78,51550
+CA,06,California,25-2011,"Preschool Teachers, Except Special Education",53290,16.829999999999998,35000
+CA,06,California,39-9011,Childcare Workers,55430,13.43,27940
+CO,08,Colorado,00-0000,All Occupations,2678490,21.28,44250
+CO,08,Colorado,11-9031,"Education and Childcare Administrators, Preschool and Daycare",720,23.01,47870
+CO,08,Colorado,25-2011,"Preschool Teachers, Except Special Education",6650,15.25,31720
+CO,08,Colorado,39-9011,Childcare Workers,10110,13.79,28690
+CT,09,Connecticut,00-0000,All Occupations,1665100,23.33,48530
+CT,09,Connecticut,11-9031,"Education and Childcare Administrators, Preschool and Daycare",800,28.07,58390
+CT,09,Connecticut,25-2011,"Preschool Teachers, Except Special Education",6510,17.46,36310
+CT,09,Connecticut,39-9011,Childcare Workers,8740,12.74,26490
+DE,10,Delaware,00-0000,All Occupations,451900,19.66,40900
+DE,10,Delaware,11-9031,"Education and Childcare Administrators, Preschool and Daycare",240,25.98,54040
+DE,10,Delaware,25-2011,"Preschool Teachers, Except Special Education",2010,12.62,26240
+DE,10,Delaware,39-9011,Childcare Workers,950,10.6,22060
+DC,11,District of Columbia,00-0000,All Occupations,723510,35.74,74340
+DC,11,District of Columbia,25-2011,"Preschool Teachers, Except Special Education",1770,18.3,38070
+DC,11,District of Columbia,39-9011,Childcare Workers,1740,15.36,31950
+FL,12,Florida,00-0000,All Occupations,8794050,17.23,35850
+FL,12,Florida,11-9031,"Education and Childcare Administrators, Preschool and Daycare",**,20.65,42940
+FL,12,Florida,25-2011,"Preschool Teachers, Except Special Education",31060,12.07,25110
+FL,12,Florida,39-9011,Childcare Workers,27310,10.87,22610
+GA,13,Georgia,00-0000,All Occupations,4471860,17.75,36930
+GA,13,Georgia,11-9031,"Education and Childcare Administrators, Preschool and Daycare",2040,19.53,40630
+GA,13,Georgia,25-2011,"Preschool Teachers, Except Special Education",11920,14.05,29230
+GA,13,Georgia,39-9011,Childcare Workers,17220,9.3699999999999992,19500
+HI,15,Hawaii,00-0000,All Occupations,635500,21.35,44400
+HI,15,Hawaii,11-9031,"Education and Childcare Administrators, Preschool and Daycare",180,24.99,51980
+HI,15,Hawaii,25-2011,"Preschool Teachers, Except Special Education",1600,19.36,40270
+HI,15,Hawaii,39-9011,Childcare Workers,1630,12.43,25850
+ID,16,Idaho,00-0000,All Occupations,727160,17,35360
+ID,16,Idaho,11-9031,"Education and Childcare Administrators, Preschool and Daycare",110,19.5,40550
+ID,16,Idaho,25-2011,"Preschool Teachers, Except Special Education",1370,11.52,23960
+ID,16,Idaho,39-9011,Childcare Workers,1890,10.08,20970
+IL,17,Illinois,00-0000,All Occupations,6025790,19.739999999999998,41060
+IL,17,Illinois,11-9031,"Education and Childcare Administrators, Preschool and Daycare",2610,24.44,50830
+IL,17,Illinois,25-2011,"Preschool Teachers, Except Special Education",25030,14.29,29720
+IL,17,Illinois,39-9011,Childcare Workers,16550,11.16,23220
+IN,18,Indiana,00-0000,All Occupations,3073680,17.77,36960
+IN,18,Indiana,11-9031,"Education and Childcare Administrators, Preschool and Daycare",790,19.510000000000002,40570
+IN,18,Indiana,25-2011,"Preschool Teachers, Except Special Education",6460,12.84,26700
+IN,18,Indiana,39-9011,Childcare Workers,8110,10.31,21450
+IA,19,Iowa,00-0000,All Occupations,1549460,18.41,38280
+IA,19,Iowa,11-9031,"Education and Childcare Administrators, Preschool and Daycare",810,19.13,39780
+IA,19,Iowa,25-2011,"Preschool Teachers, Except Special Education",4970,12.88,26780
+IA,19,Iowa,39-9011,Childcare Workers,8390,9.35,19460
+KS,20,Kansas,00-0000,All Occupations,1392480,17.79,37010
+KS,20,Kansas,11-9031,"Education and Childcare Administrators, Preschool and Daycare",510,19.989999999999998,41580
+KS,20,Kansas,25-2011,"Preschool Teachers, Except Special Education",2210,14.08,29280
+KS,20,Kansas,39-9011,Childcare Workers,5290,10.199999999999999,21220
+KY,21,Kentucky,00-0000,All Occupations,1896900,17.09,35540
+KY,21,Kentucky,11-9031,"Education and Childcare Administrators, Preschool and Daycare",510,17.3,35980
+KY,21,Kentucky,25-2011,"Preschool Teachers, Except Special Education",3930,14.42,29990
+KY,21,Kentucky,39-9011,Childcare Workers,11160,9.89,20570
+LA,22,Louisiana,00-0000,All Occupations,1921950,16.66,34650
+LA,22,Louisiana,11-9031,"Education and Childcare Administrators, Preschool and Daycare",220,18.8,39110
+LA,22,Louisiana,25-2011,"Preschool Teachers, Except Special Education",1520,12.91,26840
+LA,22,Louisiana,39-9011,Childcare Workers,8690,9.1300000000000008,18990
+ME,23,Maine,00-0000,All Occupations,611170,18.45,38370
+ME,23,Maine,11-9031,"Education and Childcare Administrators, Preschool and Daycare",240,25.07,52150
+ME,23,Maine,25-2011,"Preschool Teachers, Except Special Education",1850,17.28,35950
+ME,23,Maine,39-9011,Childcare Workers,2760,12.89,26810
+MD,24,Maryland,00-0000,All Occupations,2701010,22.1,45970
+MD,24,Maryland,11-9031,"Education and Childcare Administrators, Preschool and Daycare",970,23.09,48030
+MD,24,Maryland,25-2011,"Preschool Teachers, Except Special Education",9880,15.33,31880
+MD,24,Maryland,39-9011,Childcare Workers,8720,11.59,24100
+MA,25,Massachusetts,00-0000,All Occupations,3619640,24.14,50200
+MA,25,Massachusetts,11-9031,"Education and Childcare Administrators, Preschool and Daycare",2120,25.86,53790
+MA,25,Massachusetts,25-2011,"Preschool Teachers, Except Special Education",17070,17.55,36500
+MA,25,Massachusetts,39-9011,Childcare Workers,13990,14.11,29350
+MI,26,Michigan,00-0000,All Occupations,4344230,18.600000000000001,38680
+MI,26,Michigan,11-9031,"Education and Childcare Administrators, Preschool and Daycare",880,21.7,45140
+MI,26,Michigan,25-2011,"Preschool Teachers, Except Special Education",9940,14.89,30980
+MI,26,Michigan,39-9011,Childcare Workers,17230,11.13,23160
+MN,27,Minnesota,00-0000,All Occupations,2880650,21.21,44110
+MN,27,Minnesota,11-9031,"Education and Childcare Administrators, Preschool and Daycare",690,28.4,59070
+MN,27,Minnesota,25-2011,"Preschool Teachers, Except Special Education",9180,17.46,36320
+MN,27,Minnesota,39-9011,Childcare Workers,12150,12.06,25080
+MS,28,Mississippi,00-0000,All Occupations,1128280,15,31210
+MS,28,Mississippi,11-9031,"Education and Childcare Administrators, Preschool and Daycare",400,19.78,41150
+MS,28,Mississippi,25-2011,"Preschool Teachers, Except Special Education",2460,14.4,29960
+MS,28,Mississippi,39-9011,Childcare Workers,6020,8.94,18590
+MO,29,Missouri,00-0000,All Occupations,2820610,17.88,37180
+MO,29,Missouri,11-9031,"Education and Childcare Administrators, Preschool and Daycare",540,23.89,49690
+MO,29,Missouri,25-2011,"Preschool Teachers, Except Special Education",5920,13.78,28660
+MO,29,Missouri,39-9011,Childcare Workers,13390,10.45,21730
+MT,30,Montana,00-0000,All Occupations,468000,17.510000000000002,36420
+MT,30,Montana,11-9031,"Education and Childcare Administrators, Preschool and Daycare",150,20.18,41980
+MT,30,Montana,25-2011,"Preschool Teachers, Except Special Education",770,14.4,29960
+MT,30,Montana,39-9011,Childcare Workers,3360,10.84,22540
+NE,31,Nebraska,00-0000,All Occupations,982040,18.46,38390
+NE,31,Nebraska,11-9031,"Education and Childcare Administrators, Preschool and Daycare",360,22.29,46360
+NE,31,Nebraska,25-2011,"Preschool Teachers, Except Special Education",1890,17.11,35590
+NE,31,Nebraska,39-9011,Childcare Workers,8420,11.12,23140
+NV,32,Nevada,00-0000,All Occupations,1392680,17.510000000000002,36410
+NV,32,Nevada,11-9031,"Education and Childcare Administrators, Preschool and Daycare",160,29.35,61050
+NV,32,Nevada,25-2011,"Preschool Teachers, Except Special Education",1790,13.26,27580
+NV,32,Nevada,39-9011,Childcare Workers,4070,10.62,22080
+NH,33,New Hampshire,00-0000,All Occupations,660480,19.95,41490
+NH,33,New Hampshire,11-9031,"Education and Childcare Administrators, Preschool and Daycare",430,22.18,46130
+NH,33,New Hampshire,25-2011,"Preschool Teachers, Except Special Education",3200,14.43,30020
+NH,33,New Hampshire,39-9011,Childcare Workers,1910,11.69,24320
+NJ,34,New Jersey,00-0000,All Occupations,4087950,21.64,45000
+NJ,34,New Jersey,11-9031,"Education and Childcare Administrators, Preschool and Daycare",1760,28.7,59690
+NJ,34,New Jersey,25-2011,"Preschool Teachers, Except Special Education",16420,17.36,36100
+NJ,34,New Jersey,39-9011,Childcare Workers,19090,12.59,26180
+NM,35,New Mexico,00-0000,All Occupations,823570,17.03,35420
+NM,35,New Mexico,11-9031,"Education and Childcare Administrators, Preschool and Daycare",250,24.69,51350
+NM,35,New Mexico,25-2011,"Preschool Teachers, Except Special Education",2910,13.66,28420
+NM,35,New Mexico,39-9011,Childcare Workers,2110,10,20800
+NY,36,New York,00-0000,All Occupations,9522980,22.44,46680
+NY,36,New York,11-9031,"Education and Childcare Administrators, Preschool and Daycare",3070,31.83,66220
+NY,36,New York,25-2011,"Preschool Teachers, Except Special Education",23890,17.87,37160
+NY,36,New York,39-9011,Childcare Workers,53290,13.58,28240
+NC,37,North Carolina,00-0000,All Occupations,4462800,17.75,36910
+NC,37,North Carolina,11-9031,"Education and Childcare Administrators, Preschool and Daycare",1690,20.88,43430
+NC,37,North Carolina,25-2011,"Preschool Teachers, Except Special Education",15350,12.83,26680
+NC,37,North Carolina,39-9011,Childcare Workers,19780,10.62,22090
+ND,38,North Dakota,00-0000,All Occupations,422520,20.440000000000001,42510
+ND,38,North Dakota,11-9031,"Education and Childcare Administrators, Preschool and Daycare",210,19.48,40520
+ND,38,North Dakota,25-2011,"Preschool Teachers, Except Special Education",910,12.75,26520
+ND,38,North Dakota,39-9011,Childcare Workers,3400,11.44,23800
+OH,39,Ohio,00-0000,All Occupations,5447780,18.54,38560
+OH,39,Ohio,11-9031,"Education and Childcare Administrators, Preschool and Daycare",1920,20.77,43190
+OH,39,Ohio,25-2011,"Preschool Teachers, Except Special Education",15430,13.06,27170
+OH,39,Ohio,39-9011,Childcare Workers,18710,10.65,22160
+OK,40,Oklahoma,00-0000,All Occupations,1617390,17.18,35730
+OK,40,Oklahoma,11-9031,"Education and Childcare Administrators, Preschool and Daycare",730,18.14,37730
+OK,40,Oklahoma,25-2011,"Preschool Teachers, Except Special Education",7210,12.44,25870
+OK,40,Oklahoma,39-9011,Childcare Workers,5590,9.26,19270
+OR,41,Oregon,00-0000,All Occupations,1905860,19.829999999999998,41250
+OR,41,Oregon,11-9031,"Education and Childcare Administrators, Preschool and Daycare",**,19.91,41400
+OR,41,Oregon,25-2011,"Preschool Teachers, Except Special Education",6540,14.4,29950
+OR,41,Oregon,39-9011,Childcare Workers,5680,12.46,25930
+PA,42,Pennsylvania,00-0000,All Occupations,5901590,18.989999999999998,39490
+PA,42,Pennsylvania,11-9031,"Education and Childcare Administrators, Preschool and Daycare",2710,23.4,48670
+PA,42,Pennsylvania,25-2011,"Preschool Teachers, Except Special Education",14400,13.96,29030
+PA,42,Pennsylvania,39-9011,Childcare Workers,24340,10.69,22240
+RI,44,Rhode Island,00-0000,All Occupations,483580,21.24,44170
+RI,44,Rhode Island,11-9031,"Education and Childcare Administrators, Preschool and Daycare",230,24.32,50590
+RI,44,Rhode Island,25-2011,"Preschool Teachers, Except Special Education",1540,13.8,28700
+RI,44,Rhode Island,39-9011,Childcare Workers,2540,12.01,24980
+SC,45,South Carolina,00-0000,All Occupations,2107760,16.68,34690
+SC,45,South Carolina,11-9031,"Education and Childcare Administrators, Preschool and Daycare",510,18.11,37660
+SC,45,South Carolina,25-2011,"Preschool Teachers, Except Special Education",5560,11.05,22990
+SC,45,South Carolina,39-9011,Childcare Workers,6160,9.3699999999999992,19480
+SD,46,South Dakota,00-0000,All Occupations,425140,16.71,34750
+SD,46,South Dakota,11-9031,"Education and Childcare Administrators, Preschool and Daycare",100,27.2,56570
+SD,46,South Dakota,25-2011,"Preschool Teachers, Except Special Education",1620,14.23,29600
+SD,46,South Dakota,39-9011,Childcare Workers,2520,9.99,20770
+TN,47,Tennessee,00-0000,All Occupations,3007710,17.260000000000002,35910
+TN,47,Tennessee,11-9031,"Education and Childcare Administrators, Preschool and Daycare",770,23.79,49470
+TN,47,Tennessee,25-2011,"Preschool Teachers, Except Special Education",6420,13.45,27980
+TN,47,Tennessee,39-9011,Childcare Workers,10560,9.85,20490
+TX,48,Texas,00-0000,All Occupations,12431200,18.28,38010
+TX,48,Texas,11-9031,"Education and Childcare Administrators, Preschool and Daycare",3580,21.93,45610
+TX,48,Texas,25-2011,"Preschool Teachers, Except Special Education",33810,14.44,30030
+TX,48,Texas,39-9011,Childcare Workers,51120,10.15,21120
+UT,49,Utah,00-0000,All Occupations,1504070,18.23,37910
+UT,49,Utah,11-9031,"Education and Childcare Administrators, Preschool and Daycare",140,17.260000000000002,35900
+UT,49,Utah,25-2011,"Preschool Teachers, Except Special Education",2100,13.24,27550
+UT,49,Utah,39-9011,Childcare Workers,5600,10.47,21780
+VT,50,Vermont,00-0000,All Occupations,306300,19.68,40920
+VT,50,Vermont,11-9031,"Education and Childcare Administrators, Preschool and Daycare",270,23.41,48690
+VT,50,Vermont,25-2011,"Preschool Teachers, Except Special Education",1040,16.48,34290
+VT,50,Vermont,39-9011,Childcare Workers,1460,13.72,28540
+VA,51,Virginia,00-0000,All Occupations,3878770,20.3,42220
+VA,51,Virginia,11-9031,"Education and Childcare Administrators, Preschool and Daycare",1040,27.62,57450
+VA,51,Virginia,25-2011,"Preschool Teachers, Except Special Education",10360,15.91,33080
+VA,51,Virginia,39-9011,Childcare Workers,14540,10.96,22800
+WA,53,Washington,00-0000,All Occupations,3318510,23.15,48140
+WA,53,Washington,11-9031,"Education and Childcare Administrators, Preschool and Daycare",1460,24.12,50170
+WA,53,Washington,25-2011,"Preschool Teachers, Except Special Education",11610,15.96,33190
+WA,53,Washington,39-9011,Childcare Workers,6840,14.57,30300
+WV,54,West Virginia,00-0000,All Occupations,702100,16.309999999999999,33920
+WV,54,West Virginia,11-9031,"Education and Childcare Administrators, Preschool and Daycare",180,17.329999999999998,36040
+WV,54,West Virginia,25-2011,"Preschool Teachers, Except Special Education",1810,12.28,25540
+WV,54,West Virginia,39-9011,Childcare Workers,2500,9.9499999999999993,20690
+WI,55,Wisconsin,00-0000,All Occupations,2870050,18.79,39090
+WI,55,Wisconsin,11-9031,"Education and Childcare Administrators, Preschool and Daycare",770,21.64,45010
+WI,55,Wisconsin,25-2011,"Preschool Teachers, Except Special Education",10260,12.23,25440
+WI,55,Wisconsin,39-9011,Childcare Workers,5800,10.66,22170
+WY,56,Wyoming,00-0000,All Occupations,273340,20.02,41650
+WY,56,Wyoming,11-9031,"Education and Childcare Administrators, Preschool and Daycare",130,21.5,44720
+WY,56,Wyoming,25-2011,"Preschool Teachers, Except Special Education",860,13.27,27600
+WY,56,Wyoming,39-9011,Childcare Workers,1310,11.46,23840
+NYC,35620,"New York-Newark-Jersey City, NY-NJ-PA",00-0000,All Occupations,9655330,23.48,48840
+NYC,35620,"New York-Newark-Jersey City, NY-NJ-PA",11-9031,"Education and Childcare Administrators, Preschool and Daycare",3610,33.590000000000003,69860
+NYC,35620,"New York-Newark-Jersey City, NY-NJ-PA",25-2011,"Preschool Teachers, Except Special Education",29960,18.73,38950
+NYC,35620,"New York-Newark-Jersey City, NY-NJ-PA",39-9011,Childcare Workers,51960,13.95,29020

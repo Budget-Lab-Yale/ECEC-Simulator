@@ -476,4 +476,49 @@ expect_error(get_employment_rate_growth_factor(mutate(emp_macro, across(c(marrie
              'non-positive population weight.*18_19', 'zero fine-bin weight stops')
 
 
+#------------------------------
+# Income ranks within group (care-choice forest: NSECE by region, ACS by state)
+#------------------------------
+
+source('src/shared_functions/assign_income_pctile.R')
+
+# Three states, incomes on different scales -- same rank pattern within each
+inc_base <- rexp(5000, 1 / 50000)
+inc_grp  <- c(inc_base, 3 * inc_base, inc_base / 2)
+grp      <- rep(c(36L, 21L, 51L), each = length(inc_base))
+cuts <- lapply(split(inc_grp, grp), function(x) quantile(x, seq(0.01, 0.99, 0.01), names = FALSE))
+pct  <- assign_income_pctile(inc_grp, grp, cuts)
+
+stopifnot(all(pct >= 1L & pct <= 100L), is.integer(pct))
+# Each group spreads ~1% per bin
+for (g in unique(grp)) {
+  sh <- tabulate(pct[grp == g], 100) / sum(grp == g)
+  stopifnot(max(abs(sh - 0.01)) < 0.005)
+}
+# Scaled incomes rank identically -- rank is relative to own state
+stopifnot(identical(pct[grp == 36L], pct[grp == 21L]), identical(pct[grp == 36L], pct[grp == 51L]))
+# One national ranking would not: 3x state sits higher
+nat <- assign_income_pctile(inc_grp, rep('US', length(inc_grp)),
+                            list(US = quantile(inc_grp, seq(0.01, 0.99, 0.01), names = FALSE)))
+stopifnot(mean(nat[grp == 21L]) > mean(nat[grp == 36L]) + 10)
+cat('PASS: income ranks uniform within each state, independent of state income level\n')
+
+# Same bins as cut(right = TRUE) on unique cutpoints
+old <- as.integer(as.character(cut(inc_base, c(-Inf, cuts[['36']], Inf), labels = 1:100)))
+stopifnot(identical(pct[grp == 36L], old))
+cat('PASS: matches cut() bins on unique cutpoints\n')
+
+# Tied cutpoints (small state, heavy record) -- no error; NA income/group -> NA
+tied <- list(a = sort(c(rep(10, 50), seq(11, 59))))
+p_t  <- assign_income_pctile(c(5, 10, 10.5, 100, NA), c('a', 'a', 'a', 'a', 'a'), tied)
+stopifnot(identical(p_t, c(1L, 1L, 51L, 100L, NA)))
+stopifnot(is.na(assign_income_pctile(50, NA, tied)))
+cat('PASS: tied cutpoints take bins, NA income or group gives NA\n')
+
+expect_error(assign_income_pctile(c(1, 2), c('a', 'zz'), tied),
+             'no income cutpoints for group.*zz', 'group w/out cutpoints stops')
+expect_error(assign_income_pctile(c(1, 2), 'a', tied),
+             'income has 2 values, group 1', 'length mismatch stops')
+
+
 cat('\nAll state-analysis tests passed.\n')

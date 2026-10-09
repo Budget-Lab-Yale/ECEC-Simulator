@@ -20,6 +20,25 @@ run_nsece_processing <- function() {
 
 
   # Helper functions
+  centre_age_bin <- function(age) {
+
+    #--------------------------------------------------------------------------
+    # Child age (years) -> centre price age bin, same bins as provider file
+    # rates (0-1 infant, 2-3, 4-5; older pooled w/ 4-5).
+    #
+    # Params:
+    #   - age (num vec): child age in years
+    #
+    # Returns: (chr vec) '0-1', '2-3', '4-5'; NA where age NA
+    #--------------------------------------------------------------------------
+
+    case_when(
+      age <= 1 ~ '0-1',
+      age <= 3 ~ '2-3',
+      age >= 4 ~ '4-5'
+    )
+  }
+
   nsece_admin_classify <- function(value, miss_code = -1, admin_code = -8) {
 
     #--------------------------------------------------------------------------
@@ -121,6 +140,120 @@ run_nsece_processing <- function() {
 
     qrf
   }
+
+
+  # --- Centre posted prices and tier boundary (sections 1 and 2) ---
+  cat('Processing 2019 NSECE centre prices...\n')
+
+  # Read center-based provider survey
+  nsece_cb <- estimation_info$paths$NSECE %>%
+    file.path('2019/37941-0006-Data.tsv') %>%
+    fread() %>%
+    tibble()
+
+  enroll_cols   <- grep('^CB9_ENRL_(INF|1YR|2YR|3YR|4YR|5YR)$',    names(nsece_cb), value = T)
+  ft_share_cols <- grep('^CB9_ENRL_FT_(INF|1YR|2YR|3YR|4YR|5YR)$', names(nsece_cb), value = T)
+  price_cols    <- grep('^CB9_STDRATE_WKLY_(INF|2YR|3YR|4YR)$',    names(nsece_cb), value = T)
+  flag_cols     <- grep('^CB9_B1_3A_AGERATE_(INF|2YR|3YR|4YR)_R$', names(nsece_cb), value = T)
+
+  processed_nsece_cb <- nsece_cb %>%
+
+    # Reshape long in age group, wide in variable
+    select(
+      id               = CB9_METH_CASEID,
+      center_weight    = CB9_METH_WEIGHT,
+      region           = CB9_REGION,
+      all_of(enroll_cols),
+      all_of(ft_share_cols),
+      all_of(price_cols),
+      all_of(flag_cols)
+    ) %>%
+    pivot_longer(
+      cols          = all_of(c(enroll_cols, ft_share_cols, price_cols, flag_cols)),
+      names_to      = c('.value', 'age_bin'),
+      names_pattern = '^CB9_(.+?)_(INF|1YR|2YR|3YR|4YR|5YR)(?:_R)?$'
+    ) %>%
+
+    # Encode types of missingness for price
+    mutate(
+      price_status = case_when(
+        is.na(STDRATE_WKLY) ~ 'NIU',
+        ENRL ==  0          ~ 'NIU',
+        B1_3A_AGERATE == -8 ~ 'FREE',
+        B1_3A_AGERATE ==  2 ~ 'NORATE',
+        STDRATE_WKLY  == -1 ~ 'MISS',
+        STDRATE_WKLY  == -2 ~ 'MISS',
+        T                   ~ 'OK'
+      ),
+
+      # Scale to hourly
+      price = case_when(
+        price_status == 'OK'   ~ STDRATE_WKLY / 40,
+        price_status == 'FREE' ~ 0,
+        T                      ~ NA
+      )
+    ) %>%
+
+    # Aggregate to three age groups
+    group_by(
+      id,
+      region,
+      age_bin = case_when(
+        age_bin %in% c('INF', '1YR') ~ '0-1',
+        age_bin %in% c('2YR', '3YR') ~ '2-3',
+        age_bin %in% c('4YR', '5YR') ~ '4-5',
+      )
+    ) %>%
+
+    # Aggregation rules
+    summarise(
+      center_weight = mean(center_weight),
+
+      # Enrollment is a simple sum
+      enrollment = sum(ENRL),
+
+      # For FT share, use nonmissing values where possible
+      share_ft = case_when(
+        all(ENRL_FT < 0) ~ 0,
+        any(ENRL_FT < 0) ~ mean(ENRL_FT[ENRL_FT >= 0]) / 100,
+        T                ~ mean(ENRL_FT) / 100
+      ),
+
+      # For price, NAs are for 1 and 5 only, so use other value. For 2-3, use simple mean of
+      # nonmissing (-1, -2). This is the first layer of aggregation.
+      price = case_when(
+        all(is.na(price)) ~ NA,
+        T                 ~ mean(price, na.rm = T)
+      ),
+      .groups = 'drop'
+    ) %>%
+
+    # Express enrollment in FTE terms
+    mutate(
+      enrollment_fte = 1 * (enrollment * share_ft) + 0.5 * (enrollment * (1 - share_ft))
+    ) %>%
+    select(id, center_weight, region, age_bin, enrollment, enrollment_fte, price)
+
+
+  # Tier boundary: FTE-weighted median posted price in Census region x age
+  # bin (2026-10-09). One dollar line for both sides -- centres (section 2,
+  # posted price) and families (section 1, hourly payment) fall below it
+  # (low) or at/above it (high). Replaces national $4.75 household cutoff and
+  # national-median-by-age provider cutoff.
+  medians <- processed_nsece_cb %>%
+    filter(
+      !is.na(price),
+      price > 0
+    ) %>%
+    group_by(region, age_bin) %>%
+    summarise(
+      median = wtd.quantile(
+        x      = price,
+        weight = center_weight * enrollment_fte,
+        probs  = 0.5
+      ),
+      .groups = 'drop'
+    )
 
 
   # --- SECTION 1: Process household (demand-side) NSECE data ---
@@ -556,8 +689,8 @@ run_nsece_processing <- function() {
 
           # is_other will be derived below using location/relationship
           is_paid      = !is.na(paid_calc)   & paid_calc == 1,
-          is_lowprice  = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost <  4.75,
-          is_highprice = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost >= 4.75,
+          # Priced paid centre -- tier set below against own market's median
+          is_priced    = is_center & is_paid & net_hourly_cost_status == 'OK',
 
           # - "Home-Based": individual care (TOC 1-3), outside child's home, no prior relationship
           # - "Other":     individual care with in-home/prior-rel, OR org/irregular/unknown (TOC 5,7,8)
@@ -570,9 +703,8 @@ run_nsece_processing <- function() {
           ecec_choice = case_when(
             is_k8                                               ~ 'K-8',
             is_center & !is_paid                                ~ 'Unpaid Center-Based',
-            is_center & is_paid & is_lowprice                   ~ 'Low-Priced Center-Based',
-            is_center & is_paid & is_highprice                  ~ 'High-Priced Center-Based',
-            is_center & is_paid & !(is_lowprice | is_highprice) ~ NA,
+            is_center & is_paid & is_priced                     ~ 'Paid Center-Based',
+            is_center & is_paid & !is_priced                    ~ NA,
             is_home_based & !is_paid                            ~ 'Unpaid Home-Based',
             is_home_based &  is_paid                            ~ 'Paid Home-Based',
             is_other_kind & !is_paid                            ~ 'Other Unpaid',
@@ -580,6 +712,29 @@ run_nsece_processing <- function() {
             TRUE                                                ~ NA
           )
         )
+
+      # Paid-centre tier: family's hourly payment vs centre tier boundary
+      # (`medians`, provider posted price) for household's region x child's
+      # age bin -- same dollar line as centres. Payment net of third-party
+      # payments, so subsidised families fall low more often (limitation).
+      providers <- providers %>%
+        left_join(children %>% select(hh_id, child_id, age), by = c('hh_id', 'child_id')) %>%
+        left_join(households %>% select(hh_id, region), by = 'hh_id') %>%
+        mutate(age_bin = centre_age_bin(age)) %>%
+        left_join(medians, by = c('region', 'age_bin')) %>%
+        mutate(
+          ecec_choice = case_when(
+            is.na(ecec_choice) | ecec_choice != 'Paid Center-Based' ~ ecec_choice,
+            is.na(median)                                           ~ ecec_choice,
+            net_hourly_cost >= median                               ~ 'High-Priced Center-Based',
+            TRUE                                                    ~ 'Low-Priced Center-Based'
+          )
+        ) %>%
+        select(-age, -region, -age_bin, -median)
+      if (any(providers$ecec_choice %in% 'Paid Center-Based')) {
+        stop('NSECE paid-centre arrangements w/out a tier boundary (region x age bin). ',
+             'Check HH9_REGION / CB9_REGION codes and child ages.')
+      }
 
       # ---- Child-level overlay ('Parent only' + hours buckets) ---------------
       # Priority ranking for primary care assignment when child has multiple arrangements.
@@ -745,12 +900,6 @@ run_nsece_processing <- function() {
   # Must run BEFORE price model training to get supply-side prices
   cat('Processing 2019 NSECE supply data...\n')
 
-  # Read center-based provider survey
-  nsece_cb <- estimation_info$paths$NSECE %>%
-    file.path('2019/37941-0006-Data.tsv') %>%
-    fread() %>%
-    tibble()
-
   # Read home-based provider survey
   nsece_hb <- estimation_info$paths$NSECE %>%
     file.path('2019/37941-0007-Data.tsv') %>%
@@ -766,106 +915,9 @@ run_nsece_processing <- function() {
   supply_params <- {
 
     processed_centers <- {
-      enroll_cols   <- grep('^CB9_ENRL_(INF|1YR|2YR|3YR|4YR|5YR)$',    names(nsece_cb), value = T)
-      ft_share_cols <- grep('^CB9_ENRL_FT_(INF|1YR|2YR|3YR|4YR|5YR)$', names(nsece_cb), value = T)
-      price_cols    <- grep('^CB9_STDRATE_WKLY_(INF|2YR|3YR|4YR)$',    names(nsece_cb), value = T)
-      flag_cols     <- grep('^CB9_B1_3A_AGERATE_(INF|2YR|3YR|4YR)_R$', names(nsece_cb), value = T)
-
-      processed_nsece_cb <- nsece_cb %>%
-
-        # Reshape long in age group, wide in variable
-        select(
-          id               = CB9_METH_CASEID,
-          center_weight    = CB9_METH_WEIGHT,
-          all_of(enroll_cols),
-          all_of(ft_share_cols),
-          all_of(price_cols),
-          all_of(flag_cols)
-        ) %>%
-        pivot_longer(
-          cols          = all_of(c(enroll_cols, ft_share_cols, price_cols, flag_cols)),
-          names_to      = c('.value', 'age_bin'),
-          names_pattern = '^CB9_(.+?)_(INF|1YR|2YR|3YR|4YR|5YR)(?:_R)?$'
-        ) %>%
-
-        # Encode types of missingness for price
-        mutate(
-          price_status = case_when(
-            is.na(STDRATE_WKLY) ~ 'NIU',
-            ENRL ==  0          ~ 'NIU',
-            B1_3A_AGERATE == -8 ~ 'FREE',
-            B1_3A_AGERATE ==  2 ~ 'NORATE',
-            STDRATE_WKLY  == -1 ~ 'MISS',
-            STDRATE_WKLY  == -2 ~ 'MISS',
-            T                   ~ 'OK'
-          ),
-
-          # Scale to hourly
-          price = case_when(
-            price_status == 'OK'   ~ STDRATE_WKLY / 40,
-            price_status == 'FREE' ~ 0,
-            T                      ~ NA
-          )
-        ) %>%
-
-        # Aggregate to three age groups
-        group_by(
-          id,
-          age_bin = case_when(
-            age_bin %in% c('INF', '1YR') ~ '0-1',
-            age_bin %in% c('2YR', '3YR') ~ '2-3',
-            age_bin %in% c('4YR', '5YR') ~ '4-5',
-          )
-        ) %>%
-
-        # Aggregation rules
-        summarise(
-          center_weight = mean(center_weight),
-
-          # Enrollment is a simple sum
-          enrollment = sum(ENRL),
-
-          # For FT share, use nonmissing values where possible
-          share_ft = case_when(
-            all(ENRL_FT < 0) ~ 0,
-            any(ENRL_FT < 0) ~ mean(ENRL_FT[ENRL_FT >= 0]) / 100,
-            T                ~ mean(ENRL_FT) / 100
-          ),
-
-          # For price, NAs are for 1 and 5 only, so use other value. For 2-3, use simple mean of
-          # nonmissing (-1, -2). This is the first layer of aggregation.
-          price = case_when(
-            all(is.na(price)) ~ NA,
-            T                 ~ mean(price, na.rm = T)
-          ),
-          .groups = 'drop'
-        ) %>%
-
-        # Express enrollment in FTE terms
-        mutate(
-          enrollment_fte = 1 * (enrollment * share_ft) + 0.5 * (enrollment * (1 - share_ft))
-        ) %>%
-        select(id, center_weight, age_bin, enrollment, enrollment_fte, price)
-
-
-      # Classify production into one of three types. First, calculate median price
-      medians <- processed_nsece_cb %>%
-        filter(
-          !is.na(price),
-          price > 0
-        ) %>%
-        group_by(age_bin) %>%
-        summarise(
-          median = wtd.quantile(
-            x      = price,
-            weight = center_weight * enrollment_fte,
-            probs  = 0.5
-          )
-        )
-
       # Then do classification and return
       processed_nsece_cb %>%
-        left_join(medians, by = 'age_bin') %>%
+        left_join(medians, by = c('region', 'age_bin')) %>%
         mutate(
           ecec_choice = case_when(
             is.na(price)    ~ NA,

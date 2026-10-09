@@ -227,8 +227,7 @@ STATE_POSTAL_TO_FIPS <- c(
 # rate (state_data build), childcare wage ratio (state_supply_params.R),
 # age-sex composition (state_epop_projections.R) -- state owning `statefip`.
 # Counties read from config/substate_geographies.csv (geo, statefip, countyfip;
-# one row per county), shared w/ Python ACS scripts
-# (acs_county_crosswalk_2019.py, acs_childcare_wage_by_education_2019.py).
+# one row per county), shared w/ Python ACS script acs_county_crosswalk_2019.py.
 # New geography = its county rows there. Path relative to repo root.
 SUBSTATE_GEOGRAPHIES <- local({
   sg <- utils::read.csv(file.path('config', 'substate_geographies.csv'),

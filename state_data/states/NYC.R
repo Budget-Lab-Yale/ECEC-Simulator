@@ -6,8 +6,8 @@
 # (00_build_demand_targets.R) takes NY's out/nsch_participation_rate_base.csv
 # row (parent_geo(), src/shared_functions/constants.R) as is. City differs by
 # population, program counts, own p0
-# mix; wage ratio from ACS childcare workers in five boroughs
-# (acs_childcare_wage_by_education_2019.py).
+# mix; wage ratio from OES New York MSA 35620 childcare occupations
+# (resources/supply/oes_childcare_wage_ratios_2019.R).
 #
 # NY BUILD INCLUDES THIS ONE. NY minus NYC = rest of state by definition for
 # population, program counts only -- city's rate, p0 mix both ratios per

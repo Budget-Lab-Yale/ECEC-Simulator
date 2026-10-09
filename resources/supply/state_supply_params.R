@@ -10,19 +10,20 @@
 # state (elasticity 2 vs 4 -- same ratio bites twice as hard).
 # config/state/supply/<ST>.yaml, when present, replaces whole parameter set
 # (parse_supply_params_yaml()) -- files carry national parameters w/ wages,
-# labor_requirements, per_unit_residual re-based to state.
+# labor_requirements re-based to state.
 #
 # L_0 (labor_supply) NOT in file. 3a_initialize_simulation.R sets it per state
 # run = colSums(L_req * model base-year sector hours) from
 # adjust_alpha_for_state() -- ratio exactly 1 in base year. Needs
 # config/state/demand/<GEO>.csv; override w/out demand file stops run.
 #
-# w_0 (wages) = national NSECE wage x ACS state / national median hourly
-# earnings per group (acs_childcare_wage_by_education_2019.py: four childcare
-# occupations, education read off each worker, 2018-19 records of 2015-19
-# 5-year file, cell under 30 records takes all-worker ratio). Ratio keeps NSECE's wage
-# definition, cancels differences common to every state; at L = L_0 market
-# wage = state's own base-year wage.
+# w_0 (wages) = national NSECE wage x OES May 2019 state / national
+# childcare wage per group (oes_childcare_wage_ratios_2019.R: OES hourly
+# medians of childcare workers 39-9011, preschool teachers 25-2011,
+# preschool and childcare administrators 11-9031, mixed at national ACS
+# occupation shares of each education group; NYC = New York MSA 35620).
+# Ratio keeps NSECE's wage definition, cancels differences common to every
+# state; at L = L_0 market wage = state's own base-year wage.
 #
 # L_req (labor_requirements) = national NSECE worker-hours per child-hour x
 # state licensing staffing index, staffing_index(). Centre index = required
@@ -37,14 +38,12 @@
 # 4-year rule, age 4 takes preschool) and PN3 2020 Table 6 (homes); NYC
 # centres own Article 47 rules (DOHMH, June 2019), NYC homes NYS rules.
 #
-# delta_0 (per_unit_residual) = national x RPP / 100. P_supply = unit_cost +
-# delta_0 * cpi_factor -- delta_0 per-unit DOLLAR residual for all non-labour
-# cost (rent, food, insurance, administration, margin), scaled by BEA Regional
-# Price Parity, all items, 2019 (RPP; NYC = New York metro area, BEA has no
-# city RPP). Unpaid sector has no residual (NA) -- stays NA.
-#
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
+# delta_0 (per_unit_residual; non-labour cost + margin, P_supply = unit_cost +
+# delta_0 * cpi_factor) stays national -- no reliable sector-specific
+# geographic adjustment (all-items RPP measures consumer prices, not child care
+# costs).
 #
 # Usage: Rscript resources/supply/state_supply_params.R [--check]
 #   --check: compute, print, write nothing
@@ -59,14 +58,11 @@ source('src/shared_functions/constants.R')
 
 DIR      <- file.path('resources', 'supply')
 NATIONAL <- file.path(DIR, 'US_NSECE__national_supply_parameters__2019.yaml')
-WAGES    <- file.path(DIR, 'state_childcare_wage_ratios_acs.csv')   # acs_childcare_wage_by_education_2019.py
+WAGES    <- file.path(DIR, 'state_childcare_wage_ratios_oes.csv')   # oes_childcare_wage_ratios_2019.R
 DEMAND   <- file.path('config', 'state', 'demand')
 OUT_DIR  <- file.path('config', 'state', 'supply')
 
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
-
-# rpp_scale() input -- BEA RPP, all items, 2019, per geography
-RPP <- file.path(DIR, 'US_BEA__regional_price_parities_all_items__2019.csv')
 
 # staffing_index() inputs -- licensed children per staff by state, setting, age
 # band; county children 0-4
@@ -101,27 +97,6 @@ require_input <- function(path, hint = '') {
     cat('MISSING INPUT: ', path, hint, '\n', sep = '')
     quit(status = 1)
   }
-}
-
-
-
-rpp_scale <- function(residual, geo) {
-
-  #----------------------------------------------------------------------------
-  # Scales national per_unit_residual (non-labour $ per child-hour) by geo's
-  # RPP / 100; NA entries (unpaid sector) stay NA.
-  #
-  # Params:
-  #   - residual (list): national per_unit_residual by sector
-  #   - geo (chr): state postal code or sub-state code (NYC)
-  #
-  # Returns: (list) per_unit_residual for geo
-  #----------------------------------------------------------------------------
-
-  rpp <- read_csv(RPP, show_col_types = FALSE)
-  f <- rpp$rpp_all_items_2019[rpp$geo == geo] / 100
-  if (length(f) != 1 || !is.finite(f)) stop('no RPP for ', geo, ' in ', RPP)
-  lapply(residual, function(x) if (is.numeric(x) && !is.na(x)) x * f else x)
 }
 
 
@@ -217,7 +192,7 @@ main <- function() {
 
   require_input(NATIONAL)
   natl <- read_yaml(NATIONAL)
-  require_input(WAGES, ' -- run acs_childcare_wage_by_education_2019.py summarise first')
+  require_input(WAGES, ' -- run oes_childcare_wage_ratios_2019.R first')
   wr <- read_csv(WAGES, show_col_types = FALSE)
 
   # Sub-state geography (NYC) w/out own WAGES row falls back to parent state
@@ -242,9 +217,8 @@ main <- function() {
 
     r <- lapply(GROUPS, function(g) wage_ratio(st, g))
     w <- lapply(GROUPS, function(g) natl$wages[[g]] * r[[g]])
-    # Computed in check mode too, so --check exercises both
-    L_req    <- staffing_index(natl$labor_requirements, st)
-    residual <- rpp_scale(natl$per_unit_residual, st)
+    # Computed in check mode too
+    L_req <- staffing_index(natl$labor_requirements, st)
 
     if (!check_only) {
       dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -253,7 +227,6 @@ main <- function() {
       out$labor_supply <- NULL
       out$wages        <- w
       out$labor_requirements <- L_req
-      out$per_unit_residual  <- residual
       write_yaml(out, file.path(OUT_DIR, paste0(st, '.yaml')))
     }
 
@@ -277,8 +250,8 @@ main <- function() {
 
   cat('\n   national wages: no_ba $', sprintf('%.2f', natl$wages$no_ba),
       '  ba $', sprintf('%.2f', natl$wages$ba), '\n', sep = '')
-  cat('   wage_ratio = ACS state / national median hourly earnings, 2018-19\n',
-      '   records; cell under 30 records takes all-worker ratio.\n',
+  cat('   wage_ratio = OES May 2019 state / national childcare wage\n',
+      '   (occupation hourly medians at national ACS education weights).\n',
       sep = '')
   if (!check_only) {
     cat('wrote ', OUT_DIR, '/<ST>.yaml\n', sep = '')

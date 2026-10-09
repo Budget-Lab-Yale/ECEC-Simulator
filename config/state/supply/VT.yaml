@@ -13,13 +13,13 @@ labor_requirements:
     no_ba: 0.1812103
     ba: 0.0431067
 wages:
-  no_ba: 17.3538769
-  ba: 25.8674156
+  no_ba: 13.905296
+  ba: 22.0761277
 elasticities:
   no_ba: 4.0
   ba: 2.0
 per_unit_residual:
   unpaid_center_based: .na.real
-  low_price_center_based: 0.4769925
-  high_price_center_based: 4.7059685
-  paid_home_based: 2.8161469
+  low_price_center_based: 0.4788889
+  high_price_center_based: 4.7246782
+  paid_home_based: 2.8273432

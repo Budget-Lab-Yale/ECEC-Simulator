@@ -18,8 +18,6 @@ universe,quantity,key,value,n
 "A: NSECE, any regular care",short_share_of_part_time_type,Paid Home-Based,0,17
 "A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Center-Based,0.16565477196981104,130
 "A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Home-Based,0.22797889709464056,3
-"A: NSECE, any regular care",any_over_primary,centre,1,1122
-"A: NSECE, any regular care",any_over_primary,Paid Home-Based,1.0782844204595183,208
 "A: NSECE, any regular care",share_of_children_region,US:Center-Based,0.13564115708951938,655
 "A: NSECE, any regular care",share_of_children_region,US:Other Paid,0.07749062862462218,536
 "A: NSECE, any regular care",share_of_children_region,US:Other Unpaid,0.12978809656459717,920

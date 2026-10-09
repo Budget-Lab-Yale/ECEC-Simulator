@@ -14,11 +14,11 @@
 
 
 # Target groups: a state target file names a GROUP of model care types. All
-# singletons except centre care -- no state publishes the within-state price
-# dispersion a low/high split needs (each state's price falls wholly on one
-# side of national boundary), state sources support only the SUM. One delta for
-# the pair pins combined hours, leaves modelled ratio alone: a common additive
-# shift cancels out of odds between them.
+# singletons except centre care -- tiers fall below or at/above provider-file
+# median price for region x age band (1a); no state source counts them, state
+# sources support only the SUM. One delta for the pair pins combined hours, no
+# tier-share target: a common additive shift keeps each family's odds between
+# tiers, aggregate split still moves as families reweight (model determines it).
 STATE_TARGET_GROUPS <- list(
   'Center-Based'        = c('Low-Priced Center-Based', 'High-Priced Center-Based'),
   'Unpaid Center-Based' = 'Unpaid Center-Based',

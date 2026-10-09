@@ -50,10 +50,6 @@ rest$nonparental_rate <- ny$nonparental_rate
 rest$prek_all_settings <- ny$prek_all_settings - nyc$prek_all_settings
 # Five-year-olds: national share outside NYC -- NY's applies it to rest only
 rest$age5_share <- AGE5_NHES_NATIONAL
-# Register paid care: NY's register less NYC's (both registers state law + DOHMH)
-if (!is.null(ny$register_paid) && !is.null(nyc$register_paid))
-  rest$register_paid <- list(centre = ny$register_paid$centre - nyc$register_paid$centre,
-                             home   = ny$register_paid$home - nyc$register_paid$home)
 
 r_ny   <- build_geo(ny)
 r_nyc  <- build_geo(nyc)

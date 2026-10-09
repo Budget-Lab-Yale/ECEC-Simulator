@@ -36,8 +36,10 @@ source('state_data/code/00_build_demand_targets.R')
 #==== NSECE CONSTANTS =========================================================
 
 # NATIONAL annual hours per child -- weekly mean in primary arrangement x
-# WEEKS_PER_YEAR (50, constants.R). Fallback for thin regional cell. Center-Based = mean over both paid-center
-# price bands.
+# WEEKS_PER_YEAR (50, constants.R). Fallback for thin regional cell.
+# Center-Based = child-weighted mean over paid centres, from 2026-10-08 02_
+# run's two price-tier rows; 02_ now writes one Center-Based row -- rerun
+# 02_, then set it to WEEKS_PER_YEAR x weekly_hours[Center-Based].
 NSECE_ANNUAL_HOURS <- c(
   'Center-Based'        = (0.07008002232267292 * WEEKS_PER_YEAR * 27.454813402111718 +
                            0.06556113476684644 * WEEKS_PER_YEAR * 40.405040897598035) /
@@ -314,7 +316,7 @@ short_share_split <- function() {
   }
   nat <- function(g, t) rep(NSECE_SHORT_SHARE_OF_PT, length(t))
   reg <- function(g, t) rep(s_reg[[get_spec(parent_geo(g))$region]], length(t))
-  typ <- function(g, t) unname(s_typ[t])
+  typ <- function(g, t) unname(s_typ[P0_TYPE_MAP[t]])
   rel <- function(s_of) {
     p <- sapply(GEOGRAPHIES, parts, s_of = s_of)
     n <- rowSums(p[, names(STATE_POSTAL_TO_FIPS)])

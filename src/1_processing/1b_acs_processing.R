@@ -73,31 +73,35 @@ run_acs_processing <- function() {
     ), levels = c('none', 'pt', 'ft'))
   }
 
-  compute_income_pctiles <- function(children, households) {
+  compute_income_pctiles <- function(children, households, group_col) {
 
     #--------------------------------------------------------------------------
-    # Compute child-weighted income percentile cutpoints for children under 5.
-    # Joins children to households, then calculates weighted quantiles (1-99)
-    # of household income using child weights.
+    # Child-weighted income percentile cutpoints for children under 5, one set
+    # per group -- NSECE by Census region (finest NSECE geography), ACS by
+    # state (statefip; NYC ranks within NYS). Each family ranked in own area,
+    # as price forest does (1a, compute_price_wedge_cache.R). Records w/ NA
+    # group get no cutpoints.
     #
     # Params:
     #   - children (df): Children table with hh_id, age, child_weight columns
-    #   - households (df): Households table with hh_id, income columns
+    #   - households (df): Households table with hh_id, income, group_col
+    #   - group_col (chr): households column to rank within ('region',
+    #     'statefip')
     #
-    # Returns: (num vec) 99-element named vector of income cutpoints
+    # Returns: (list) named by group, each a 99-element num vec of cutpoints
     #--------------------------------------------------------------------------
 
-    children %>%
-      left_join(households, by = 'hh_id') %>%
-      filter(age < 5, income > 0) %>%
-      reframe(
-        income_pctile = wtd.quantile(
-          x      = income + runif(nrow(.)),
-          weight = child_weight,
-          probs  = seq(0.01, 0.99, 0.01)
-        )
-      ) %>%
-      deframe()
+    base <- children %>%
+      left_join(households %>% select(hh_id, income, all_of(group_col)), by = 'hh_id') %>%
+      filter(age < 5, income > 0, !is.na(.data[[group_col]]))
+
+    lapply(split(base, base[[group_col]]), function(d) {
+      wtd.quantile(
+        x      = d$income + runif(nrow(d)),
+        weight = d$child_weight,
+        probs  = seq(0.01, 0.99, 0.01)
+      )
+    })
   }
 
   extract_pc_features <- function(df, primary_caregiver_col = 'primary_caregiver') {
@@ -230,8 +234,8 @@ run_acs_processing <- function() {
 
   prepare_data_for_rf <- function(children, parent_units, households,
                                   household_members, enrollment,
-                                  income_pctiles, source_label,
-                                  is_nsece = FALSE) {
+                                  income_pctiles, income_group_col,
+                                  source_label, is_nsece = FALSE) {
 
     #--------------------------------------------------------------------------
     # Prepare child-level data for random forest ECEC enrollment models.
@@ -246,7 +250,10 @@ run_acs_processing <- function() {
     #   - households (df): Households table with income, region, n_members
     #   - household_members (df): Household members table with demographics
     #   - enrollment (df): ECEC enrollment table (NSECE only; NULL for ACS)
-    #   - income_pctiles (num vec): Income percentile cutpoints
+    #   - income_pctiles (list): Income percentile cutpoints by group
+    #     (compute_income_pctiles())
+    #   - income_group_col (chr): households column income ranks within
+    #     ('region' NSECE, 'statefip' ACS)
     #   - source_label (chr): Label for error messages ('NSECE' or 'ACS')
     #   - is_nsece (logical): Whether the data source is NSECE (default FALSE)
     #
@@ -305,17 +312,18 @@ run_acs_processing <- function() {
         )
     }
 
-    # Add household characteristics
+    # Add household characteristics. Income rank within income_group_col
+    # (region / state); group column dropped after unless it's region
     rf_tmp <- rf_tmp %>%
       left_join(
-        households %>% select(hh_id, income, n_members, region),
+        households %>% select(hh_id, income, n_members, region, all_of(income_group_col)),
         by = 'hh_id'
       ) %>%
       mutate(
-        income_pctile = cut(income, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
-          as.character() %>% as.integer(),
+        income_pctile = assign_income_pctile(income, .data[[income_group_col]], income_pctiles),
         region = factor(region)
-      )
+      ) %>%
+      select(-any_of(setdiff(income_group_col, 'region')))
 
     # Derive primary caregiver employment choice
     if (is_nsece) {
@@ -1127,9 +1135,22 @@ run_acs_processing <- function() {
 
     set.seed(random_seed_base + 1)
 
+    # Income ranks in own area: NSECE within Census region (no state in public
+    # file), ACS within state (NYC within NYS) -- as price forest
+    # (compute_price_wedge_cache.R)
+    acs_no_state <- processed_acs_2019$children %>%
+      filter(age < 5) %>%
+      distinct(hh_id) %>%
+      left_join(processed_acs_2019$households %>% select(hh_id, any_of('statefip')), by = 'hh_id')
+    if (!'statefip' %in% names(acs_no_state) || anyNA(acs_no_state$statefip)) {
+      n_miss <- if ('statefip' %in% names(acs_no_state)) sum(is.na(acs_no_state$statefip)) else nrow(acs_no_state)
+      stop('Care-choice income ranks: ', n_miss, ' ACS households w/ children under 5 lack statefip. ',
+           'Check households table statefip (1b_acs_processing.R) -- raw ACS pull needs STATEFIP.')
+    }
+
     # Prepare NSECE data for RF training
     nsece_income_pctiles <- compute_income_pctiles(
-      processed_nsece_hh$children, processed_nsece_hh$households
+      processed_nsece_hh$children, processed_nsece_hh$households, 'region'
     )
     nsece_hh_rf <- prepare_data_for_rf(
       children         = processed_nsece_hh$children,
@@ -1138,13 +1159,14 @@ run_acs_processing <- function() {
       household_members = processed_nsece_hh$household_members,
       enrollment       = processed_nsece_hh$enrollment,
       income_pctiles   = nsece_income_pctiles,
+      income_group_col = 'region',
       source_label     = 'NSECE',
       is_nsece         = TRUE
     )
 
     # Prepare ACS data for RF prediction
     acs_income_pctiles <- compute_income_pctiles(
-      processed_acs_2019$children, processed_acs_2019$households
+      processed_acs_2019$children, processed_acs_2019$households, 'statefip'
     )
     acs_rf <- prepare_data_for_rf(
       children         = processed_acs_2019$children,
@@ -1153,6 +1175,7 @@ run_acs_processing <- function() {
       household_members = processed_acs_2019$household_members,
       enrollment       = NULL,
       income_pctiles   = acs_income_pctiles,
+      income_group_col = 'statefip',
       source_label     = 'ACS',
       is_nsece         = FALSE
     )
@@ -1300,18 +1323,18 @@ run_acs_processing <- function() {
             ) %>%
             left_join(
               processed_acs_2019$households %>%
-                select(hh_id, income, n_members, region),
+                select(hh_id, income, n_members, region, statefip),
               by = 'hh_id'
             ) %>%
             mutate(
-              income_pctile = cut(income, c(-Inf, acs_income_pctiles, Inf), labels = 1:100) %>%
-                as.character() %>% as.integer(),
+              # Rank within state, as prepare_data_for_rf()
+              income_pctile = assign_income_pctile(income, statefip, acs_income_pctiles),
               primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
               region = factor(region)
             ) %>%
-            select(-income, -hours_pc, -primary_caregiver)
+            select(-income, -hours_pc, -primary_caregiver, -statefip)
 
           # Run one-child RF model for each employment state
           extra_child_by_emp <- map(employment_states, function(emp_state) {

@@ -119,12 +119,6 @@ code/07_compare_nhes.R                 validation: the build against NHES-ECPP 2
 code/08_nieer_prek_sensitivity.R        sensitivity: demand targets with NIEER pre-K and
                                         NIEER Head Start overlap in place of CCD and the
                                         fallback share (writes nothing the simulator reads)
-code/04_compare_licensing_registers.R   comparison: step 4 center and home children
-                                        against licensing registers, KY, NJ, NY, NYC, VA,
-                                        same ages (0-4), counting basis, and 2019
-                                        licensing thresholds both sides; also writes
-                                        out/register_paid_care.csv, which 00_ reads only
-                                        when USE_REGISTER_PAID is TRUE (off: in progress)
 code/06_compare_state_shares.R          comparison: care mix of all 52 geographies
                                         (targets, model) against region's NHES and
                                         NSECE shares; total error = dissimilarity index
@@ -159,13 +153,6 @@ out/nsch_participation_rate_base.csv    BASE_WAVE (2016-19 pool) -- what load_sp
 out/nsece_constants.csv                 the NSECE derivation, full precision
 out/nsece_shares_by_age.csv             NSECE care-type shares of children 0-4 by age
                                         (cluster/nsece_shares_by_age.R)
-out/licensing_register_comparison.csv   04_ register comparison, one row per geography
-out/register_paid_care.csv              04_ register paid care in build terms (center,
-                                        home children); unused while USE_REGISTER_PAID off
-out/nsece_listed_home_share.csv         NSECE share of paid home children in listed homes
-                                        (cluster/nsece_listed_home_share.py), for 04_
-out/nsece_home_threshold_share.csv      the same share, listed homes at or over each
-                                        state licensing threshold, for 04_
 out/state_share_comparison.csv          06_: share by geography and care type, four columns
 out/state_share_errors.csv              06_: total error by geography vs NHES, NSECE
 out/nhes_comparison.csv                 build vs NHES-ECPP 2019 by region and care type;
@@ -261,7 +248,7 @@ so.
 | NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 less Appendix B | `raw/US/US_NIEER__state_of_preschool_yearbook__2019.pdf`, constant | 2018–19 | step 4 deduction: NIEER overlap share |
 | Head Start program options | OHS PIR 2018–19 Services Snapshots (HS, EHS, AIAN): home-based and family child care funded slots | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
 | Five-year-olds in programs | NHES-ECPP 2019 public-use file, national share per program; NYC 0 (DOE calendar-year enrolment, 45 CFR 1302.12(b)) | `raw/local/US_NHES__…` (git-ignored) → constant; `raw/NYC/NYC_DOE__…` | 2019 | step 4 |
-| Base-year wage ratio | IPUMS ACS, 2018-2019 records of the 2015-2019 5-year file, childcare occupations (OCC 4600, 2300, 2330, 230), by measured education; weighted medians | IPUMS extract usa:34, cluster only (`raw/local/`) → `resources/supply/state_childcare_wage_ratios_acs.csv` | 2018–2019 | step 7 |
+| Base-year wage ratio | BLS OES May 2019, state / national: hourly medians of childcare workers (39-9011), preschool teachers (25-2011), and preschool and childcare administrators (11-9031), mixed at national ACS shares of each education group's workers in each occupation; NYC = New York MSA 35620 | `raw/US/US_OES__childcare_occupation_wages__2019.csv` → `resources/supply/state_childcare_wage_ratios_oes.csv` (`resources/supply/oes_childcare_wage_ratios_2019.R`) | May 2019 | step 7 |
 | National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
 | Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-band map) | 2019 | supply centre staffing index weights |
@@ -617,11 +604,11 @@ because it is not settled which ratio is right.
 ### Reference documents
 
 Each report sits beside the data of its scope, in `raw/<SCOPE>/`. Only the
-documents behind numbers the build uses are held. On 2 October 2026 I
-removed the documents read only for context, method, or a rejected source,
-and the NHES codebook; earlier commits still hold them.
-On 5 October 2026 I removed the licensing-register and industry-count (QCEW,
-nonemployer) comparisons, with their data and reports; commit `6dff713` holds them.
+documents behind numbers the build uses are held. Removed material stays in
+git history: documents read only for context, method, or a rejected source
+(removed 2 October 2026), and the licensing-register and industry-count
+comparisons with their data and reports (commits `6dff713` and `7ffdb2d` hold
+them).
 
 | Folder | File | What it is |
 |---|---|---|
@@ -682,7 +669,8 @@ checks read the committed files as they are, so a stale file can pass them.
 copy in `out/`.
 `read_state_demand_targets()` in `src/shared_functions/adjust_alpha_for_state.R`
 takes the same six rows. One Center-Based target covers both of the
-simulator's center price bands, and both bands get one shared adjustment.
+simulator's center tiers with one shared adjustment; the model determines the
+split between them.
 
 NYC gets a simulator file too. The simulator selects NYC households by
 STATEFIP 36 and COUNTYFIP 005, 047, 061, 081, and 085 (`SUBSTATE_GEOGRAPHIES`

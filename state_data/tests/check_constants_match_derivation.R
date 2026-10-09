@@ -132,26 +132,15 @@ check_vec(NSECE_RESIDUAL_MIX * sum(NSECE_RESIDUAL_MIX), 'informal_mix')
 # Step 6. National part-time shares, national hours fallback.
 check_vec(NSECE_PART_TIME, 'part_time_share')
 
-# NSECE_ANNUAL_HOURS = 50 x national weekly mean, except Center-Based, which
-# blends two paid-center price bands by their shares.
-for (ty in setdiff(ECEC_TYPES, 'Center-Based')) {
+# NSECE_ANNUAL_HOURS = 50 x national weekly mean. 02_ writes one Center-Based
+# row (paid centres pooled).
+for (ty in ECEC_TYPES) {
   r <- lookup('weekly_hours', ty)
   if (is.null(r)) {
     fail(sprintf('FAIL %-52s no csv row\n', paste0('weekly_hours[', ty, ']')))
   } else {
     near(paste0('NSECE_ANNUAL_HOURS[', ty, ']'), NSECE_ANNUAL_HOURS[[ty]], 50 * r$value, 1e-9)
   }
-}
-
-band <- c('High-Priced Center-Based', 'Low-Priced Center-Based')
-s <- lapply(band, lookup, quantity = 'price_band_share')
-h <- lapply(band, lookup, quantity = 'weekly_hours')
-if (any(vapply(c(s, h), is.null, logical(1)))) {
-  fail('FAIL NSECE_ANNUAL_HOURS[Center-Based]                 price bands absent\n')
-} else {
-  want <- (s[[1]]$value * 50 * h[[1]]$value + s[[2]]$value * 50 * h[[2]]$value) /
-          (s[[1]]$value + s[[2]]$value)
-  near('NSECE_ANNUAL_HOURS[Center-Based]', NSECE_ANNUAL_HOURS[['Center-Based']], want, 1e-9)
 }
 
 # Regional tables, value and record count.
@@ -163,12 +152,12 @@ check_tbl(NSECE_PART_TIME_REGION, 'pt_share', 'part_time_share_region')
 # = as much a drift signal as one it reads wrongly.
 used <- c('children_all_over_10plus', 'short_share_of_part_time', 'formal_share', 'unpaid_centre_share',
           'centre_home_split', 'informal_mix', 'part_time_share',
-          'weekly_hours', 'price_band_share', 'informal_mix_region',
+          'weekly_hours', 'informal_mix_region',
           'weekly_hours_region', 'part_time_share_region',
           # read live from the CSV by 05_ short_share_split(), no constant
           'short_share_of_part_time_region', 'short_share_of_part_time_type',
-          # read live by 04_ (ANY_OVER_PRIMARY), 06_ (regional benchmark)
-          'any_over_primary', 'share_of_children_region')
+          # read live by 06_ (regional benchmark)
+          'share_of_children_region')
 extra <- setdiff(unique(a$quantity), used)
 if (length(extra)) {
   failures <- failures + 1

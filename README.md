@@ -120,7 +120,8 @@ NSECE shares).
 The build and the simulator are wired together.
 `state_data/code/00_build_demand_targets.R` writes each file once, to
 `config/state/demand/<GEO>.csv`, and the simulator reads it from there (`adjust_alpha_for_state.R`). The simulator takes
-six target groups: one Center-Based target covers both center price bands.
+six target groups: one Center-Based target covers both center tiers, and
+the model determines the split between them.
 A runscript can name `NYC` beside the states: the simulator selects its
 households by STATEFIP 36 and the five borough county FIPS
 (`SUBSTATE_GEOGRAPHIES` in `constants.R`, read from
@@ -222,9 +223,9 @@ nationally (see `docs/state_level_analysis.md` for the full design):
 - **Supply**: `config/state/supply/<ST>.yaml` (same schema as
   `estimation/supply/supply_2019.yaml`) replaces the NSECE-derived parameters
   when present. `resources/supply/state_supply_params.R` builds it: state
-  wages (ACS median childcare wage ratios), staffing scaled by state licensing
-  ratios, and the non-labor residual scaled by BEA Regional Price Parities;
-  elasticities stay national.
+  wages (OES May 2019 childcare occupation wages, mixed at national ACS
+  education weights), staffing scaled by state licensing
+  ratios; the non-labor residual and elasticities stay national.
 - **Employment growth**: `config/state/employment/<ST>.csv` (the 16-59 cells
   of `resources/epop/epop_projections.csv`) replaces the national CBO epop
   projections when present (`resources/epop/state_epop_projections.R`: each
@@ -273,7 +274,11 @@ calibration's mix:
 1. Run `state_data/cluster/acs_p0_shares.R <new interface> <out.csv>` on the
    cluster, and replace the raw file with its output.
 2. Rebuild the demand targets: `Rscript state_data/code/00_build_demand_targets.R --all --check`.
-3. Rebuild the supply files: `Rscript resources/supply/state_supply_params.R`.
+3. Copy the new `estimation/supply/supply_2019.yaml` over
+   `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` -- the
+   calibration re-estimates staffing and the non-labor residual for each
+   center tier.
+4. Rebuild the supply files: `Rscript resources/supply/state_supply_params.R`.
 
 A fresh clone also needs `cache/price_models/price_qrf_models.rds`, which is
 not in git and which `-C` does not copy. Copy it from an existing checkout

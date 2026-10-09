@@ -59,6 +59,7 @@ src/
     ├── prepare_donor_pool.R           # Tax donor pool preparation + AGI binning helpers
     ├── reconstruct_tax_unit_agi.R     # Corrected-tax-unit AGI from legacy fragments
     ├── compute_price_wedge_cache.R   # Price wedge cache computation
+    ├── assign_income_pctile.R         # Income percentile within group (region, state) from per-group cutpoints
     ├── load_policy.R                  # Base policy loader (isolated environments)
     ├── load_cdctc_policy.R            # CDCTC policy loader
     ├── load_demand_policy.R           # Demand policy loader
