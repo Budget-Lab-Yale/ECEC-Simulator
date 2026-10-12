@@ -112,8 +112,8 @@ probabilities, summed over the state's ACS households
 NSECE shares).
 
 - The **state method memos** (`state_data/docs/<date>_summary.pdf`, one per
-  update, newest first by name) are the documents to read — what every number means and how solid it is. They are kept
-  outside git; ask Anna for the current versions.
+  update, newest first by name) are the documents to read — what every number means and how solid it is. Finished memos are in
+  `state_data/docs/archive/`; the memo in progress is kept outside git.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
   provenance of every input, the five checks that each exit non-zero on
   failure, and the known traps.

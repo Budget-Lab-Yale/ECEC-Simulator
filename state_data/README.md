@@ -13,11 +13,11 @@ Rscript state_data/code/00_build_demand_targets.R --all --check    # with invari
 ```
 
 **The method memos, `docs/<date>_summary.pdf`, are the documents to read.** They
-say what every number means, where it comes from, and how solid it is. The
-memos and their .tex sources are kept outside git; ask Anna for the current
-version. This file is the map, and the record of every
+say what every number means, where it comes from, and how solid it is. Finished
+memos (PDF) are in `docs/archive/`; the memo in progress and the .tex sources
+are kept outside git. This file is the map, and the record of every
 source. A machine-readable source register (one row per source and geography,
-with its URL, vintage, and retrieval date) is kept with the memos, outside git.
+with its URL, vintage, and retrieval date) is kept outside git.
 
 ## What is built
 
@@ -142,7 +142,8 @@ code/shared_nsece_ages.R                NSECE 2019 centre enrollment by age 0-4 
                                         resources/supply/state_supply_params.R
 code/config_local.example.yaml          copy to state_data/config_local.yaml (git-ignored)
 tests/                                  the check suite
-docs/                                   method memos (.tex, .pdf) and source register (local only, git-ignored)
+docs/archive/                           finished method memos (.pdf)
+docs/                                   memo in progress, .tex sources, source register (local only, git-ignored)
 raw/                                    the input files, one folder per scope
 raw/US/                                 national files and reports
 raw/NYC/                                New York City report (Health Code staffing rules)

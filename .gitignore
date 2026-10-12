@@ -36,9 +36,10 @@ state_data/raw/local/
 # Python bytecode
 __pycache__/
 
-# Anna's personal state documentation (memos, drafts, source register) --
-# kept local, never committed
-state_data/docs/
+# Anna's state documentation -- in-progress memo, drafts, source register kept
+# local; finished memos in docs/archive/ committed
+state_data/docs/*
+!state_data/docs/archive/
 
 # Editor settings (memo LaTeX) -- local only
 .vscode/

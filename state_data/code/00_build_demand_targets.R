@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # 00_build_demand_targets.R -- state-level demand inputs for the simulator:
 # config/state/demand/<GEO>.csv, six rows, annual hours by care type. Method
-# memos (docs/<date>_summary.pdf, kept local) define each number.
+# memos (docs/archive/<date>_summary.pdf) define each number.
 #
 # METHOD, per geography. Step numbers name quantities across state_data/
 # (README, memos) -- fixed, though p0 runs them in
