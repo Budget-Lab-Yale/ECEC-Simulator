@@ -74,7 +74,7 @@ NSECE_UNIVERSE_RATIO <- 1.0980541895845115
 # Short share: NSECE children under 10 total hrs/week over children part-time
 # in simulator's sense (primary hours < 20). Every under-10 child part-time.
 # 02_derive_nsece_constants.R, quantity short_share_of_part_time.
-NSECE_SHORT_SHARE_OF_PT <- 0.3402579024009446
+NSECE_SHORT_SHARE_OF_PT <- 0.3414628024535046
 
 # SIMULATOR'S HOURS GRID -- PT_CARE_HOURS, FT_CARE_HOURS, WEEKS_PER_YEAR from
 # src/shared_functions/constants.R, no copy here. Simulator places a child at
