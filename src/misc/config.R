@@ -696,6 +696,16 @@ default_paths <- read_yaml('./config/default_paths.yaml')
 # Make seed_offset globally accessible for simulation
 seed_offset <<- if (exists('seed_offset')) seed_offset else 0
 
+# Income-rank scheme for care-choice forest + price QRF (income_rank.R).
+# Env var ECEC_INCOME_RANK; unset -> 'state' (NSECE in region, ACS in state)
+income_rank_scheme <<- Sys.getenv('ECEC_INCOME_RANK', 'state')
+if (income_rank_scheme == '') income_rank_scheme <<- 'state'
+if (!income_rank_scheme %in% c('state', 'region', 'national', 'national_rpp')) {
+  stop('ECEC_INCOME_RANK = "', income_rank_scheme, '" unknown. ',
+       'Use state, region, national, or national_rpp.')
+}
+if (income_rank_scheme != 'state') cat('Income-rank scheme:', income_rank_scheme, '\n')
+
 # Create output root (append seed suffix for non-default seeds to avoid collisions)
 time_stamp <- format(Sys.time(), '%Y%m%d%H%M')
 if (seed_offset != 0) {

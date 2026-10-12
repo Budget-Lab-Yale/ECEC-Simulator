@@ -1148,34 +1148,46 @@ run_acs_processing <- function() {
            'Check households table statefip (1b_acs_processing.R) -- raw ACS pull needs STATEFIP.')
     }
 
+    # Rank inputs per scheme (income_rank.R): local household copies w/ income
+    # to rank (RPP-deflated under national_rpp) + rank_group. income only
+    # feeds income_pctile -- copies never leave this block
+    rank_hh <- function(households, source) {
+      ri <- income_rank_inputs(households$income, households$region,
+                               if (source == 'acs') households$statefip else NULL, source)
+      households %>% mutate(income = ri$income, rank_group = ri$group)
+    }
+    nsece_rank_hh <- rank_hh(processed_nsece_hh$households, 'nsece')
+    acs_rank_hh   <- rank_hh(processed_acs_2019$households, 'acs')
+    cat('  Care-choice income ranks: scheme', get_income_rank_scheme(), '\n')
+
     # Prepare NSECE data for RF training
     nsece_income_pctiles <- compute_income_pctiles(
-      processed_nsece_hh$children, processed_nsece_hh$households, 'region'
+      processed_nsece_hh$children, nsece_rank_hh, 'rank_group'
     )
     nsece_hh_rf <- prepare_data_for_rf(
       children         = processed_nsece_hh$children,
       parent_units     = processed_nsece_hh$parent_units,
-      households       = processed_nsece_hh$households,
+      households       = nsece_rank_hh,
       household_members = processed_nsece_hh$household_members,
       enrollment       = processed_nsece_hh$enrollment,
       income_pctiles   = nsece_income_pctiles,
-      income_group_col = 'region',
+      income_group_col = 'rank_group',
       source_label     = 'NSECE',
       is_nsece         = TRUE
     )
 
     # Prepare ACS data for RF prediction
     acs_income_pctiles <- compute_income_pctiles(
-      processed_acs_2019$children, processed_acs_2019$households, 'statefip'
+      processed_acs_2019$children, acs_rank_hh, 'rank_group'
     )
     acs_rf <- prepare_data_for_rf(
       children         = processed_acs_2019$children,
       parent_units     = processed_acs_2019$parent_units,
-      households       = processed_acs_2019$households,
+      households       = acs_rank_hh,
       household_members = processed_acs_2019$household_members,
       enrollment       = NULL,
       income_pctiles   = acs_income_pctiles,
-      income_group_col = 'statefip',
+      income_group_col = 'rank_group',
       source_label     = 'ACS',
       is_nsece         = FALSE
     )
@@ -1322,19 +1334,19 @@ run_acs_processing <- function() {
               by = c('hh_id', 'parent_unit_id')
             ) %>%
             left_join(
-              processed_acs_2019$households %>%
-                select(hh_id, income, n_members, region, statefip),
+              acs_rank_hh %>%
+                select(hh_id, income, n_members, region, rank_group),
               by = 'hh_id'
             ) %>%
             mutate(
-              # Rank within state, as prepare_data_for_rf()
-              income_pctile = assign_income_pctile(income, statefip, acs_income_pctiles),
+              # Rank per scheme, as prepare_data_for_rf()
+              income_pctile = assign_income_pctile(income, rank_group, acs_income_pctiles),
               primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
               region = factor(region)
             ) %>%
-            select(-income, -hours_pc, -primary_caregiver, -statefip)
+            select(-income, -hours_pc, -primary_caregiver, -rank_group)
 
           # Run one-child RF model for each employment state
           extra_child_by_emp <- map(employment_states, function(emp_state) {

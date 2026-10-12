@@ -1,0 +1,53 @@
+geo,bea_geography,bea_name,rpp_all_items_2019
+AL,state,Alabama,88.303
+AK,state,Alaska,103.041
+AZ,state,Arizona,97.779
+AR,state,Arkansas,87.744
+CA,state,California,111.134
+CO,state,Colorado,102.491
+CT,state,Connecticut,103.915
+DE,state,Delaware,98.824
+DC,state,District of Columbia,109.228
+FL,state,Florida,99.645
+GA,state,Georgia,94.392
+HI,state,Hawaii,111.767
+ID,state,Idaho,92.437
+IL,state,Illinois,99.453
+IN,state,Indiana,92.829
+IA,state,Iowa,91.804
+KS,state,Kansas,92.734
+KY,state,Kentucky,89.597
+LA,state,Louisiana,91.159
+ME,state,Maine,95.607
+MD,state,Maryland,105.087
+MA,state,Massachusetts,107.151
+MI,state,Michigan,95.359
+MN,state,Minnesota,98.759
+MS,state,Mississippi,86.527
+MO,state,Missouri,92.52
+MT,state,Montana,94.24
+NE,state,Nebraska,92.531
+NV,state,Nevada,98.838
+NH,state,New Hampshire,104.001
+NJ,state,New Jersey,111.188
+NM,state,New Mexico,92.969
+NY,state,New York,109.426
+NC,state,North Carolina,91.866
+ND,state,North Dakota,93.191
+OH,state,Ohio,93.289
+OK,state,Oklahoma,89.332
+OR,state,Oregon,103.811
+PA,state,Pennsylvania,97.979
+RI,state,Rhode Island,102.39
+SC,state,South Carolina,91.49
+SD,state,South Dakota,91.818
+TN,state,Tennessee,91.262
+TX,state,Texas,98.507
+UT,state,Utah,97.246
+VT,state,Vermont,99.604
+VA,state,Virginia,100.053
+WA,state,Washington,107.971
+WV,state,West Virginia,88.518
+WI,state,Wisconsin,94.476
+WY,state,Wyoming,94.107
+NYC,msa_35620,"New York-Newark-Jersey City, NY-NJ (Metropolitan Statistical Area)",114.899

@@ -72,16 +72,28 @@ compute_price_wedge_cache <- function(parent_units, children, households, qrf_mo
   # move ranks. Calibration, re-anchoring, simulation (national + state runs)
   # share this cache -- sub-state geography (NYC) ranks within its state. No
   # statefip (pre-state interface) -> one national ranking.
-  agi_jittered <- cache_df$baseline_agi + runif(nrow(cache_df))  # small jitter for ties
-  rank_group <- if ('statefip' %in% names(cache_df) && !all(is.na(cache_df$statefip))) {
-    cache_df$statefip
+  # Non-default scheme (income_rank.R): region / national group, national_rpp
+  # deflates AGI by state RPP -- same scheme as QRF training (1a)
+  has_state <- 'statefip' %in% names(cache_df) && !all(is.na(cache_df$statefip))
+  rank_agi <- cache_df$baseline_agi
+  if (get_income_rank_scheme() == 'state') {
+    rank_group <- if (has_state) {
+      cache_df$statefip
+    } else {
+      cat('  Price wedge: no statefip, ranking income nationally\n')
+      rep(0L, nrow(cache_df))
+    }
   } else {
-    cat('  Price wedge: no statefip, ranking income nationally\n')
-    rep(0L, nrow(cache_df))
+    ri <- income_rank_inputs(cache_df$baseline_agi, cache_df$region,
+                             if (has_state) cache_df$statefip else NULL, 'acs')
+    rank_agi <- ri$income
+    rank_group <- ri$group
+    cat('  Price wedge income ranks: scheme', get_income_rank_scheme(), '\n')
   }
+  agi_jittered <- rank_agi + runif(nrow(cache_df))  # small jitter for ties
   if (anyNA(rank_group)) {
-    stop('compute_price_wedge_cache: ', sum(is.na(rank_group)), ' parent units lack statefip. ',
-         'Check households table statefip (1b_acs_processing.R).')
+    stop('compute_price_wedge_cache: ', sum(is.na(rank_group)), ' parent units lack rank group ',
+         '(statefip / region). Check households table (1b_acs_processing.R).')
   }
 
   # Bin = 1 + breaks strictly below AGI -- same bins as cut(right = TRUE) when
@@ -95,7 +107,7 @@ compute_price_wedge_cache <- function(parent_units, children, households, qrf_mo
       weight = cache_df$weight[i],
       probs  = seq(0.01, 0.99, 0.01)
     )
-    income_pctile[i] <- findInterval(cache_df$baseline_agi[i], income_pctiles, left.open = TRUE) + 1L
+    income_pctile[i] <- findInterval(rank_agi[i], income_pctiles, left.open = TRUE) + 1L
   }
 
   cache_df$income_pctile <- income_pctile

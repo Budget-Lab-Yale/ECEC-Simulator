@@ -37,13 +37,9 @@ source('state_data/code/00_build_demand_targets.R')
 
 # NATIONAL annual hours per child -- weekly mean in primary arrangement x
 # WEEKS_PER_YEAR (50, constants.R). Fallback for thin regional cell.
-# Center-Based = child-weighted mean over paid centres, from 2026-10-08 02_
-# run's two price-tier rows; 02_ now writes one Center-Based row -- rerun
-# 02_, then set it to WEEKS_PER_YEAR x weekly_hours[Center-Based].
+# Center-Based = one paid-centre row (02_ run 2026-10-12).
 NSECE_ANNUAL_HOURS <- c(
-  'Center-Based'        = (0.07008002232267292 * WEEKS_PER_YEAR * 27.454813402111718 +
-                           0.06556113476684644 * WEEKS_PER_YEAR * 40.405040897598035) /
-                          (0.07008002232267292 + 0.06556113476684644),
+  'Center-Based'        = WEEKS_PER_YEAR * 33.840936175175060,
   'Unpaid Center-Based' = WEEKS_PER_YEAR * 28.733041207982050,
   'Paid Home-Based'     = WEEKS_PER_YEAR * 38.389082189644240,
   'Other Unpaid'        = WEEKS_PER_YEAR * 38.587712836110920,
@@ -107,13 +103,13 @@ NSECE_MIX_REGION <- tibble::tribble(
 # pooled into one Center-Based row (no price-band blend).
 NSECE_HOURS_REGION <- tibble::tribble(
   ~region,     ~type,                 ~weekly,             ~n,
-  'midwest',   'Center-Based',         29.9188971275273020, 108,
+  'midwest',   'Center-Based',         30.0567700154362040, 108,
   'midwest',   'Unpaid Center-Based',  30.4488858327566800,  94,
   'midwest',   'Paid Home-Based',      38.8896376330629536,  67,
   'midwest',   'Other Unpaid',         30.6266013460264230, 159,
   'midwest',   'Other Paid',           26.7065241000148140, 100,
   'midwest',   'Unpaid Home-Based',    28.3171331998730444,  11,
-  'northeast', 'Center-Based',         31.9334570995736900, 121,
+  'northeast', 'Center-Based',         32.3822203133483900, 121,
   'northeast', 'Unpaid Center-Based',  25.8468155624064830,  91,
   'northeast', 'Paid Home-Based',      36.6526630678393133,  33,
   'northeast', 'Other Unpaid',         49.3387552672910350, 140,
@@ -135,7 +131,7 @@ NSECE_HOURS_REGION <- tibble::tribble(
 # NATIONAL part-time share. Fallback for thin regional cell -- Unpaid
 # Home-Based rests on 5 to 14 children per region.
 NSECE_PART_TIME <- c(
-  'Center-Based'        = 0.24156066533388276,
+  'Center-Based'        = 0.23845679514677057,
   'Unpaid Center-Based' = 0.32374404913138010,
   'Paid Home-Based'     = 0.07704556374948256,
   'Other Unpaid'        = 0.29237982925281690,
@@ -147,13 +143,13 @@ NSECE_PART_TIME <- c(
 # part-time.
 NSECE_PART_TIME_REGION <- tibble::tribble(
   ~region,     ~type,                 ~pt_share,           ~n,
-  'midwest',   'Center-Based',         0.3672560769094304, 108,
+  'midwest',   'Center-Based',         0.3662129169620846, 108,
   'midwest',   'Unpaid Center-Based',  0.3514149565490429,  94,
   'midwest',   'Paid Home-Based',      0.1161727070892445,  67,
   'midwest',   'Other Unpaid',         0.3778589556081480, 159,
   'midwest',   'Other Paid',           0.4180859752229404, 100,
   'midwest',   'Unpaid Home-Based',    0.2810657094393909,  11,
-  'northeast', 'Center-Based',         0.2639149081693626, 121,
+  'northeast', 'Center-Based',         0.2510931020615140, 121,
   'northeast', 'Unpaid Center-Based',  0.3325585112527899,  91,
   'northeast', 'Paid Home-Based',      0.1458057480669377,  33,
   'northeast', 'Other Unpaid',         0.1561441499432618, 140,

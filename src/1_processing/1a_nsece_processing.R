@@ -1304,10 +1304,20 @@ run_nsece_processing <- function() {
       # Income percentiles (child-weighted) within Census region -- finest
       # NSECE geography. ACS side ranks within state (compute_price_wedge_cache.R):
       # family ranked in own area, area price level set by market price
+      # Scheme (income_rank.R) may swap group (region / national) + deflate
+      # income by region RPP; default 'state' = region ranks as above
+      rank_hh <- processed_nsece_hh$households %>%
+        filter(!is.na(region))
+      ri <- income_rank_inputs(rank_hh$income, rank_hh$region, NULL, 'nsece')
+      rank_hh <- rank_hh %>%
+        transmute(hh_id, income_rank = ri$income, rank_group = ri$group)
+      cat('  Price QRF income ranks: scheme', get_income_rank_scheme(), '\n')
       pctile_base <- processed_nsece_hh$children %>%
         left_join(processed_nsece_hh$households, by = 'hh_id') %>%
-        filter(age < 5, income > 0, !is.na(region))
-      income_pctiles <- lapply(split(pctile_base, pctile_base$region), function(d) {
+        left_join(rank_hh, by = 'hh_id') %>%
+        filter(age < 5, income > 0, !is.na(region)) %>%
+        mutate(income = income_rank)
+      income_pctiles <- lapply(split(pctile_base, pctile_base$rank_group), function(d) {
         wtd.quantile(
           x      = d$income + runif(nrow(d)),
           weight = d$child_weight,
@@ -1329,18 +1339,19 @@ run_nsece_processing <- function() {
             select(hh_id, income, region),
           by = 'hh_id'
         ) %>%
+        left_join(rank_hh, by = 'hh_id') %>%
         left_join(
           processed_nsece_hh$parent_units %>%
             select(hh_id, parent_unit_id, n_parents),
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         mutate(
-          # Bin = 1 + region's breaks strictly below income (= cut(right = TRUE))
+          # Bin = 1 + group's breaks strictly below income (= cut(right = TRUE))
           income_pctile = {
             p <- rep(NA_integer_, n())
             for (r in names(income_pctiles)) {
-              i <- which(as.character(region) == r)
-              p[i] <- findInterval(income[i], income_pctiles[[r]], left.open = TRUE) + 1L
+              i <- which(as.character(rank_group) == r)
+              p[i] <- findInterval(income_rank[i], income_pctiles[[r]], left.open = TRUE) + 1L
             }
             p
           },
