@@ -89,7 +89,8 @@ initialize_simulation <- function() {
     validate_baseline_interface(
       baseline_interface   = baseline_interface,
       years_to_run         = baseline_info$years,
-      counterfactual_infos = counterfactual_infos
+      counterfactual_infos = counterfactual_infos,
+      run_states           = if (exists('run_states')) run_states else NULL
     )
   }
 

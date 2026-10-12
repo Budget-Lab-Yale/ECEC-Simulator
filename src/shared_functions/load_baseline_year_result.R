@@ -24,8 +24,31 @@
 
 
 
+resolve_baseline_source_dir <- function(baseline_interface, state = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Resolves the source run's baseline output directory, descending into the
+  # per-state subdirectory for state-level runs.
+  #
+  # Params:
+  #   - baseline_interface (chr): Timestamp of the prior run to reuse
+  #   - state (chr): State postal code for state-level runs (NULL = national)
+  #
+  # Returns: (chr) Path to the source run's baseline output directory
+  #----------------------------------------------------------------------------
+
+  baseline_dir <- file.path(default_paths$roots$output, baseline_interface,
+                            'simulation', 'baseline')
+  if (!is.null(state)) {
+    baseline_dir <- file.path(baseline_dir, 'states', state)
+  }
+  baseline_dir
+}
+
+
+
 validate_baseline_interface <- function(baseline_interface, years_to_run,
-                                        counterfactual_infos) {
+                                        counterfactual_infos, run_states = NULL) {
 
   #----------------------------------------------------------------------------
   # Validates that a prior run's baseline output is complete and compatible
@@ -36,6 +59,8 @@ validate_baseline_interface <- function(baseline_interface, years_to_run,
   #   - baseline_interface (chr): Timestamp of the prior run to reuse
   #   - years_to_run (int vec): Years the current run will simulate
   #   - counterfactual_infos (list): Scenario info lists for counterfactuals
+  #   - run_states (named list): State configs for state-level runs (NULL =
+  #       national). Per-year files are checked under states/<ST>/ for each
   #
   # Returns: nothing (side effects only; stops on incompatibility)
   #----------------------------------------------------------------------------
@@ -47,6 +72,9 @@ validate_baseline_interface <- function(baseline_interface, years_to_run,
     stop('Baseline interface not found: ', baseline_dir, '\n',
          '  Check that ', baseline_interface, ' is a completed run with a baseline scenario.')
   }
+
+  # National runs check one baseline directory; state runs check each state's
+  states_to_check <- if (is.null(run_states)) list(NULL) else as.list(names(run_states))
 
   # Helper: read a value from the prior run's run_info.txt field list
   parse_run_info_field <- function(lines, field) {
@@ -187,36 +215,47 @@ validate_baseline_interface <- function(baseline_interface, years_to_run,
 
   targeting_enabled <- !(exists('disable_employment_targeting') &&
                           isTRUE(disable_employment_targeting))
-  targeting_file <- file.path(baseline_dir, 'models', 'equilibrium',
-                              paste0('employment_targeting_', min(years_to_run), '.csv'))
-  if (targeting_enabled && !file.exists(targeting_file)) {
-    stop('Baseline interface ', baseline_interface, ' has no employment targeting output\n',
-         '  (expected ', targeting_file, ').\n',
-         '  The prior run likely used --no-employment-targeting. Pass the same flag, or\n',
-         '  reuse a baseline that was solved with employment targeting enabled.')
-  }
-  if (!targeting_enabled && file.exists(targeting_file)) {
-    stop('Baseline interface ', baseline_interface, ' was solved WITH employment targeting,\n',
-         '  but the current run passes --no-employment-targeting. Drop the flag, or reuse\n',
-         '  a baseline that was solved without targeting.')
+  for (st in states_to_check) {
+    st_dir <- resolve_baseline_source_dir(baseline_interface, st)
+    st_label <- if (is.null(st)) '' else paste0(' (state ', st, ')')
+    targeting_file <- file.path(st_dir, 'models', 'equilibrium',
+                                paste0('employment_targeting_', min(years_to_run), '.csv'))
+    if (targeting_enabled && !file.exists(targeting_file)) {
+      stop('Baseline interface ', baseline_interface, ' has no employment targeting output',
+           st_label, '\n',
+           '  (expected ', targeting_file, ').\n',
+           '  The prior run likely used --no-employment-targeting, or did not cover this\n',
+           '  state. Pass the same flag, or reuse a matching baseline.')
+    }
+    if (!targeting_enabled && file.exists(targeting_file)) {
+      stop('Baseline interface ', baseline_interface, ' was solved WITH employment targeting,\n',
+           '  but the current run passes --no-employment-targeting. Drop the flag, or reuse\n',
+           '  a baseline that was solved without targeting.')
+    }
   }
 
   #-----------------------------------------
   # Check 4: per-year files must exist
   #-----------------------------------------
 
-  for (year in years_to_run) {
-    required_files <- c(
-      file.path(baseline_dir, 'data', paste0('parent_units_c1_', year, '.csv')),
-      file.path(baseline_dir, 'data', paste0('parent_units_c2plus_', year, '.csv')),
-      file.path(baseline_dir, 'supply', paste0('supply_', year, '.yaml'))
-    )
-    missing <- required_files[!file.exists(required_files)]
-    if (length(missing) > 0) {
-      stop('Baseline interface ', baseline_interface, ' is missing files for year ', year, ':\n',
-           paste0('  ', missing, collapse = '\n'), '\n',
-           '  The prior run must cover every year in the current runscript (baseline may\n',
-           '  not have converged for this year, or the run used a shorter year range).')
+  for (st in states_to_check) {
+    st_dir <- resolve_baseline_source_dir(baseline_interface, st)
+    st_label <- if (is.null(st)) '' else paste0(' (state ', st, ')')
+    for (year in years_to_run) {
+      required_files <- c(
+        file.path(st_dir, 'data', paste0('parent_units_c1_', year, '.csv')),
+        file.path(st_dir, 'data', paste0('parent_units_c2plus_', year, '.csv')),
+        file.path(st_dir, 'supply', paste0('supply_', year, '.yaml'))
+      )
+      missing <- required_files[!file.exists(required_files)]
+      if (length(missing) > 0) {
+        stop('Baseline interface ', baseline_interface, ' is missing files for year ', year,
+             st_label, ':\n',
+             paste0('  ', missing, collapse = '\n'), '\n',
+             '  The prior run must cover every year (and state) in the current run\n',
+             '  (baseline may not have converged for this year, or the run used a\n',
+             '  shorter year range or different state list).')
+      }
     }
   }
 
@@ -229,18 +268,24 @@ validate_baseline_interface <- function(baseline_interface, years_to_run,
       identical(info$employer_subsidy_config$type, 'percentage')
   }))
   if (needs_wages) {
-    first_yaml <- read_yaml(file.path(baseline_dir, 'supply',
-                                      paste0('supply_', min(years_to_run), '.yaml')))
-    if (is.null(first_yaml$equilibrium_wages)) {
-      stop('A counterfactual uses a percentage employer subsidy, which needs equilibrium\n',
-           '  wages from the baseline, but interface ', baseline_interface, ' predates the\n',
-           '  equilibrium_wages field in supply_<year>.yaml. Re-run the baseline with\n',
-           '  current code, or use a dollar-type employer subsidy.')
+    for (st in states_to_check) {
+      st_dir <- resolve_baseline_source_dir(baseline_interface, st)
+      first_yaml <- read_yaml(file.path(st_dir, 'supply',
+                                        paste0('supply_', min(years_to_run), '.yaml')))
+      if (is.null(first_yaml$equilibrium_wages)) {
+        stop('A counterfactual uses a percentage employer subsidy, which needs equilibrium\n',
+             '  wages from the baseline, but interface ', baseline_interface, ' predates the\n',
+             '  equilibrium_wages field in supply_<year>.yaml. Re-run the baseline with\n',
+             '  current code, or use a dollar-type employer subsidy.')
+      }
     }
   }
 
   cat('Baseline interface', baseline_interface, 'validated:\n')
   cat('  Years covered:', min(years_to_run), '-', max(years_to_run), '\n')
+  if (!is.null(run_states)) {
+    cat('  States covered:', paste(names(run_states), collapse = ', '), '\n')
+  }
   cat('  Baseline equilibrium solves will be skipped.\n')
 }
 
@@ -251,7 +296,8 @@ load_baseline_year_result <- function(baseline_interface, year, parent_units_lis
                                       cpi_chain_factor_2019, cpi_chain_factor_2026,
                                       n_draws_per_record,
                                       wage_growth_factor_2019 = 1.0,
-                                      wage_growth_factor_2026 = 1.0) {
+                                      wage_growth_factor_2026 = 1.0,
+                                      state = NULL) {
 
   #----------------------------------------------------------------------------
   # Loads one year of converged baseline results from a prior run, returning
@@ -271,13 +317,14 @@ load_baseline_year_result <- function(baseline_interface, year, parent_units_lis
   #   - n_draws_per_record (int): Epsilon draws per record in the current run
   #   - wage_growth_factor_2019 (dbl): Nominal hourly wage growth factor 2019 -> year
   #   - wage_growth_factor_2026 (dbl): Nominal hourly wage growth factor 2019 -> 2026
+  #   - state (chr): State postal code for state-level runs (NULL = national);
+  #       resolves to the source run's states/<ST>/ baseline subdirectory
   #
   # Returns: (list) Synthetic baseline result with $converged, $prices, $w,
   #   $employment_shifts, $parent_units, $supply_subsidy
   #----------------------------------------------------------------------------
 
-  baseline_dir <- file.path(default_paths$roots$output, baseline_interface,
-                            'simulation', 'baseline')
+  baseline_dir <- resolve_baseline_source_dir(baseline_interface, state)
 
   #-----------------------------------------
   # Load collapsed parent units per type
@@ -419,7 +466,8 @@ load_baseline_year_result <- function(baseline_interface, year, parent_units_lis
     }
   }
 
-  cat('  Loaded baseline from interface', baseline_interface, 'for year', year, '\n')
+  cat('  Loaded baseline from interface', baseline_interface, 'for year', year,
+      if (is.null(state)) '' else paste0('(state ', state, ')'), '\n')
   cat(sprintf('    Prices: [%.4f, %.4f, %.4f, %.4f]\n',
               prices[1], prices[2], prices[3], prices[4]))
 

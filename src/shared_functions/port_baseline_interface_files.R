@@ -15,7 +15,7 @@
 
 
 port_baseline_interface_files <- function(baseline_interface, year,
-                                          dest_output_dir) {
+                                          dest_output_dir, state = NULL) {
 
   #----------------------------------------------------------------------------
   # Copies the source run's baseline outputs for one year into the current
@@ -26,12 +26,13 @@ port_baseline_interface_files <- function(baseline_interface, year,
   #   - year (int): Simulation year whose files to copy
   #   - dest_output_dir (chr): Current run's baseline output folder
   #       (scenario_info$paths$output for the baseline scenario)
+  #   - state (chr): State postal code for state-level runs (NULL = national);
+  #       source files come from the source run's states/<ST>/ subdirectory
   #
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
 
-  src_baseline_dir <- file.path(default_paths$roots$output, baseline_interface,
-                                'simulation', 'baseline')
+  src_baseline_dir <- resolve_baseline_source_dir(baseline_interface, state)
 
   files_to_port <- c(
     file.path('supply', paste0('supply_', year, '.yaml')),

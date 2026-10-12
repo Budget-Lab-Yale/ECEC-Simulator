@@ -84,8 +84,8 @@ slurm_setup_simulation <- function(scratch_dir) {
     sim_sample           = sim_sample,
     fiscal_npv           = if (exists('fiscal_npv')) fiscal_npv else FALSE,
     disable_employment_targeting = exists('disable_employment_targeting') && isTRUE(disable_employment_targeting),
-    baseline_interface   = if (exists('baseline_interface')) baseline_interface else NULL,
-    state_contexts       = sim_ctx$state_contexts
+    state_contexts       = sim_ctx$state_contexts,
+    baseline_interface   = if (exists('baseline_interface')) baseline_interface else NULL
   )
 
   # Save run config (globals needed by year workers and finalize)
@@ -283,6 +283,7 @@ run_year_standalone <- function(year, ctx, scratch_dir = NULL) {
     # per-state subdirectory
     view <- ctx
     view$state_contexts     <- NULL
+    view$current_state      <- st
     view$current_epop_path  <- st_ctx$epop_path
     view$sim_base_hh        <- st_ctx$sim_base_hh
     view$base_supply_params <- st_ctx$base_supply_params
@@ -401,22 +402,14 @@ run_year_standalone_core <- function(year, ctx, scratch_dir = NULL) {
 
   target_emp_rates <- NULL
   if (employment_targeting_enabled) {
-    baseline_emp_rates_2019 <- compute_baseline_employment_rates(parent_units_list)
-    demand_base_year <- as.integer(demand_params$year %||% 2019)
-
-    growth_factor <- get_employment_rate_growth_factor(
+    targeting <- compute_target_employment_rates(
+      parent_units_list = parent_units_list,
       macro_projections = ctx$macro_projections,
-      base_year = demand_base_year,
-      target_year = year,
-      epop_path = ctx$current_epop_path
+      demand_base_year  = as.integer(demand_params$year %||% 2019),
+      year              = year,
+      epop_path         = ctx$current_epop_path
     )
-
-    target_emp_rates <- pmin(baseline_emp_rates_2019 * growth_factor, 0.999999)
-
-    cat('  Employment targeting:\n')
-    for (g in EMPLOYMENT_TARGETING_GROUPS) {
-      cat(sprintf('    %s: target=%.4f\n', g, target_emp_rates[g]))
-    }
+    target_emp_rates <- targeting$targets
   } else {
     cat('  Employment targeting: DISABLED\n')
   }
@@ -436,14 +429,16 @@ run_year_standalone_core <- function(year, ctx, scratch_dir = NULL) {
       cpi_chain_factor_2026 = cpi_chain_factor_2026,
       n_draws_per_record    = ctx$n_draws_per_record,
       wage_growth_factor_2019 = wage_growth_factor_2019,
-      wage_growth_factor_2026 = wage_growth_factor_2026
+      wage_growth_factor_2026 = wage_growth_factor_2026,
+      state                 = ctx$current_state
     )
 
     # Port the source run's baseline outputs (record-level parent units,
     # solver diagnostics, supply and targeting files) so this interface is
     # self-contained and can serve as a future -b source
     port_baseline_interface_files(ctx$baseline_interface, year,
-                                  baseline_info$paths$output)
+                                  baseline_info$paths$output,
+                                  state = ctx$current_state)
   } else {
     cat('\n  --- Baseline ---\n')
 
@@ -461,48 +456,19 @@ run_year_standalone_core <- function(year, ctx, scratch_dir = NULL) {
     )
   }
 
-  # Write employment targeting diagnostics (skipped when the baseline was
-  # loaded from an interface -- diagnostics were copied from the source run)
-  if (!use_baseline_interface &&
-      baseline_result$converged && employment_targeting_enabled &&
-      !is.null(baseline_result$employment_shifts) && !is.null(target_emp_rates)) {
-    do_demand_policy <- load_demand_policy(baseline_info$equilibrium$policy_demand)
-    do_cdctc_policy <- load_cdctc_policy(baseline_info$policy_cdctc %||% 'baseline')
-
-    eq_output_dir <- file.path(baseline_info$paths$output, 'models', 'equilibrium')
-    dir.create(eq_output_dir, showWarnings = FALSE, recursive = TRUE)
-
-    achieved_rates <- setNames(rep(NA_real_, length(EMPLOYMENT_TARGETING_GROUPS)), EMPLOYMENT_TARGETING_GROUPS)
-    for (g in EMPLOYMENT_TARGETING_GROUPS) {
-      achieved_rates[g] <- compute_group_employment_rate(
-        P = baseline_result$prices,
-        group = g,
-        parent_units_list = parent_units_list,
-        demand_params = demand_params,
-        employment_shifts = baseline_result$employment_shifts,
-        policy_demand = do_demand_policy,
-        policy_cdctc = do_cdctc_policy,
-        cpi_growth_factor = supply_params$cpi_factor
-      )
-    }
-
-    diag_df <- tibble(
-      year = year,
-      group = EMPLOYMENT_TARGETING_GROUPS,
-      target_rate = target_emp_rates[EMPLOYMENT_TARGETING_GROUPS],
-      achieved_rate = achieved_rates[EMPLOYMENT_TARGETING_GROUPS],
-      delta_shift = baseline_result$employment_shifts[EMPLOYMENT_TARGETING_GROUPS],
-      rate_gap = achieved_rates[EMPLOYMENT_TARGETING_GROUPS] - target_emp_rates[EMPLOYMENT_TARGETING_GROUPS]
+  # Write employment targeting diagnostics (no-op unless converged + targeting;
+  # skipped when the baseline was loaded from an interface -- diagnostics were
+  # copied from the source run)
+  if (!use_baseline_interface) {
+    write_employment_targeting_diagnostics(
+      baseline_result   = baseline_result,
+      parent_units_list = parent_units_list,
+      demand_params     = demand_params,
+      supply_params     = supply_params,
+      baseline_info     = baseline_info,
+      target_emp_rates  = target_emp_rates,
+      year              = year
     )
-
-    output_file <- file.path(eq_output_dir, paste0('employment_targeting_', year, '.csv'))
-    fwrite(diag_df, output_file, na = 'NA')
-
-    cat('  Employment targeting diagnostics:\n')
-    for (g in EMPLOYMENT_TARGETING_GROUPS) {
-      cat(sprintf('    %s: target=%.4f, achieved=%.4f, delta=%.4f\n',
-                  g, target_emp_rates[g], achieved_rates[g], baseline_result$employment_shifts[g]))
-    }
   }
 
   baseline_summaries <- list(
@@ -596,7 +562,8 @@ run_counterfactual_standalone <- function(scenario_id, scenario_info, year,
                                           baseline_info, macro_projections,
                                           target_employment_rates = NULL,
                                           baseline_employment_shifts = NULL,
-                                          run_fiscal_npv = FALSE) {
+                                          run_fiscal_npv = FALSE,
+                                          initial_prices = NULL) {
 
   #----------------------------------------------------------------------------
   # Processes a single counterfactual scenario as a pure function for parallel
@@ -628,10 +595,13 @@ run_counterfactual_standalone <- function(scenario_id, scenario_info, year,
   #   - target_employment_rates (num vec): Target employment rates by group
   #   - baseline_employment_shifts (list): Employment shifts from baseline
   #   - run_fiscal_npv (logical): Whether to compute fiscal NPV
+  #   - initial_prices (num vec or NULL): Warm-start prices from the caller
+  #       (e.g. previous year's solution in the sequential path). NULL or
+  #       INITIAL_PRICES falls back to this year's baseline solution.
   #
   # Returns: (list) Named list of result summary tibbles including allocation,
   #   employment, fiscal_cost, mechanical_fiscal, child_earnings, distributional,
-  #   and poverty results
+  #   and poverty results, plus converged (logical) and prices (num vec or NULL)
   #----------------------------------------------------------------------------
 
   cat('\n  --- Counterfactual:', scenario_id, '---\n')
@@ -645,6 +615,7 @@ run_counterfactual_standalone <- function(scenario_id, scenario_info, year,
 
   result_summaries <- list(
     converged                    = FALSE,
+    prices                       = NULL,
     allocation                   = tibble(),
     employment                   = tibble(),
     fiscal_cost                  = tibble(),
@@ -665,7 +636,42 @@ run_counterfactual_standalone <- function(scenario_id, scenario_info, year,
   distributional_year <- years_to_run[dist_idx]
   is_distributional_year <- (year == distributional_year)
 
-  # Compute MECHANICAL effect first
+  # Resolve warm-start prices: caller-supplied prices (previous year's
+  # counterfactual solution in the sequential path) take precedence; a NULL
+  # or never-solved (INITIAL_PRICES) starting point falls back to this
+  # year's baseline solution when available.
+  if (is.null(initial_prices)) {
+    initial_prices <- INITIAL_PRICES
+  }
+  if (isTRUE(all.equal(initial_prices, INITIAL_PRICES)) &&
+      baseline_result$converged && !is.null(baseline_result$prices)) {
+    initial_prices <- baseline_result$prices
+  }
+
+  # Run full equilibrium
+  result <- run_scenario(
+    scenario_info      = scenario_info,
+    supply_params      = supply_params,
+    demand_params      = demand_params,
+    parent_units_list  = parent_units_list,
+    year               = year,
+    initial_prices     = initial_prices,
+    n_draws_per_record = n_draws_per_record,
+    year_seed          = year_seed,
+    macro_projections  = macro_projections,
+    target_employment_rates = target_employment_rates,
+    baseline_employment_shifts = baseline_employment_shifts
+  )
+
+  result_summaries$converged <- result$converged
+  if (result$converged) {
+    result_summaries$prices <- result$prices
+  }
+
+  # Compute MECHANICAL effect (policy cost with no behavioral response).
+  # Runs AFTER the equilibrium: rationed policies reuse the policy run's
+  # solved offer rates and lottery draws (Option A), which only exist once
+  # the equilibrium has been solved.
   if (baseline_result$converged) {
     if (isTRUE(scenario_info$employer_subsidy_config$enabled)) {
       config <- scenario_info$employer_subsidy_config
@@ -696,28 +702,41 @@ run_counterfactual_standalone <- function(scenario_id, scenario_info, year,
       policy_transfer_file  = scenario_info$policy_transfer %||% 'baseline',
       employer_subsidy_rate = employer_subsidy_rate,
       demand_params         = demand_params,
-      cpi_growth_factor     = supply_params$cpi_factor
+      cpi_growth_factor     = supply_params$cpi_factor,
+      policy_result         = result
     )
 
     result_summaries$mechanical_fiscal <- mechanical_effect
   }
 
-  # Run full equilibrium (use INITIAL_PRICES - no warm-starting in parallel)
-  result <- run_scenario(
-    scenario_info      = scenario_info,
-    supply_params      = supply_params,
-    demand_params      = demand_params,
-    parent_units_list  = parent_units_list,
-    year               = year,
-    initial_prices     = if (baseline_result$converged && !is.null(baseline_result$prices)) baseline_result$prices else INITIAL_PRICES,
-    n_draws_per_record = n_draws_per_record,
-    year_seed          = year_seed,
-    macro_projections  = macro_projections,
-    target_employment_rates = target_employment_rates,
-    baseline_employment_shifts = baseline_employment_shifts
-  )
+  # Rationed program diagnostics CSV: slots / offer rates / expected, realized,
+  # and mechanical take-up side by side (guards against misreading the
+  # mechanical line as full program cost)
+  if (!is.null(result$program_slots)) {
+    rationed_sectors_diag <- which(result$program_slots > 0)
+    mech_cols <- paste0('mechanical_program_takeup_s', rationed_sectors_diag)
+    mech_available <- nrow(result_summaries$mechanical_fiscal) > 0 &&
+      all(mech_cols %in% names(result_summaries$mechanical_fiscal))
 
-  result_summaries$converged <- result$converged
+    rationing_diag <- tibble(
+      year             = year,
+      sector           = SECTOR_MAPPING$ecec_type[rationed_sectors_diag],
+      sector_id        = rationed_sectors_diag,
+      slots            = result$program_slots[rationed_sectors_diag],
+      offer_rate       = if (!is.null(result$offer_rates)) result$offer_rates[rationed_sectors_diag] else NA_real_,
+      expected_takeup  = if (!is.null(result$program_takeup)) result$program_takeup[rationed_sectors_diag] else NA_real_,
+      realized_takeup  = if (!is.null(result$program_takeup_realized)) result$program_takeup_realized[rationed_sectors_diag] else NA_real_,
+      mechanical_takeup = if (mech_available) {
+        as.numeric(unlist(result_summaries$mechanical_fiscal[1, mech_cols]))
+      } else {
+        NA_real_
+      }
+    )
+
+    diag_dir <- file.path(scenario_info$paths$output, 'models', 'equilibrium')
+    dir.create(diag_dir, showWarnings = FALSE, recursive = TRUE)
+    fwrite(rationing_diag, file.path(diag_dir, paste0('rationing_', year, '.csv')), na = 'NA')
+  }
 
   # Aggregate scenario results
   scenario_allocation <- aggregate_year_allocation(result, year)

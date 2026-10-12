@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical vs. Behavioral Effects for Quantity-Limited Programs</title>
+<style>
+  :root {
+    --text: #1a1a2e;
+    --muted: #5a5a72;
+    --accent: #1f4e79;
+    --rule: #d8d8e0;
+    --bg-note: #f4f6fa;
+    --bg-code: #f0f0f4;
+  }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--text);
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+    line-height: 1.55;
+  }
+  h1 {
+    font-size: 1.6rem;
+    color: var(--accent);
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 1rem;
+  }
+  h2 {
+    font-size: 1.2rem;
+    color: var(--accent);
+    margin-top: 2.2rem;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 0.3rem;
+  }
+  h3 {
+    font-size: 1.02rem;
+    margin-top: 1.6rem;
+  }
+  code {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--bg-code);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+  .note {
+    background: var(--bg-note);
+    border-left: 3px solid var(--accent);
+    padding: 0.8rem 1rem;
+    margin: 1.2rem 0;
+    font-size: 0.95rem;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.2rem 0;
+    font-size: 0.93rem;
+  }
+  th, td {
+    border: 1px solid var(--rule);
+    padding: 0.5rem 0.7rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--bg-note); }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin-bottom: 0.35rem; }
+</style>
+</head>
+<body>
+
+<h1>Defining the Mechanical Effect for Quantity-Limited Public Programs</h1>
+<p class="subtitle">ECEC-Simulator design memo &mdash; July 9, 2026. Assumes full familiarity with the model; context on the proposed rationing extension is included in &sect;1.</p>
+
+<h2>1. Context: the proposed rationing extension</h2>
+
+<p>We are extending the simulator to handle quantity-limited public programs (e.g., New York&rsquo;s 2K), specified in the <code>policy_demand</code> file via optional metadata: slots by paid sector, a government covered share of cost, and the usual eligibility criteria. When slots are limited, the equilibrium mimics a lottery:</p>
+
+<ul>
+  <li>Offers are drawn <strong>per eligible child, per rationed sector</strong> (Bernoulli with sector-specific offer rate <em>r<sub>j</sub></em>).</li>
+  <li>Choice probabilities are computed conditional on each offer state; aggregate demand and program take-up are mixtures over states weighted by the offer-rate probabilities. Because the state-conditional probabilities do not depend on <em>r</em>, the offer rates are solved by a cheap root-find nested inside each price evaluation (analogous to the existing employment-shift nesting), with the constraint that expected take-up (in weighted <em>children</em>) equals the slot count &mdash; or <em>r<sub>j</sub></em> = 1 with slack if the program is undersubscribed.</li>
+  <li>Post-equilibrium, the Gumbel stage draws an actual offer state per expanded record (from a separately seeded RNG stream, so epsilon draws stay aligned with the baseline) and collapses to discrete choices using the state-conditional probabilities. The drawn offer state is persisted as micro-level columns on the collapsed output.</li>
+</ul>
+
+<p>The key consequence for this memo: <strong>a household&rsquo;s realized subsidy is no longer a deterministic function of (household, choice, prices)</strong>. It also depends on which offers the household holds. Every downstream computation that regenerates policy components from <code>compute_policy_components()</code> &mdash; the mechanical fiscal effect, the distributional decomposition, and the poverty decomposition &mdash; must therefore condition on an offer state. The question is <em>which</em> offer state the mechanical world should use.</p>
+
+<h2>2. How the mechanical/behavioral split works today</h2>
+
+<p>The distinction is introduced <strong>after</strong> the Gumbel draws, at the level of individual expanded records. <code>compute_mechanical_fiscal_effect()</code> takes the baseline&rsquo;s collapsed micro-data (one row per household &times; <code>epsilon_id</code>, each with a realized discrete <code>choice</code>), strips the collapsed scalars, applies the <em>policy&rsquo;s</em> subsidy/CDCTC/tax rules at <em>baseline</em> prices, and extracts values at each record&rsquo;s baseline choice:</p>
+
+<ul>
+  <li><strong>Mechanical</strong> = policy rules, baseline prices, baseline behavior.</li>
+  <li><strong>Full</strong> = policy scenario totals minus baseline totals (same epsilon seed across scenarios).</li>
+  <li><strong>Behavioral</strong> = full &minus; mechanical (computed in <code>compute_budget_deltas()</code>; the phase-in factor scales only the behavioral component).</li>
+</ul>
+
+<p>The distributional and poverty decompositions use the same construction at the family level, joining baseline and policy records on <code>(hh_id, parent_unit_id, pseudofamily_id, epsilon_id)</code>. This record-level join is what makes the family-level tables coherent: a family that does not change behavior has mechanical effect equal to total effect by construction.</p>
+
+<h2>3. The problem rationing introduces</h2>
+
+<p>The current definition is &ldquo;policy <em>rules</em> at baseline prices and baseline behavior&rdquo;: rules are statutory, prices are held at baseline. The offer rate <em>r</em> fits neither category. It is an <strong>equilibrium object</strong> &mdash; solved jointly with prices such that expected take-up <em>under policy behavior</em> fills the slots. There is no baseline value of <em>r</em> (the baseline has no program), so the mechanical world must take a stance on it. Two coherent options exist, and they give different answers.</p>
+
+<h3>Option A &mdash; reuse the policy equilibrium&rsquo;s offer rates and the identical offer draws</h3>
+
+<p>Draw offers on the baseline expansion using the same <em>r</em> and the same seeded stream as the policy run, so each <code>(household, epsilon_id)</code> record holds exactly the offers it holds in the policy scenario. Mechanical subsidy flows to a record only if it holds an offer <em>and</em> its baseline choice uses the offered sector.</p>
+
+<ul>
+  <li><strong>Interpretation:</strong> mechanical = windfall to lottery-winning inframarginal users &mdash; the subsidy cost of families who would have used the sector anyway, at the offer rates that clear the market under policy behavior.</li>
+  <li><strong>Consequence:</strong> mechanical take-up &ne; slot count. If the policy strongly expands enrollment, <em>r</em> is low (few offers fill the slots), so few baseline users hold offers, mechanical cost is small, and the behavioral residual absorbs the rest.</li>
+  <li><strong>Property preserved:</strong> record-level offer consistency between mechanical and total. A non-switching family&rsquo;s mechanical effect equals its total effect, so the family-level distributional and poverty decompositions remain internally coherent.</li>
+</ul>
+
+<h3>Option B &mdash; re-solve a mechanical-world offer rate</h3>
+
+<p>Solve a separate <em>r<sup>mech</sup></em> such that take-up <em>under baseline behavior</em> fills the slots (capped at <em>r</em> = 1), and draw a separate mechanical lottery.</p>
+
+<ul>
+  <li><strong>Interpretation:</strong> mechanical cost reads naturally at the aggregate level &mdash; &ldquo;the program fully subscribed to the extent baseline demand allows,&rdquo; i.e., subsidy &times; min(slots, baseline eligible users of the sector).</li>
+  <li><strong>Consequence:</strong> the offer draws differ between the mechanical and behavioral evaluations of the same record. In the distributional join, a family that holds an offer in the policy run but not in the mechanical draw shows a large total income gain with a zero mechanical component <em>despite not changing behavior</em>. The family-level mechanical/behavioral split becomes noise, and the standard sanity check (non-switchers: mechanical = total) fails.</li>
+  <li>Also requires calibrating a second lottery per scenario-year.</li>
+</ul>
+
+<h3>Summary of the trade-off</h3>
+
+<table>
+  <tr>
+    <th></th>
+    <th>Option A: policy-run offers</th>
+    <th>Option B: mechanical lottery</th>
+  </tr>
+  <tr>
+    <td>Aggregate mechanical cost</td>
+    <td>Windfall at policy offer rates; take-up &ne; slots (needs a footnote)</td>
+    <td>&ldquo;Program at baseline behavior&rdquo;; slots filled where baseline demand allows</td>
+  </tr>
+  <tr>
+    <td>Family-level decomposition</td>
+    <td>Coherent: same offers in mechanical and total; non-switchers have mechanical = total</td>
+    <td>Incoherent: offer status flips between mechanical and total for the same record</td>
+  </tr>
+  <tr>
+    <td>Implementation</td>
+    <td>Reuse <em>r</em> and seeded draws from the policy run</td>
+    <td>Second lottery calibration per scenario-year</td>
+  </tr>
+</table>
+
+<h2>4. Decision: Option A</h2>
+
+<p>We are adopting <strong>Option A</strong>. The record-level coherence of the distributional and poverty tables is the primary purpose of this machinery, and Option B breaks it. Option A&rsquo;s only cost is that the aggregate &ldquo;mechanical&rdquo; line requires interpretation, which we address with diagnostics rather than by changing the definition.</p>
+
+<p class="note"><strong>Reading the mechanical line under Option A:</strong> for a rationed program, &ldquo;mechanical&rdquo; is the subsidy windfall to baseline-behavior users who win the lottery at the policy-equilibrium offer rates. It is <em>not</em> the full statutory program cost, and mechanical take-up will generally fall short of the slot count. The budget diagnostics will report slots, policy take-up, and mechanical take-up side by side so this cannot be misread.</p>
+
+<h3>Implementation implications</h3>
+
+<ol>
+  <li><strong>Execution order changes.</strong> The counterfactual loop currently computes the mechanical effect <em>before</em> solving the policy equilibrium (in both <code>3b_run_simulation_year.R</code> and <code>run_counterfactual_standalone()</code> in <code>slurm.R</code>). Under Option A the mechanical computation needs <em>r</em> and the offer draws, which exist only after the equilibrium solves, so the mechanical step moves after it. The mechanical computation does not feed the equilibrium, so the reorder is safe; we will move it unconditionally (rationed or not) for a single code path.</li>
+  <li><strong>Same-seed offer draws.</strong> Offers are drawn from a dedicated RNG stream keyed off <code>year_seed</code> (separate from the epsilon stream), replayed identically for the mechanical evaluation so each record&rsquo;s offer state matches the policy run exactly.</li>
+  <li><strong>Offer state as a first-class micro variable.</strong> The drawn offer state is persisted on the collapsed parent-units output and threaded through every downstream <code>compute_policy_components()</code> call (mechanical fiscal, distributional &mdash; including both terms of the symmetric-EV welfare effect that evaluate policy rules &mdash; and poverty). Unrationed policies write no offer columns; downstream accessors treat missing offer columns as &ldquo;offered,&rdquo; so existing policies and old runs are unaffected.</li>
+  <li><strong>Diagnostics.</strong> Solver output gains offer rates and per-sector slot slack (to distinguish undersubscription from non-convergence); budget diagnostics gain the slots / policy take-up / mechanical take-up comparison.</li>
+</ol>
+
+<h2>5. Points of caution</h2>
+
+<ul>
+  <li><strong>Behavioral component absorbs the offer-rate channel.</strong> Under Option A, the difference between mechanical take-up and slots lands in the behavioral component by construction. When comparing scenarios with different degrees of oversubscription, behavioral cost differences partly reflect <em>who wins the lottery</em>, not just behavioral response. The side-by-side take-up diagnostics are the intended guard against over-interpreting this.</li>
+  <li><strong>Phase-in interaction.</strong> The phase-in factor currently scales behavioral components at reporting time. For rationed programs the natural phase-in is a slot schedule (an input-side concept), so scenarios using slot ramps should leave the runscript <code>phase_in</code> column blank to avoid double-counting the ramp.</li>
+  <li><strong>Monte Carlo slack.</strong> The slot constraint binds in expectation over offer and epsilon draws; realized weighted take-up in the collapsed micro-data will wobble around the slot count with finite <code>n_draws_per_record</code>. This is the same class of approximation the model already accepts for choice shares.</li>
+</ul>
+
+</body>
+</html>
