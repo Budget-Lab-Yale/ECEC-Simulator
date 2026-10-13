@@ -181,6 +181,10 @@ compute_supply_residuals <- function(P, Qd, supply_params, policy_supply = ident
 
   P_supply <- policy_supply(P)
 
+  # Remap experiment: unpaid-center hours supplied by low-price sector
+  # (identity when ECEC_REMAP_UNPAID off)
+  Qd <- remap_unpaid_demand(Qd)
+
   if (any(!is.finite(P_supply))) {
     stop('compute_supply_residuals: policy_supply produced non-finite P_supply.')
   }
@@ -1745,6 +1749,11 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
   }
 
   result$supply_subsidy <- supply_subsidy
+
+  # Remap experiment: low-price supplier price paid for remapped hours (3d)
+  if (unpaid_remap_on() && !is.null(result$prices)) {
+    result$unpaid_remap_price <- do_supply_policy(result$prices)[2]
+  }
 
   if (isTRUE(scenario_info$employer_subsidy_config$enabled)) {
     if (!is.null(supply_params$employer_subsidy_pct)) {

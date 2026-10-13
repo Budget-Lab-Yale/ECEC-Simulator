@@ -17,7 +17,7 @@
 #   Rscript state_data/cluster/nsece_shares_by_age.R --nsece <dir> [--out <file>]
 #------------------------------------------------------------------------------
 
-# read_household(), build_children(), build_arrangements(),
+# read_household(), classify_children() (unknown payment drawn),
 # primary_arrangement(), PAID_CENTRE, PT_FT_CUT; main() guarded
 source('state_data/code/02_derive_nsece_constants.R')
 
@@ -30,16 +30,18 @@ shares_by <- function(kids, prim, cell) {
   # cell.
   #
   # Params:
-  #   - kids (tibble): every child 0-4 (build_children())
+  #   - kids (tibble): every child 0-4 x label draw (classify_children(),
+  #       child_weight / M, rec = 1 / M)
   #   - prim (tibble): primary-arrangement rows joined to kids
   #   - cell (function): age -> cell label
   #
-  # Returns: (tibble) cell, type, share, part_time, n
+  # Returns: (tibble) cell, type, share, part_time, n (mean records per
+  #   draw) -- shares pooled over label draws
   #----------------------------------------------------------------------------
 
   all <- kids %>%
-    left_join(select(prim, hh_id, child_id, ecec_choice, hours),
-              by = c('hh_id', 'child_id')) %>%
+    left_join(select(prim, hh_id, child_id, draw, ecec_choice, hours),
+              by = c('hh_id', 'child_id', 'draw')) %>%
     mutate(type = case_when(is.na(ecec_choice) ~ 'Parent Only',
                             ecec_choice %in% PAID_CENTRE ~ 'Center-Based',
                             TRUE ~ ecec_choice),
@@ -51,7 +53,7 @@ shares_by <- function(kids, prim, cell) {
     summarise(share = sum(child_weight) / first(total),
               part_time = sum(child_weight[!is.na(hours) & hours < PT_FT_CUT]) /
                           sum(child_weight),
-              n = n(), .groups = 'drop')
+              n = n_rec(rec), .groups = 'drop')
 }
 
 
@@ -62,10 +64,11 @@ main_by_age <- function() {
   if (!nzchar(root)) stop('pass --nsece <dir> or set NSECE_ROOT')
   out <- cli_value('--out', 'nsece_shares_by_age.csv')
 
-  d    <- read_household(root)
-  kids <- build_children(d)
-  prim <- primary_arrangement(build_arrangements(d)) %>%
-    inner_join(kids, by = c('hh_id', 'child_id'))
+  # Unknown payment: drawn paid status, NSECE_MI_DRAWS draws pooled; no
+  # draw -> child out of numerator, denominator (02_ classify_children())
+  cc   <- classify_children(read_household(root))
+  kids <- cc$kids
+  prim <- cc$prim
   res <- bind_rows(
     shares_by(kids, prim, function(a) ifelse(a <= 2, '0-2', '3-4')),
     shares_by(kids, prim, function(a) paste('age', a)) %>% filter(cell != 'all 0-4')) %>%

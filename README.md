@@ -112,8 +112,8 @@ probabilities, summed over the state's ACS households
 NSECE shares).
 
 - The **state method memos** (`state_data/docs/<date>_summary.pdf`, one per
-  update, newest first by name) are the documents to read — what every number means and how solid it is. They are kept
-  outside git; ask Anna for the current versions.
+  update, newest first by name) are the documents to read — what every number means and how solid it is. Finished memos are in
+  `state_data/docs/archive/`; the memo in progress is kept outside git.
 - [state_data/README.md](state_data/README.md) is the map: how to build, the
   provenance of every input, the five checks that each exit non-zero on
   failure, and the known traps.
@@ -135,7 +135,7 @@ weights.
 
 ## Model Flow
 
-1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment and prices (random forest), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`; see `docs/ecec_team_taxid_memo_2026-08-17.md`).
+1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment (random forest), price wedges (weighted empirical NSECE price distribution per care type, by income quintile for low-priced center and Other Paid), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`; see `docs/ecec_team_taxid_memo_2026-08-17.md`).
 
 2. **Calibration** - Estimates CRRA demand parameters (beta, rho) by targeting empirical elasticities. Backs out household-level preference heterogeneity (alpha matrices) from observed/imputed choice probabilities.
 
@@ -270,6 +270,38 @@ nationally (see `docs/state_level_analysis.md` for the full design):
   summary tibbles gain a `state` column and per-state output is written under
   `simulation/{scenario_id}/states/<ST>/`. Run provenance (deltas, supply and
   epop sources) is recorded in `metadata/state_analysis.yaml`.
+- **Income ranks**: `ECEC_INCOME_RANK` selects how income is ranked for the
+  care-choice forest and for the income-quintile price wedge distributions
+  (low-priced center and Other Paid). Both schemes rank
+  nationally. The default `national_rpp` divides income by the state price level (BEA RPP);
+  `national` uses nominal income and is the one sensitivity. The `state` and
+  `region` schemes were removed: a test showed no difference from
+  `national_rpp`.
+- **Experiment switches** (env vars, off by default; with the switch off,
+  outputs are unchanged). Each applies to the baseline and every scenario.
+  SLURM jobs inherit the shell's environment (`--export=ALL`). Details are in
+  `docs/state_level_analysis.md` (section 13).
+  - `ECEC_REMAP_UNPAID=1`: the low-price paid-center sector supplies the
+    Unpaid Center-Based children. Their hours enter low-price demand in the
+    equilibrium (labor, wages, price). The family price stays 0 and alphas do
+    not change. The fiscal table gets `unpaid_remap_hours` and
+    `total_unpaid_remap_payment` (billions: remapped hours x the low-price
+    supplier price).
+  - `ECEC_STATE_CALIBRATION=counts`: state re-anchoring matches children by
+    target group and hours band (part-time, full-time) from
+    `config/state/demand_counts/<ST>.csv`, not the 6 annual-hours targets.
+    The default is `hours`.
+- **NYC income ranks**: NYC households have two versions. The NY run and all
+  national uses divide NYC income by the New York State RPP. The NYC run uses
+  its own ranks for the care-choice forest (`p0`): under
+  `national_rpp`, NYC income is divided by the NYC metro RPP (114.899) and
+  ranked against the national cutpoints. ACS processing writes
+  `acs_enrollment[_joint]_2019_NYC.csv`; calibration writes
+  `alpha_<c1|c2plus>_2019_NYC.rds` with the national beta and rho
+  (`src/shared_functions/compute_substate_alpha.R`). Under `national` the two
+  versions are identical, so no NYC files are written. An interface without
+  the NYC files runs NYC on the national alphas and logs it. An NYC file with
+  no scheme label, or built under `state` or `region`, stops the run: recalibrate.
 
 State runs require an interface generated after state support was added
 (`STATEFIP` in the ACS pull and `p0`/weights stored with the alpha matrices);
@@ -314,9 +346,72 @@ calibration's mix:
    center tier.
 4. Rebuild the supply files: `Rscript resources/supply/state_supply_params.R`.
 
-A fresh clone also needs `cache/price_models/price_qrf_models.rds`, which is
-not in git and which `-C` does not copy. Copy it from an existing checkout
-before the first run.
+A fresh clone also needs `cache/price_models/price_wedge_quantiles.rds`, which
+is not in git and which `-C` does not copy. Copy it from an existing checkout
+before the first run, or run NSECE processing (1a), which writes it. The file
+replaced `price_qrf_models.rds` on 2026-10-12. An old checkout must rerun 1a
+once: calibration and simulation stop if the file is missing, or if it has no
+income-quintile grids. They also stop if the file was built under a different
+`ECEC_INCOME_RANK` scheme than the run.
+
+**Price wedge**: each parent unit with a child under 5 gets one price
+multiplier per paid care type (low-priced center, high-priced center, paid
+home-based, and Other Paid). The multiplier is a weighted empirical quantile
+of the NSECE price wedge (household out-of-pocket price divided by the base
+price), at a percentile from 1 to 99. The percentile comes from a hash of
+`(hh_id, parent_unit_id)` (`draw_price_pctile_idx()`), and it is the same for
+all four care types. The multiplier is clipped to [0.1, 5].
+
+- **Low-priced center and Other Paid** use the distribution of the household's
+  income quintile. The quintile is `ceiling(income_pctile / 20)`, with the same
+  scheme and national cutpoints as the care-choice forest
+  (`price_wedge_income_pctiles()`). A household-held-out 5-fold test gave a
+  pinball loss 8-13% lower than one distribution in every fold. A quintile
+  cell with fewer than 30 NSECE households uses the one distribution (1a logs
+  which). A household with no positive income uses the one distribution.
+- **High-priced center and paid home-based** use one distribution. The same
+  test showed no gain, and most quintile cells had fewer than 30 households.
+
+The wedge does not use parents or child age. A quantile regression forest on
+income, parents, and child age was removed on 2026-10-12: the 5-fold test gave
+negative out-of-sample skill for every care type. 1a writes the grids to
+`estimation/models/price_wedge_quantiles.csv` and
+`estimation/models/price_wedge_quantiles_by_quintile.csv`.
+
+**NSECE label draws**: three NSECE labels need a random draw for an
+uncertain record (the hours of a regular provider with zero reference-week
+hours, the paid status of an unknown payment amount, and the price tier of a
+paid center without its own hourly price). Since 2026-10-12, 1a makes these
+draws `NSECE_MI_DRAWS` = 50 times (`src/shared_functions/nsece_mi_draws.R`)
+and averages over them. `estimation/data/nsece_enrollment_2019.csv` holds
+one row per child and draw, with the columns `draw` (0-49) and
+`draw_weight` (1/50). A reader of this file multiplies `child_weight` by
+`draw_weight`. `nsece_providers_2019.csv` holds draw 0, which is the single
+draw from before. See `docs/state_level_analysis.md`.
+
+**Center price tiers and urban density**: a paid center is high-priced when
+its price is at or above a tier line for its Census region, community urban
+density, and age band (0-1, 2-3, 4-5). Centers use their posted price;
+families use their hourly payment, so one dollar line applies to both. Since
+2026-10-12 the line is the region's median posted price among high-density
+centers, times the national ratio of the density level's median to the
+high-density median (`compute_tier_thresholds()`,
+`src/shared_functions/urban_density.R`). Medians are weighted by survey weight
+times FTE enrollment, over positive prices. Density is the NSECE code
+(`HH9_` / `CB9_COMM_URBAN_DENSITY`: 1 high, 2 moderate, 3 rural). 1a prints
+the line and writes it to `estimation/data/nsece_tier_thresholds_2019.csv`.
+The care-choice forest also takes `density` as a feature. ACS has no tract,
+so 1b builds the NSECE measure at tract level and pools it to the 2010 PUMA.
+For each 2010 tract, I compute the urban share of the population in the
+tracts within 2 miles, with inverse-distance weights, and cut it at the NSECE
+thresholds (0.85, 0.30). For each PUMA, I take the share of its 2010
+children 0-4 at each level. For each ACS household, 1b predicts the care
+probabilities at all three levels and averages them with its PUMA's shares
+(`mix_density_predictions()`), so no random draw enters.
+`resources/acs/puma_urban_density_2010.R` builds the table
+`resources/acs/puma_urban_density_2010.csv`. 1b reads the household's PUMA
+from `resources/acs/US_ACS__household_county_puma_crosswalk__2019.csv.gz`
+and stops if a household has no PUMA or no row in the table.
 
 ## Output Structure
 

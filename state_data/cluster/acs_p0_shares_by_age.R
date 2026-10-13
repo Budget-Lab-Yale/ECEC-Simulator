@@ -12,6 +12,9 @@
 # Summed over age, output must equal acs_p0_shares.R's -- checked at end when
 # that file is passed.
 #
+# Sub-state geography (NYC): own p0 when alpha_<type>_2019_NYC.rds exists,
+# else national, logged -- same rule as acs_p0_shares.R.
+#
 # KINDERGARTEN (--kindergarten <flags.csv>, acs_kindergarten_flags_2019.py):
 # extra key `kindergarten` (1 = child 0-4 already in kindergarten, joined on
 # hh_id = SERIAL, child_id = PERNUM). NHES-ECPP leaves these children out, so
@@ -118,6 +121,10 @@ main_by_age <- function(args = commandArgs(trailingOnly = TRUE)) {
     geo_hh[[g]] <- select_geo_hh_ids(hh, g, fips)
   }
 
+  # Sub-state geography w/ own p0 (NYC income ranks) -- as acs_p0_shares.R
+  sub_ad <- substate_alpha_data(iface, geo_hh)
+  nat_geo_hh <- geo_hh[setdiff(names(geo_hh), names(sub_ad))]
+
   res <- list()
   for (pu_type in c('c1', 'c2plus')) {
     ad <- readRDS(file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds')))
@@ -128,7 +135,13 @@ main_by_age <- function(args = commandArgs(trailingOnly = TRUE)) {
     kg <- matrix(paste(ad$row_ids$hh_id, ca$ids) %in% kg_ids, ncol = ncol(ages))
     cat(pu_type, ' ages: ', paste(names(table(ages)), table(ages), sep = '=', collapse = ' '),
         '; kindergarten slots: ', sum(kg), '\n', sep = '')
-    res[[pu_type]] <- geo_children_by_age(ad, n_children, geo_hh, ages, kg)
+    res[[pu_type]] <- geo_children_by_age(ad, n_children, nat_geo_hh, ages, kg)
+    for (g in names(sub_ad)) {
+      sad <- sub_ad[[g]][[pu_type]]
+      sca <- child_ages(iface, pu_type, sad)
+      skg <- matrix(paste(sad$row_ids$hh_id, sca$ids) %in% kg_ids, ncol = ncol(sca$ages))
+      res[[paste(pu_type, g)]] <- geo_children_by_age(sad, n_children, geo_hh[g], sca$ages, skg)
+    }
   }
   if (!is.null(kg_f) && !any(bind_rows(res)$kindergarten == 1)) {
     stop('--kindergarten given but no child matched ', kg_f, ' -- check hh_id = SERIAL, child_id = PERNUM')

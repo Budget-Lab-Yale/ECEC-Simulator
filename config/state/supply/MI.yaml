@@ -1,17 +1,17 @@
 year: 2019.0
 labor_requirements:
   unpaid_center_based:
-    no_ba: 0.0544079
-    ba: 0.0594198
+    no_ba: 0.0571519
+    ba: 0.0624165
   low_price_center_based:
-    no_ba: 0.1873917
-    ba: 0.0367017
+    no_ba: 0.1968425
+    ba: 0.0385527
   high_price_center_based:
-    no_ba: 0.1629168
-    ba: 0.0794934
+    no_ba: 0.1711332
+    ba: 0.0835025
   paid_home_based:
-    no_ba: 0.1812103
-    ba: 0.0431067
+    no_ba: 0.1795058
+    ba: 0.0427012
 wages:
   no_ba: 11.7099769
   ba: 19.293224

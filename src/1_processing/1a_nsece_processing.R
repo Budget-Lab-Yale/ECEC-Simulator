@@ -1,14 +1,19 @@
 # 1a_nsece_processing.R
 #
 # NSECE processing: household demand data, supply parameters,
-# and price heterogeneity model training. Called from main.R.
+# and price heterogeneity quantile grids. Called from main.R.
+#
+# Label draws (nsece_mi_draws.R): nsece_enrollment_2019.csv one row per
+# child x draw (NSECE_MI_DRAWS draws; columns draw, draw_weight = 1 / M) --
+# weight readers multiply child_weight by draw_weight. nsece_providers_2019.csv
+# holds draw 0 (= single draw before MI).
 
 
 run_nsece_processing <- function() {
 
   #----------------------------------------------------------------------------
   # Processes 2019 NSECE data: household demand data, supply parameters,
-  # and price heterogeneity QRF models. Writes to estimation output folder.
+  # and price heterogeneity quantile grids. Writes to estimation output folder.
   #
   # Params: none
   #
@@ -95,53 +100,6 @@ run_nsece_processing <- function() {
   }
 
 
-  train_single_qrf <- function(df, target_col, name) {
-
-    #--------------------------------------------------------------------------
-    # Trains a single quantile regression forest model.
-    #
-    # Params:
-    #   - df (df): Input dataframe with predictor and target columns
-    #   - target_col (chr): Name of the target column to predict
-    #   - name (chr): Display name for logging progress
-    #
-    # Returns: (ranger) Trained QRF model. Region ranks income only -- not a
-    #   predictor (2026-10-07): geographic price level comes from market price
-    #--------------------------------------------------------------------------
-
-    # Filter out NAs
-    df <- df %>%
-      filter(
-        !is.na(income_pctile),
-        !is.na(region),
-        !is.na(n_parents),
-        !is.na(child_age),
-        !is.na(.data[[target_col]])
-      )
-
-    sample_size  <- 50000
-    replace_flag <- nrow(df) < sample_size
-
-    train_df <- df %>%
-      sample_n(size = sample_size, weight = weight, replace = replace_flag) %>%
-      rename(target = !!sym(target_col)) %>%
-      select(target, income_pctile, n_parents, child_age)
-
-    # Train ranger with quantreg = TRUE for quantile regression forest
-    qrf <- ranger(
-      formula       = target ~ income_pctile + n_parents + child_age,
-      data          = train_df,
-      num.trees     = 500,
-      mtry          = 3,
-      min.node.size = 10,
-      quantreg      = TRUE,
-      keep.inbag    = TRUE
-    )
-
-    qrf
-  }
-
-
   # --- Centre posted prices and tier boundary (sections 1 and 2) ---
   cat('Processing 2019 NSECE centre prices...\n')
 
@@ -163,6 +121,8 @@ run_nsece_processing <- function() {
       id               = CB9_METH_CASEID,
       center_weight    = CB9_METH_WEIGHT,
       region           = CB9_REGION,
+      # Community urban density 1 high / 2 moderate / 3 rural (urban_density.R)
+      density          = CB9_COMM_URBAN_DENSITY,
       all_of(enroll_cols),
       all_of(ft_share_cols),
       all_of(price_cols),
@@ -198,6 +158,7 @@ run_nsece_processing <- function() {
     group_by(
       id,
       region,
+      density,
       age_bin = case_when(
         age_bin %in% c('INF', '1YR') ~ '0-1',
         age_bin %in% c('2YR', '3YR') ~ '2-3',
@@ -232,28 +193,24 @@ run_nsece_processing <- function() {
     mutate(
       enrollment_fte = 1 * (enrollment * share_ft) + 0.5 * (enrollment * (1 - share_ft))
     ) %>%
-    select(id, center_weight, region, age_bin, enrollment, enrollment_fte, price)
+    select(id, center_weight, region, density, age_bin, enrollment, enrollment_fte, price)
 
 
-  # Tier boundary: FTE-weighted median posted price in Census region x age
-  # bin (2026-10-09). One dollar line for both sides -- centres (section 2,
-  # posted price) and families (section 1, hourly payment) fall below it
-  # (low) or at/above it (high). Replaces national $4.75 household cutoff and
-  # national-median-by-age provider cutoff.
-  medians <- processed_nsece_cb %>%
-    filter(
-      !is.na(price),
-      price > 0
-    ) %>%
-    group_by(region, age_bin) %>%
-    summarise(
-      median = wtd.quantile(
-        x      = price,
-        weight = center_weight * enrollment_fte,
-        probs  = 0.5
-      ),
-      .groups = 'drop'
-    )
+  # Tier boundary: density-adjusted line per Census region x community urban
+  # density x age bin (2026-10-12; region x age median before, 2026-10-09) --
+  # regional high-density median x national density price ratio
+  # (compute_tier_thresholds(), urban_density.R), FTE x survey weighted,
+  # positive prices. One line both sides -- centres (section 2, posted price,
+  # own CB9 density) and families (section 1, hourly payment, own HH9
+  # density) fall below it (low) or at/above it (high). Same $10 reads
+  # higher tier in rural market than in dense city
+  tier_thresholds <- compute_tier_thresholds(processed_nsece_cb)
+  medians <- tier_thresholds %>%
+    select(region, density, age_bin, median = threshold)
+  cat('  Paid-centre tier line ($/hr), region x density (1 high, 2 moderate, 3 rural) x age:\n')
+  print(as.data.frame(tier_thresholds %>%
+                        mutate(across(c(median_high, national_ratio, threshold), ~ round(.x, 3)))))
+  fwrite(tier_thresholds, file.path(estimation_info$paths$data, 'nsece_tier_thresholds_2019.csv'))
 
 
   # --- SECTION 1: Process household (demand-side) NSECE data ---
@@ -290,7 +247,10 @@ run_nsece_processing <- function() {
           ),
           resp_partner = if_else(HH9_RSPOUSEPARTNER_LOOP < 0, NA, HH9_RSPOUSEPARTNER_LOOP),
           # Census region: 1=Northeast, 2=Midwest, 3=South, 4=West
-          region = HH9_REGION
+          region = HH9_REGION,
+          # Community urban density 1 high / 2 moderate / 3 rural -- tier
+          # line, care-forest feature (urban_density.R)
+          density = HH9_COMM_URBAN_DENSITY
         ) %>%
         select(
           hh_id        = HH9_METH_CASEID,
@@ -298,6 +258,7 @@ run_nsece_processing <- function() {
           n_members    = HH9_HHCOMP_MEMBERS,
           income       = HH9_ECON_INCOME_ANNUAL,
           region,
+          density,
           resp_male,
           resp_has_partner,
           resp_partner
@@ -391,7 +352,7 @@ run_nsece_processing <- function() {
       parch_cols <- grep('^HH9_PARCH_[1-9]_[1-9]$', names(nsece_hh), value = T)
 
       # Start by constructing household - parent - child links
-      pu <- nsece_hh %>%
+      links <- nsece_hh %>%
         select(hh_id = HH9_METH_CASEID, all_of(parch_cols)) %>%
 
         # Reshape long in parent and child
@@ -404,7 +365,27 @@ run_nsece_processing <- function() {
         ) %>%
         filter(is_parent == 1) %>%
         arrange(hh_id, child_id, hhm_id) %>%
-        select(hh_id, child_id, hhm_id) %>%
+        select(hh_id, child_id, hhm_id)
+
+      # Parent sex (infer_parent_sex()): respondent from HH9_RGENDER, other
+      # parents from household mother / father counts -- roster sex not on
+      # public file. Before: male1 only when parent 1 = respondent, no
+      # male2; RGENDER -4 coded female
+      parent_sex <- infer_parent_sex(
+        links,
+        nsece_hh %>%
+          transmute(
+            hh_id     = HH9_METH_CASEID,
+            resp_male = if_else(HH9_RGENDER %in% c(1, 2), as.numeric(HH9_RGENDER == 1), NA_real_),
+            n_mothers = if_else(HH9_HHCOMP_NUMMOTHER >= 0, as.numeric(HH9_HHCOMP_NUMMOTHER), NA_real_),
+            n_fathers = if_else(HH9_HHCOMP_NUMFATHER >= 0, as.numeric(HH9_HHCOMP_NUMFATHER), NA_real_)
+          )
+      )
+      cat('  Parent sex source (parents, raw): ',
+          paste(names(table(parent_sex$sex_source)), table(parent_sex$sex_source),
+                sep = ' ', collapse = ', '), '\n', sep = '')
+
+      pu <- links %>%
 
         # Create parent IDs
         group_by(hh_id, child_id) %>%
@@ -430,15 +411,14 @@ run_nsece_processing <- function() {
           .before = hhm_id1
         ) %>%
 
-        # Add sex
+        # Add sex, both parents
         left_join(
-          nsece_hh %>%
-            mutate(
-              hhm_id1 = 1,
-              male1 = if_else(HH9_RGENDER != 3, as.integer(HH9_RGENDER == 1), NA)
-            ) %>%
-            select(hh_id = HH9_METH_CASEID, hhm_id1, male1),
+          parent_sex %>% select(hh_id, hhm_id1 = hhm_id, male1 = male),
           by = c('hh_id', 'hhm_id1')
+        ) %>%
+        left_join(
+          parent_sex %>% select(hh_id, hhm_id2 = hhm_id, male2 = male),
+          by = c('hh_id', 'hhm_id2')
         )
 
       pu <- {
@@ -483,6 +463,45 @@ run_nsece_processing <- function() {
               select(hh_id, child_id, hhm_id2 = hhm_id, hours2 = hours),
             by = c('hh_id', 'child_id','hhm_id2')
           )
+
+        # Employment band per parent, ACS concept (usual hours, past 12
+        # months) as near as public file allows (nsece_person_employment()):
+        # worked for pay last week -> reference-week WST hours (hours1 /
+        # hours2); not working, still holds job or last job within 12 months
+        # of interview -> usual hours at that job; else none. Hours /
+        # recency unknown -> NA (family out of forest frame, 1b). Before:
+        # WST hours of parent 1, NA -> none (2026-10-12)
+        person_cols <- grep('^HH9_(D1A_WORK|D5B_LASTWRKMOYR_R|D5C_HOUR)_[1-9]$', names(nsece_hh), value = T)
+        interview <- children %>%
+          mutate(t = nsece_interview_time(age_months, age_months_sep1)) %>%
+          filter(!is.na(t)) %>%
+          group_by(hh_id) %>%
+          summarise(t = median(t), .groups = 'drop')
+        # Household w/out child born before 2018-09-01 -> median interview time
+        t_fill <- median(interview$t)
+        person_work <- nsece_hh %>%
+          select(hh_id = HH9_METH_CASEID, all_of(person_cols)) %>%
+          pivot_longer(
+            cols          = -hh_id,
+            names_to      = c('name', 'hhm_id'),
+            names_pattern = 'HH9_(D1A_WORK|D5B_LASTWRKMOYR_R|D5C_HOUR)_([1-9])$'
+          ) %>%
+          mutate(hhm_id = as.integer(hhm_id)) %>%
+          pivot_wider() %>%
+          left_join(interview, by = 'hh_id') %>%
+          transmute(hh_id, hhm_id, worked = D1A_WORK, last_work = D5B_LASTWRKMOYR_R,
+                    last_hours = D5C_HOUR, cutoff = coalesce(t, t_fill) - 1)
+        pu <- pu %>%
+          left_join(person_work %>% rename_with(~ paste0(.x, '_p1'), -hh_id) %>% rename(hhm_id1 = hhm_id_p1),
+                    by = c('hh_id', 'hhm_id1')) %>%
+          left_join(person_work %>% rename_with(~ paste0(.x, '_p2'), -hh_id) %>% rename(hhm_id2 = hhm_id_p2),
+                    by = c('hh_id', 'hhm_id2')) %>%
+          mutate(
+            emp1 = nsece_person_employment(worked_p1, hours1, last_work_p1, last_hours_p1, cutoff_p1),
+            emp2 = if_else(is.na(hhm_id2), NA_character_,
+                           nsece_person_employment(worked_p2, hours2, last_work_p2, last_hours_p2, cutoff_p2))
+          ) %>%
+          select(-matches('_p[12]$'))
 
         # Add parent wages
         wage_cols  <- grep('^HH9_D3D_WAGE_TC_[1-9]$', names(nsece_hh), value = T)
@@ -574,6 +593,7 @@ run_nsece_processing <- function() {
       pubprek_xy_cols   <- grep('^HH9_PUBPREK_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
       hours_xy_cols     <- grep('^HH9_HRS_WEEK_PROV_[1-9]_(?:[1-9]|1[0-4])$',     names(nsece_hh), value = T)
       payment_xy_cols   <- grep('^HH9_WEEKLY_PAYMENT_TC_[1-9]_(?:[1-9]|1[0-4])$', names(nsece_hh), value = T)
+      paidhh_xy_cols    <- grep('^HH9_PAID_[1-9]_(?:[1-9]|1[0-4])$',              names(nsece_hh), value = T)
       subsidy_xy_cols   <- grep('^HH9_SUBSIDY_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
       careloc_xy_cols   <- grep('^HH9_CARELOC_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
 
@@ -602,6 +622,7 @@ run_nsece_processing <- function() {
           all_of(pubprek_xy_cols),
           all_of(hours_xy_cols),
           all_of(payment_xy_cols),
+          all_of(paidhh_xy_cols),
           all_of(subsidy_xy_cols),
           all_of(careloc_xy_cols)
         ) %>%
@@ -624,6 +645,8 @@ run_nsece_processing <- function() {
         select(
           hh_id, child_id, provider_id,
           regular           = HH9_REGCARE,
+          # Raw code kept -- resolve_regular_care() reads -1 / -2
+          regcare           = HH9_REGCARE,
           type_raw          = HH9_TYPEOFCARE_AGG,
           headstart         = HH9_HEADSTART,
           pubprek           = HH9_PUBPREK,
@@ -635,6 +658,11 @@ run_nsece_processing <- function() {
           # does NOT subtract subsidy paid to household (that is HH9_WEEKLY_COST_CARE_TC).
           # Name kept for callers -- "net" of third-party payments only.
           net_weekly_cost = HH9_WEEKLY_PAYMENT_TC,
+          # Questionnaire paid status (J1 "do you pay provider anything
+          # directly", C5E) -- 1 paid, 0 not paid by household, -1 DK, -2 no
+          # Section J. Raw code kept; resolves paid status of unknown-amount
+          # rows (impute_unknown_payment(), paid_q)
+          paid_hh           = HH9_PAID,
           subsidy_weekly    = HH9_SUBSIDY
         ) %>%
 
@@ -644,7 +672,9 @@ run_nsece_processing <- function() {
             regular         = list(miss_threshold = -2),
             headstart       = list(),
             pubprek         = list(),
-            net_weekly_cost = list(),
+            # -2 = ineligible for Section J (not asked) -> amount unknown,
+            # as -1 DK / refused (2026-10-12; NIU, unpaid before)
+            net_weekly_cost = list(miss_threshold = -2),
             subsidy_weekly  = list(),
             careloc         = list(),
             priorrel        = list()
@@ -689,22 +719,38 @@ run_nsece_processing <- function() {
 
           # is_other will be derived below using location/relationship
           is_paid      = !is.na(paid_calc)   & paid_calc == 1,
-          # Priced paid centre -- tier set below against own market's median
-          is_priced    = is_center & is_paid & net_hourly_cost_status == 'OK',
+          # Payment amount unknown (HH9_WEEKLY_PAYMENT_TC -1 DK / refused,
+          # -2 no Section J) -> neither paid nor unpaid label (2026-10-12;
+          # was unpaid). Child-level overlay uses paid status from HH9_PAID
+          # when 0 / 1, else drawn (impute_unknown_payment())
+          pay_unknown  = is.na(paid_calc),
 
           # - "Home-Based": individual care (TOC 1-3), outside child's home, no prior relationship
-          # - "Other":     individual care with in-home/prior-rel, OR org/irregular/unknown (TOC 5,7,8)
+          # - "Other":     individual care with in-home/prior-rel, OR org (TOC 5).
+          #   TOC 7 / 8 rows also land here but never regular
+          #   (resolve_regular_care(), TOC 1-5 only) -> never count, never
+          #   payment donors / draw targets (2026-10-12; TOC 8 counted Other before)
           in_child_home = careloc == 1,
           has_prior_rel = priorrel == 1,
 
           is_home_based = is_home & !in_child_home & !has_prior_rel,
           is_other_kind = (!is_center & !is_k8) & (!is_home | in_child_home | has_prior_rel),
 
+          # Kind of unknown-payment row -- picks its candidate labels
+          # (PAY_UNKNOWN_OPTIONS) in child-level overlay
+          unknown_kind = case_when(
+            is_k8 | !pay_unknown ~ NA_character_,
+            is_center            ~ 'center',
+            is_home_based        ~ 'home',
+            is_other_kind        ~ 'other'
+          ),
+
           ecec_choice = case_when(
             is_k8                                               ~ 'K-8',
+            pay_unknown                                         ~ NA,
             is_center & !is_paid                                ~ 'Unpaid Center-Based',
-            is_center & is_paid & is_priced                     ~ 'Paid Center-Based',
-            is_center & is_paid & !is_priced                    ~ NA,
+            # Paid centre -- tier set below against own market's median
+            is_center & is_paid                                 ~ 'Paid Center-Based',
             is_home_based & !is_paid                            ~ 'Unpaid Home-Based',
             is_home_based &  is_paid                            ~ 'Paid Home-Based',
             is_other_kind & !is_paid                            ~ 'Other Unpaid',
@@ -713,106 +759,168 @@ run_nsece_processing <- function() {
           )
         )
 
-      # Paid-centre tier: family's hourly payment vs centre tier boundary
-      # (`medians`, provider posted price) for household's region x child's
-      # age bin -- same dollar line as centres. Payment net of third-party
-      # payments, so subsidised families fall low more often (limitation).
-      providers <- providers %>%
-        left_join(children %>% select(hh_id, child_id, age), by = c('hh_id', 'child_id')) %>%
-        left_join(households %>% select(hh_id, region), by = 'hh_id') %>%
-        mutate(age_bin = centre_age_bin(age)) %>%
-        left_join(medians, by = c('region', 'age_bin')) %>%
-        mutate(
-          ecec_choice = case_when(
-            is.na(ecec_choice) | ecec_choice != 'Paid Center-Based' ~ ecec_choice,
-            is.na(median)                                           ~ ecec_choice,
-            net_hourly_cost >= median                               ~ 'High-Priced Center-Based',
-            TRUE                                                    ~ 'Low-Priced Center-Based'
+      # Draw stage, NSECE_MI_DRAWS times (multiple imputation,
+      # nsece_mi_draws.R): draw m seeds = base + m x NSECE_MI_SEED_STEP, m = 0
+      # = single draw before. Which rows draw (hours_imputed, tier_unknown,
+      # unknown payment) same every draw -- only drawn values change
+      providers_base <- providers
+      label_draw <- function(m) {
+
+        #------------------------------------------------------------------------
+        # One draw: regular care + hours, paid-centre tier, unknown payment.
+        #
+        # Params:
+        #   - m (int): draw index, 0 .. NSECE_MI_DRAWS - 1
+        #
+        # Returns: (tibble) provider rows w/ draw m's hours, labels
+        #------------------------------------------------------------------------
+
+        show <- m == 0
+
+        # Regular care + weekly hours (resolve_regular_care(), shared w/
+        # state_data 02): REGCARE -1 / -2 -> regular when TOC 1-5; regular row
+        # w/ zero / missing reference-week hours -> imputed hours (keyed draw
+        # from weighted donor hours, TOC group x age cell). Overwrites
+        # `regular`, `hours`;
+        # net_hourly_cost above stays on reported hours (price models,
+        # home price use reported hours only)
+        rc <- providers_base %>%
+          left_join(children %>% select(hh_id, child_id, age, child_weight),
+                    by = c('hh_id', 'child_id')) %>%
+          resolve_regular_care(seed = nsece_mi_seed(REGULAR_HOURS_SEED, m))
+        providers <- rc$arr %>% select(-child_weight)
+        if (show) {
+          cat('  Regular care: REGCARE -1/-2 rows regular by TOC ', sum(providers$regular_by_type),
+              ', regular rows w/ imputed hours ', sum(providers$hours_imputed), '\n', sep = '')
+        }
+
+        # Paid-centre tier: family's hourly payment vs centre tier boundary
+        # (`medians`, provider posted price) for household's region x community
+        # density x child's age bin -- same dollar line as centres. Payment net of third-party
+        # payments, so subsidised families fall low more often (limitation).
+        # Hourly payment on reported hours only. Paid centre w/ imputed hours
+        # (no reference-week care): weekly payment over donor-drawn hours
+        # isn't family's own hourly price -> tier drawn, as unknown payment
+        # (impute_unknown_payment(), tier_unknown) (2026-10-12; tiered on
+        # imputed hours before, 42 rows). No hours -> no tier, label NA (row
+        # can't count)
+        providers <- providers %>%
+          left_join(households %>% select(hh_id, region, density), by = 'hh_id') %>%
+          mutate(age_bin = centre_age_bin(age),
+                 tier_unknown = ecec_choice %in% 'Paid Center-Based' & hours_imputed,
+                 tier_price = if_else(!hours_imputed & !is.na(hours) & hours > 0,
+                                      net_weekly_cost / hours, NA_real_)) %>%
+          left_join(medians, by = c('region', 'density', 'age_bin')) %>%
+          mutate(
+            ecec_choice = case_when(
+              is.na(ecec_choice) | ecec_choice != 'Paid Center-Based' ~ ecec_choice,
+              is.na(tier_price)                                       ~ NA_character_,
+              is.na(median)                                           ~ ecec_choice,
+              tier_price >= median                                    ~ 'High-Priced Center-Based',
+              TRUE                                                    ~ 'Low-Priced Center-Based'
+            )
+          ) %>%
+          select(-age, -region, -density, -age_bin, -median, -tier_price)
+        if (any(providers$ecec_choice %in% 'Paid Center-Based')) {
+          stop('NSECE paid-centre arrangements w/out a tier boundary (region x density x age bin). ',
+               'Check HH9_REGION / HH9_COMM_URBAN_DENSITY codes and child ages.')
+        }
+
+        # Unknown payment: paid status (+ centre tier) drawn per arrangement,
+        # impute_unknown_payment() (shared w/ state_data 02 -- same draws).
+        # assign_primary_care() uses draw on every counting unknown row.
+        # Paid centre w/ imputed hours (tier_unknown) -> tier alone drawn
+        imp_in <- providers %>%
+          left_join(children %>% select(hh_id, child_id, age, child_weight),
+                    by = c('hh_id', 'child_id')) %>%
+          left_join(households %>% select(hh_id, region, density), by = 'hh_id') %>%
+          transmute(
+            hh_id, child_id, provider_id, age, region, density, child_weight,
+            kind   = pay_kind(is_k8, is_center, is_home_based, is_other_kind),
+            paid   = if_else(pay_unknown, NA, is_paid),
+            paid_q = case_when(paid_hh %in% 1 ~ TRUE, paid_hh %in% 0 ~ FALSE),
+            tier   = case_when(ecec_choice %in% 'High-Priced Center-Based' ~ 'High',
+                               ecec_choice %in% 'Low-Priced Center-Based'  ~ 'Low'),
+            counts = !is.na(regular) & regular == 1 & !is.na(hours) & hours > 0,
+            tier_unknown
           )
-        ) %>%
-        select(-age, -region, -age_bin, -median)
-      if (any(providers$ecec_choice %in% 'Paid Center-Based')) {
-        stop('NSECE paid-centre arrangements w/out a tier boundary (region x age bin). ',
-             'Check HH9_REGION / CB9_REGION codes and child ages.')
+        pay_imp <- impute_unknown_payment(imp_in, seed = nsece_mi_seed(IMPUTE_PAY_SEED, m))
+        if (show) {
+          cat('  Unknown-payment arrangements w/ draws: ', sum(!pay_imp$draws$tier_only),
+              ' (paid drawn ', sum(pay_imp$draws$imp_paid[!pay_imp$draws$tier_only]),
+              '); paid centres w/ imputed hours, tier drawn: ', sum(pay_imp$draws$tier_only),
+              '\n', sep = '')
+        }
+        providers %>%
+          left_join(pay_imp$draws %>% select(hh_id, child_id, provider_id, imp_paid, imp_tier),
+                    by = c('hh_id', 'child_id', 'provider_id')) %>%
+          mutate(imputed_choice = imputed_pay_label(unknown_kind, imp_paid, imp_tier),
+                 ecec_choice = if_else(tier_unknown,
+                                       imputed_pay_label(rep('center', n()), imp_paid, imp_tier),
+                                       ecec_choice))
       }
+      draws <- lapply(seq_len(NSECE_MI_DRAWS) - 1L, label_draw)
+
+      # providers table = draw 0 (single draw before). Price inputs (home
+      # price, price wedges) read observed payment over reported hours only
+      # -- no drawn row enters them
+      providers <- draws[[1]]
 
       # ---- Child-level overlay ('Parent only' + hours buckets) ---------------
-      # Priority ranking for primary care assignment when child has multiple arrangements.
-      # Center-based care (including unpaid programs like Head Start/pre-K) ranks above
-      # home-based and other care because we focus on policies affecting formal ECEC markets.
-      category_priority <- c(
-        'K-8',
-        'High-Priced Center-Based',
-        'Low-Priced Center-Based',
-        'Unpaid Center-Based',
-        'Paid Home-Based',
-        'Other Paid',
-        'Unpaid Home-Based',
-        'Other Unpaid'
-      )
+      # Primary arrangement per child: assign_primary_care() (shared_functions)
+      # -- rank paid over unpaid, centre first (formal ECEC markets focus),
+      # paid-centre tiers share one rank, unknown payment from imputed draws
+      primary_care <- function(prov, kids) {
 
-      enrollment <- children %>%
+        #------------------------------------------------------------------------
+        # Primary arrangement, hours band per child, one draw.
+        #
+        # Params:
+        #   - prov (tibble): one draw's provider rows
+        #   - kids (tibble): children to label
+        #
+        # Returns: (tibble) hh_id, child_id, ecec_choice, hours,
+        #   ecec_hours_choice -- one row per child
+        #------------------------------------------------------------------------
 
-        # Bring in provider rows (if any) for each child
-        left_join(
-          providers %>% mutate(has_provider_info = 1L),
-          by = c('hh_id', 'child_id')
-        ) %>%
-        group_by(hh_id, child_id) %>%
-        group_modify(~{
-          df   <- .x
-          prov <- df %>% filter(has_provider_info == 1L)
+        kids %>%
 
-          # Hours by category from usable rows only
-          category_hours <- prov %>%
-            filter(
-              regular == 1,
-              !is.na(ecec_choice),
-              hours > 0
-            ) %>%
-            group_by(ecec_choice) %>%
-            summarise(hours = sum(hours), .groups = 'drop')
-
-          if (nrow(category_hours) > 0) {
-
-            # Borowsky method: privilege paid over unpaid (priority first). Hours already summed
-            # within category, so each category is one row and priority alone picks; desc(hours)
-            # never breaks a tie
-            return(
-              category_hours %>%
-                mutate(priority = match(ecec_choice, category_priority)) %>%
-                arrange(priority, desc(hours)) %>%
-                slice(1) %>%
-                select(ecec_choice, hours)
+          # Bring in provider rows (if any) for each child
+          left_join(
+            prov %>% mutate(has_provider_info = 1L),
+            by = c('hh_id', 'child_id')
+          ) %>%
+          group_by(hh_id, child_id) %>%
+          group_modify(~ assign_primary_care(.x %>% filter(has_provider_info == 1L))) %>%
+          ungroup() %>%
+          mutate(
+            ecec_hours_choice = case_when(
+              is.na(ecec_choice) ~ NA,
+              hours == 0         ~ 'none',
+              hours < 20         ~ 'pt',
+              TRUE               ~ 'ft'
             )
-          } else {
+          ) %>%
+          select(hh_id, child_id, ecec_choice, hours, ecec_hours_choice) %>%
+          arrange(hh_id, child_id)
+      }
 
-            # No usable rows; decide NA vs Parent Only
-            if (nrow(prov) == 0) {
-              return(tibble(ecec_choice = 'Parent Only', hours = 0))
-            }
-
-            # Provider rows exist, but are all NA in key fields -> NA bucket
-            all_na_keys <- all(is.na(prov$regular) | is.na(prov$ecec_choice))
-            if (all_na_keys) {
-              return(tibble(ecec_choice = NA, hours = NA))
-            }
-
-            # Otherwise: there were defined rows, just not regular>0/hours>0 -> Parent Only
-            return(tibble(ecec_choice = 'Parent Only', hours = 0))
-          }
-        }) %>%
-        ungroup() %>%
-        mutate(
-          ecec_hours_choice = case_when(
-            is.na(ecec_choice) ~ NA,
-            hours == 0         ~ 'none',
-            hours < 20         ~ 'pt',
-            TRUE               ~ 'ft'
-          )
-        ) %>%
-        select(hh_id, child_id, ecec_choice, hours, ecec_hours_choice) %>%
-        arrange(hh_id, child_id)
+      # Child w/ any drawn row (imputed hours, tier-only draw, drawn paid
+      # status) relabelled every draw; other children same label every draw
+      # -- draw 0 label reused. Every child NSECE_MI_DRAWS rows w/ draw,
+      # draw_weight 1 / M (stack_mi_draws()); child_weight x draw_weight
+      # summed over child's rows = child_weight
+      varies <- providers %>%
+        filter(hours_imputed | tier_unknown | !is.na(imp_paid)) %>%
+        distinct(hh_id, child_id)
+      enr0 <- primary_care(providers, children)
+      fixed <- anti_join(enr0, varies, by = c('hh_id', 'child_id'))
+      kids_varies <- semi_join(children, varies, by = c('hh_id', 'child_id'))
+      enrollment <- stack_mi_draws(c(list(enr0), lapply(draws[-1], function(p) {
+        bind_rows(fixed, primary_care(p, kids_varies)) %>% arrange(hh_id, child_id)
+      })))
+      cat('  Label draws: ', NSECE_MI_DRAWS, ' per child; children w/ drawn rows ',
+          nrow(varies), ' of ', nrow(children), '\n', sep = '')
 
       list(
         providers = providers,
@@ -822,14 +930,17 @@ run_nsece_processing <- function() {
 
     # -- Assertions: NSECE data integrity after processing ----
 
-    # Every child must appear in exactly one enrollment record (the primary
-    # care arrangement). If the enrollment join + group_modify produced
-    # duplicates, child_weight is silently double-counted in calibration.
+    # Every child must appear in exactly one enrollment record per label
+    # draw (the primary care arrangement), NSECE_MI_DRAWS draws. If the
+    # enrollment join + group_modify produced duplicates, child_weight is
+    # silently double-counted in calibration. Draw weights sum to 1 per child.
     enrollment <- enrollment_data$enrollment
     n_enrollment_keys <- enrollment %>%
-      distinct(hh_id, child_id) %>%
+      distinct(hh_id, child_id, draw) %>%
       nrow()
-    stopifnot(n_enrollment_keys == nrow(enrollment))
+    stopifnot(n_enrollment_keys == nrow(enrollment),
+              nrow(enrollment) == NSECE_MI_DRAWS * nrow(children),
+              abs(sum(enrollment$draw_weight) - nrow(children)) < 1e-6)
 
     # Enrollment ecec_choice must only contain known categories or NA.
     # If the recode logic in the provider classification has a gap, an
@@ -917,7 +1028,7 @@ run_nsece_processing <- function() {
     processed_centers <- {
       # Then do classification and return
       processed_nsece_cb %>%
-        left_join(medians, by = c('region', 'age_bin')) %>%
+        left_join(medians, by = c('region', 'density', 'age_bin')) %>%
         mutate(
           ecec_choice = case_when(
             is.na(price)    ~ NA,
@@ -1162,11 +1273,12 @@ run_nsece_processing <- function() {
           n_no_ba   = n_workers - n_ba
         ) %>%
 
-        # Get totals
+        # Get totals -- provider-weighted (HB9_METH_WEIGHT), as centre totals
+        # (2026-10-12; unweighted sums before)
         summarise(
-          enrollment = sum(enrollment),
-          ba         = sum(n_ba),
-          no_ba      = sum(n_no_ba),
+          enrollment = sum(enrollment * hb_weight),
+          ba         = sum(n_ba       * hb_weight),
+          no_ba      = sum(n_no_ba    * hb_weight),
         ) %>%
         mutate(
 
@@ -1288,12 +1400,19 @@ run_nsece_processing <- function() {
   }
 
 
-  # --- SECTION 3: Train price heterogeneity models ---
+  # --- SECTION 3: Price heterogeneity quantile grids ---
+  # Per care type: weighted empirical distribution of price_wedge (household
+  # OOP / base price), 99 quantiles. Replaces price QRF (2026-10-12) -- 5-fold
+  # household-held-out CV: negative pseudo-R2, negative pinball skill vs
+  # constant quantile for every care type, income-rank scheme. Low-price
+  # center, Other Paid add one grid per income quintile (same CV: pinball
+  # loss 8-13% lower every fold); cell < PRICE_WEDGE_MIN_CELL_HH households
+  # -> unconditional grid
   {
     supply_prices <- supply_params$prices
     tc_output_root <- estimation_info$paths$output
 
-    qrf_data <- {
+    price_data <- {
 
       # Extract supply-side prices by sector
       supply_price_center_low  <- supply_prices['Low-Priced Center-Based']
@@ -1301,13 +1420,23 @@ run_nsece_processing <- function() {
       supply_price_home        <- supply_prices['Paid Home-Based']
 
 
-      # Income percentiles (child-weighted) within Census region -- finest
-      # NSECE geography. ACS side ranks within state (compute_price_wedge_cache.R):
-      # family ranked in own area, area price level set by market price
+      # Income percentiles (child-weighted), ranked nationally per scheme
+      # (income_rank.R): national_rpp (default) deflates income by region RPP,
+      # national keeps nominal income. Quintile grids (center_low, other_paid),
+      # price_by_income_quintile.csv; ACS side ranks same scheme
+      # (price_wedge_income_pctiles())
+      rank_hh <- processed_nsece_hh$households %>%
+        filter(!is.na(region))
+      ri <- income_rank_inputs(rank_hh$income, rank_hh$region, NULL, 'nsece')
+      rank_hh <- rank_hh %>%
+        transmute(hh_id, income_rank = ri$income, rank_group = ri$group)
+      cat('  Price diagnostic income ranks: scheme', get_income_rank_scheme(), '\n')
       pctile_base <- processed_nsece_hh$children %>%
         left_join(processed_nsece_hh$households, by = 'hh_id') %>%
-        filter(age < 5, income > 0, !is.na(region))
-      income_pctiles <- lapply(split(pctile_base, pctile_base$region), function(d) {
+        left_join(rank_hh, by = 'hh_id') %>%
+        filter(age < 5, income > 0, !is.na(region)) %>%
+        mutate(income = income_rank)
+      income_pctiles <- lapply(split(pctile_base, pctile_base$rank_group), function(d) {
         wtd.quantile(
           x      = d$income + runif(nrow(d)),
           weight = d$child_weight,
@@ -1329,21 +1458,26 @@ run_nsece_processing <- function() {
             select(hh_id, income, region),
           by = 'hh_id'
         ) %>%
+        left_join(rank_hh, by = 'hh_id') %>%
         left_join(
           processed_nsece_hh$parent_units %>%
             select(hh_id, parent_unit_id, n_parents),
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         mutate(
-          # Bin = 1 + region's breaks strictly below income (= cut(right = TRUE))
+          # Bin = 1 + group's breaks strictly below income (= cut(right = TRUE))
           income_pctile = {
             p <- rep(NA_integer_, n())
             for (r in names(income_pctiles)) {
-              i <- which(as.character(region) == r)
-              p[i] <- findInterval(income[i], income_pctiles[[r]], left.open = TRUE) + 1L
+              i <- which(as.character(rank_group) == r)
+              p[i] <- findInterval(income_rank[i], income_pctiles[[r]], left.open = TRUE) + 1L
             }
             p
           },
+          # Quintile for grids; NA w/out positive income (ACS side same:
+          # unconditional grid)
+          income_quintile = if_else(!is.na(income) & income > 0,
+                                    as.integer(ceiling(income_pctile / 20)), NA_integer_),
           region = factor(region),
           child_age = age
         )
@@ -1357,8 +1491,8 @@ run_nsece_processing <- function() {
         #   - choice (chr): ECEC care type choice label
         #   - base_price (dbl): Base supply price for the care type
         #
-        # Returns: (df) Price wedge data with income_pctile, region, n_parents,
-        #   child_age, price_wedge, weight
+        # Returns: (df) Price wedge data with hh_id, income_pctile,
+        #   income_quintile, region, n_parents, child_age, price_wedge, weight
         #--------------------------------------------------------------------------
 
         provider_base %>%
@@ -1368,7 +1502,8 @@ run_nsece_processing <- function() {
             net_hourly_cost > 0
           ) %>%
           mutate(price_wedge = net_hourly_cost / base_price) %>%
-          select(income_pctile, region, n_parents, child_age, price_wedge, weight = child_weight)
+          select(hh_id, income_pctile, income_quintile, region, n_parents, child_age,
+                 price_wedge, weight = child_weight)
       }
 
       # Other Paid has no supply sector; use weighted mean OOP as base price
@@ -1394,16 +1529,39 @@ run_nsece_processing <- function() {
       )
     }
 
-    price_qrf_models <- {
-
-      qrf_center_low_price  <- train_single_qrf(qrf_data$center_low_price, 'price_wedge', 'center_low_price')
-      qrf_center_high_price <- train_single_qrf(qrf_data$center_high_price, 'price_wedge', 'center_high_price')
-      qrf_home_price        <- train_single_qrf(qrf_data$home_price, 'price_wedge', 'home_price')
-      qrf_other_paid_price  <- train_single_qrf(qrf_data$other_paid_price, 'price_wedge', 'other_paid_price')
+    price_wedge_quantiles <- {
 
       model_keys <- c('center_low_price', 'center_high_price', 'home_price', 'other_paid_price')
+
+      # Wedge grids at percentiles 1..99, child-weighted, all care type's
+      # provider rows (compute_price_wedge_cache.R reads grid[[type]][idx])
+      quantile_grid <- map(model_keys, function(key) {
+        d <- price_data[[key]]
+        price_wedge_quantile_grid(d$price_wedge, d$weight)
+      }) %>% set_names(PRICE_WEDGE_TYPES)
+
+      # Income-quintile grids (PRICE_WEDGE_QUINTILE_TYPES): one per quintile,
+      # thin cell -> unconditional grid (compute_price_wedge_cache.R reads
+      # grid_by_quintile[[type]][[q]][idx])
+      quintile_fits <- map(PRICE_WEDGE_QUINTILE_TYPES, function(k) {
+        d <- price_data[[model_keys[match(k, PRICE_WEDGE_TYPES)]]]
+        fit <- price_wedge_quintile_grids(d$price_wedge, d$weight, d$hh_id, d$income_quintile)
+        cat('  Price wedge quintile grids ', k, ': households per quintile ',
+            paste(fit$n_hh, collapse = ', '),
+            '; effective sample size ', paste(round(fit$ess), collapse = ', '),
+            '; largest weight share ', paste(round(fit$max_w_share, 3), collapse = ', '),
+            if (length(fit$fallback) > 0) {
+              paste0(' -- quintile(s) ', paste(fit$fallback, collapse = ', '), ' < ',
+                     PRICE_WEDGE_MIN_CELL_HH, ' households, use unconditional grid')
+            } else {
+              ' -- no fallback'
+            }, '\n', sep = '')
+        fit
+      }) %>% set_names(PRICE_WEDGE_QUINTILE_TYPES)
+      quantile_grid_by_quintile <- map(quintile_fits, 'grids')
+
       summary_stats <- map(model_keys, function(key) {
-        d <- qrf_data[[key]]
+        d <- price_data[[key]]
         list(
           n    = nrow(d),
           mean = weighted.mean(d$price_wedge, d$weight),
@@ -1413,17 +1571,20 @@ run_nsece_processing <- function() {
           q75  = wtd.quantile(d$price_wedge, d$weight, 0.75)
         )
       }) %>% set_names(model_keys)
-      summary_stats$supply_price_center_low  <- qrf_data$supply_price_center_low
-      summary_stats$supply_price_center_high <- qrf_data$supply_price_center_high
-      summary_stats$supply_price_home        <- qrf_data$supply_price_home
-      summary_stats$other_paid_base_price    <- qrf_data$other_paid_base_price
+      summary_stats$supply_price_center_low  <- price_data$supply_price_center_low
+      summary_stats$supply_price_center_high <- price_data$supply_price_center_high
+      summary_stats$supply_price_home        <- price_data$supply_price_home
+      summary_stats$other_paid_base_price    <- price_data$other_paid_base_price
 
       list(
-        center_low_price  = qrf_center_low_price,
-        center_high_price = qrf_center_high_price,
-        home_price        = qrf_home_price,
-        other_paid_price  = qrf_other_paid_price,
-        summary_stats     = summary_stats
+        quantile_grid             = quantile_grid,
+        quantile_grid_by_quintile = quantile_grid_by_quintile,
+        quintile_n_hh             = map(quintile_fits, 'n_hh'),
+        quintile_ess              = map(quintile_fits, 'ess'),
+        quintile_max_w_share      = map(quintile_fits, 'max_w_share'),
+        quintile_fallback         = map(quintile_fits, 'fallback'),
+        income_rank_scheme        = get_income_rank_scheme(),
+        summary_stats             = summary_stats
       )
     }
 
@@ -1439,15 +1600,33 @@ run_nsece_processing <- function() {
       base_price_keys <- c('supply_price_center_low', 'supply_price_center_high',
                            'supply_price_home', 'other_paid_base_price')
       summary_df <- map_dfr(seq_along(model_keys), function(i) {
-        s <- price_qrf_models$summary_stats[[model_keys[i]]]
+        s <- price_wedge_quantiles$summary_stats[[model_keys[i]]]
         tibble(
           model = model_keys[i], n_obs = s$n, mean = s$mean, sd = s$sd,
           q25 = s$q25, q50 = s$q50, q75 = s$q75,
-          base_price_2019 = price_qrf_models$summary_stats[[base_price_keys[i]]]
+          base_price_2019 = price_wedge_quantiles$summary_stats[[base_price_keys[i]]]
         )
       })
 
       write_csv(summary_df, file.path(models_dir, 'price_summary.csv'))
+
+      # Quantile grids, one column per care type (as cached)
+      write_csv(bind_cols(tibble(pctile = 1:99), as_tibble(price_wedge_quantiles$quantile_grid)),
+                file.path(models_dir, 'price_wedge_quantiles.csv'))
+
+      # Quintile grids, long: care type x quintile x pctile (as cached;
+      # fallback = cell on unconditional grid)
+      write_csv(
+        map_dfr(PRICE_WEDGE_QUINTILE_TYPES, function(k) {
+          map_dfr(1:5, function(q) {
+            tibble(care_type = k, income_quintile = q, pctile = 1:99,
+                   price_wedge = price_wedge_quantiles$quantile_grid_by_quintile[[k]][[q]],
+                   n_hh = price_wedge_quantiles$quintile_n_hh[[k]][q],
+                   fallback = q %in% price_wedge_quantiles$quintile_fallback[[k]])
+          })
+        }),
+        file.path(models_dir, 'price_wedge_quantiles_by_quintile.csv')
+      )
 
       #----------------------------------
       # 2. Distribution by region CSV
@@ -1456,7 +1635,7 @@ run_nsece_processing <- function() {
       care_type_map <- c(center_low_price = 'center_low', center_high_price = 'center_high',
                          home_price = 'home', other_paid_price = 'other_paid')
       price_by_region <- map_dfr(names(care_type_map), function(key) {
-        qrf_data[[key]] %>%
+        price_data[[key]] %>%
           group_by(region) %>%
           summarise(
             n                = n(),
@@ -1477,7 +1656,7 @@ run_nsece_processing <- function() {
       #----------------------------------
 
       price_by_income <- map_dfr(names(care_type_map), function(key) {
-        qrf_data[[key]] %>%
+        price_data[[key]] %>%
           mutate(income_quintile = cut(income_pctile, c(0, 20, 40, 60, 80, 100), labels = 1:5)) %>%
           group_by(income_quintile) %>%
           summarise(
@@ -1495,7 +1674,7 @@ run_nsece_processing <- function() {
       # 4. Supply prices and price_wedge info text file
       #----------------------------------
 
-      ss <- price_qrf_models$summary_stats
+      ss <- price_wedge_quantiles$summary_stats
       base_prices <- list(
         'Low-priced center-based (supply)'  = ss$supply_price_center_low,
         'High-priced center-based (supply)' = ss$supply_price_center_high,
@@ -1525,7 +1704,7 @@ run_nsece_processing <- function() {
     cache_dir <- './cache/price_models'
     dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
 
-    saveRDS(price_qrf_models, file.path(cache_dir, 'price_qrf_models.rds'))
+    saveRDS(price_wedge_quantiles, file.path(cache_dir, 'price_wedge_quantiles.rds'))
   }
 
   cat('NSECE estimation data preparation complete!\n')

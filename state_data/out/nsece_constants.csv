@@ -1,235 +1,228 @@
 universe,quantity,key,value,n
-"A: NSECE, any regular care",formal_share,national,0.5274568364220226,2814
-"A: NSECE, any regular care",centre_home_split,national,0.8038049187777314,853
-"A: NSECE, any regular care",unpaid_centre_share,national,0.2962787762013613,1320
-"B: NSCH-matched, 10+ hrs/week",formal_share,national,0.5454252052969701,2574
-"B: NSCH-matched, 10+ hrs/week",centre_home_split,national,0.7912308613187419,804
-"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,national,0.2977399548837041,1250
-"A: NSECE, any regular care",children_all_over_10plus,national,1.0980541895845115,2814
-"A: NSECE, any regular care",short_share_of_part_time,national,0.3402579024009446,675
-"A: NSECE, any regular care",short_share_of_part_time_region,midwest,0.3717471432796255,156
-"A: NSECE, any regular care",short_share_of_part_time_region,northeast,0.3014598266552965,98
-"A: NSECE, any regular care",short_share_of_part_time_region,south,0.3267596055514679,204
-"A: NSECE, any regular care",short_share_of_part_time_region,west,0.3495482178592005,217
-"A: NSECE, any regular care",short_share_of_part_time_type,High-Priced Center-Based,0.34026291520030005,98
-"A: NSECE, any regular care",short_share_of_part_time_type,Low-Priced Center-Based,0.1982741512689668,41
-"A: NSECE, any regular care",short_share_of_part_time_type,Other Paid,0.3450647075011508,126
-"A: NSECE, any regular care",short_share_of_part_time_type,Other Unpaid,0.49468691331718007,260
-"A: NSECE, any regular care",short_share_of_part_time_type,Paid Home-Based,0,17
-"A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Center-Based,0.16565477196981104,130
-"A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Home-Based,0.22797889709464056,3
-"A: NSECE, any regular care",share_of_children_region,US:Center-Based,0.13564115708951938,655
-"A: NSECE, any regular care",share_of_children_region,US:Other Paid,0.07749062862462218,536
-"A: NSECE, any regular care",share_of_children_region,US:Other Unpaid,0.12978809656459717,920
-"A: NSECE, any regular care",share_of_children_region,US:Paid Home-Based,0.0331076946788622,198
-"A: NSECE, any regular care",share_of_children_region,US:Parent Only,0.5453750654998054,3708
-"A: NSECE, any regular care",share_of_children_region,US:Unpaid Center-Based,0.07104617794166028,467
-"A: NSECE, any regular care",share_of_children_region,US:Unpaid Home-Based,0.007551179600933409,38
-"A: NSECE, any regular care",share_of_children_region,midwest:Center-Based,0.11532446518945758,108
-"A: NSECE, any regular care",share_of_children_region,midwest:Other Paid,0.0820355607573944,100
-"A: NSECE, any regular care",share_of_children_region,midwest:Other Unpaid,0.11844166939066858,159
-"A: NSECE, any regular care",share_of_children_region,midwest:Paid Home-Based,0.050093531197337886,67
-"A: NSECE, any regular care",share_of_children_region,midwest:Parent Only,0.5499527922188585,635
-"A: NSECE, any regular care",share_of_children_region,midwest:Unpaid Center-Based,0.07275980785511257,94
-"A: NSECE, any regular care",share_of_children_region,midwest:Unpaid Home-Based,0.011392173391170497,11
-"A: NSECE, any regular care",share_of_children_region,northeast:Center-Based,0.19261239489574836,121
-"A: NSECE, any regular care",share_of_children_region,northeast:Other Paid,0.07092873673650738,63
-"A: NSECE, any regular care",share_of_children_region,northeast:Other Unpaid,0.1498825541149426,140
-"A: NSECE, any regular care",share_of_children_region,northeast:Paid Home-Based,0.026280541332665303,33
-"A: NSECE, any regular care",share_of_children_region,northeast:Parent Only,0.4479197128986319,430
-"A: NSECE, any regular care",share_of_children_region,northeast:Unpaid Center-Based,0.093178902558221,91
-"A: NSECE, any regular care",share_of_children_region,northeast:Unpaid Home-Based,0.01919715746328341,8
-"A: NSECE, any regular care",share_of_children_region,south:Center-Based,0.13795666239398602,282
-"A: NSECE, any regular care",share_of_children_region,south:Other Paid,0.08664205118123793,221
-"A: NSECE, any regular care",share_of_children_region,south:Other Unpaid,0.12457409990399501,329
-"A: NSECE, any regular care",share_of_children_region,south:Paid Home-Based,0.03103565550285095,55
-"A: NSECE, any regular care",share_of_children_region,south:Parent Only,0.5440269044530053,1370
-"A: NSECE, any regular care",share_of_children_region,south:Unpaid Center-Based,0.07338735729542804,170
-"A: NSECE, any regular care",share_of_children_region,south:Unpaid Home-Based,0.002377269269496717,5
-"A: NSECE, any regular care",share_of_children_region,west:Center-Based,0.1120691194289531,144
-"A: NSECE, any regular care",share_of_children_region,west:Other Paid,0.0634422130341862,152
-"A: NSECE, any regular care",share_of_children_region,west:Other Unpaid,0.13458781858217275,292
-"A: NSECE, any regular care",share_of_children_region,west:Paid Home-Based,0.026258165703770372,43
-"A: NSECE, any regular care",share_of_children_region,west:Parent Only,0.6075104265856891,1273
-"A: NSECE, any regular care",share_of_children_region,west:Unpaid Center-Based,0.05135567873048325,112
-"A: NSECE, any regular care",share_of_children_region,west:Unpaid Home-Based,0.004776577934745145,14
-"A: NSECE, any regular care",part_time_share,Center-Based,0.24156066533388276,655
-"A: NSECE, any regular care",part_time_share,Other Paid,0.2861976571150922,536
-"A: NSECE, any regular care",part_time_share,Other Unpaid,0.2923798292528169,920
-"A: NSECE, any regular care",part_time_share,Paid Home-Based,0.07704556374948256,198
-"A: NSECE, any regular care",part_time_share,Unpaid Center-Based,0.3237440491313801,467
-"A: NSECE, any regular care",part_time_share,Unpaid Home-Based,0.11530630069636505,38
-"B: NSCH-matched, 10+ hrs/week",part_time_share,Center-Based,0.1801272081714587,606
-"B: NSCH-matched, 10+ hrs/week",part_time_share,Other Paid,0.20798040721040825,497
-"B: NSCH-matched, 10+ hrs/week",part_time_share,Other Unpaid,0.17272580572873253,790
-"B: NSCH-matched, 10+ hrs/week",part_time_share,Paid Home-Based,0.07704556374948256,198
-"B: NSCH-matched, 10+ hrs/week",part_time_share,Unpaid Center-Based,0.2854213787210886,446
-"B: NSCH-matched, 10+ hrs/week",part_time_share,Unpaid Home-Based,0.091422148315279,37
-"A: NSECE, any regular care",part_time_share_region,midwest:Center-Based,0.3672560769094304,108
-"A: NSECE, any regular care",part_time_share_region,midwest:Other Paid,0.4180859752229404,100
-"A: NSECE, any regular care",part_time_share_region,midwest:Other Unpaid,0.377858955608148,159
-"A: NSECE, any regular care",part_time_share_region,midwest:Paid Home-Based,0.11617270708924447,67
-"A: NSECE, any regular care",part_time_share_region,midwest:Unpaid Center-Based,0.35141495654904287,94
-"A: NSECE, any regular care",part_time_share_region,midwest:Unpaid Home-Based,0.2810657094393909,11
-"A: NSECE, any regular care",part_time_share_region,northeast:Center-Based,0.2639149081693626,121
-"A: NSECE, any regular care",part_time_share_region,northeast:Other Paid,0.202731670977534,63
-"A: NSECE, any regular care",part_time_share_region,northeast:Other Unpaid,0.1561441499432618,140
-"A: NSECE, any regular care",part_time_share_region,northeast:Paid Home-Based,0.14580574806693766,33
-"A: NSECE, any regular care",part_time_share_region,northeast:Unpaid Center-Based,0.33255851125278985,91
-"A: NSECE, any regular care",part_time_share_region,northeast:Unpaid Home-Based,0,8
-"A: NSECE, any regular care",part_time_share_region,south:Center-Based,0.19456310771704727,282
-"A: NSECE, any regular care",part_time_share_region,south:Other Paid,0.22327817599035985,221
-"A: NSECE, any regular care",part_time_share_region,south:Other Unpaid,0.2619140572593956,329
-"A: NSECE, any regular care",part_time_share_region,south:Paid Home-Based,0.04136400947966338,55
-"A: NSECE, any regular care",part_time_share_region,south:Unpaid Center-Based,0.27279750254859914,170
-"A: NSECE, any regular care",part_time_share_region,south:Unpaid Home-Based,0.21655714153438207,5
-"A: NSECE, any regular care",part_time_share_region,west:Center-Based,0.1965070478204198,144
-"A: NSECE, any regular care",part_time_share_region,west:Other Paid,0.33648929621069606,152
-"A: NSECE, any regular care",part_time_share_region,west:Other Unpaid,0.37178280597886115,292
-"A: NSECE, any regular care",part_time_share_region,west:Paid Home-Based,0.034311770992339015,43
-"A: NSECE, any regular care",part_time_share_region,west:Unpaid Center-Based,0.3944863316507277,112
-"A: NSECE, any regular care",part_time_share_region,west:Unpaid Home-Based,0,14
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Center-Based,0.2618908653020304,94
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Other Paid,0.2865785588721401,89
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Other Unpaid,0.2055505293166764,136
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Paid Home-Based,0.11617270708924447,67
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Unpaid Center-Based,0.3449529815605522,93
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Unpaid Home-Based,0.2810657094393909,11
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Center-Based,0.23386290347893232,118
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Other Paid,0.17532735445464395,60
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Other Unpaid,0.03855365833686178,116
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Paid Home-Based,0.14580574806693766,33
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Unpaid Center-Based,0.26148840928032524,84
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Unpaid Home-Based,0,8
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Center-Based,0.132093989892839,264
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Other Paid,0.16074866665208587,207
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Other Unpaid,0.1799665696950726,294
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Paid Home-Based,0.04136400947966338,55
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Unpaid Center-Based,0.2360080825676509,163
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Unpaid Home-Based,0,4
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Center-Based,0.1443586736943881,130
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Other Paid,0.25948132990952333,141
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Other Unpaid,0.24162989746699412,244
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Paid Home-Based,0.034311770992339015,43
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Unpaid Center-Based,0.34991653325057365,106
-"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Unpaid Home-Based,0,14
-"A: NSECE, any regular care",informal_mix_region,midwest:Other Paid,0.387198714807366,100
-"A: NSECE, any regular care",informal_mix_region,midwest:Other Unpaid,0.5590314949309603,159
-"A: NSECE, any regular care",informal_mix_region,midwest:Unpaid Home-Based,0.05376979026167372,11
-"A: NSECE, any regular care",informal_mix_region,northeast:Other Paid,0.2955260001660253,63
-"A: NSECE, any regular care",informal_mix_region,northeast:Other Unpaid,0.6244886593258383,140
-"A: NSECE, any regular care",informal_mix_region,northeast:Unpaid Home-Based,0.07998534050813641,8
-"A: NSECE, any regular care",informal_mix_region,south:Other Paid,0.4056400756041331,221
-"A: NSECE, any regular care",informal_mix_region,south:Other Unpaid,0.5832300437771258,329
-"A: NSECE, any regular care",informal_mix_region,south:Unpaid Home-Based,0.011129880618741055,5
-"A: NSECE, any regular care",informal_mix_region,west:Other Paid,0.31282122991262645,152
-"A: NSECE, any regular care",informal_mix_region,west:Other Unpaid,0.6636263920592722,292
-"A: NSECE, any regular care",informal_mix_region,west:Unpaid Home-Based,0.023552378028101305,14
-"A: NSECE, any regular care",weekly_hours_region,midwest:Center-Based,29.918897127527302,108
-"A: NSECE, any regular care",weekly_hours_region,midwest:Other Paid,26.706524100014814,100
-"A: NSECE, any regular care",weekly_hours_region,midwest:Other Unpaid,30.626601346026423,159
-"A: NSECE, any regular care",weekly_hours_region,midwest:Paid Home-Based,38.889637633062954,67
-"A: NSECE, any regular care",weekly_hours_region,midwest:Unpaid Center-Based,30.44888583275668,94
-"A: NSECE, any regular care",weekly_hours_region,midwest:Unpaid Home-Based,28.317133199873044,11
-"A: NSECE, any regular care",weekly_hours_region,northeast:Center-Based,31.93345709957369,121
-"A: NSECE, any regular care",weekly_hours_region,northeast:Other Paid,30.587391167993445,63
-"A: NSECE, any regular care",weekly_hours_region,northeast:Other Unpaid,49.338755267291035,140
-"A: NSECE, any regular care",weekly_hours_region,northeast:Paid Home-Based,36.65266306783931,33
-"A: NSECE, any regular care",weekly_hours_region,northeast:Unpaid Center-Based,25.846815562406483,91
-"A: NSECE, any regular care",weekly_hours_region,northeast:Unpaid Home-Based,37.524592804705385,8
-"A: NSECE, any regular care",weekly_hours_region,south:Center-Based,36.736110919401,282
-"A: NSECE, any regular care",weekly_hours_region,south:Other Paid,34.82662178066427,221
-"A: NSECE, any regular care",weekly_hours_region,south:Other Unpaid,38.51352365077784,329
-"A: NSECE, any regular care",weekly_hours_region,south:Paid Home-Based,39.76548178522392,55
-"A: NSECE, any regular care",weekly_hours_region,south:Unpaid Center-Based,31.038765111462236,170
-"A: NSECE, any regular care",weekly_hours_region,south:Unpaid Home-Based,86.48703355636596,5
-"A: NSECE, any regular care",weekly_hours_region,west:Center-Based,33.206642538858546,144
-"A: NSECE, any regular care",weekly_hours_region,west:Other Paid,28.25112947002141,152
-"A: NSECE, any regular care",weekly_hours_region,west:Other Unpaid,36.862572646348276,292
-"A: NSECE, any regular care",weekly_hours_region,west:Paid Home-Based,36.14029936583437,43
-"A: NSECE, any regular care",weekly_hours_region,west:Unpaid Center-Based,24.87781911283403,112
-"A: NSECE, any regular care",weekly_hours_region,west:Unpaid Home-Based,49.79705258982594,14
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,midwest:Other Paid,0.391173811596216,89
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,midwest:Other Unpaid,0.5422281342403003,136
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,midwest:Unpaid Home-Based,0.06659805416348377,11
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,northeast:Other Paid,0.3126561914812563,60
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,northeast:Other Unpaid,0.5998134288197247,116
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,northeast:Unpaid Home-Based,0.08753037969901895,8
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,south:Other Paid,0.4129623319161619,207
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,south:Other Unpaid,0.5774460042650084,294
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,south:Unpaid Home-Based,0.009591663818829699,4
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,west:Other Paid,0.3283717524565852,141
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,west:Other Unpaid,0.644035660955972,244
-"B: NSCH-matched, 10+ hrs/week",informal_mix_region,west:Unpaid Home-Based,0.027592586587442822,14
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Center-Based,33.719258038293226,94
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Other Paid,31.574356581683208,89
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Other Unpaid,37.92308437645976,136
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Paid Home-Based,38.889637633062954,67
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Unpaid Center-Based,30.657603529310006,93
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Unpaid Home-Based,28.317133199873044,11
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Center-Based,32.98357919813226,118
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Other Paid,31.336112341936452,60
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Other Unpaid,55.36584488860502,116
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Paid Home-Based,36.65266306783931,33
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Unpaid Center-Based,27.97052812552739,84
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Unpaid Home-Based,37.524592804705385,8
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Center-Based,39.02338854246167,264
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Other Paid,37.14420088051001,207
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Other Unpaid,42.14312898665575,294
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Paid Home-Based,39.76548178522392,55
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Unpaid Center-Based,32.401178669967734,163
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Unpaid Home-Based,108.18220564303024,4
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Center-Based,34.93609262787394,130
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Other Paid,30.914406618366733,141
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Other Unpaid,43.50748329283768,244
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Paid Home-Based,36.14029936583437,43
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Unpaid Center-Based,26.272475661168812,106
-"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Unpaid Home-Based,49.79705258982594,14
-"A: NSECE, any regular care",centre_home_split,midwest,0.6971700039202228,175
-"A: NSECE, any regular care",centre_home_split,northeast,0.8799388331780533,154
-"A: NSECE, any regular care",centre_home_split,south,0.8163487199353228,337
-"A: NSECE, any regular care",centre_home_split,west,0.8101736350960986,187
-"B: NSCH-matched, 10+ hrs/week",centre_home_split,midwest,0.663701158736219,161
-"B: NSCH-matched, 10+ hrs/week",centre_home_split,northeast,0.8756466634917238,151
-"B: NSCH-matched, 10+ hrs/week",centre_home_split,south,0.8048840609368354,319
-"B: NSCH-matched, 10+ hrs/week",centre_home_split,west,0.8003136679893773,173
-"A: NSECE, any regular care",unpaid_centre_share,midwest,0.30548525748105915,269
-"A: NSECE, any regular care",unpaid_centre_share,northeast,0.29858157955075193,245
-"A: NSECE, any regular care",unpaid_centre_share,south,0.3027785115943172,507
-"A: NSECE, any regular care",unpaid_centre_share,west,0.27074481379107573,299
-"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,midwest,0.32598584369185585,254
-"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,northeast,0.2849332793599261,235
-"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,south,0.3051487111154907,482
-"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,west,0.2667386966342519,279
-"A: NSECE, any regular care",price_band_share,High-Priced Center-Based,0.07008002232267292,258
-"A: NSECE, any regular care",price_band_share,Low-Priced Center-Based,0.06556113476684644,397
-"B: NSCH-matched, 10+ hrs/week",price_band_share,High-Priced Center-Based,0.061292178509325834,221
-"B: NSCH-matched, 10+ hrs/week",price_band_share,Low-Priced Center-Based,0.06418532234404016,385
-"A: NSECE, any regular care",formal_share,midwest,0.5292284900870536,539
-"A: NSECE, any regular care",formal_share,northeast,0.5652653175231646,456
-"A: NSECE, any regular care",formal_share,south,0.53156573832827,1062
-"A: NSECE, any regular care",formal_share,west,0.48328153589694967,757
-"B: NSCH-matched, 10+ hrs/week",formal_share,midwest,0.5636883285304244,490
-"B: NSCH-matched, 10+ hrs/week",formal_share,northeast,0.5740280896928023,419
-"B: NSCH-matched, 10+ hrs/week",formal_share,south,0.5410571617553072,987
-"B: NSCH-matched, 10+ hrs/week",formal_share,west,0.5088253666422634,678
-"A: NSECE, any regular care",informal_mix,Other Paid,0.3607068983264482,536
-"A: NSECE, any regular care",informal_mix,Other Unpaid,0.6041435278360107,920
-"A: NSECE, any regular care",informal_mix,Unpaid Home-Based,0.03514957383754115,38
-"B: NSCH-matched, 10+ hrs/week",informal_mix,Other Paid,0.37107047354999223,497
-"B: NSCH-matched, 10+ hrs/week",informal_mix,Other Unpaid,0.5898624638122244,790
-"B: NSCH-matched, 10+ hrs/week",informal_mix,Unpaid Home-Based,0.03906706263778341,37
-"A: NSECE, any regular care",weekly_hours,High-Priced Center-Based,27.454813402111718,258
-"A: NSECE, any regular care",weekly_hours,Low-Priced Center-Based,40.405040897598035,397
-"A: NSECE, any regular care",weekly_hours,Other Paid,31.085307060488336,536
-"A: NSECE, any regular care",weekly_hours,Other Unpaid,38.58771283611092,920
-"A: NSECE, any regular care",weekly_hours,Paid Home-Based,38.38908218964424,198
-"A: NSECE, any regular care",weekly_hours,Unpaid Center-Based,28.73304120798205,467
-"A: NSECE, any regular care",weekly_hours,Unpaid Home-Based,42.44790936076457,38
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,High-Priced Center-Based,30.394040372362795,221
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,Low-Priced Center-Based,41.121336783657625,385
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,Other Paid,33.87151678051075,497
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,Other Unpaid,44.24846613440479,790
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,Paid Home-Based,38.38908218964424,198
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,Unpaid Center-Based,30.054764228996078,446
-"B: NSCH-matched, 10+ hrs/week",weekly_hours,Unpaid Home-Based,43.37790255166212,37
+"A: NSECE, any regular care",formal_share,national,0.4786780198007421,3427
+"A: NSECE, any regular care",centre_home_split,national,0.7995596019577713,1004.5
+"A: NSECE, any regular care",unpaid_centre_share,national,0.24243260951174206,1450.62
+"B: NSCH-matched, 10+ hrs/week",formal_share,national,0.499626536832041,3122.22
+"B: NSCH-matched, 10+ hrs/week",centre_home_split,national,0.7906692835321064,954.98
+"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,national,0.2445834158790513,1383.76
+"A: NSECE, any regular care",children_all_over_10plus,national,1.0994893847297402,3427
+"A: NSECE, any regular care",short_share_of_part_time,national,0.34957429599815637,835.48
+"A: NSECE, any regular care",short_share_of_part_time_region,midwest,0.364944025192303,189.9
+"A: NSECE, any regular care",short_share_of_part_time_region,northeast,0.289908259982987,121.64
+"A: NSECE, any regular care",short_share_of_part_time_region,south,0.33969438552488823,253.72
+"A: NSECE, any regular care",short_share_of_part_time_region,west,0.3843528196393959,270.22
+"A: NSECE, any regular care",short_share_of_part_time_type,Center-Based,0.26112620794427743,163.18
+"A: NSECE, any regular care",short_share_of_part_time_type,Other Paid,0.34196916888996054,181.8
+"A: NSECE, any regular care",short_share_of_part_time_type,Other Unpaid,0.5354469242825229,333
+"A: NSECE, any regular care",short_share_of_part_time_type,Paid Home-Based,0.11061030523175358,27.9
+"A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Center-Based,0.13508123344579967,124.74
+"A: NSECE, any regular care",short_share_of_part_time_type,Unpaid Home-Based,0.35006789170195385,4.86
+"A: NSECE, any regular care",share_of_children_region,US:Center-Based,0.15941375106430059,765.88
+"A: NSECE, any regular care",share_of_children_region,US:Other Paid,0.10392630779982094,746.46
+"A: NSECE, any regular care",share_of_children_region,US:Other Unpaid,0.17821966102141026,1192.54
+"A: NSECE, any regular care",share_of_children_region,US:Paid Home-Based,0.03996319428657272,238.62
+"A: NSECE, any regular care",share_of_children_region,US:Parent Only,0.4501931075003947,3095
+"A: NSECE, any regular care",share_of_children_region,US:Unpaid Center-Based,0.06380352922363727,446.12
+"A: NSECE, any regular care",share_of_children_region,US:Unpaid Home-Based,0.004480449103863559,37.38
+"A: NSECE, any regular care",share_of_children_region,midwest:Center-Based,0.13129529220666558,121.78
+"A: NSECE, any regular care",share_of_children_region,midwest:Other Paid,0.1090630089916253,128.98
+"A: NSECE, any regular care",share_of_children_region,midwest:Other Unpaid,0.20592701952543135,219.02
+"A: NSECE, any regular care",share_of_children_region,midwest:Paid Home-Based,0.06509075857093388,81
+"A: NSECE, any regular care",share_of_children_region,midwest:Parent Only,0.4127836109127817,520
+"A: NSECE, any regular care",share_of_children_region,midwest:Unpaid Center-Based,0.07353684618436276,97.22
+"A: NSECE, any regular care",share_of_children_region,midwest:Unpaid Home-Based,0.002303463608199488,6
+"A: NSECE, any regular care",share_of_children_region,northeast:Center-Based,0.21745896770726036,139.84
+"A: NSECE, any regular care",share_of_children_region,northeast:Other Paid,0.084176978127357735,87.26
+"A: NSECE, any regular care",share_of_children_region,northeast:Other Unpaid,0.1876579176692513,177.74
+"A: NSECE, any regular care",share_of_children_region,northeast:Paid Home-Based,0.034305045161744846,40.62
+"A: NSECE, any regular care",share_of_children_region,northeast:Parent Only,0.37848490619704733,346
+"A: NSECE, any regular care",share_of_children_region,northeast:Unpaid Center-Based,0.08454009433237399,89.16
+"A: NSECE, any regular care",share_of_children_region,northeast:Unpaid Home-Based,0.013376090804964458,5.38
+"A: NSECE, any regular care",share_of_children_region,south:Center-Based,0.16438376214085573,329.38
+"A: NSECE, any regular care",share_of_children_region,south:Other Paid,0.11452647362449767,289.04
+"A: NSECE, any regular care",share_of_children_region,south:Other Unpaid,0.15576722694030914,415.96
+"A: NSECE, any regular care",share_of_children_region,south:Paid Home-Based,0.035433106752394694,67
+"A: NSECE, any regular care",share_of_children_region,south:Parent Only,0.4666635349876342,1169
+"A: NSECE, any regular care",share_of_children_region,south:Unpaid Center-Based,0.0616023314016967,154.62
+"A: NSECE, any regular care",share_of_children_region,south:Unpaid Home-Based,0.00162356415261188,7
+"A: NSECE, any regular care",share_of_children_region,west:Center-Based,0.13765236825790353,174.88
+"A: NSECE, any regular care",share_of_children_region,west:Other Paid,0.09573459136281887,241.18
+"A: NSECE, any regular care",share_of_children_region,west:Other Unpaid,0.1836568077888138,379.82
+"A: NSECE, any regular care",share_of_children_region,west:Paid Home-Based,0.02922900445203757,50
+"A: NSECE, any regular care",share_of_children_region,west:Parent Only,0.503395198850245,1060
+"A: NSECE, any regular care",share_of_children_region,west:Unpaid Center-Based,0.04530680450557221,105.12
+"A: NSECE, any regular care",share_of_children_region,west:Unpaid Home-Based,0.005025224782609087,19
+"A: NSECE, any regular care",part_time_share,Center-Based,0.24472582731000103,765.88
+"A: NSECE, any regular care",part_time_share,Other Paid,0.2961192234237463,746.46
+"A: NSECE, any regular care",part_time_share,Other Unpaid,0.2701702045320909,1192.54
+"A: NSECE, any regular care",part_time_share,Paid Home-Based,0.10299640506681328,238.62
+"A: NSECE, any regular care",part_time_share,Unpaid Center-Based,0.3128599785835478,446.12
+"A: NSECE, any regular care",part_time_share,Unpaid Home-Based,0.06748315729195549,37.38
+"B: NSCH-matched, 10+ hrs/week",part_time_share,Center-Based,0.1931656189708253,719.52
+"B: NSCH-matched, 10+ hrs/week",part_time_share,Other Paid,0.21681061142553015,688.44
+"B: NSCH-matched, 10+ hrs/week",part_time_share,Other Unpaid,0.14673540854780182,1014.08
+"B: NSCH-matched, 10+ hrs/week",part_time_share,Paid Home-Based,0.09265956197027507,235.46
+"B: NSCH-matched, 10+ hrs/week",part_time_share,Unpaid Center-Based,0.2825389917137433,428.78
+"B: NSCH-matched, 10+ hrs/week",part_time_share,Unpaid Home-Based,0.0449206623423458,35.94
+"A: NSECE, any regular care",part_time_share_region,midwest:Center-Based,0.3480211620150312,121.78
+"A: NSECE, any regular care",part_time_share_region,midwest:Other Paid,0.3957723546553799,128.98
+"A: NSECE, any regular care",part_time_share_region,midwest:Other Unpaid,0.3120250647142747,219.02
+"A: NSECE, any regular care",part_time_share_region,midwest:Paid Home-Based,0.1547124732991101,81
+"A: NSECE, any regular care",part_time_share_region,midwest:Unpaid Center-Based,0.36165824010589226,97.22
+"A: NSECE, any regular care",part_time_share_region,midwest:Unpaid Home-Based,0.04635660441158015,6
+"A: NSECE, any regular care",part_time_share_region,northeast:Center-Based,0.2766457581938724,139.84
+"A: NSECE, any regular care",part_time_share_region,northeast:Other Paid,0.21847048852370984,87.26
+"A: NSECE, any regular care",part_time_share_region,northeast:Other Unpaid,0.19011259457010213,177.74
+"A: NSECE, any regular care",part_time_share_region,northeast:Paid Home-Based,0.1172632377150076,40.62
+"A: NSECE, any regular care",part_time_share_region,northeast:Unpaid Center-Based,0.25833619321943724,89.16
+"A: NSECE, any regular care",part_time_share_region,northeast:Unpaid Home-Based,0,5.38
+"A: NSECE, any regular care",part_time_share_region,south:Center-Based,0.1997696000676197,329.38
+"A: NSECE, any regular care",part_time_share_region,south:Other Paid,0.2639640969004947,289.04
+"A: NSECE, any regular care",part_time_share_region,south:Other Unpaid,0.23073442705685568,415.96
+"A: NSECE, any regular care",part_time_share_region,south:Paid Home-Based,0.0755038620951855,67
+"A: NSECE, any regular care",part_time_share_region,south:Unpaid Center-Based,0.2846602690863041,154.62
+"A: NSECE, any regular care",part_time_share_region,south:Unpaid Home-Based,0.09950403723102844,7
+"A: NSECE, any regular care",part_time_share_region,west:Center-Based,0.21170843977265288,174.88
+"A: NSECE, any regular care",part_time_share_region,west:Other Paid,0.30406105518629495,241.18
+"A: NSECE, any regular care",part_time_share_region,west:Other Unpaid,0.336305585449333,379.82
+"A: NSECE, any regular care",part_time_share_region,west:Paid Home-Based,0.045633309492679845,50
+"A: NSECE, any regular care",part_time_share_region,west:Unpaid Center-Based,0.37206355499682225,105.12
+"A: NSECE, any regular care",part_time_share_region,west:Unpaid Home-Based,0.17732985648227523,19
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Center-Based,0.271246726801371,109.48
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Other Paid,0.2858339453390307,116.28
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Other Unpaid,0.15962530487795154,183.3
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Paid Home-Based,0.14944974395726146,80.54
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Unpaid Center-Based,0.3534909770260222,95.76
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,midwest:Unpaid Home-Based,0.04635660441158015,6
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Center-Based,0.24965532467579893,136.48
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Other Paid,0.17720278850310903,80.92
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Other Unpaid,0.07927215964708784,147.76
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Paid Home-Based,0.11716368357421589,40.58
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Unpaid Center-Based,0.20194392721279536,82.66
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,northeast:Unpaid Home-Based,0,5.38
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Center-Based,0.14727027633853018,314.46
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Other Paid,0.19026188434208147,269.16
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Other Unpaid,0.13940578843264337,367.46
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Paid Home-Based,0.05147362733340962,65.04
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Unpaid Center-Based,0.254339841016009,149.06
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,south:Unpaid Home-Based,0.05520312362900464,6.38
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Center-Based,0.1584497706832467,159.1
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Other Paid,0.22800941116106682,222.08
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Other Unpaid,0.19338697396566873,315.56
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Paid Home-Based,0.04241574245207107,49.3
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Unpaid Center-Based,0.3374388529107176,101.3
+"B: NSCH-matched, 10+ hrs/week",part_time_share_region,west:Unpaid Home-Based,0.1226517245223094,18.18
+"A: NSECE, any regular care",informal_mix_region,midwest:Other Paid,0.34372910790294786,128.98
+"A: NSECE, any regular care",informal_mix_region,midwest:Other Unpaid,0.6490111667469648,219.02
+"A: NSECE, any regular care",informal_mix_region,midwest:Unpaid Home-Based,0.007259725350087429,6
+"A: NSECE, any regular care",informal_mix_region,northeast:Other Paid,0.29513932520751407,87.26
+"A: NSECE, any regular care",informal_mix_region,northeast:Other Unpaid,0.6579617423062342,177.74
+"A: NSECE, any regular care",informal_mix_region,northeast:Unpaid Home-Based,0.046898932486251786,5.38
+"A: NSECE, any regular care",informal_mix_region,south:Other Paid,0.4211813241925467,289.04
+"A: NSECE, any regular care",informal_mix_region,south:Other Unpaid,0.5728478737905269,415.96
+"A: NSECE, any regular care",informal_mix_region,south:Unpaid Home-Based,0.005970802016926425,7
+"A: NSECE, any regular care",informal_mix_region,west:Other Paid,0.3365998444062576,241.18
+"A: NSECE, any regular care",informal_mix_region,west:Other Unpaid,0.6457316216202467,379.82
+"A: NSECE, any regular care",informal_mix_region,west:Unpaid Home-Based,0.017668533973495652,19
+"A: NSECE, any regular care",weekly_hours_region,midwest:Center-Based,30.341162291698772,121.78
+"A: NSECE, any regular care",weekly_hours_region,midwest:Other Paid,28.013073792841798,128.98
+"A: NSECE, any regular care",weekly_hours_region,midwest:Other Unpaid,37.347726821099975,219.02
+"A: NSECE, any regular care",weekly_hours_region,midwest:Paid Home-Based,37.12185490505811,81
+"A: NSECE, any regular care",weekly_hours_region,midwest:Unpaid Center-Based,30.41135342419286,97.22
+"A: NSECE, any regular care",weekly_hours_region,midwest:Unpaid Home-Based,41.49039374373457,6
+"A: NSECE, any regular care",weekly_hours_region,northeast:Center-Based,31.780220620611612,139.84
+"A: NSECE, any regular care",weekly_hours_region,northeast:Other Paid,31.128140382910612,87.26
+"A: NSECE, any regular care",weekly_hours_region,northeast:Other Unpaid,52.04813848616243,177.74
+"A: NSECE, any regular care",weekly_hours_region,northeast:Paid Home-Based,37.063522280642864,40.62
+"A: NSECE, any regular care",weekly_hours_region,northeast:Unpaid Center-Based,27.95670890699668,89.16
+"A: NSECE, any regular care",weekly_hours_region,northeast:Unpaid Home-Based,40.08323532897601,5.38
+"A: NSECE, any regular care",weekly_hours_region,south:Center-Based,36.89108017243702,329.38
+"A: NSECE, any regular care",weekly_hours_region,south:Other Paid,36.264342117082805,289.04
+"A: NSECE, any regular care",weekly_hours_region,south:Other Unpaid,45.04692123420868,415.96
+"A: NSECE, any regular care",weekly_hours_region,south:Paid Home-Based,39.133961353218396,67
+"A: NSECE, any regular care",weekly_hours_region,south:Unpaid Center-Based,29.745532565490652,154.62
+"A: NSECE, any regular care",weekly_hours_region,south:Unpaid Home-Based,52.175666482670835,7
+"A: NSECE, any regular care",weekly_hours_region,west:Center-Based,32.70702949850111,174.88
+"A: NSECE, any regular care",weekly_hours_region,west:Other Paid,32.3371974351913,241.18
+"A: NSECE, any regular care",weekly_hours_region,west:Other Unpaid,41.26988444609215,379.82
+"A: NSECE, any regular care",weekly_hours_region,west:Paid Home-Based,36.98632658852082,50
+"A: NSECE, any regular care",weekly_hours_region,west:Unpaid Center-Based,27.720194625526045,105.12
+"A: NSECE, any regular care",weekly_hours_region,west:Unpaid Home-Based,38.223165692480336,19
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,midwest:Other Paid,0.35063793464381865,116.28
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,midwest:Other Unpaid,0.6406089754082639,183.3
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,midwest:Unpaid Home-Based,0.008753089947917478,6
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,northeast:Other Paid,0.30942579365003475,80.92
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,northeast:Other Unpaid,0.6388087770547373,147.76
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,northeast:Unpaid Home-Based,0.05176542929522798,5.38
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,south:Other Paid,0.4251042474262705,269.16
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,south:Other Unpaid,0.5685767589942385,367.46
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,south:Unpaid Home-Based,0.006318993579490983,6.38
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,west:Other Paid,0.35643233424309034,222.08
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,west:Other Unpaid,0.6241069739563684,315.56
+"B: NSCH-matched, 10+ hrs/week",informal_mix_region,west:Unpaid Home-Based,0.019460691800541344,18.18
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Center-Based,33.08556417034442,109.48
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Other Paid,32.22015358559357,116.28
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Other Unpaid,44.62064661895803,183.3
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Paid Home-Based,37.31700419842573,80.54
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Unpaid Center-Based,30.688388990286484,95.76
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,midwest:Unpaid Home-Based,41.49039374373457,6
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Center-Based,32.734001131180335,136.48
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Other Paid,32.36076083616557,80.92
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Other Unpaid,58.403056442053014,147.76
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Paid Home-Based,37.06712427421519,40.58
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Unpaid Center-Based,29.592863946743062,82.66
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,northeast:Unpaid Home-Based,40.08323532897601,5.38
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Center-Based,38.81791325090127,314.46
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Other Paid,39.37678760402355,269.16
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Other Unpaid,49.743856159298474,367.46
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Paid Home-Based,39.97213379369304,65.04
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Unpaid Center-Based,30.852571564805743,149.06
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,south:Unpaid Home-Based,54.46449121400974,6.38
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Center-Based,34.46531839819288,159.1
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Other Paid,35.251300464025476,222.08
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Other Unpaid,49.073191209386756,315.56
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Paid Home-Based,37.092313045165824,49.3
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Unpaid Center-Based,28.92724613263646,101.3
+"B: NSCH-matched, 10+ hrs/week",weekly_hours_region,west:Unpaid Home-Based,40.4220327194104,18.18
+"A: NSECE, any regular care",centre_home_split,midwest,0.6685571184246332,202.78
+"A: NSECE, any regular care",centre_home_split,northeast,0.8637412679802096,180.46
+"A: NSECE, any regular care",centre_home_split,south,0.8226720949604892,396.38
+"A: NSECE, any regular care",centre_home_split,west,0.8248516058000019,224.88
+"B: NSCH-matched, 10+ hrs/week",centre_home_split,midwest,0.6448665773334199,190.02
+"B: NSCH-matched, 10+ hrs/week",centre_home_split,northeast,0.8593856713726055,177.06
+"B: NSCH-matched, 10+ hrs/week",centre_home_split,south,0.817078020792522,379.5
+"B: NSCH-matched, 10+ hrs/week",centre_home_split,west,0.8157114560970086,208.39999999999998
+"A: NSECE, any regular care",unpaid_centre_share,midwest,0.27243648838996287,300
+"A: NSECE, any regular care",unpaid_centre_share,northeast,0.25137990444390057,269.62
+"A: NSECE, any regular care",unpaid_centre_share,south,0.23564578015766885,551
+"A: NSECE, any regular care",unpaid_centre_share,west,0.2135218139866267,330
+"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,midwest,0.28500590332479303,285.78
+"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,northeast,0.24361323851055458,259.72
+"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,south,0.2383959068255089,528.56
+"B: NSCH-matched, 10+ hrs/week",unpaid_centre_share,west,0.2136160337449587,309.7
+"A: NSECE, any regular care",formal_share,midwest,0.45966512852533986,654
+"A: NSECE, any regular care",formal_share,northeast,0.5411036844553323,540
+"A: NSECE, any regular care",formal_share,south,0.4901581223944361,1263
+"A: NSECE, any regular care",formal_share,west,0.4272777402156575,970
+"B: NSCH-matched, 10+ hrs/week",formal_share,midwest,0.49188976711016064,591.36
+"B: NSCH-matched, 10+ hrs/week",formal_share,northeast,0.5551780820052415,493.78
+"B: NSCH-matched, 10+ hrs/week",formal_share,south,0.5030537086561689,1171.56
+"B: NSCH-matched, 10+ hrs/week",formal_share,west,0.4536034398169199,865.52
+"A: NSECE, any regular care",informal_mix,Other Paid,0.362584539667172,746.46
+"A: NSECE, any regular care",informal_mix,Other Unpaid,0.6217837919880265,1192.54
+"A: NSECE, any regular care",informal_mix,Unpaid Home-Based,0.015631668344801536,37.38
+"B: NSCH-matched, 10+ hrs/week",informal_mix,Other Paid,0.373288318721245,688.44
+"B: NSCH-matched, 10+ hrs/week",informal_mix,Other Unpaid,0.6092283021726796,1014.08
+"B: NSCH-matched, 10+ hrs/week",informal_mix,Unpaid Home-Based,0.01748337910607528,35.94
+"A: NSECE, any regular care",weekly_hours,Center-Based,33.75893415200879,765.88
+"A: NSECE, any regular care",weekly_hours,Other Paid,32.896281600626324,746.46
+"A: NSECE, any regular care",weekly_hours,Other Unpaid,43.41002195705766,1192.54
+"A: NSECE, any regular care",weekly_hours,Paid Home-Based,37.77749862719917,238.62
+"A: NSECE, any regular care",weekly_hours,Unpaid Center-Based,29.175548621735036,446.12
+"A: NSECE, any regular care",weekly_hours,Unpaid Home-Based,41.41512678974394,37.38
+"B: NSCH-matched, 10+ hrs/week",weekly_hours,Center-Based,35.58246662569703,719.52
+"B: NSCH-matched, 10+ hrs/week",weekly_hours,Other Paid,35.99905138609283,688.44
+"B: NSCH-matched, 10+ hrs/week",weekly_hours,Other Unpaid,49.894617266649426,1014.08
+"B: NSCH-matched, 10+ hrs/week",weekly_hours,Paid Home-Based,38.13668177978001,235.46
+"B: NSCH-matched, 10+ hrs/week",weekly_hours,Unpaid Center-Based,30.221641915078916,428.78
+"B: NSCH-matched, 10+ hrs/week",weekly_hours,Unpaid Home-Based,42.28938855473169,35.94

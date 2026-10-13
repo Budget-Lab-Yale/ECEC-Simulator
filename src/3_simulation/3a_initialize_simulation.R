@@ -157,6 +157,16 @@ initialize_simulation <- function() {
     }
   }
 
+  # Price wedge income ranks (quintile grids: center_low, other_paid) on full
+  # calibration sample, before sub-sampling -- same ranks as 2a cache, so
+  # base-year wedges match alphas. Wedge off -> not needed
+  price_wedge_on <- !(exists('disable_price_wedge') && isTRUE(disable_price_wedge))
+  price_income_pctiles <- if (price_wedge_on) {
+    price_wedge_income_pctiles(sim_base_hh$households, sim_base_hh$children)
+  } else {
+    NULL
+  }
+
   # Sub-sample households for simulation if sim_sample < calib_sample
   if (sim_sample < calib_sample && !is_state_run) {
     sampling_fraction <- sim_sample / calib_sample
@@ -304,11 +314,11 @@ initialize_simulation <- function() {
       }
     }
 
-    # Load other_paid_base_price from price models cache
-    price_models_path <- file.path('./cache/price_models', 'price_qrf_models.rds')
-    if (file.exists(price_models_path)) {
-      price_qrf_models <- readRDS(price_models_path)
-      base_demand_params$other_paid_base_price <- price_qrf_models$summary_stats$other_paid_base_price
+    # Load other_paid_base_price from price wedge quantiles cache
+    price_quantiles_path <- file.path('./cache/price_models', 'price_wedge_quantiles.rds')
+    if (file.exists(price_quantiles_path)) {
+      price_quantiles <- readRDS(price_quantiles_path)
+      base_demand_params$other_paid_base_price <- price_quantiles$summary_stats$other_paid_base_price
       if (!is.null(base_demand_params$other_paid_base_price)) {
         cat('  Loaded other_paid_base_price: $', round(base_demand_params$other_paid_base_price, 2), '/hr\n', sep = '')
       }
@@ -348,11 +358,8 @@ initialize_simulation <- function() {
     )
   }
 
-  # Load price models and compute price_wedge cache
-  price_models <- {
-    price_qrf_models <- readRDS(file.path('./cache/price_models', 'price_qrf_models.rds'))
-    list(price_qrf_models = price_qrf_models)
-  }
+  # Load price wedge quantile grids (1a), compute price_wedge cache
+  price_quantiles <- readRDS(file.path('./cache/price_models', 'price_wedge_quantiles.rds'))
 
   wedge_disabled <- exists('disable_price_wedge') && isTRUE(disable_price_wedge)
   if (wedge_disabled) {
@@ -360,15 +367,15 @@ initialize_simulation <- function() {
   }
 
   # One cache over all households in state runs too, each state context takes
-  # its rows (below) -- same rows, seed, within-state income ranking as
-  # calibration cache, so base-year draws match alphas.
+  # its rows (below) -- keyed draws, same grids as calibration cache, so
+  # base-year wedges match alphas.
   cached_price_wedge <- NULL
   if (!wedge_disabled) {
     cached_price_wedge <- compute_price_wedge_cache(
-      parent_units = sim_base_hh$parent_units,
-      children     = sim_base_hh$children,
-      households   = sim_base_hh$households,
-      qrf_models   = price_models$price_qrf_models
+      parent_units    = sim_base_hh$parent_units,
+      children        = sim_base_hh$children,
+      price_quantiles = price_quantiles,
+      income_pctiles  = price_income_pctiles
     )
   }
 
@@ -419,14 +426,27 @@ initialize_simulation <- function() {
             sim_sample, '% of ACS)\n', sep = '')
       }
 
+      # Sub-state geography (NYC) on own income ranks: own alpha rds
+      # (compute_substate_alpha.R) + own price wedge rows below. NULL (logged)
+      # -> national alphas, as every other geography
+      st_alpha_data <- alpha_data_by_type
+      substate_alpha <- load_substate_alpha(st, estimation_dir, calibration_year)
+      if (!is.null(substate_alpha)) st_alpha_data <- substate_alpha
+
       # Demand: re-anchor alphas to state targets when a target CSV exists;
       # otherwise subset the national alphas to the state's rows unchanged
       st_demand_params <- base_demand_params
       demand_targets_path <- file.path('config', 'state', 'demand', paste0(st, '.csv'))
       demand_adjustment <- NULL
       if (file.exists(demand_targets_path)) {
-        demand_adjustment <- adjust_alpha_for_state(
-          alpha_data_by_type = alpha_data_by_type,
+        # ECEC_STATE_CALIBRATION=counts -> two-count experiment, else hours
+        adjust_fn <- if (get_state_calibration_mode() == 'counts') {
+          adjust_alpha_for_state_counts
+        } else {
+          adjust_alpha_for_state
+        }
+        demand_adjustment <- adjust_fn(
+          alpha_data_by_type = st_alpha_data,
           state_hh_ids       = state_hh_ids,
           targets_csv_path   = demand_targets_path,
           state_postal       = st
@@ -438,8 +458,8 @@ initialize_simulation <- function() {
       } else {
         cat('  No demand target file (', demand_targets_path,
             '): using national alphas, filter only\n', sep = '')
-        for (pu_type in names(alpha_data_by_type)) {
-          ad <- alpha_data_by_type[[pu_type]]
+        for (pu_type in names(st_alpha_data)) {
+          ad <- st_alpha_data[[pu_type]]
           in_state <- ad$row_ids$hh_id %in% state_hh_ids
           st_demand_params[[pu_type]]$alpha <- ad$alpha[in_state, , drop = FALSE]
           st_demand_params[[pu_type]]$row_ids <- ad$row_ids[in_state, , drop = FALSE]
@@ -488,9 +508,22 @@ initialize_simulation <- function() {
         cat('  Employment growth: state epop file (', st_epop_path, ')\n', sep = '')
       }
 
-      # State's rows of price wedge cache (income ranked within state)
-      st_price_wedge <- if (is.null(cached_price_wedge)) NULL else
+      # State's rows of price wedge cache. Sub-state (NYC) w/ own alphas: own
+      # wedge rows -- quintile grids at geo's own income ranks, as
+      # compute_substate_alphas() (2a), so base-year wedges match own alphas
+      st_price_wedge <- if (is.null(cached_price_wedge)) {
+        NULL
+      } else if (!is.null(substate_alpha)) {
+        compute_price_wedge_cache(
+          parent_units    = sim_base_hh$parent_units %>% filter(hh_id %in% state_hh_ids),
+          children        = sim_base_hh$children %>% filter(hh_id %in% state_hh_ids),
+          price_quantiles = price_quantiles,
+          income_pctiles  = price_wedge_income_pctiles(sim_base_hh$households,
+                                                       sim_base_hh$children, st)
+        )
+      } else {
         cached_price_wedge %>% filter(hh_id %in% state_hh_ids)
+      }
 
       state_contexts[[st]] <- list(
         postal                     = st,
@@ -514,6 +547,9 @@ initialize_simulation <- function() {
         base_year_labor  = as.list(setNames(st_supply_params$L, c('no_ba', 'ba'))),
         epop_source      = st_epop_path %||% 'national'
       )
+      if (!is.null(substate_alpha)) {
+        state_metadata[[st]]$income_ranks <- paste0('own (', get_income_rank_scheme(), ')')
+      }
     }
 
     # Record state-run provenance in run metadata
@@ -544,7 +580,6 @@ initialize_simulation <- function() {
       lapply(counterfactual_ids, function(x) INITIAL_PRICES),
       counterfactual_ids
     ),
-    price_models             = price_models,
     cached_price_wedge       = cached_price_wedge,
     state_contexts           = state_contexts
   )

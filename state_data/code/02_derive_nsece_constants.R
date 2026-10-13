@@ -9,14 +9,35 @@
 #
 # TWO UNIVERSES, build uses A:
 #   A  every child 0-4 w/ a regular non-parental arrangement -- NSECE's own
-#      five-hour screener. Reproduces NSECE's published figures exactly
-#      (validates code). SIMULATOR'S OWN UNIVERSE: 1a_nsece_processing.R keeps
-#      every child w/ positive hours, adds no threshold of its own.
+#      five-hour screener. Reproduced NSECE's published regional formal
+#      shares exactly while unknown cost counted unpaid (validated code);
+#      since 2026-10-12 children whose label unknown payment changes take
+#      imputed paid status (impute_unknown_payment(), as 1a) -- midwest +2.1
+#      points, other regions within 0.8 points; paid status from HH9_PAID
+#      where known, payment -2 (no Section J) unknown, not unpaid (same
+#      day). Since 2026-10-12 regular
+#      care per resolve_regular_care() (as 1a): regular provider w/ zero /
+#      missing reference-week hours counts w/ imputed hours (drawn from
+#      cell's weighted donor hours, keyed); REGCARE -1 / -2
+#      regular when TOC 1-5. Universe 2,814 -> 3,462 children; added
+#      children mostly informal, so formal shares now 4-10 points under
+#      published (published shares rest on reference-week care). TOC 7 /
+#      8 never regular (same day): NSECE's regular care = TOC 1-5 only --
+#      universe 3,462 -> 3,427, in-care share of weighted children 0-4
+#      55.55% -> 54.98%, NSECE's own TOC 1-5 rate.
+#      SIMULATOR'S OWN UNIVERSE: 1a_nsece_processing.R counts same
+#      arrangements, adds no threshold of its own.
 #   B  same children whose TOTAL weekly hours across regular non-parental
 #      arrangements reach 10 -- NSCH k6q20 threshold. Kept since NSCH can only
 #      measure B; `children_all_over_10plus` carries step 1 from B up to A.
 # Restriction on child's total since NSCH asks about all non-parental care.
 # School (K-8) excluded from both.
+#
+# LABEL DRAWS (2026-10-12, as 1a): paid status, hours draws run
+# NSECE_MI_DRAWS times (nsece_mi_draws.R), every child one row per draw w/
+# child_weight / M -- every constant = pooled average over draws. Record
+# counts (n) = mean records per draw, may be fractional. One draw before:
+# seed choice moved universe ratio 1.094-1.105 over 20 seed pairs.
 #
 # DATA. NSECE public-use, ICPSR 37941, licensed, not in repo -- on cluster
 # beside simulator's inputs. Reads 2019/37941-0009-Data.tsv (117 MB, several
@@ -36,6 +57,17 @@ suppressPackageStartupMessages({
 # Not 00_build_demand_targets.R -- too heavy for a cluster job on licensed data.
 source('state_data/code/shared_setup.R')
 
+# Unknown-payment imputation -- same rule, same draws as 1a
+# (assign_primary_care(), impute_unknown_payment()); with_rng_preserved()
+source('src/shared_functions/impute_unknown_payment.R')
+# Regular care, weekly hours -- same rule as 1a (REGCARE -1 / -2 by TOC,
+# zero-hour regular rows drawn hours, keyed hash from price wedge file)
+source('src/shared_functions/compute_price_wedge_cache.R')
+source('src/shared_functions/resolve_regular_care.R')
+# Label draws, seeds per draw -- same M, seeds as 1a
+source('src/shared_functions/nsece_mi_draws.R')
+source('src/shared_functions/compute_substate_alpha.R')
+
 # Part-time below this many hrs/wk. src/shared_functions/constants.R sets
 # pt = 10, ft = 40; 1a_nsece_processing.R cuts between them at `hours < 20`.
 PT_FT_CUT <- 20
@@ -52,7 +84,9 @@ PAID_CENTRE <- 'Center-Based'
 FORMAL      <- c(PAID_CENTRE, 'Unpaid Center-Based', 'Paid Home-Based')
 INFORMAL    <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 
-# NSECE's published regional formal shares -- universe A must reproduce them.
+# NSECE's published regional formal shares -- universe A printed beside them
+# (exact match w/ unknown cost unpaid, reference-week hours only;
+# unknown-payment rule, 2026-10-12 regular-care rule move it).
 PUBLISHED_FORMAL <- c(northeast = 0.5653, midwest = 0.5292,
                       south = 0.5316, west = 0.4835)
 
@@ -63,9 +97,14 @@ AGE_RE      <- '^HHC9_AGE_[1-9]$'
 WEIGHT_RE   <- '^HHC9_METH_WEIGHT_[1-9]$'
 PRIORREL_RE <- paste0('^HH9_PRIORREL_', PROV, '$')
 CHILD_PROV_RE <- paste0('^', c('HH9_CHILDREN', 'HH9_REGCARE', 'HH9_TYPEOFCARE_AGG',
-                               'HH9_CARELOC', 'HH9_WEEKLY_PAYMENT_TC'),
+                               'HH9_CARELOC', 'HH9_WEEKLY_PAYMENT_TC', 'HH9_PAID'),
                         '_[1-9]_', PROV, '$')
 HOURS_RE    <- paste0('^HH9_HRS_WEEK_PROV_[1-9]_', PROV, '$')
+
+# Record count of child x draw rows: sum of record shares (rec = 1 / M) =
+# mean records per draw, rounded to 6 decimals -- drops float noise of
+# summed 1 / M (3427.000000000001)
+n_rec <- function(rec) round(sum(rec), 6)
 
 
 
@@ -89,7 +128,7 @@ read_household <- function(root) {
 
   # Hours arrive as PROV<provider>_<child> in some releases,
   # PROV_<child>_<provider> in others -- take both, normalise.
-  d <- fread(f, select = unique(c('HH9_METH_CASEID', 'HH9_REGION',
+  d <- fread(f, select = unique(c('HH9_METH_CASEID', 'HH9_REGION', 'HH9_COMM_URBAN_DENSITY',
     cols(c(AGE_RE, WEIGHT_RE, CHILD_PROV_RE, PRIORREL_RE,
            '^HH9_HRS_WEEK_PROV[0-9_]+$', '^HH9_HOURS_WEEK_PROV[0-9_]+$')))))
   for (stem in c('HH9_HRS_WEEK_PROV', 'HH9_HOURS_WEEK_PROV')) {
@@ -113,11 +152,31 @@ build_children <- function(d) {
   # Returns: (tibble) hh_id, child_id, age, child_weight, region
   #----------------------------------------------------------------------------
 
+  build_children_all(d) %>%
+    filter(age <= 4, !is.na(child_weight), child_weight > 0)
+}
+
+
+
+build_children_all <- function(d) {
+
+  #----------------------------------------------------------------------------
+  # One row per child of every age (age in months >= 0), any weight -- same
+  # children as 1a. Unknown-payment imputation cells, draw universe span
+  # every age (as 1a), so draws match 1a child for child.
+  #
+  # Params:
+  #   - d (data.table) from read_household()
+  #
+  # Returns: (tibble) hh_id, child_id, age, child_weight, region, density
+  #   (HH9_COMM_URBAN_DENSITY 1-3 -- tier donor cells, as 1a)
+  #----------------------------------------------------------------------------
+
   as_tibble(d) %>%
-    select(hh_id = HH9_METH_CASEID, region = HH9_REGION,
+    select(hh_id = HH9_METH_CASEID, region = HH9_REGION, density = HH9_COMM_URBAN_DENSITY,
            all_of(grep(AGE_RE, names(d), value = TRUE)),
            all_of(grep(WEIGHT_RE, names(d), value = TRUE))) %>%
-    pivot_longer(c(-hh_id, -region), names_to = 'variable', values_to = 'value') %>%
+    pivot_longer(c(-hh_id, -region, -density), names_to = 'variable', values_to = 'value') %>%
     mutate(name     = if_else(str_detect(variable, 'WEIGHT'),
                               'child_weight', 'age_months'),
            child_id = as.integer(str_sub(variable, start = -1))) %>%
@@ -125,25 +184,35 @@ build_children <- function(d) {
     pivot_wider() %>%
     filter(!is.na(age_months), age_months >= 0) %>%
     mutate(age = floor(age_months / 12)) %>%
-    filter(age <= 4, !is.na(child_weight), child_weight > 0) %>%
     mutate(region = REGIONS[as.character(region)]) %>%
-    select(hh_id, child_id, age, child_weight, region)
+    select(hh_id, child_id, age, child_weight, region, density)
 }
 
 
 
-build_arrangements <- function(d) {
+build_arrangements <- function(d, kids_all, draws = NSECE_MI_DRAWS) {
 
   #----------------------------------------------------------------------------
   # One row per regular child x provider arrangement w/ positive hours, in
-  # simulator's care types. Classification deliberately identical to
-  # 1a_nsece_processing.R -- a different rule would measure a different thing,
-  # universe difference would not be readable.
+  # simulator's care types, per label draw. Classification deliberately
+  # identical to 1a_nsece_processing.R -- a different rule would measure a
+  # different thing, universe difference would not be readable. Regularity,
+  # hours from resolve_regular_care() (as 1a): REGCARE -1 / -2 regular when
+  # TOC 1-5; TOC 7 / 8 never regular (NSECE's regular care TOC 1-5 only);
+  # regular row w/ zero / missing reference-week hours takes imputed hours,
+  # draw m seed nsece_mi_seed(REGULAR_HOURS_SEED, m) (as 1a).
   #
   # Params:
   #   - d (data.table) from read_household()
+  #   - kids_all (tibble): build_children_all() rows (age, child_weight --
+  #       hours imputation cells, donor weights)
+  #   - draws (int): label draws (M)
   #
-  # Returns: (tibble) hh_id, child_id, provider_id, ecec_choice, hours
+  # Returns: (tibble) hh_id, child_id, provider_id, ecec_choice,
+  #   unknown_kind, kind (imputation cell, every row), paid (lgl; NA =
+  #   unknown payment), paid_q (lgl: HH9_PAID 1 / 0, NA unknown), hours,
+  #   hours_imputed (lgl), regular_by_type (lgl), draw (int, 0 .. M - 1) --
+  #   same rows every draw, hours of imputed rows differ
   #----------------------------------------------------------------------------
 
   prior <- as_tibble(d) %>%
@@ -154,7 +223,7 @@ build_arrangements <- function(d) {
                  values_to = 'priorrel') %>%
     mutate(provider_id = as.integer(provider_id))
 
-  as_tibble(d) %>%
+  base <- as_tibble(d) %>%
     select(hh_id = HH9_METH_CASEID,
            all_of(unlist(lapply(c(CHILD_PROV_RE, HOURS_RE), grep, x = names(d),
                                 value = TRUE)))) %>%
@@ -167,15 +236,45 @@ build_arrangements <- function(d) {
     filter(HH9_CHILDREN == 1) %>%
     left_join(prior, by = c('hh_id', 'provider_id')) %>%
     transmute(hh_id, child_id, provider_id,
-              regular  = HH9_REGCARE,
+              regcare  = HH9_REGCARE,
               type_raw = HH9_TYPEOFCARE_AGG,
               careloc  = HH9_CARELOC,
               priorrel,
               hours    = HH9_HRS_WEEK_PROV,
-              cost     = HH9_WEEKLY_PAYMENT_TC) %>%
+              cost     = HH9_WEEKLY_PAYMENT_TC,
+              # Questionnaire paid status, as 1a paid_hh -> paid_q
+              paid_q   = case_when(HH9_PAID %in% 1 ~ TRUE, HH9_PAID %in% 0 ~ FALSE)) %>%
+    left_join(select(kids_all, hh_id, child_id, age, child_weight),
+              by = c('hh_id', 'child_id'))
+
+  bind_rows(lapply(seq_len(draws) - 1L, function(m) classify_arrangements(
+    resolve_regular_care(base, seed = nsece_mi_seed(REGULAR_HOURS_SEED, m))$arr) %>%
+      mutate(draw = m)))
+}
+
+
+
+classify_arrangements <- function(rc) {
+
+  #----------------------------------------------------------------------------
+  # Care type per arrangement, one draw -- 1a's classification.
+  #
+  # Params:
+  #   - rc (tibble): resolve_regular_care()$arr rows
+  #
+  # Returns: (tibble) build_arrangements() columns, w/out draw
+  #----------------------------------------------------------------------------
+
+  rc %>%
     mutate(
-      hours = if_else(!is.na(hours) & hours >= 0, hours, NA_real_),
-      cost  = if_else(!is.na(cost)  & cost  >= 0, cost,  NA_real_),
+      # Cost codes as 1a status handling: -1 DK/refused, -2 no Section J
+      # (MISS) -> unknown payment, NA; other negative codes, blank (NIU) ->
+      # 0. 2026-10-12; every missing cost unpaid before, -2 unpaid until
+      # later same day
+      cost  = case_when(!is.na(cost) & cost >= 0  ~ cost,
+                        !is.na(cost) & cost >= -2 ~ NA_real_,
+                        TRUE                      ~ 0),
+      pay_unknown  = is.na(cost),
       is_paid      = !is.na(cost) & cost > 0,
       hourly       = if_else(!is.na(hours) & hours > 0, cost / hours, NA_real_),
       is_k8        = type_raw == 6,
@@ -186,18 +285,107 @@ build_arrangements <- function(d) {
       is_home_based = is_home & !in_child_home & !has_prior_rel,
       is_other_kind = (!is_center & !is_k8) &
                         (!is_home | in_child_home | has_prior_rel),
+      # Unknown payment: no label, kind picks candidate labels
+      # (primary_arrangement())
+      unknown_kind = case_when(
+        is_k8 | !pay_unknown ~ NA_character_,
+        is_center            ~ 'center',
+        is_home_based        ~ 'home',
+        is_other_kind        ~ 'other'),
       ecec_choice = case_when(
         is_k8                              ~ 'K-8',
+        pay_unknown                        ~ NA_character_,
         is_center & !is_paid               ~ 'Unpaid Center-Based',
         is_center & is_paid                ~ 'Center-Based',
         is_home_based & !is_paid           ~ 'Unpaid Home-Based',
         is_home_based &  is_paid           ~ 'Paid Home-Based',
         is_other_kind & !is_paid           ~ 'Other Unpaid',
         is_other_kind &  is_paid           ~ 'Other Paid',
-        TRUE                               ~ NA_character_)) %>%
-    filter(!is.na(regular), regular == 1, !is.na(ecec_choice),
+        TRUE                               ~ NA_character_),
+      kind = pay_kind(is_k8, is_center, is_home_based, is_other_kind),
+      paid = if_else(pay_unknown, NA, is_paid)) %>%
+    filter(regular == 1,
+           !is.na(ecec_choice) | !is.na(unknown_kind),
            !is.na(hours), hours > 0) %>%
-    select(hh_id, child_id, provider_id, ecec_choice, hours)
+    select(hh_id, child_id, provider_id, ecec_choice, unknown_kind, kind,
+           paid, paid_q, hours, hours_imputed, regular_by_type)
+}
+
+
+
+add_imputed_payment <- function(arr, kids_all) {
+
+  #----------------------------------------------------------------------------
+  # Draws paid status for unknown-payment rows, impute_unknown_payment() --
+  # same function, seeds, universe as 1a: draw m seed
+  # nsece_mi_seed(IMPUTE_PAY_SEED, m). Tiers unused here (one paid-centre
+  # type); tier uniforms still drawn, so paid draws match 1a's.
+  #
+  # Params:
+  #   - arr (tibble): build_arrangements() rows (regular, hours > 0 only),
+  #       w/ draw
+  #   - kids_all (tibble): build_children_all() rows
+  #
+  # Returns: (list) arr (+ imputed_choice: drawn label, NA on known rows),
+  #   imp (impute_unknown_payment() result, draw 0 -- cells same every
+  #   draw), n_paid (int: rows drawn paid, per draw)
+  #----------------------------------------------------------------------------
+
+  kid_cols <- select(kids_all, hh_id, child_id, age, child_weight, region, density)
+  per_draw <- lapply(split(arr, arr$draw), function(a) {
+    m <- a$draw[1]
+    imp <- a %>%
+      left_join(kid_cols, by = c('hh_id', 'child_id')) %>%
+      mutate(tier = NA_character_, counts = TRUE) %>%
+      impute_unknown_payment(seed = nsece_mi_seed(IMPUTE_PAY_SEED, m))
+    a <- a %>%
+      left_join(select(imp$draws, hh_id, child_id, provider_id, imp_paid),
+                by = c('hh_id', 'child_id', 'provider_id')) %>%
+      mutate(imputed_choice = imputed_pay_label(unknown_kind, imp_paid, NA_character_,
+                                                paid_centre = PAID_CENTRE)) %>%
+      select(-imp_paid)
+    list(arr = a, imp = imp)
+  })
+  list(arr = bind_rows(lapply(per_draw, `[[`, 'arr')), imp = per_draw[[1]]$imp,
+       n_paid = vapply(per_draw, function(p) sum(p$imp$draws$imp_paid), numeric(1)))
+}
+
+
+
+classify_children <- function(d, draws = NSECE_MI_DRAWS) {
+
+  #----------------------------------------------------------------------------
+  # Children 0-4, arrangements, primary arrangement (unknown payment, hours
+  # drawn) -- shared by main(), nsece_shares_by_age.R,
+  # 13_participation_audit.R. Multiple imputation (nsece_mi_draws.R, as
+  # 1a): every child `draws` rows, one per label draw, child_weight / M,
+  # rec = 1 / M (record share) -- weighted results = pooled average over
+  # draws, n_rec(rec) = mean record count per draw.
+  #
+  # Params:
+  #   - d (data.table) from read_household()
+  #   - draws (int): label draws (M); draw 0 = single draw before
+  #
+  # Returns: (list) kids (retained child x draw rows, children 0-4), prim
+  #   (their primary arrangements, joined to kids), arr (arrangements w/
+  #   imputed_choice, every draw), dropped (hh_id, child_id, draw still
+  #   NA), n_kids, wt_kids (all children 0-4 before drop, once each), imp
+  #   (impute_unknown_payment() result, draw 0), n_paid (rows drawn paid,
+  #   per draw), draws
+  #----------------------------------------------------------------------------
+
+  kids_all <- build_children_all(d)
+  kids <- filter(kids_all, age <= 4, !is.na(child_weight), child_weight > 0)
+  ai <- add_imputed_payment(build_arrangements(d, kids_all, draws), kids_all)
+  kids_d <- kids %>%
+    cross_join(tibble(draw = seq_len(draws) - 1L)) %>%
+    mutate(child_weight = child_weight / draws, rec = 1 / draws)
+  prim <- primary_arrangement(ai$arr) %>%
+    inner_join(kids_d, by = c('hh_id', 'child_id', 'draw'))
+  kept <- drop_unresolved(kids_d, prim)
+  list(kids = kept$kids, prim = kept$prim, arr = ai$arr, dropped = kept$dropped,
+       n_kids = nrow(kids), wt_kids = sum(kids$child_weight), imp = ai$imp,
+       n_paid = ai$n_paid, draws = draws)
 }
 
 
@@ -214,19 +402,84 @@ primary_arrangement <- function(arr) {
   # Params:
   #   - arr (tibble) from build_arrangements()
   #
-  # Returns: (tibble) hh_id, child_id, ecec_choice, hours, total_hours
+  # Unknown payment (unknown_kind set), as 1a assign_primary_care(): unknown
+  # rows take drawn labels (imputed_choice, add_imputed_payment()) -- child
+  # whose type x hours band (PT_FT_CUT) payment can't change gets same label
+  # from any draw. No draw -> ecec_choice NA, drop_unresolved() takes it out
+  # of numerators, denominators (2026-10-12; unknown cost unpaid before,
+  # enumerated + drawn where ambiguous same day).
+  #
+  # One row per child x label draw (draw column; absent -> draw 0).
+  #
+  # Returns: (tibble) draw, hh_id, child_id, ecec_choice (NA = ambiguous, no
+  #   draw), hours, total_hours, imputed (lgl)
   #----------------------------------------------------------------------------
 
-  arr %>%
-    filter(ecec_choice != 'K-8') %>%
-    group_by(hh_id, child_id, ecec_choice) %>%
+  if (!'draw' %in% names(arr)) arr$draw <- 0L
+  arr <- filter(arr, is.na(ecec_choice) | ecec_choice != 'K-8')
+  has_unknown <- arr %>%
+    group_by(draw, hh_id, child_id) %>%
+    mutate(unk = any(!is.na(unknown_kind))) %>%
+    ungroup() %>%
+    pull(unk)
+
+  known <- arr[!has_unknown, ] %>%
+    group_by(draw, hh_id, child_id, ecec_choice) %>%
     summarise(hours = sum(hours), .groups = 'drop') %>%
-    group_by(hh_id, child_id) %>%
+    group_by(draw, hh_id, child_id) %>%
     mutate(total_hours = sum(hours)) %>%
     arrange(match(ecec_choice, CATEGORY_PRIORITY), desc(hours),
             .by_group = TRUE) %>%
     slice(1) %>%
+    ungroup() %>%
+    mutate(imputed = FALSE)
+
+  unknown <- arr[has_unknown, ] %>%
+    group_by(draw, hh_id, child_id) %>%
+    group_modify(~ {
+      p <- .x
+      unk <- which(!is.na(p$unknown_kind))
+      imp <- if ('imputed_choice' %in% names(p)) p$imputed_choice[unk] else NA_character_
+      if (any(is.na(imp))) {
+        return(tibble(ecec_choice = NA_character_, hours = NA_real_,
+                      total_hours = sum(p$hours), imputed = FALSE))
+      }
+      # Unknown rows take drawn labels, as 1a
+      labels <- p$ecec_choice
+      labels[unk] <- imp
+      h <- tapply(p$hours, labels, sum)
+      top <- order(match(names(h), CATEGORY_PRIORITY), -h)[1]
+      tibble(ecec_choice = names(h)[top], hours = h[[top]],
+             total_hours = sum(p$hours), imputed = TRUE)
+    }) %>%
     ungroup()
+
+  bind_rows(known, unknown) %>% arrange(hh_id, child_id, draw)
+}
+
+
+
+drop_unresolved <- function(kids, prim) {
+
+  #----------------------------------------------------------------------------
+  # Takes children whose label unknown payment changes (primary_arrangement()
+  # ecec_choice NA) out of both child table, primary-arrangement table -- out
+  # of every numerator, denominator (Parent Only share incl.), as 1a.
+  #
+  # Within label draw: child x draw row out when that draw leaves label NA.
+  #
+  # Params:
+  #   - kids (tibble): child x draw rows (classify_children())
+  #   - prim (tibble): primary_arrangement() rows
+  #
+  # Returns: (list) kids, prim (retained child x draw rows), dropped (hh_id,
+  #   child_id, draw)
+  #----------------------------------------------------------------------------
+
+  dropped <- prim %>% filter(is.na(ecec_choice)) %>% distinct(hh_id, child_id, draw)
+  list(kids    = anti_join(kids, dropped, by = c('hh_id', 'child_id', 'draw')),
+       prim    = filter(prim, !is.na(ecec_choice)),
+       dropped = dropped)
 }
 
 
@@ -234,10 +487,12 @@ primary_arrangement <- function(arr) {
 summarise_universe <- function(kids, label) {
 
   #----------------------------------------------------------------------------
-  # NSECE constants on universe `kids`.
+  # NSECE constants on universe `kids`. Child x draw rows, child_weight / M
+  # -> shares pooled over draws; record counts n_rec(rec) = mean records per
+  # draw (may be fractional).
   #
   # Params:
-  #   - kids (tibble): primary-arrangement rows w/ child_weight, region
+  #   - kids (tibble): primary-arrangement rows w/ child_weight, region, rec
   #   - label (chr): universe label
   #
   # Returns: (list of tibbles) formal, mix, hours, split, mix_r, hours_r,
@@ -249,21 +504,21 @@ summarise_universe <- function(kids, label) {
 
   formal <- in_region %>%
     group_by(region) %>%
-    summarise(universe = label, children = n(),
+    summarise(universe = label, children = n_rec(rec),
               formal_share = w(ecec_choice %in% FORMAL, child_weight),
               .groups = 'drop')
 
   mix <- kids %>%
     filter(ecec_choice %in% INFORMAL) %>%
     group_by(ecec_choice) %>%
-    summarise(universe = label, children = n(), wt = sum(child_weight),
+    summarise(universe = label, children = n_rec(rec), wt = sum(child_weight),
               .groups = 'drop') %>%
     mutate(share = wt / sum(wt)) %>%
     select(universe, ecec_choice, children, share)
 
   hrs <- kids %>%
     group_by(ecec_choice) %>%
-    summarise(universe = label, children = n(),
+    summarise(universe = label, children = n_rec(rec),
               weekly = w(hours, child_weight), .groups = 'drop') %>%
     mutate(annual = weekly * 50)
 
@@ -272,8 +527,8 @@ summarise_universe <- function(kids, label) {
   unpaid <- in_region %>%
     filter(ecec_choice %in% FORMAL) %>%
     group_by(region) %>%
-    summarise(universe = label, children = n(),
-              n_unpaid = sum(ecec_choice == 'Unpaid Center-Based'),
+    summarise(universe = label, children = n_rec(rec),
+              n_unpaid = n_rec(rec * (ecec_choice == 'Unpaid Center-Based')),
               unpaid_share = w(ecec_choice == 'Unpaid Center-Based', child_weight),
               .groups = 'drop')
 
@@ -283,8 +538,8 @@ summarise_universe <- function(kids, label) {
     filter(ecec_choice %in% c(PAID_CENTRE, 'Paid Home-Based')) %>%
     group_by(region) %>%
     summarise(universe = label,
-              n_centre = sum(ecec_choice %in% PAID_CENTRE),
-              n_home   = sum(ecec_choice == 'Paid Home-Based'),
+              n_centre = n_rec(rec * (ecec_choice %in% PAID_CENTRE)),
+              n_home   = n_rec(rec * (ecec_choice == 'Paid Home-Based')),
               centre_share = w(ecec_choice %in% PAID_CENTRE, child_weight),
               .groups = 'drop')
 
@@ -292,20 +547,20 @@ summarise_universe <- function(kids, label) {
   # build, simulator agree child for child.
   ptft_nat <- kids %>%
     group_by(ecec_choice) %>%
-    summarise(universe = label, children = n(),
+    summarise(universe = label, children = n_rec(rec),
               pt_share = w(hours < PT_FT_CUT, child_weight), .groups = 'drop')
 
   ptft <- kids %>%
     filter(!is.na(region)) %>%
     group_by(region, ecec_choice) %>%
-    summarise(universe = label, children = n(),
-              n_pt = sum(hours < PT_FT_CUT),
+    summarise(universe = label, children = n_rec(rec),
+              n_pt = n_rec(rec * (hours < PT_FT_CUT)),
               pt_share = w(hours < PT_FT_CUT, child_weight), .groups = 'drop')
 
   mix_r <- in_region %>%
     filter(ecec_choice %in% INFORMAL) %>%
     group_by(region, ecec_choice) %>%
-    summarise(universe = label, children = n(), wt = sum(child_weight),
+    summarise(universe = label, children = n_rec(rec), wt = sum(child_weight),
               .groups = 'drop') %>%
     group_by(region) %>%
     mutate(share = wt / sum(wt)) %>%
@@ -315,7 +570,7 @@ summarise_universe <- function(kids, label) {
   hrs_r <- kids %>%
     filter(!is.na(region)) %>%
     group_by(region, ecec_choice) %>%
-    summarise(universe = label, children = n(),
+    summarise(universe = label, children = n_rec(rec),
               weekly = w(hours, child_weight), .groups = 'drop')
 
   list(formal = formal, mix = mix, hours = hrs, split = split,
@@ -350,7 +605,7 @@ pooled_national <- function(kids, label) {
                 sum(paid_formal$child_weight),
               sum(formal_kids$child_weight[formal_kids$ecec_choice ==
                      'Unpaid Center-Based']) / sum(formal_kids$child_weight)),
-    n = c(nrow(kids), nrow(paid_formal), nrow(formal_kids)))
+    n = c(n_rec(kids$rec), n_rec(paid_formal$rec), n_rec(formal_kids$rec)))
 }
 
 
@@ -382,26 +637,28 @@ share_of_children_region <- function(arr, kids, prim) {
   #
   # Params:
   #   - arr (tibble): build_arrangements() rows
-  #   - kids (tibble): build_children() rows (child_weight, region)
+  #   - kids (tibble): classify_children() child x draw rows (child_weight
+  #       / M, region, rec)
   #   - prim (tibble): primary_arrangement() rows joined to kids
   #
   # Returns: (tibble) universe, quantity, key ('<region>:<type>'), value, n
+  #   (mean records per draw)
   #----------------------------------------------------------------------------
 
   k_ids <- arr %>% filter(ecec_choice == 'K-8') %>% distinct(hh_id, child_id)
   all_k <- kids %>% anti_join(k_ids, by = c('hh_id', 'child_id'))
   typ <- prim %>%
     anti_join(k_ids, by = c('hh_id', 'child_id')) %>%
-    transmute(hh_id, child_id, type = ecec_choice)
+    transmute(hh_id, child_id, draw, type = ecec_choice)
   d <- all_k %>%
-    left_join(typ, by = c('hh_id', 'child_id')) %>%
+    left_join(typ, by = c('hh_id', 'child_id', 'draw')) %>%
     mutate(type = coalesce(type, 'Parent Only'))
   d <- bind_rows(d, mutate(d, region = 'US')) %>% filter(!is.na(region))
   d %>%
     group_by(region) %>%
     mutate(tot = sum(child_weight)) %>%
     group_by(region, type) %>%
-    summarise(value = sum(child_weight) / first(tot), n = n(), .groups = 'drop') %>%
+    summarise(value = sum(child_weight) / first(tot), n = n_rec(rec), .groups = 'drop') %>%
     transmute(universe = UNIVERSE_A, quantity = 'share_of_children_region',
               key = paste(region, type, sep = ':'), value, n)
 }
@@ -426,7 +683,7 @@ short_share_by <- function(prim, by, quantity) {
     filter(hours < PT_FT_CUT, !is.na(.data[[by]])) %>%
     group_by(key = .data[[by]]) %>%
     summarise(value = sum(child_weight[total_hours < 10]) / sum(child_weight),
-              n = n(), .groups = 'drop') %>%
+              n = n_rec(rec), .groups = 'drop') %>%
     transmute(universe = UNIVERSE_A, quantity = quantity, key, value, n)
 }
 
@@ -468,12 +725,26 @@ main <- function() {
   cat('reading ', root, '\n', sep = '')
   d <- read_household(root)
   cat('  households ', nrow(d), '\n', sep = '')
-  kids <- build_children(d)
-  cat('  children aged 0-4 ', nrow(kids), '\n', sep = '')
-  arr <- build_arrangements(d)
-  cat('  child x provider arrangements ', nrow(arr), '\n', sep = '')
-  prim <- primary_arrangement(arr) %>% inner_join(kids, by = c('hh_id', 'child_id'))
-  cat('  children 0-4 in non-parental care ', nrow(prim), '\n', sep = '')
+  cc <- classify_children(d)
+  cat('  children aged 0-4 ', cc$n_kids, '; label draws ', cc$draws,
+      ' (counts below: mean records per draw)\n', sep = '')
+  arr <- cc$arr
+  arr0 <- filter(arr, draw == 0)
+  cat('  child x provider arrangements ', nrow(arr0), '\n', sep = '')
+  cat(sprintf('  of which regular by TOC (REGCARE -1/-2) %d, imputed hours %d (pt < %d hrs: %.1f)\n',
+              sum(arr0$regular_by_type), sum(arr0$hours_imputed), PT_FT_CUT,
+              sum(arr$hours_imputed & arr$hours < PT_FT_CUT) / cc$draws))
+  show_table('UNKNOWN PAYMENT -- paid share of known-payment arrangements, kind x age cell',
+             cc$imp$paid_cells, 4)
+  cat(sprintf('  unknown-payment arrangements drawn: %d (paid %.1f)\n',
+              nrow(cc$imp$draws), mean(cc$n_paid)))
+  cat(sprintf('  children 0-4 w/ imputed label (ambiguous): %.1f (weighted %.0f)\n',
+              sum(cc$prim$rec[cc$prim$imputed]), sum(cc$prim$child_weight[cc$prim$imputed])))
+  cat(sprintf('  children 0-4 still out (no label): %.1f (weighted %.0f)\n',
+              nrow(cc$dropped) / cc$draws, cc$wt_kids - sum(cc$kids$child_weight)))
+  kids <- cc$kids
+  prim <- cc$prim
+  cat('  children 0-4 in non-parental care ', n_rec(prim$rec), '\n', sep = '')
 
   keep   <- prim$total_hours >= 10
   b_kids <- prim[keep, ]
@@ -484,8 +755,8 @@ main <- function() {
   hA <- sum(prim$child_weight * prim$hours)
   hB <- sum(prim$child_weight[keep] * prim$hours[keep])
   cat('\n== children reaching the ten-hour line\n',
-      sprintf('  universe A %d children, universe B %d (%.1f%% kept)\n',
-              nrow(prim), sum(keep), 100 * mean(keep)),
+      sprintf('  universe A %.1f children, universe B %.1f (%.1f%% kept)\n',
+              sum(prim$rec), sum(prim$rec[keep]), 100 * mean(keep)),
       sprintf('  weighted primary-arrangement hours: A %.0f, B %.0f (%.1f%% kept)\n',
               hA, hB, 100 * hB / hA),
       sprintf('  sub-ten-hour group: %.1f%% of children, %.1f%% of HOURS\n',
@@ -542,7 +813,7 @@ main <- function() {
     tibble(universe = UNIVERSE_A, quantity = 'children_all_over_10plus',
            key = 'national',
            value = sum(prim$child_weight) / sum(b_kids$child_weight),
-           n = nrow(prim)),
+           n = n_rec(prim$rec)),
     # SHORT SHARE OF PART-TIME. Children under 10 total hrs/week over
     # children part-time in simulator's sense (primary hours < PT_FT_CUT).
     # Every under-10 child part-time -- primary hours <= total hours. Step 1
@@ -551,7 +822,7 @@ main <- function() {
            key = 'national',
            value = sum(prim$child_weight[!keep]) /
                    sum(prim$child_weight[prim$hours < PT_FT_CUT]),
-           n = sum(prim$hours < PT_FT_CUT)),
+           n = n_rec(prim$rec[prim$hours < PT_FT_CUT])),
     # Same share by region, by primary care type -- 05_compare_nsece_shares.R
     # tests whether either split moves step 1; build keeps national.
     short_share_by(prim, 'region', 'short_share_of_part_time_region'),

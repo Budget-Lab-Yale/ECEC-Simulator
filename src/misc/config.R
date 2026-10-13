@@ -696,6 +696,38 @@ default_paths <- read_yaml('./config/default_paths.yaml')
 # Make seed_offset globally accessible for simulation
 seed_offset <<- if (exists('seed_offset')) seed_offset else 0
 
+# Income-rank scheme for care-choice forest (income_rank.R).
+# Env var ECEC_INCOME_RANK; unset -> 'national_rpp' (real income ranked
+# nationally -- 10/13 ranking test); 'national' = nominal income, sensitivity
+income_rank_scheme <<- Sys.getenv('ECEC_INCOME_RANK', 'national_rpp')
+if (income_rank_scheme == '') income_rank_scheme <<- 'national_rpp'
+if (!income_rank_scheme %in% c('national_rpp', 'national')) {
+  stop('ECEC_INCOME_RANK = "', income_rank_scheme, '" unknown. ',
+       'Use national_rpp (default) or national -- state, region schemes removed.')
+}
+cat('Income-rank scheme:', income_rank_scheme, '\n')
+
+# Experiment: unpaid-center children on low-price paid supply
+# (remap_unpaid_care.R). Env var ECEC_REMAP_UNPAID; unset/'0' -> off
+# (default, outputs unchanged), '1' -> on
+remap_unpaid_care <<- Sys.getenv('ECEC_REMAP_UNPAID', '0')
+if (remap_unpaid_care == '') remap_unpaid_care <<- '0'
+if (!remap_unpaid_care %in% c('0', '1')) {
+  stop('ECEC_REMAP_UNPAID = "', remap_unpaid_care, '" unknown. Use 0 (default) or 1.')
+}
+if (remap_unpaid_care == '1') cat('EXPERIMENT: unpaid-center care remapped to low-price supply\n')
+
+# Experiment: state demand re-anchoring targets (adjust_alpha_for_state.R).
+# Env var ECEC_STATE_CALIBRATION; unset -> 'hours' (6 annual-hours targets,
+# default); 'counts' -> children by group x pt/ft (config/state/demand_counts/)
+state_calibration_mode <<- Sys.getenv('ECEC_STATE_CALIBRATION', 'hours')
+if (state_calibration_mode == '') state_calibration_mode <<- 'hours'
+if (!state_calibration_mode %in% c('hours', 'counts')) {
+  stop('ECEC_STATE_CALIBRATION = "', state_calibration_mode, '" unknown. ',
+       'Use hours (default) or counts.')
+}
+if (state_calibration_mode == 'counts') cat('EXPERIMENT: state re-anchoring on two-count targets\n')
+
 # Create output root (append seed suffix for non-default seeds to avoid collisions)
 time_stamp <- format(Sys.time(), '%Y%m%d%H%M')
 if (seed_offset != 0) {

@@ -77,16 +77,13 @@ run_acs_processing <- function() {
 
     #--------------------------------------------------------------------------
     # Child-weighted income percentile cutpoints for children under 5, one set
-    # per group -- NSECE by Census region (finest NSECE geography), ACS by
-    # state (statefip; NYC ranks within NYS). Each family ranked in own area,
-    # as price forest does (1a, compute_price_wedge_cache.R). Records w/ NA
-    # group get no cutpoints.
+    # per group -- one national group (rank_group = 0, income_rank.R).
+    # Records w/ NA group get no cutpoints.
     #
     # Params:
     #   - children (df): Children table with hh_id, age, child_weight columns
     #   - households (df): Households table with hh_id, income, group_col
-    #   - group_col (chr): households column to rank within ('region',
-    #     'statefip')
+    #   - group_col (chr): households column to rank within ('rank_group')
     #
     # Returns: (list) named by group, each a 99-element num vec of cutpoints
     #--------------------------------------------------------------------------
@@ -253,7 +250,7 @@ run_acs_processing <- function() {
     #   - income_pctiles (list): Income percentile cutpoints by group
     #     (compute_income_pctiles())
     #   - income_group_col (chr): households column income ranks within
-    #     ('region' NSECE, 'statefip' ACS)
+    #     ('rank_group', one national group)
     #   - source_label (chr): Label for error messages ('NSECE' or 'ACS')
     #   - is_nsece (logical): Whether the data source is NSECE (default FALSE)
     #
@@ -268,24 +265,36 @@ run_acs_processing <- function() {
 
     # Add enrollment info (NSECE only - ACS children don't have observed enrollment)
     if (is_nsece && !is.null(enrollment)) {
+      # Label draws (1a, nsece_mi_draws.R): child x draw rows, child_weight
+      # x draw_weight (1 / M) -- weighted totals unchanged. Family count,
+      # censoring, two-child pairing below run within draw. No draw column
+      # -> one draw, weight 1
+      if (!'draw' %in% names(enrollment)) enrollment <- mutate(enrollment, draw = 0L, draw_weight = 1)
       rf_tmp <- rf_tmp %>%
         left_join(
-          enrollment %>% select(hh_id, child_id, ecec_choice, ecec_hours_choice),
+          enrollment %>% select(hh_id, child_id, draw, draw_weight, ecec_choice, ecec_hours_choice),
           by = c('hh_id', 'child_id')
         ) %>%
-        filter(!is.na(ecec_choice), !is.na(ecec_hours_choice)) %>%
-        mutate(ecec_class = paste0(ecec_choice, '_', ecec_hours_choice), .after = child_weight) %>%
+        mutate(draw = coalesce(draw, 0L), child_weight = child_weight * coalesce(draw_weight, 1)) %>%
+        select(-draw_weight) %>%
+        # Unlabelled children kept here, NA class -- family size counted
+        # below from every child 0-4; one-child / two-child filters drop
+        # them after (2026-10-12; dropped before family count before)
+        mutate(ecec_class = if_else(is.na(ecec_choice) | is.na(ecec_hours_choice), NA_character_,
+                                    paste0(ecec_choice, '_', ecec_hours_choice)),
+               .after = child_weight) %>%
         select(-ecec_choice, -ecec_hours_choice)
     }
 
     # Add parent unit information
     if (is_nsece) {
-      # NSECE: respondent (parent 1) is primary caregiver by survey design
+      # NSECE: parent sex both parents (1a infer_parent_sex()), employment
+      # band per parent (1a nsece_person_employment())
       rf_tmp <- rf_tmp %>%
         left_join(
           parent_units %>%
             select(hh_id, parent_unit_id, p.hhm_id1 = hhm_id1, p.hhm_id2 = hhm_id2,
-                   p.male1 = male1, p.hours1 = hours1, p.hours2 = hours2),
+                   p.male1 = male1, p.male2 = male2, p.emp1 = emp1, p.emp2 = emp2),
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         left_join(
@@ -313,27 +322,36 @@ run_acs_processing <- function() {
     }
 
     # Add household characteristics. Income rank within income_group_col
-    # (region / state); group column dropped after unless it's region
+    # (rank_group); group column dropped after unless it's region
     rf_tmp <- rf_tmp %>%
       left_join(
-        households %>% select(hh_id, income, n_members, region, all_of(income_group_col)),
+        households %>% select(hh_id, income, n_members, region, density, any_of(c('share_1', 'share_2')),
+                            all_of(income_group_col)),
         by = 'hh_id'
       ) %>%
       mutate(
         income_pctile = assign_income_pctile(income, .data[[income_group_col]], income_pctiles),
-        region = factor(region)
+        region = factor(region),
+        # Fixed levels -- ACS may lack a level NSECE has (urban_density.R)
+        density = factor(density, levels = 1:3)
       ) %>%
       select(-any_of(setdiff(income_group_col, 'region')))
 
     # Derive primary caregiver employment choice
     if (is_nsece) {
-      # NSECE: respondent (parent 1) is primary caregiver
+      # NSECE: caregiver chosen as ACS (mother in two-parent unit, else
+      # parent 1; NA when mother unknown), band from 1a (same 35-hr cut,
+      # ACS concept). NA -> family out of frame below (2026-10-12; parent
+      # 1's work + school + training + commute hours, NA -> none before)
       rf_tmp <- rf_tmp %>%
         mutate(
-          hours_pc = p.hours1,
-          employment_choice_pc = derive_employment_choice(hours_pc)
+          primary_caregiver = nsece_primary_caregiver(p.hhm_id2, p.male1, p.male2),
+          employment_choice_pc = factor(case_when(
+            primary_caregiver == 1L ~ p.emp1,
+            primary_caregiver == 2L ~ p.emp2
+          ), levels = c('none', 'pt', 'ft'))
         ) %>%
-        select(-hours_pc, -income)
+        select(-primary_caregiver, -p.male2, -p.emp1, -p.emp2, -income)
     } else {
       # ACS: identify primary caregiver then derive employment choice
       rf_tmp <- rf_tmp %>%
@@ -345,7 +363,7 @@ run_acs_processing <- function() {
         select(-income, -hours_pc)
     }
 
-    # Build family_id and count children
+    # Build family_id and count children (within label draw, NSECE)
     rf_tmp <- rf_tmp %>%
       mutate(
         family_id = if_else(
@@ -354,7 +372,9 @@ run_acs_processing <- function() {
           paste0('pu_', hh_id, '_', parent_unit_id)
         )
       ) %>%
-      add_count(family_id, name = 'n_children') %>%
+      group_by(family_id, across(any_of('draw'))) %>%
+      mutate(n_children = n()) %>%
+      ungroup() %>%
       mutate(
         n_children_original = n_children,
         child_category = case_when(
@@ -371,7 +391,7 @@ run_acs_processing <- function() {
 
     rf_tmp <- rf_tmp %>%
       arrange(family_id, age, child_id) %>%
-      group_by(family_id) %>%
+      group_by(family_id, across(any_of('draw'))) %>%
       mutate(child_index_temp = row_number()) %>%
       ungroup() %>%
       filter(child_index_temp <= 2) %>%
@@ -395,7 +415,7 @@ run_acs_processing <- function() {
 
     # Update n_children to reflect effective count after censoring
     rf_tmp <- rf_tmp %>%
-      group_by(family_id) %>%
+      group_by(family_id, across(any_of('draw'))) %>%
       mutate(n_children = n()) %>%
       ungroup()
 
@@ -410,8 +430,13 @@ run_acs_processing <- function() {
     # Two-child families: reshape wide
     two_child_base <- rf_tmp %>% filter(n_children == 2)
     if (is_nsece) {
+      # Whole family out when either kept child lacks label / age / sex --
+      # never re-enters as one-child family (2026-10-12; row filter before
+      # left a one-row family pivoting to 'class__NA')
       two_child_base <- two_child_base %>%
-        filter(!is.na(ecec_class), !is.na(age), !is.na(male))
+        group_by(family_id, across(any_of('draw'))) %>%
+        filter(all(!is.na(ecec_class) & !is.na(age) & !is.na(male))) %>%
+        ungroup()
     }
 
     pivot_cols <- if (is_nsece) {
@@ -421,13 +446,14 @@ run_acs_processing <- function() {
     }
     two_child_wide <- two_child_base %>%
       arrange(family_id, age, child_id) %>%
-      group_by(family_id) %>%
+      group_by(family_id, across(any_of('draw'))) %>%
       mutate(child_index = row_number()) %>%
       ungroup() %>%
       pivot_wider(
         id_cols = c(
-          family_id, hh_id, parent_unit_id, n_children_original, child_category,
-          income_pctile, n_members, region, p.hhm_id2, p.age1, p.age2, p.male1, employment_choice_pc
+          family_id, any_of('draw'), hh_id, parent_unit_id, n_children_original, child_category,
+          income_pctile, n_members, region, density, any_of(c('share_1', 'share_2')),
+          p.hhm_id2, p.age1, p.age2, p.male1, employment_choice_pc
         ),
         names_from  = child_index,
         values_from = all_of(pivot_cols),
@@ -446,16 +472,17 @@ run_acs_processing <- function() {
         mutate(is_3plus = as.integer(n_children_original >= 3))
     }
 
-    # Filter to complete cases with valid region
+    # Filter to complete cases w/ valid region, density. Employment NA only on
+    # NSECE (hours / recency / caregiver unknown) -- family out
     one_child_split <- list(
-      `0` = one_child %>% filter(is.na(parent_unit_id), !is.na(region)),
-      `1` = one_child %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
-      `2` = one_child %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
+      `0` = one_child %>% filter(is.na(parent_unit_id), !is.na(region), !is.na(density)),
+      `1` = one_child %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region), !is.na(density), !is.na(employment_choice_pc)),
+      `2` = one_child %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region), !is.na(density), !is.na(employment_choice_pc))
     )
     two_child_split <- list(
-      `0` = two_child_wide %>% filter(is.na(parent_unit_id), !is.na(region)),
-      `1` = two_child_wide %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
-      `2` = two_child_wide %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
+      `0` = two_child_wide %>% filter(is.na(parent_unit_id), !is.na(region), !is.na(density)),
+      `1` = two_child_wide %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region), !is.na(density), !is.na(employment_choice_pc)),
+      `2` = two_child_wide %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region), !is.na(density), !is.na(employment_choice_pc))
     )
 
     list(one_child = one_child_split, two_child = two_child_split)
@@ -497,19 +524,21 @@ run_acs_processing <- function() {
     fread() %>%
     tibble()
 
-  # County for sub-state runs (SUBSTATE_GEOGRAPHIES, constants.R). Raw pull
-  # lacks COUNTYFIP -- join household crosswalk from IPUMS usa:33, same 2019
-  # 1-year sample (resources/acs/acs_county_crosswalk_2019.py), on SERIAL;
-  # CBSERIAL must agree, else extracts differ. No crosswalk -> no countyfip,
-  # sub-state run fails at simulation init.
+  # County (sub-state runs, SUBSTATE_GEOGRAPHIES, constants.R), PUMA (urban
+  # density draw below). Raw pull lacks COUNTYFIP, PUMA -- join household
+  # crosswalk from IPUMS usa:33, same 2019 1-year sample
+  # (resources/acs/acs_county_crosswalk_2019.py), on SERIAL; CBSERIAL must
+  # agree, else extracts differ. No crosswalk -> no countyfip (sub-state run
+  # fails at simulation init), no PUMA (density step below stops).
   county_xwalk_path <- file.path('resources', 'acs',
                                  'US_ACS__household_county_puma_crosswalk__2019.csv.gz')
-  if (!'COUNTYFIP' %in% names(acs_raw) && file.exists(county_xwalk_path)) {
+  xwalk_cols <- setdiff(c('COUNTYFIP', 'PUMA'), names(acs_raw))
+  if (length(xwalk_cols) > 0 && file.exists(county_xwalk_path)) {
     # Base gzfile reader -- fread needs R.utils for .gz
     county_xwalk <- utils::read.csv(gzfile(county_xwalk_path),
                                     colClasses = 'numeric') %>%
       tibble() %>%
-      select(SERIAL, xw_cbserial = CBSERIAL, COUNTYFIP)
+      select(SERIAL, xw_cbserial = CBSERIAL, all_of(xwalk_cols))
     acs_raw <- left_join(acs_raw, county_xwalk, by = 'SERIAL')
     # as.numeric: fread may read 13-digit CBSERIAL as integer64
     bad <- acs_raw$YEAR == 2019 &
@@ -521,7 +550,8 @@ run_acs_processing <- function() {
            'resources/acs/acs_county_crosswalk_2019.py.')
     }
     acs_raw <- select(acs_raw, -xw_cbserial)
-    cat('  County crosswalk joined: ', county_xwalk_path, '\n', sep = '')
+    cat('  County crosswalk joined (', paste(xwalk_cols, collapse = ', '), '): ',
+        county_xwalk_path, '\n', sep = '')
   }
 
   # Corrected Census tax-unit crosswalk (April 2024 Census correction).
@@ -559,7 +589,7 @@ run_acs_processing <- function() {
         HHWT,
         HHINCOME,
         REGION,
-        any_of(c('STATEFIP', 'COUNTYFIP')),
+        any_of(c('STATEFIP', 'COUNTYFIP', 'PUMA')),
         PERNUM, PERWT,
         AGE, SEX, MARST, RACE, HISPAN, EDUC,
         RELATE,
@@ -650,9 +680,40 @@ run_acs_processing <- function() {
         # IPUMS county within state (0 = not identified) for sub-state runs;
         # NA w/out COUNTYFIP -- sub-state run then fails at simulation init
         countyfip = if ('COUNTYFIP' %in% names(acs)) first(COUNTYFIP) else NA_integer_,
+        # 2010 PUMA within state -- urban density draw below
+        puma      = if ('PUMA' %in% names(acs)) as.integer(first(PUMA)) else NA_integer_,
         n_members = n(),
         .groups   = 'drop'
       )
+
+    # Community urban density (1 high, 2 moderate, 3 rural; care-forest
+    # feature, urban_density.R). ACS has no tract -- NSECE measure built per
+    # 2010 tract, pooled to 2010 PUMA as share of children 0-4 at each level
+    # (resources/acs/puma_urban_density_2010.R). Household keeps PUMA shares
+    # (share_1, share_2) -- forest predictions averaged over three levels by
+    # shares (mix_density_predictions()); `density` = modal level, row
+    # filters only (2026-10-13; one keyed draw before)
+    puma_path <- file.path('resources', 'acs', 'puma_urban_density_2010.csv')
+    puma_density <- read_csv(puma_path, col_types = cols(statefip = 'i', puma = 'i',
+                                                         .default = 'd')) %>%
+      select(statefip, puma, share_1, share_2)
+    if (anyNA(households$puma)) {
+      stop(sum(is.na(households$puma)), ' ACS households w/out PUMA. Raw pull needs PUMA or ',
+           'the household crosswalk ', county_xwalk_path, ' (rebuild w/ ',
+           'resources/acs/acs_county_crosswalk_2019.py).')
+    }
+    households <- households %>%
+      left_join(puma_density, by = c('statefip', 'puma'))
+    if (anyNA(households$share_1)) {
+      bad <- households %>% filter(is.na(share_1)) %>% distinct(statefip, puma)
+      stop(sum(is.na(households$share_1)), ' ACS households w/out urban density -- (statefip, puma) ',
+           'absent from ', puma_path, ': ',
+           paste(head(paste(bad$statefip, bad$puma), 10), collapse = ', '),
+           '. ACS PUMAs must be 2010 PUMAs; else rebuild table w/ ',
+           'resources/acs/puma_urban_density_2010.R.')
+    }
+    households <- households %>%
+      mutate(density = modal_density(share_1, share_2))
 
 
     #--------------------------
@@ -1039,11 +1100,11 @@ run_acs_processing <- function() {
         }
 
         if (parent_count == '0') {
-          predictions <- predict(model, data = data)$predictions
+          predictions <- mix_density_predictions(data, function(d) predict(model, data = d)$predictions)
         } else {
           data_cf <- data %>%
             mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
-          predictions <- predict(model, data = data_cf)$predictions
+          predictions <- mix_density_predictions(data_cf, function(d) predict(model, data = d)$predictions)
         }
 
         as.data.frame(predictions) %>%
@@ -1091,11 +1152,11 @@ run_acs_processing <- function() {
         }
 
         if (parent_count == '0') {
-          predictions <- predict(model, data = data)$predictions
+          predictions <- mix_density_predictions(data, function(d) predict(model, data = d)$predictions)
         } else {
           data_cf <- data %>%
             mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
-          predictions <- predict(model, data = data_cf)$predictions
+          predictions <- mix_density_predictions(data_cf, function(d) predict(model, data = d)$predictions)
         }
 
         as.data.frame(predictions) %>%
@@ -1135,9 +1196,8 @@ run_acs_processing <- function() {
 
     set.seed(random_seed_base + 1)
 
-    # Income ranks in own area: NSECE within Census region (no state in public
-    # file), ACS within state (NYC within NYS) -- as price forest
-    # (compute_price_wedge_cache.R)
+    # Income ranked nationally (income_rank.R).
+    # ACS statefip needed for state RPP (national_rpp, income_rank.R)
     acs_no_state <- processed_acs_2019$children %>%
       filter(age < 5) %>%
       distinct(hh_id) %>%
@@ -1148,34 +1208,46 @@ run_acs_processing <- function() {
            'Check households table statefip (1b_acs_processing.R) -- raw ACS pull needs STATEFIP.')
     }
 
+    # Rank inputs per scheme (income_rank.R): local household copies w/ income
+    # to rank (RPP-deflated under national_rpp) + rank_group. income only
+    # feeds income_pctile -- copies never leave this block
+    rank_hh <- function(households, source) {
+      ri <- income_rank_inputs(households$income, households$region,
+                               if (source == 'acs') households$statefip else NULL, source)
+      households %>% mutate(income = ri$income, rank_group = ri$group)
+    }
+    nsece_rank_hh <- rank_hh(processed_nsece_hh$households, 'nsece')
+    acs_rank_hh   <- rank_hh(processed_acs_2019$households, 'acs')
+    cat('  Care-choice income ranks: scheme', get_income_rank_scheme(), '\n')
+
     # Prepare NSECE data for RF training
     nsece_income_pctiles <- compute_income_pctiles(
-      processed_nsece_hh$children, processed_nsece_hh$households, 'region'
+      processed_nsece_hh$children, nsece_rank_hh, 'rank_group'
     )
     nsece_hh_rf <- prepare_data_for_rf(
       children         = processed_nsece_hh$children,
       parent_units     = processed_nsece_hh$parent_units,
-      households       = processed_nsece_hh$households,
+      households       = nsece_rank_hh,
       household_members = processed_nsece_hh$household_members,
       enrollment       = processed_nsece_hh$enrollment,
       income_pctiles   = nsece_income_pctiles,
-      income_group_col = 'region',
+      income_group_col = 'rank_group',
       source_label     = 'NSECE',
       is_nsece         = TRUE
     )
 
     # Prepare ACS data for RF prediction
     acs_income_pctiles <- compute_income_pctiles(
-      processed_acs_2019$children, processed_acs_2019$households, 'statefip'
+      processed_acs_2019$children, acs_rank_hh, 'rank_group'
     )
     acs_rf <- prepare_data_for_rf(
       children         = processed_acs_2019$children,
       parent_units     = processed_acs_2019$parent_units,
-      households       = processed_acs_2019$households,
+      households       = acs_rank_hh,
       household_members = processed_acs_2019$household_members,
       enrollment       = NULL,
       income_pctiles   = acs_income_pctiles,
-      income_group_col = 'statefip',
+      income_group_col = 'rank_group',
       source_label     = 'ACS',
       is_nsece         = FALSE
     )
@@ -1183,18 +1255,21 @@ run_acs_processing <- function() {
     # Train ECEC RF models
     rf_models <- {
 
-      # Feature sets include 'region' (Census region: 1=NE, 2=MW, 3=S, 4=W)
+      # Feature sets include 'region' (Census region: 1=NE, 2=MW, 3=S, 4=W),
+      # 'density' (community urban density 1 high, 2 moderate, 3 rural --
+      # NSECE HH9 code, ACS predictions averaged over PUMA mix; urban_density.R;
+      # ordered codes)
       # employment_choice_pc captures primary caregiver employment status (none/pt/ft)
       feature_sets <- list(
         one_child = list(
-          `0` = c('age', 'male', 'income_pctile', 'n_members', 'region'),
-          `1` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc'),
-          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.age2', 'employment_choice_pc')
+          `0` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'density'),
+          `1` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'density', 'p.age1', 'p.male1', 'employment_choice_pc'),
+          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'density', 'p.age1', 'p.age2', 'employment_choice_pc')
         ),
         two_child = list(
-          `0` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'is_3plus'),
-          `1` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc', 'is_3plus'),
-          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.age2', 'employment_choice_pc', 'is_3plus')
+          `0` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'density', 'is_3plus'),
+          `1` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'density', 'p.age1', 'p.male1', 'employment_choice_pc', 'is_3plus'),
+          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'density', 'p.age1', 'p.age2', 'employment_choice_pc', 'is_3plus')
         )
       )
 
@@ -1212,8 +1287,15 @@ run_acs_processing <- function() {
             return(NULL)
           }
 
+          # Weighted resample always w/ replacement -- draw probability
+          # proportional to model_weight. Stacked label draws (1a, M rows per
+          # child) can exceed 50,000 rows; w/out replacement heavy rows
+          # would be capped at one pick (2026-10-12; replacement only under
+          # 50,000 rows before -- every NSECE frame was, so no change at one
+          # draw). Copies of one child fall in-bag and OOB alike -> OOB
+          # error optimistic, as already w/ repeated resampled rows
           sample_size  <- 50000
-          replace_flag <- nrow(train_raw) < sample_size
+          replace_flag <- TRUE
 
           train_df <- train_raw %>%
             sample_n(
@@ -1261,7 +1343,23 @@ run_acs_processing <- function() {
     }
 
     # Fit ECEC probabilities from RF predictions
-    {
+    fit_ecec_probabilities <- function(acs_rf, acs_rank_hh, acs_income_pctiles, acs_children) {
+
+      #------------------------------------------------------------------------
+      # Care-choice probabilities (p0 inputs) from trained forests: one-child,
+      # two-child joint + marginals, extra children of 3+ families (one-child
+      # forest). Run once nationally, once per sub-state geography on own rank
+      # inputs (substate_rank_inputs(), income_rank.R).
+      #
+      # Params:
+      #   - acs_rf (list): prepare_data_for_rf() output for acs_children
+      #   - acs_rank_hh (df): households w/ rank income + rank_group
+      #   - acs_income_pctiles (list): cutpoints by rank_group
+      #   - acs_children (df): ACS children to predict (all, or geo's)
+      #
+      # Returns: (list) enrollment (marginals per child), enrollment_joint
+      #   (two-child joint)
+      #------------------------------------------------------------------------
 
       parent_keys <- c('0', '1', '2')
       employment_states <- c('none', 'pt', 'ft')
@@ -1295,7 +1393,7 @@ run_acs_processing <- function() {
       # Generate marginal probabilities for extra children in 3+ child families
       #------------------------------------------------------------------------
 
-      children_in_3plus <- processed_acs_2019$children %>%
+      children_in_3plus <- acs_children %>%
         filter(age < 5) %>%
         group_by(hh_id, parent_unit_id) %>%
         filter(n() >= 3) %>%
@@ -1322,19 +1420,20 @@ run_acs_processing <- function() {
               by = c('hh_id', 'parent_unit_id')
             ) %>%
             left_join(
-              processed_acs_2019$households %>%
-                select(hh_id, income, n_members, region, statefip),
+              acs_rank_hh %>%
+                select(hh_id, income, n_members, region, density, any_of(c('share_1', 'share_2')), rank_group),
               by = 'hh_id'
             ) %>%
             mutate(
-              # Rank within state, as prepare_data_for_rf()
-              income_pctile = assign_income_pctile(income, statefip, acs_income_pctiles),
+              # Rank per scheme, as prepare_data_for_rf()
+              income_pctile = assign_income_pctile(income, rank_group, acs_income_pctiles),
               primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
-              region = factor(region)
+              region = factor(region),
+              density = factor(density, levels = 1:3)
             ) %>%
-            select(-income, -hours_pc, -primary_caregiver, -statefip)
+            select(-income, -hours_pc, -primary_caregiver, -rank_group)
 
           # Run one-child RF model for each employment state
           extra_child_by_emp <- map(employment_states, function(emp_state) {
@@ -1347,11 +1446,11 @@ run_acs_processing <- function() {
               } else if (parent_count == '1') {
                 data <- extra_children_features %>%
                   filter(!is.na(parent_unit_id), is.na(p.hhm_id2),
-                         !is.na(p.male1), !is.na(p.age1), !is.na(region))
+                         !is.na(p.male1), !is.na(p.age1), !is.na(region), !is.na(density))
               } else {
                 data <- extra_children_features %>%
                   filter(!is.na(parent_unit_id), !is.na(p.hhm_id2),
-                         !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
+                         !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region), !is.na(density))
               }
 
               if (is.null(model) || nrow(data) == 0) {
@@ -1359,11 +1458,11 @@ run_acs_processing <- function() {
               }
 
               if (parent_count == '0') {
-                predictions <- predict(model, data = data)$predictions
+                predictions <- mix_density_predictions(data, function(d) predict(model, data = d)$predictions)
               } else {
                 data_cf <- data %>%
                   mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
-                predictions <- predict(model, data = data_cf)$predictions
+                predictions <- mix_density_predictions(data_cf, function(d) predict(model, data = d)$predictions)
               }
 
               as.data.frame(predictions) %>%
@@ -1406,7 +1505,7 @@ run_acs_processing <- function() {
         distinct(hh_id, parent_unit_id, child_id)
 
       # Fit values for universe (marginal probabilities per child)
-      enrollment <- processed_acs_2019$children %>%
+      enrollment <- acs_children %>%
         filter(age < 5) %>%
         semi_join(valid_children, by = c('hh_id', 'parent_unit_id', 'child_id')) %>%
         expand_grid(
@@ -1453,6 +1552,57 @@ run_acs_processing <- function() {
         enrollment_joint = two_child_wide
       )
     }
+
+    # National p0 -- every use but sub-state geography's own run
+    ecec_national <- fit_ecec_probabilities(acs_rf, acs_rank_hh, acs_income_pctiles,
+                                            processed_acs_2019$children)
+
+    # Sub-state p0 (NYC ranked twice, income_rank.R): geo's households on own
+    # rank inputs, same forests, national cutpoints. Own seed, RNG restored after --
+    # national outputs, later draws unchanged. Written as
+    # acs_enrollment[_joint]_2019_<geo>.csv (calibration ->
+    # compute_substate_alpha.R)
+    ecec_national$substate <- list()
+    for (geo in names(SUBSTATE_GEOGRAPHIES)) {
+      geo_hh_ids <- tryCatch(
+        select_geo_hh_ids(processed_acs_2019$households, geo,
+                          SUBSTATE_GEOGRAPHIES[[geo]]$statefip),
+        error = function(e) {
+          cat('  Sub-state p0 ', geo, ' skipped -- ', conditionMessage(e), '\n', sep = '')
+          NULL
+        }
+      )
+      if (is.null(geo_hh_ids)) next
+      hh <- processed_acs_2019$households
+      in_geo <- hh$hh_id %in% geo_hh_ids
+      si <- substate_rank_inputs(hh$income, hh$region, hh$statefip, in_geo, geo)
+      if (is.null(si)) next
+
+      ecec_national$substate[[geo]] <- with_rng_preserved({
+        set.seed(random_seed_base + 11)
+        geo_children <- processed_acs_2019$children %>% filter(hh_id %in% geo_hh_ids)
+        geo_rank_hh <- hh[in_geo, ] %>%
+          mutate(income = si$eval_income[in_geo], rank_group = si$group[in_geo])
+        geo_rf <- prepare_data_for_rf(
+          children          = geo_children,
+          parent_units      = processed_acs_2019$parent_units %>% filter(hh_id %in% geo_hh_ids),
+          households        = geo_rank_hh,
+          household_members = processed_acs_2019$household_members %>% filter(hh_id %in% geo_hh_ids),
+          enrollment        = NULL,
+          income_pctiles    = acs_income_pctiles,
+          income_group_col  = 'rank_group',
+          source_label      = paste('ACS', geo),
+          is_nsece          = FALSE
+        )
+        fit_ecec_probabilities(geo_rf, geo_rank_hh, acs_income_pctiles, geo_children)
+      })
+      cat('  Sub-state p0 ', geo, ': ',
+          n_distinct(ecec_national$substate[[geo]]$enrollment$child_id,
+                     ecec_national$substate[[geo]]$enrollment$hh_id),
+          ' children on own income ranks\n', sep = '')
+    }
+
+    ecec_national
   }
 
   #-------------------------------------------
@@ -1460,14 +1610,19 @@ run_acs_processing <- function() {
   #-------------------------------------------
   {
 
-    # NSECE distribution
+    # NSECE distribution -- child x label draw rows, child_weight x
+    # draw_weight (1a, nsece_mi_draws.R); older 1a output w/out draws ->
+    # weight 1
+    nsece_enr <- processed_nsece_hh$enrollment
+    if (!'draw_weight' %in% names(nsece_enr)) nsece_enr$draw_weight <- 1
     nsece_children <- processed_nsece_hh$children %>%
       filter(age < 5) %>%
       left_join(
-        processed_nsece_hh$enrollment %>%
-          select(hh_id, child_id, ecec_choice, ecec_hours_choice),
+        nsece_enr %>%
+          select(hh_id, child_id, draw_weight, ecec_choice, ecec_hours_choice),
         by = c('hh_id', 'child_id')
       ) %>%
+      mutate(child_weight = child_weight * draw_weight) %>%
       filter(!is.na(ecec_choice), !is.na(ecec_hours_choice))
 
     total_nsece_weight <- sum(nsece_children$child_weight)
@@ -2061,6 +2216,16 @@ run_acs_processing <- function() {
           fwrite(processed_acs_2019[[table_name]], file = ., na = 'NA')
       }
     )
+
+  # Sub-state p0 on own income ranks (NYC) -- compute_substate_alpha.R reads
+  for (geo in names(ecec_result$substate)) {
+    for (table_name in c('enrollment', 'enrollment_joint')) {
+      out_f <- file.path(estimation_info$paths$data,
+                         paste0('acs_', table_name, '_2019_', geo, '.csv'))
+      fwrite(ecec_result$substate[[geo]][[table_name]], file = out_f, na = 'NA')
+    }
+    cat('  Wrote sub-state p0 for', geo, '\n')
+  }
 
   if (spm_result$has_spm_data && !is.null(processed_acs_2019$pu_spm_xwalk)) {
     fwrite(

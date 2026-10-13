@@ -66,7 +66,8 @@ src/
     ├── write_employment_targeting_diagnostics.R # Targeting diagnostics CSV (shared 3b + slurm)
     ├── prepare_donor_pool.R           # Tax donor pool preparation + AGI binning helpers
     ├── reconstruct_tax_unit_agi.R     # Corrected-tax-unit AGI from legacy fragments
-    ├── compute_price_wedge_cache.R   # Price wedge cache computation
+    ├── compute_price_wedge_cache.R   # Price wedge cache (weighted empirical NSECE quantile grids, keyed draw;
+    │                                  #   center_low / other_paid by ACS income quintile, price_wedge_income_pctiles())
     ├── assign_income_pctile.R         # Income percentile within group (region, state) from per-group cutpoints
     ├── load_policy.R                  # Base policy loader (isolated environments)
     ├── load_cdctc_policy.R            # CDCTC policy loader
@@ -77,6 +78,9 @@ src/
     ├── filter_sim_base_hh.R           # Household filter/subsample cascade (shared by 3a paths)
     ├── adjust_alpha_for_state.R       # State demand re-anchoring contraction (state-level runs)
     ├── select_geo_hh_ids.R            # Household ids for a run geography (state, or sub-state e.g. NYC)
+    ├── income_rank.R                  # Income-rank scheme (ECEC_INCOME_RANK) + sub-state rank inputs
+    ├── nsece_mi_draws.R               # NSECE label draws averaged (NSECE_MI_DRAWS = 50, 1a + state_data 02)
+    ├── compute_substate_alpha.R       # Sub-state (NYC) alpha on own income ranks: 2a writes, 3a loads
     ├── get_hourly_wage_growth_factor.R          # Hourly wage growth projection
     ├── get_employment_rate_growth_factor.R      # Employment rate growth projection (epop_path override for state runs)
     └── get_cpi_growth_factor.R                  # CPI growth projection

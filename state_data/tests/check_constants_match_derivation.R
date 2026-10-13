@@ -167,9 +167,9 @@ if (length(extra)) {
 
 # AGE5_NHES_NATIONAL (00_) -- NHES-ECPP 2019, recomputed by its recipe:
 # children not yet in kindergarten, center program now, ages 3+ at
-# 2018-12-31, share 5+, weight FEWT, national. File git-ignored (raw/local/)
+# 2018-12-31, share 5+, weight FEWT, national. File in raw/US/
 # -- absent, block says so, counts nothing.
-NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'local',
+NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'US',
                        'US_NHES__ecpp_public_use_file__2019.csv')
 if (file.exists(NHES_FILE)) {
   nh <- read_csv(NHES_FILE, show_col_types = FALSE)

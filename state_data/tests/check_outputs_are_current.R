@@ -24,6 +24,7 @@ TOL <- 1e-6                        # relative; these should agree to the bit
 cat('rebuilding every geography and comparing to', SIMULATOR_DEMAND_DIR, '\n\n')
 
 fails <- 0
+built_res <- list()                # reused by two-count check below
 for (g in GEOGRAPHIES) {
 
   f <- file.path(SIMULATOR_DEMAND_DIR, paste0(g, '.csv'))
@@ -32,6 +33,7 @@ for (g in GEOGRAPHIES) {
   }
 
   quiet <- utils::capture.output(res <- build_geo(load_spec(g)))
+  built_res[[g]] <- res
   built <- setNames(res$care$annual_hours, res$care$ecec_type)
   have  <- read_csv(f, show_col_types = FALSE)
   onf   <- setNames(have$annual_hours, have$ecec_type)
@@ -59,6 +61,31 @@ for (g in GEOGRAPHIES) {
   } else {
     cat(sprintf('  [ok]   %-4s six rows agree to %.0e, simulator reader accepts it\n',
                 g, TOL))
+  }
+}
+
+# Two-count experiment targets (config/state/demand_counts/<GEO>.csv, read
+# only under ECEC_STATE_CALIBRATION=counts) -- children, part_time = rebuild,
+# simulator's count reader accepts file
+cat('\ncomparing two-count targets in', SIMULATOR_COUNTS_DIR, '\n\n')
+for (g in GEOGRAPHIES) {
+  fc <- file.path(SIMULATOR_COUNTS_DIR, paste0(g, '.csv'))
+  if (!file.exists(fc)) {
+    cat('  [FAIL]', g, '-', fc, 'does not exist\n'); fails <- fails + 1; next
+  }
+  res <- built_res[[g]]
+  if (is.null(res)) quiet <- utils::capture.output(res <- build_geo(load_spec(g)))
+  have  <- read_csv(fc, show_col_types = FALSE)
+  have  <- have[match(res$care$ecec_type, have$ecec_type), ]
+  d <- max(abs(c(have$children - res$care$children, have$part_time - res$care$part_time)) /
+             pmax(abs(c(res$care$children, res$care$part_time)), 1), na.rm = FALSE)
+  read_ok <- tryCatch({ read_state_count_targets(fc, g); TRUE },
+                      error = function(e) { cat('  ', conditionMessage(e), '\n'); FALSE })
+  if (!is.finite(d) || d > TOL || !read_ok) {
+    cat(sprintf('  [FAIL] %-4s count file differs from code or reader rejects it\n', g))
+    fails <- fails + 1
+  } else {
+    cat(sprintf('  [ok]   %-4s children, part_time agree to %.0e\n', g, TOL))
   }
 }
 

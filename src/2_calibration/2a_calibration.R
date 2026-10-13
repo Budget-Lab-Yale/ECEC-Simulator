@@ -1832,28 +1832,31 @@ run_calibration <- function() {
       ', High=$', round(supply_prices[3], 2),
       ', Home=$', round(supply_prices[4], 2), '\n', sep = '')
 
-  # Load price models and compute price_wedge cache for ACS parent units
-  price_models <- {
-    cache_dir <- './cache/price_models'
-    price_qrf_models <- readRDS(file.path(cache_dir, 'price_qrf_models.rds'))
-    list(
-      price_qrf_models = price_qrf_models
-    )
+  # Load price wedge quantile grids (1a), compute price_wedge cache for ACS
+  # parent units
+  price_quantiles_path <- file.path('./cache/price_models', 'price_wedge_quantiles.rds')
+  if (!file.exists(price_quantiles_path)) {
+    stop('Price wedge quantiles not found at ', price_quantiles_path,
+         '. Run run_nsece_processing() (1a) first.')
   }
-
-  if (is.null(price_models)) {
-    stop('Price models not found. Run run_nsece_processing() first.')
-  }
+  price_quantiles <- readRDS(price_quantiles_path)
 
   # Extract Other Paid base price for calibration cost consistency
-  other_paid_base_price <- price_models$price_qrf_models$summary_stats$other_paid_base_price
+  other_paid_base_price <- price_quantiles$summary_stats$other_paid_base_price
   cat('  Other Paid base price: $', round(other_paid_base_price, 2), '/hr\n', sep = '')
 
+  # Household income percentiles for quintile grids (center_low, other_paid)
+  # -- same scheme, rank inputs as care forest, full calibration sample
+  price_income_pctiles <- price_wedge_income_pctiles(
+    households = processed_acs_2019$households,
+    children   = processed_acs_2019$children
+  )
+
   price_wedge_cache <- compute_price_wedge_cache(
-    parent_units = processed_acs_2019$parent_units,
-    children     = processed_acs_2019$children,
-    households   = processed_acs_2019$households,
-    qrf_models   = price_models$price_qrf_models
+    parent_units    = processed_acs_2019$parent_units,
+    children        = processed_acs_2019$children,
+    price_quantiles = price_quantiles,
+    income_pctiles  = price_income_pctiles
   )
 
   cat('  Computed price_wedge for', nrow(price_wedge_cache), 'parent units\n')
@@ -2091,6 +2094,27 @@ run_calibration <- function() {
     wage_elasticity_target      = calib_targets$wage_elasticity_target,
     paid_care_elasticity_target = calib_targets$paid_care_elasticity_target,
     income_elasticity_target    = calib_targets$income_elasticity_target
+  )
+
+  # Sub-state alphas (NYC on own income ranks, national beta / rho) --
+  # compute_substate_alpha.R. National outputs above untouched
+  compute_substate_alphas(
+    parent_units_wide     = parent_units_wide,
+    acs_tables            = processed_acs_2019,
+    build_type_data       = build_calibration_type_data,
+    compute_V             = compute_V_crra,
+    supply_prices         = supply_prices,
+    other_paid_base_price = other_paid_base_price,
+    wage_perturbation     = wage_perturbation_cd,
+    tax_max               = tax_max_2019,
+    data_dir              = estimation_info$paths$data,
+    estimation_dir        = estimation_info$paths$output,
+    year                  = 2019,
+    price_quantiles       = if (exists('disable_price_wedge') && isTRUE(disable_price_wedge)) {
+      NULL
+    } else {
+      price_quantiles
+    }
   )
 
   cat('Calibration complete!\n')

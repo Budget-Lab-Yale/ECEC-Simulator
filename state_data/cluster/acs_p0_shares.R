@@ -19,6 +19,11 @@
 # (select_geo_hh_ids()). An interface w/out countyfip writes no NYC rows and
 # says so.
 #
+# Sub-state geography ranked twice (compute_substate_alpha.R): NYC rows read
+# NYC's own p0 (estimation/alpha_<type>_2019_NYC.rds, NYC income ranks) when
+# both types exist; else national p0 (NYC ranked inside NY), logged. NY rows
+# always national p0.
+#
 # Runs on the cluster (interfaces live there). Writes the summary only.
 #
 # Usage, from repo root:
@@ -33,6 +38,38 @@ suppressPackageStartupMessages({
 source('src/shared_functions/constants.R')
 source('src/shared_functions/get_choice_catalog.R')
 source('src/shared_functions/select_geo_hh_ids.R')
+source('src/shared_functions/compute_substate_alpha.R')   # substate_alpha_path()
+
+
+
+substate_alpha_data <- function(iface, geo_hh) {
+
+  #----------------------------------------------------------------------------
+  # Own alpha data (p0 on own income ranks) of each sub-state geography in
+  # geo_hh, when interface holds both types; else geo left on national p0,
+  # logged.
+  #
+  # Params: iface (chr): interface dir, geo_hh (named list): geo -> hh_id
+  # Returns: (list) geo -> list(c1 = alpha data, c2plus = alpha data)
+  #----------------------------------------------------------------------------
+
+  out <- list()
+  for (g in intersect(names(SUBSTATE_GEOGRAPHIES), names(geo_hh))) {
+    paths <- vapply(c('c1', 'c2plus'), function(t) {
+      substate_alpha_path(file.path(iface, 'estimation'), t, 2019, g)
+    }, character(1))
+    if (all(file.exists(paths))) {
+      out[[g]] <- lapply(paths, readRDS)
+      cat(g, ': own p0 (', paste(basename(paths), collapse = ', '), ', scheme ',
+          if (is.null(out[[g]]$c1$income_rank_scheme)) '?' else out[[g]]$c1$income_rank_scheme,
+          ')\n', sep = '')
+    } else {
+      cat(g, ': no ', paste(basename(paths[!file.exists(paths)]), collapse = ', '),
+          ' -- national p0, ', g, ' ranked inside ', SUBSTATE_GEOGRAPHIES[[g]]$parent, '\n', sep = '')
+    }
+  }
+  out
+}
 
 
 
@@ -122,6 +159,9 @@ main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
     if (!is.null(ids)) geo_hh[[g]] <- ids
   }
 
+  sub_ad <- substate_alpha_data(iface, geo_hh)
+  nat_geo_hh <- geo_hh[setdiff(names(geo_hh), names(sub_ad))]
+
   res <- list()
   for (pu_type in c('c1', 'c2plus')) {
     f <- file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds'))
@@ -129,7 +169,11 @@ main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
     ad <- if (!is.null(ad[[pu_type]])) ad[[pu_type]] else ad
     n_children <- if (pu_type == 'c1') 1 else 2
     cat(pu_type, ': ', nrow(ad$p0), ' units x ', ncol(ad$p0), ' choices\n', sep = '')
-    res[[pu_type]] <- geo_children(ad, n_children, geo_hh) %>% mutate(pu_type = pu_type)
+    res[[pu_type]] <- geo_children(ad, n_children, nat_geo_hh) %>% mutate(pu_type = pu_type)
+    for (g in names(sub_ad)) {
+      res[[paste(pu_type, g)]] <- geo_children(sub_ad[[g]][[pu_type]], n_children, geo_hh[g]) %>%
+        mutate(pu_type = pu_type)
+    }
   }
 
   out <- bind_rows(res) %>%

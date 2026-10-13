@@ -1,10 +1,10 @@
 #------------------------------------------------------------------------------
 # 00_build_demand_targets.R -- state-level demand inputs for the simulator:
 # config/state/demand/<GEO>.csv, six rows, annual hours by care type. Method
-# memos (docs/<date>_summary.pdf, kept local) define each number.
+# memos (docs/archive/<date>_summary.pdf) define each number.
 #
 # METHOD, per geography. Step numbers name quantities across state_data/
-# (README, SOURCES.csv) -- fixed, though p0 runs them in
+# (README, memos) -- fixed, though p0 runs them in
 # order 1, 4, 2-3-5, 6.
 #   1. children in regular care = population 0-4 x NSCH rate x universe ratio
 #   4. Unpaid Center-Based = program counts in centers, ages 0-4, less Head
@@ -14,7 +14,9 @@
 #      simulator p0 summed over geography's own ACS households. Formal share,
 #      informal mix, center-home split all results.
 #   6. annual hours = children x simulator's hours grid x 50, split part-time /
-#      full-time by p0's part-time share per type
+#      full-time by p0's part-time share per type. Unpaid Center-Based too --
+#      program-by-program hours (NHES weekly, PIR schedule, operating weeks)
+#      sensitivity only, 14_program_hours_sensitivity.R (header says why)
 # Regional NSECE shares: comparison only, 05_compare_nsece_shares.R.
 #
 # states/<GEO>.R = hand-researched DATA (geo_spec()). NSCH rate and
@@ -60,21 +62,27 @@ ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
 # unpaid; hours break ties.
 
 # Step 1. Weighted children in ANY regular non-parental care over weighted
-# children at 10+ hrs/week (what NSCH asks). 2,814 children.
-NSECE_UNIVERSE_RATIO <- 1.0980541895845115
+# children at 10+ hrs/week (what NSCH asks). 3,427 children. One national
+# ratio for every geography (2026-10-12; scaled by geography's p0 part-time
+# share 2026-10-07 to 10-12 -- moved ratio +-2.5%, made targets depend on
+# forest, income-rank scheme). Regular care per resolve_regular_care()
+# (2026-10-12: zero-hour regular providers count w/ imputed hours, REGCARE
+# -1 / -2 regular when TOC 1-5) -- ratio 1.0981 -> 1.0739, 2,814 children
+# before. Imputed hours drawn from cell's weighted donor hours (keyed,
+# 2026-10-12; cell weighted median before) -- more imputed rows under 10
+# hrs, universe B 3,239 -> 3,157 children, ratio 1.0739 -> 1.0979. TOC 7 /
+# 8 never regular (NSECE regular care = TOC 1-5, 2026-10-12; TOC 8 counted
+# Other before) -- universe A 3,462 -> 3,427, B 3,157 -> 3,124 children,
+# ratio 1.09786 -> 1.09806. Label draws averaged over NSECE_MI_DRAWS = 50
+# (nsece_mi_draws.R, 2026-10-12; one draw before, seed moved ratio
+# 1.094-1.105) -- ratio 1.09806 -> 1.09949; 5 base seed pairs 1.0990-1.0996.
+NSECE_UNIVERSE_RATIO <- 1.0994893847297402
 
-# STATE FIVE-HOUR RATIO (2026-10-07). NSECE public file has no state --
-# geography's ratio = NSECE_UNIVERSE_RATIO x rel, rel = predicted ratio of
-# geography / predicted national ratio (50 states + DC). Predicted ratio from
-# simulator's p0 (P0_SHARES_FILE):
-#   children in care / (children in care - short share x part-time children)
-# children in care = all non-parental rows, part-time = hours choice 'pt'.
-# National level stays NSECE's; only composition differences enter.
-#
 # Short share: NSECE children under 10 total hrs/week over children part-time
 # in simulator's sense (primary hours < 20). Every under-10 child part-time.
-# 02_derive_nsece_constants.R, quantity short_share_of_part_time.
-NSECE_SHORT_SHARE_OF_PT <- 0.3402579024009446
+# 02_derive_nsece_constants.R, quantity short_share_of_part_time. Not used by
+# build since national ratio -- 05_compare_nsece_shares.R reads it.
+NSECE_SHORT_SHARE_OF_PT <- 0.34957429599815637
 
 # SIMULATOR'S HOURS GRID -- PT_CARE_HOURS, FT_CARE_HOURS, WEEKS_PER_YEAR from
 # src/shared_functions/constants.R, no copy here. Simulator places a child at
@@ -367,7 +375,7 @@ EHS_HOME_FCC_SHARE <- (57221 + 5722 + (1493 + 16) * AIAN_EHS_FRAC) /
 # FIVE-YEAR-OLDS (2026-10-07). Population = children 0-4; pre-K grade, Head
 # Start 3-4 slots hold children who turn 5 during program year (NIEER folds 5s
 # into 4s; CCD counts a grade, not an age). One national share 5+ per program
-# at 2018-12-31: NHES-ECPP 2019 (raw/local/, git-ignored), age AGE2018, not
+# at 2018-12-31: NHES-ECPP 2019 (raw/US/), age AGE2018, not
 # yet in kindergarten, center program now (CPNNOWX = 1), ages 3+, FEWT; pre-K
 # CPPLACEX = 2 (483 records), HS CPHEADST = 1 (247). Same share on CCD, NIEER
 # counts -- larger-of rule unaffected by order. Documented source rule
@@ -652,7 +660,7 @@ build_geo <- function(spec) {
   #   care (tibble): ecec_type, children, part_time (children), annual_hours
   #     -- ECEC_TYPES order
   #   participation (list), step 1: children_0_4 (PEP), nsch_rate (geography's
-  #     rate; NYC = NY's), nsch_children (10+ hrs/week), universe_ratio (spec's, universe_ratio_of()),
+  #     rate; NYC = NY's), nsch_children (10+ hrs/week), universe_ratio (spec's, NSECE_UNIVERSE_RATIO),
   #     nonparental_total (rounded, any regular care)
   #   programs (list), step 4: program_children() -- counts by program at
   #     each step, total, overlap shares, conversion factors
@@ -790,6 +798,11 @@ GEOGRAPHIES <- c(MEMO_GEOGRAPHIES,
 # STATEFIP + COUNTYFIP (SUBSTATE_GEOGRAPHIES).
 SIMULATOR_DEMAND_DIR <- file.path('config', 'state', 'demand')
 
+# Two-count experiment targets (ECEC_STATE_CALIBRATION=counts,
+# adjust_alpha_for_state_counts()): children, part_time by group. Own dir --
+# hours file, default reader untouched.
+SIMULATOR_COUNTS_DIR <- file.path('config', 'state', 'demand_counts')
+
 
 
 out_row <- function(file, geo, script) {
@@ -809,46 +822,6 @@ out_row <- function(file, geo, script) {
   row <- d[d$geo == geo, ]
   if (nrow(row) != 1) stop('no ', file, ' row for ', geo)
   row
-}
-
-
-
-universe_ratio_of <- function(geo) {
-
-  #----------------------------------------------------------------------------
-  # Geography's five-hour ratio: NSECE_UNIVERSE_RATIO x its relative factor
-  # (header, STATE FIVE-HOUR RATIO). NYC has its own p0 rows.
-  #
-  # Params:
-  #   - geo (chr)
-  #
-  # Returns: (num) ratio
-  #----------------------------------------------------------------------------
-
-  rel <- predicted_five_hour_ratio(geo) /
-    predicted_five_hour_ratio(names(STATE_POSTAL_TO_FIPS))
-  NSECE_UNIVERSE_RATIO * rel
-}
-
-
-
-predicted_five_hour_ratio <- function(geos) {
-
-  #----------------------------------------------------------------------------
-  # Simulator-predicted children 5+ hrs over children 10+ hrs, pooled over
-  # geos (header, STATE FIVE-HOUR RATIO).
-  #
-  # Params:
-  #   - geos (chr vec): geographies pooled -- one for a geography, 50 states +
-  #       DC for nation
-  #
-  # Returns: (num) ratio; stops if a geography has no p0 rows
-  #----------------------------------------------------------------------------
-
-  d <- dplyr::bind_rows(lapply(geos, p0_rows))
-  in_care <- sum(num(d$children[d$ecec_type != 'Parent Only']))
-  pt      <- sum(num(d$children[d$hours_choice == 'pt']))
-  in_care / (in_care - NSECE_SHORT_SHARE_OF_PT * pt)
 }
 
 
@@ -921,7 +894,7 @@ load_spec <- function(geo) {
   spec <- get_spec(geo)
 
   spec$nonparental_rate    <- nsch_rate_of(geo)
-  spec$universe_ratio      <- universe_ratio_of(geo)
+  spec$universe_ratio      <- NSECE_UNIVERSE_RATIO
   nieer <- nieer_prek_inputs(spec)
   spec$prek_all_settings   <- nieer$all_settings
   spec$nieer_hs_share      <- nieer$nieer_hs_share
@@ -933,12 +906,13 @@ load_spec <- function(geo) {
 write_geo <- function(res, geo) {
 
   #----------------------------------------------------------------------------
-  # Writes SIMULATOR_DEMAND_DIR/<GEO>.csv -- file simulator reads, only copy.
+  # Writes SIMULATOR_DEMAND_DIR/<GEO>.csv -- file simulator reads, only copy
+  # -- and SIMULATOR_COUNTS_DIR/<GEO>.csv (two-count experiment targets).
   #
   # Params:
   #   - res (list): build_geo() result; geo (chr)
   #
-  # Returns: (chr) path written
+  # Returns: (chr) hours path written
   #----------------------------------------------------------------------------
 
   rows <- dplyr::select(res$care, ecec_type, annual_hours)
@@ -946,6 +920,12 @@ write_geo <- function(res, geo) {
   f <- file.path(SIMULATOR_DEMAND_DIR, paste0(geo, '.csv'))
   readr::write_csv(rows, f)
   cat('  wrote                 ', f, '\n')
+
+  counts <- dplyr::select(res$care, ecec_type, children, part_time)
+  dir.create(SIMULATOR_COUNTS_DIR, showWarnings = FALSE, recursive = TRUE)
+  fc <- file.path(SIMULATOR_COUNTS_DIR, paste0(geo, '.csv'))
+  readr::write_csv(counts, fc)
+  cat('  wrote                 ', fc, '\n')
   f
 }
 

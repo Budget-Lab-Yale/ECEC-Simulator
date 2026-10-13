@@ -13,11 +13,11 @@ Rscript state_data/code/00_build_demand_targets.R --all --check    # with invari
 ```
 
 **The method memos, `docs/<date>_summary.pdf`, are the documents to read.** They
-say what every number means, where it comes from, and how solid it is. The
-memos and their .tex sources are kept outside git; ask Anna for the current
-version. This file is the map, and the record of every
-source. `docs/SOURCES.csv` is the machine-readable register: one row per source and
-geography, with its URL, vintage, and retrieval date.
+say what every number means, where it comes from, and how solid it is. Finished
+memos (PDF) are in `docs/archive/`; the memo in progress and the .tex sources
+are kept outside git. This file is the map, and the record of every
+source. A machine-readable source register (one row per source and geography,
+with its URL, vintage, and retrieval date) is kept outside git.
 
 ## What is built
 
@@ -60,7 +60,10 @@ them in the order 1, 4, then 2, 3, and 5 together, then 6.
    step 1 less step 4 over the five other types, so steps 2, 3, and 5 come
    out of one division.
 6. **Annual hours** = children × the simulator's 10/40 grid × 50, split
-   part-time / full-time by the share model.
+   part-time / full-time by the share model. Unpaid Center-Based takes the
+   same rule. `code/14_program_hours_sensitivity.R` builds its hours program
+   by program instead, as a sensitivity only (see "Program hours" under step
+   4).
 
 **The share model.** Steps 2, 3, 5, and 6 take their shares from the
 simulator itself. `cluster/acs_p0_shares.R` sums the calibration's base-year
@@ -119,6 +122,31 @@ code/07_compare_nhes.R                 validation: the build against NHES-ECPP 2
 code/08_nieer_prek_sensitivity.R        sensitivity: demand targets with NIEER pre-K and
                                         NIEER Head Start overlap in place of CCD and the
                                         fallback share (writes nothing the simulator reads)
+code/09_ccdf_subsidy_children.R         diagnostic: CCDF FY2019 children 0-4 by setting,
+                                        hours, and $0 copay, against Unpaid Center-Based
+                                        (writes nothing the simulator reads)
+code/10_idea_preschool_special_education.R
+                                        diagnostic: IDEA Part B 2018-19 children 3-5 by
+                                        environment, against step 4 (writes nothing the
+                                        simulator reads)
+code/11_ndcp_price_comparison.R         diagnostic: NDCP 2019 centre prices by age group,
+                                        child-weighted mean of county medians, against the
+                                        model high-priced centre share (writes nothing the
+                                        simulator reads)
+code/12_participation_bias.R            diagnostic: national non-parental share in NSECE,
+                                        p0, NSCH, targets, and NHES; aligned NHES
+                                        five-to-ten-hour ratio (prints only)
+code/13_participation_audit.R           diagnostic (cluster, NSECE microdata): OPRE
+                                        published rates reproduced, then one restriction
+                                        at a time to model population; fixed-denominator
+                                        count of excluded vs relabeled children; NSECE vs
+                                        ACS forest predictions within cells; with
+                                        --est-old, label changes from the 2026-10-12
+                                        counting, parent sex, and employment rules
+code/14_program_hours_sensitivity.R     sensitivity: Unpaid Center-Based hours program by
+                                        program (NHES usual weekly hours, PIR schedule
+                                        mix, operating weeks) against step 6 (writes
+                                        nothing the simulator reads)
 code/06_compare_state_shares.R          comparison: care mix of all 52 geographies
                                         (targets, model) against region's NHES and
                                         NSECE shares; total error = dissimilarity index
@@ -137,17 +165,18 @@ states/<GEO>.R                          one per geography: a geo_spec() call wit
                                         hand-researched
 code/01_nsch_participation_rate.R       derives each state's rate and standard error
 code/02_derive_nsece_constants.R        derives every NSECE constant (runs on the cluster)
-code/shared_nsece_ages.R                NSECE 2019 centre enrollment by age 0-4 and the
-                                        age-to-licensing-band map -- sourced by
+code/shared_nsece_ages.R                NSECE 2019 centre enrollment by age 0-4, the
+                                        age-to-licensing-point and age-to-band maps -- sourced by
                                         resources/supply/state_supply_params.R
 code/config_local.example.yaml          copy to state_data/config_local.yaml (git-ignored)
 tests/                                  the check suite
-docs/<date>_summary.tex                 method memos and their .pdf (local only, git-ignored)
-docs/SOURCES.csv                        every source, where it came from, what it feeds
+docs/archive/                           finished method memos (.pdf)
+docs/                                   memo in progress, .tex sources, source register (local only, git-ignored)
 raw/                                    the input files, one folder per scope
 raw/US/                                 national files and reports
 raw/NYC/                                New York City report (Health Code staffing rules)
-raw/local/                              files too large for git (git-ignored)
+raw/local/                              files too large for git (git-ignored); the price database is on Bouchet
+                                        (shared/raw_data/DOL-NDCP/v1/2008-2022/)
 out/nsch_participation_rate_by_wave.csv the NSCH derivation, every wave and pool
 out/nsch_participation_rate_base.csv    BASE_WAVE (2016-19 pool) -- what load_spec() reads
 out/nsece_constants.csv                 the NSECE derivation, full precision
@@ -162,6 +191,19 @@ out/nhes_age_mix.csv                    single-year age mix of children 0-4 not 
                                         kindergarten: NHES, model ACS, Census PEP 2019
 out/nieer_sensitivity/<GEO>.csv         NIEER sensitivity demand targets, simulator schema
 out/nieer_sensitivity_summary.csv       hours by geography and care type, main vs NIEER
+out/program_hours_sensitivity.csv       14_: children and annual hours by geography and
+                                        program, four versions (grid_50, usual_50,
+                                        usual_ow, sched_ow)
+out/ccdf_subsidy_children.csv           09_: CCDF children 0-4 by state (weighted)
+out/idea_preschool_special_education.csv 10_: IDEA children 3-5 by state (raw counts)
+out/ndcp_price_comparison.csv           11_: NDCP price ($/week) and model high-priced
+                                        share by geography and age group
+out/ndcp_price_correlation.csv          11_: state correlation of the two, by age group
+out/licensing_ratio_change_2014_2017.csv licensing ratios and staffing indices, 2014
+                                        vs 2017, both at 3 age points
+                                        (resources/supply/licensing_ratios_2017.R)
+out/licensing_ratio_change_3pt_5pt.csv  2017 centre ratios at 5 age points, centre index
+                                        at 3 vs 5 points (same script)
 ../config/state/demand/<GEO>.csv        the output: the demand targets the simulator
                                         reads (the build writes only this copy)
 ```
@@ -218,7 +260,8 @@ Nothing downloads at build time: each file is fetched by hand and held in
 
 ```
 raw/<SCOPE>/                <SCOPE>_<SOURCE_KEY>__<content>__<vintage>.<ext>
-raw/local/            files too large for git (git-ignored, cluster only)
+raw/local/            files too large for git (git-ignored); large shared files live in
+                      Bouchet shared/raw_data/ (DOL-NDCP)
 cluster/              scripts that derive a raw/ summary from cluster data
 ```
 
@@ -247,11 +290,16 @@ so.
 | Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US/US_HSSL__…2026-09-23`, `raw/US/US_CCD__…`, `raw/US/US_EDGE__…` | 2026, 2018–19 | step 4 deduction; NYC shares |
 | NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 less Appendix B | `raw/US/US_NIEER__state_of_preschool_yearbook__2019.pdf`, constant | 2018–19 | step 4 deduction: NIEER overlap share |
 | Head Start program options | OHS PIR 2018–19 Services Snapshots (HS, EHS, AIAN): home-based and family child care funded slots | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
-| Five-year-olds in programs | NHES-ECPP 2019 public-use file, national share per program; NYC 0 (DOE calendar-year enrolment, 45 CFR 1302.12(b)) | `raw/local/US_NHES__…` (git-ignored) → constant; `raw/NYC/NYC_DOE__…` | 2019 | step 4 |
+| Five-year-olds in programs | NHES-ECPP 2019 public-use file, national share per program; NYC 0 (DOE calendar-year enrolment, 45 CFR 1302.12(b)) | `raw/US/US_NHES__…` → constant; `raw/NYC/NYC_DOE__…` | 2019 | step 4 |
 | Base-year wage ratio | BLS OES May 2019, state / national: hourly medians of childcare workers (39-9011), preschool teachers (25-2011), and preschool and childcare administrators (11-9031), mixed at national ACS shares of each education group's workers in each occupation; NYC = New York MSA 35620 | `raw/US/US_OES__childcare_occupation_wages__2019.csv` → `resources/supply/state_childcare_wage_ratios_oes.csv` (`resources/supply/oes_childcare_wage_ratios_2019.R`) | May 2019 | step 7 |
 | National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
-| Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-band map) | 2019 | supply centre staffing index weights |
+| Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-point map) | 2019 | supply centre staffing index weights |
+| Licensing ratios | 2017 Child Care Licensing Study, ICPSR 37700: centre child-staff ratios at 11 months, 18 months, 35 months, 3 years, and 4 years (one point per year of age 0–4); small family home maximum children; ID centres and NYC centres from the 2014 file (3 bands mapped onto the 5 points) | `raw/US/US_ICPSR37700__licensing_*__2017.rda` → `resources/supply/US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv` (`resources/supply/licensing_ratios_2017.R`) | 2017 | supply staffing index |
+| PUMA urban density | 2010 Census SF1 Urban/Rural Update, tract level (`www2.census.gov/census_2010/04-Summary_File_1/Urban_Rural_Update/`): P2 total, urban, and rural population, P12 children under 5; 2010 tract population centroids (`www2.census.gov/geo/docs/reference/cenpop2010/tract/CenPop2010_Mean_TR.txt`); 2010 Gazetteer tract land area (`www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_tracts_national.zip`); 2010 tract-to-PUMA relationship file (`www2.census.gov/geo/docs/maps-data/data/rel/2010_Census_Tract_to_2010_PUMA.txt`). NSECE community urban share per tract (2-mile community, inverse-distance weights), cut at 0.85 / 0.30, then the share of each PUMA's children 0–4 at each level | `raw/US/US_Census__tract_urban_rural_population_children_0_4__2010.csv` (SF1 extract; the state zips are about 11 GB and are not kept), `raw/US/US_Census__tract_population_centroids__2010.txt`, `raw/US/US_Census__gazetteer_tracts__2010.zip`, `raw/US/US_Census__tract_to_puma_relationship__2010.txt` → `resources/acs/puma_urban_density_2010.csv` (`resources/acs/puma_urban_density_2010.R`) | 2010 | simulator care-choice forest feature `density` (1b) |
+| CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `raw/US/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
+| Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `raw/US/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
+| Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `raw/local/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `raw/US/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |
 
 A **file** is read by the code. A **constant** is read by hand once and written
 into `states/<GEO>.R` next to its provenance comment.
@@ -296,13 +344,14 @@ sub-state identifier, so NYC takes the New York State rate as is
 
 ### NSECE — the regional constants
 
-The build uses only `NSECE_UNIVERSE_RATIO` and `NSECE_SHORT_SHARE_OF_PT`
-(step 1), in `00_build_demand_targets.R`. The short share is the NSECE
-children under 10 total hours a week over the children part-time in the
-simulator's sense (primary hours under 20). The build applies it to the
-simulator's predicted part-time children of each geography, from the p0
-summary, to give each geography a five-hour ratio relative to the nation. The regional shares live in
-`05_compare_nsece_shares.R`, which uses them for comparison only.
+The build uses only `NSECE_UNIVERSE_RATIO` (step 1), in
+`00_build_demand_targets.R`: one national five-hour ratio for every geography.
+Until 2026-10-12 the build scaled it by each geography's predicted part-time
+share; that moved the ratio by at most 2.5% and made the targets depend on the
+forest and the income-rank scheme. `NSECE_SHORT_SHARE_OF_PT` (NSECE children
+under 10 total hours a week over children part-time in the simulator's sense,
+primary hours under 20) stays for `05_compare_nsece_shares.R`. The regional
+shares live in `05_compare_nsece_shares.R`, which uses them for comparison only.
 
 The formal share, the unpaid-center share, the center-home split, the informal
 mix, and the weekly hours all come from the NSECE 2019 household file,
@@ -322,17 +371,76 @@ It writes each constant with its unweighted record count to
 `out/nsece_constants.csv`, over two universes:
 
 - **Universe A** — every child 0–4 with a regular non-parental arrangement,
-  NSECE's own five-hour screener. It reproduces NSECE's published figures
-  exactly, which validates the code. **This is the universe the build uses**,
+  NSECE's own five-hour screener. With reference-week hours only, it
+  reproduced NSECE's published figures exactly; the counting rule below
+  moves it off them. **This is the universe the build uses**,
   because the simulator sets no hours threshold of its own.
 - **Universe B** — the same children whose regular non-parental care totals at
   least 10 hours a week, school excluded. This matches the NSCH threshold.
   `NSECE_UNIVERSE_RATIO` carries the NSCH rate from B up to A; B is otherwise
   used only for sensitivity.
 
+**Which arrangements count (2026-10-12).** 02 and the simulator (1a) use one
+function, `src/shared_functions/resolve_regular_care.R`:
+
+- A provider with `HH9_REGCARE` = 1 counts even when the reference-week
+  calendar shows zero hours for the child. Its hours are a draw from the
+  weighted hours of the `REGCARE` = 1 arrangements with hours above 0 in the
+  same type-of-care group and age cell. The draw is a keyed uniform on
+  (`hh_id`, `child_id`, `provider_id`), so it does not depend on row order
+  or the global random stream, and the cell keeps the donors' part-time
+  share. Before, every imputed row took the cell's weighted median.
+- `REGCARE` -1 or -2 (not known) counts as regular when `HH9_TYPEOFCARE_AGG`
+  is 1-5, NSECE's own regular-care test. `REGCARE` = 0 never counts.
+- Only `HH9_TYPEOFCARE_AGG` 1-5 counts as non-parental care, as in NSECE's
+  own definition. Type 7 (irregular), type 8 (type unknown), and a missing
+  type never count, whatever `REGCARE` says. These rows are not hours
+  donors, payment donors, or payment draw targets. Type 6 (K-8) stays out
+  of the build as before. Before, a type 8 row with `REGCARE` = 1 counted
+  as Other: 35 children 0-4 (unweighted), 0.57% of weighted children 0-4,
+  were in care through type 8 alone.
+- A row with imputed hours keeps its reported payment. `HH9_PAID`
+  (question J1, which does not refer to last week) confirms "not paid" on
+  993 of the 996 zero-payment rows with imputed hours (children 0-4).
+- A payment amount the file does not hold (`HH9_WEEKLY_PAYMENT_TC` -1 DK or
+  refused, -2 not asked Section J) takes its paid status from `HH9_PAID`
+  when that is 1 or 0. Only the rest are drawn
+  (`src/shared_functions/impute_unknown_payment.R`, same draws as 1a).
+  Before, all of them were drawn, and -2 counted as unpaid.
+
+This rule grows universe A from 2,814 to 3,462 children (unweighted) and
+moves `NSECE_UNIVERSE_RATIO` from 1.0981 to 1.0739. The drawn imputed hours
+put more imputed rows under 10 hours. Universe B falls from 3,239 to 3,157
+children (unweighted), and the ratio moves from 1.0739 to 1.0979. The
+national short share of part-time children (`NSECE_SHORT_SHARE_OF_PT`)
+moves from 0.302 to 0.350. Most added children are
+in informal care, so the formal shares now sit 4 to 10 points below NSECE's
+published figures, which rest on reference-week care only. The old exact
+match no longer holds.
+
+The type 1-5 rule then takes universe A from 3,462 to 3,427 children and
+universe B from 3,157 to 3,124 (unweighted). The share of weighted children
+0-4 in care falls from 55.55% to 54.98%, which is NSECE's own rate for type
+1-5 care. The ratio moves from 1.09786 to 1.09806, and the short share from
+0.350 to 0.348. The demand targets rise by 0.017% to 0.029%; Unpaid
+Center-Based does not change.
+
+**Label draws (2026-10-12).** The hours of an imputed row and the paid
+status of an unknown amount are random draws. With one draw, the seed moved
+`NSECE_UNIVERSE_RATIO` between 1.094 and 1.105 over 20 seed pairs. 02 and 1a
+now make the draws `NSECE_MI_DRAWS` = 50 times
+(`src/shared_functions/nsece_mi_draws.R`) and give each child one row per
+draw with the child weight divided by 50, so every constant is the pooled
+average over the draws. The record counts in `out/nsece_constants.csv` are
+the mean count per draw, so some are fractional (for example, 128.98). Over 5
+base seed pairs, the ratio stays between 1.0990 and 1.0996. With the base
+seeds, the ratio moves from 1.09806 to 1.09949 and the short share from
+0.348 to 0.350. The demand targets rise by 0.14% to 0.20%; Unpaid
+Center-Based does not change.
+
 A regional cell under 30 records takes the national value; only Unpaid
-Home-Based falls below it, in all four regions (Northeast 8, Midwest 11, South
-5, West 14 records).
+Home-Based falls below it, in all four regions (Northeast 6, Midwest 6, South
+7, West 19 records).
 
 `out/nsece_constants.csv` is the only on-disk record of where the constants in
 `00_build_demand_targets.R` come from, and it arrives by hand because NSECE
@@ -468,7 +576,7 @@ Start services carry no fee.
 **Ages 0–4.** The population is children 0–4. The pre-K grade and the Head
 Start 3–4 slots also hold children who turn 5 during the program year. I
 remove one national share per program: the NHES-ECPP 2019 share aged 5 or
-older on 31 December 2018 (`raw/local/`, git-ignored; children not yet in
+older on 31 December 2018 (`raw/US/`; children not yet in
 kindergarten, in a center program now, age 3 or older, weighted by `FEWT`).
 It is 24.4% for pre-K (483 records) and 10.7% for Head Start (247). NYC is 0
 for both programs: the DOE enrolls by calendar year (2019 kindergarten guide,
@@ -520,12 +628,65 @@ NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
   the child in its pre-K membership. No file gives that count.
 - **Preschool special education with services only.** CCD's pre-K grade can
   hold children who get only itinerant services (for example, speech therapy)
-  and are in no regular care arrangement. IDEA educational-environment counts
-  by state are not held.
+  and are in no regular care arrangement. IDEA Table 12, fall 2018
+  (`code/10_idea_preschool_special_education.R`), gives the size: 802,486
+  children 3-5 in 50 states and DC (raw counts; WI flagged), of whom 536,450
+  attend a regular early childhood program, 199,906 are in a separate class or
+  school, and 66,130 get services at home or at a provider. Table 12 has no
+  age split and no program type, so I cannot tell which regular-program
+  children step 4 already holds. In the 18 states that take NIEER Table 2
+  (no special education), separate-class children are not in the count:
+  79,560 children 3-5, 4.3% of national Unpaid Center-Based children (FL
+  12.6%, NJ 16.4%, NY 11.9% of their own). I do not add them: Table 12 has no
+  age split, and many attend part-day.
 - **Paid care alongside the program.** A pre-K or Head Start child whose
   family also pays for a center is Center-Based under the primary-type rule.
   The program count puts the child in Unpaid Center-Based. Childcare-partner
   families who pay a subsidy copay for extra hours are the same case.
+- **Program hours.** Step 6 gives every Unpaid Center-Based child the
+  share model's hours: 1,557 hours a year per child nationally (about 31
+  hours a week for 50 weeks). The programs run fewer hours.
+  `code/14_program_hours_sensitivity.R` builds hours for each program from
+  the step 4 net children (each child once), and writes
+  `out/program_hours_sensitivity.csv`:
+  - **Usual weekly hours** come from NHES-ECPP 2019 (`CPHRS`, weight `FEWT`):
+    pre-K 19.3 (ages 3-4, 354 records), Head Start 22.8 (ages 3-4, 214
+    records), and Early Head Start 24.3 (ages 0-2, 74 records). These are
+    parent reports of usual hours, not an attendance rate. No public
+    attendance rate exists at this vintage, so I keep scheduled hours as
+    scheduled.
+  - **Scheduled weekly hours** for Head Start and Early Head Start come from
+    the PIR 2018-19 center-based option mix (part-day 3.5 hours a day,
+    full-day 6.5, full working day 10; 4 or 5 days a week): Head Start 29.2,
+    Early Head Start 39.1. Pre-K has no enrolment-weighted schedule (NIEER
+    prints program minimums), so pre-K uses the NHES hours.
+  - **Operating weeks**: pre-K 36 (a 180-day school year; 44 of 62 NIEER
+    programs run a school year). Head Start and Early Head Start take 32
+    weeks for part-day slots, 36 for other full-day slots, and 50 for
+    full-calendar-year slots: Head Start 35.9, Early Head Start 40.8.
+  - **Result**, national Unpaid Center-Based hours against the build:
+    usual hours × 50 weeks -34.9% (-40.7% DC to -23.0% WY); usual hours ×
+    operating weeks -52.8% (-56.9% to -43.4%); scheduled hours × operating
+    weeks -46.9% (-52.5% to -26.2%).
+  - **Why not in the build.** The simulator holds each child at 10 or 40
+    hours a week for 50 weeks, and re-anchoring moves one constant per care
+    type. A lower hours target therefore reads as fewer Unpaid Center-Based
+    children, not as shorter hours, against step 4's own count. The other
+    five types and the NSECE calibration also count usual weekly hours × 50,
+    so a school-year cut for the programs alone is not like for like. The
+    schedule mix is also national only, and the NHES Early Head Start cell
+    is small. The gap says that p0 puts too many program children at 40
+    hours; I record it here and do not change the build.
+- **Subsidised children with a $0 copay.** The opposite case: a CCDF child at
+  a priced center whose family pays nothing is Unpaid Center-Based demand, and
+  the program count leaves the child out. CCDF ACF-801 FY2019
+  (`code/09_ccdf_subsidy_children.R`, weight `A_FCHWT`) gives 218,276 such
+  children 0-4 in an average month (weighted), 11.8% of national Unpaid
+  Center-Based children (0.3% IL to 52.8% DE; GA not in the file). I do not
+  add them. A $0 copay does not mean the family pays nothing (a provider can
+  charge above the subsidy rate), CCDF also funds wraparound hours for pre-K
+  and Head Start children, and the targets are already 33% above the NSECE
+  unpaid-center count nationally.
 - **Five-year-olds by state.** One national share per program; state
   kindergarten cutoffs differ (the South has more early cutoffs), and NYC is the
   only geography with a documented source rule.
@@ -565,7 +726,7 @@ at 20 hrs/week, the same cut `1a_nsece_processing.R` uses.
 | NHES-ECPP restricted-use | yes | yes | **needs an IES licence** — the one route that would work |
 | SIPP 2018–2023 | yes | **no** | rejected below |
 | NDCP 2008–2022 | county | full-time only | rejected below |
-| CCDF ACF-801 / Table 14 | yes | yes | subsidy children only, and `acf.gov` answers 202 with an empty body from both Windows and Bouchet |
+| CCDF ACF-801 FY2019 (ICPSR 38677, held) | yes | yes (monthly hours) | subsidy children only (757,000 children 0-4, weighted); diagnostic in `code/09_` |
 | NSECE restricted-use (ICPSR 38445) | unconfirmed | yes | ICPSR does not document its geography; would need to ask |
 
 **SIPP — rejected.** SIPP identifies every state and asks about child care, but
@@ -592,10 +753,11 @@ the IES restricted-use file, which needs a licence.
 Its continuous total hours (`CAREHOURX`) can be cut at any threshold, so NHES
 can measure the universe ratio that `NSECE_UNIVERSE_RATIO` carries. Weighted
 by `FEWT`, ages 0–4, NHES puts the five-hour universe at **1.194** times the
-ten-hour one. NSECE puts it at **1.098** (universe A over universe B), so the
-two disagree by 8.7%. With the NHES ratio, total hours rise 8.8–8.9% in the
-five memo geographies, and the Unpaid Center-Based child count does not
-change. Both ratios use a total-hours cut at 10. NHES enters an arrangement
+ten-hour one. NSECE puts it at **1.074** (universe A over universe B; 1.098
+before the 2026-10-12 counting rule), so the two disagree by 11.2%. With the
+NHES ratio, total hours rise by about 11% (8.8–8.9% in the five memo
+geographies against the old 1.098), and the Unpaid Center-Based child count
+does not change. Both ratios use a total-hours cut at 10. NHES enters an arrangement
 on a looser screen ("at least once a week"), but a looser screen pushes its
 ratio down, not up, so the construct difference does not explain the gap.
 The build keeps the NSECE ratio and does not correct one source to the other,

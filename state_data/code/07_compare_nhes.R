@@ -49,7 +49,7 @@
 # carry no age. Ages 0-2 hold no pre-K, almost no Head Start, no five-year-olds.
 #
 # Usage: Rscript state_data/code/07_compare_nhes.R [--by region|age]
-#   NHES file: state_data/raw/local/US_NHES__ecpp_public_use_file__2019.csv
+#   NHES file: state_data/raw/US/US_NHES__ecpp_public_use_file__2019.csv
 #   (git-ignored; cluster copy in state_data/raw/)
 #   prints table, writes out/nhes_comparison.csv (by age:
 #   nhes_comparison_by_age.csv) and out/nhes_age_mix.csv
@@ -58,7 +58,7 @@
 # build_of(), read_chr(), raw_path(), GEOGRAPHIES; main() guarded
 source('state_data/code/00_build_demand_targets.R')
 
-NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'local',
+NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'US',
                        'US_NHES__ecpp_public_use_file__2019.csv')
 P0_BY_AGE_FILE <- 'US_ACS__p0_children_by_care_type_hours_age__2019.csv'
 # Census PEP vintage 2019, resident population, 1 July 2019, ages 0-4 -- same

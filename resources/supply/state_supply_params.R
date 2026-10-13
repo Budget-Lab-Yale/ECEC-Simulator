@@ -33,10 +33,20 @@
 # children per family child care home, / 0-4-weighted mean over states that
 # license homes; state w/out home licence -> 1. Centre index scales all three
 # centre sectors, home index paid_home_based, both education groups alike.
-# Ratios: HHS ACF Data Explorer (2014 licensing study) via CAP 2018 Table 1
-# (centres; infant, toddler = 35 months, preschool = 3 years -- no separate
-# 4-year rule, age 4 takes preschool) and PN3 2020 Table 6 (homes); NYC
-# centres own Article 47 rules (DOHMH, June 2019), NYC homes NYS rules.
+# Ratios: 2017 Child Care Licensing Study (ICPSR 37700; licensing_ratios_2017.R
+# extracts) -- centres at five representative age points, one per year of age
+# (NSECE_AGE_POINT): age 0 = 11 months, 1 = 18 months, 2 = 35 months, 3 = 3
+# years, 4 = 4 years; aggregated to one centre index, no extra sectors or
+# choices. First 2017 version three points (11 months, 35 months, 3 years;
+# ages 1-2 took 35 months, age 4 took 3 years) --
+# state_data/out/licensing_ratio_change_3pt_5pt.csv compares. Homes = max
+# children per small family child care home excl. school-age add-ons. ID
+# centres (point system, not tabulated) keep 2014 rows; NYC centres own
+# Article 47 rules (DOHMH, June 2019), NYC homes NYS 2017 rule -- both
+# centre sets 3 bands, mapped onto 5 points by NSECE_AGE_BAND. Index
+# relative to national mean -> national state = national NSECE staffing.
+# Before 2026-10-12: 2014 study via CAP 2018 Table 1, PN3 2020 Table 6
+# (US_ACF__..._2014.csv, kept for comparison).
 #
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
@@ -46,7 +56,14 @@
 # costs).
 #
 # Usage: Rscript resources/supply/state_supply_params.R [--check]
+#          [--national-staffing] [--out <dir>]
 #   --check: compute, print, write nothing
+#   --national-staffing: staffing test -- index 1 in every geo (national
+#     worker-hours per child-hour); wages unchanged. 3a still sets L_0 from
+#     these L_req x re-anchored hours, so supply stays consistent. Write to
+#     own dir w/ --out (e.g. config/state/supply_national) and swap it in for
+#     config/state/supply in a test run's copy.
+#   --out <dir>: output dir (default config/state/supply)
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -61,18 +78,21 @@ NATIONAL <- file.path(DIR, 'US_NSECE__national_supply_parameters__2019.yaml')
 WAGES    <- file.path(DIR, 'state_childcare_wage_ratios_oes.csv')   # oes_childcare_wage_ratios_2019.R
 DEMAND   <- file.path('config', 'state', 'demand')
 OUT_DIR  <- file.path('config', 'state', 'supply')
+ARGS     <- commandArgs(TRUE)
+if ('--out' %in% ARGS) OUT_DIR <- ARGS[which(ARGS == '--out') + 1]
+NATIONAL_STAFFING <- '--national-staffing' %in% ARGS
 
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 
 # staffing_index() inputs -- licensed children per staff by state, setting, age
-# band; county children 0-4
-RATIOS  <- file.path('state_data', 'raw', 'US',
-                     'US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv')
+# point (licensing_ratios_2017.R); county children 0-4
+RATIOS  <- file.path(DIR, 'US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv')
 POP_0_4 <- file.path('state_data', 'raw', 'US',
                      'US_PEP__population_children_age_0_4_by_county__2019.csv')
 
 # NSECE_CENTRE_ENROLLED (NSECE 2019 centre enrolment by age 0-4),
-# NSECE_AGE_BAND (age 0-4 -> licensing age band in RATIOS), NSECE_AGES_0_4 --
+# NSECE_AGE_POINT (age 0-4 -> licensing age point in RATIOS), NSECE_AGE_BAND
+# (age 0-4 -> 2014 band), NSECE_AGES_0_4 --
 # state_data/code/shared_nsece_ages.R
 source('state_data/code/shared_nsece_ages.R')
 CENTRE_SECTORS <- c('unpaid_center_based', 'low_price_center_based',
@@ -101,29 +121,28 @@ require_input <- function(path, hint = '') {
 
 
 
-staffing_index <- function(L_req, geo) {
+licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
 
   #----------------------------------------------------------------------------
-  # Scales national labor_requirements by geo's licensing staffing index.
-  # Centre: staff per child = sum_a w_a / r(geo, band(a)) / sum_a w_a, w =
-  # NSECE_CENTRE_ENROLLED ages 0-4, band = NSECE_AGE_BAND, r = licensed
-  # children per staff (RATIOS); index = geo value / PEP
-  # children-0-4-weighted mean over 50 states + DC. Home:
-  # 1 / max children, same weighting over states that license homes; geo w/
-  # home value NA (no home licence) -> index 1. NYC carries own RATIOS rows,
-  # not in national mean (inside NY). Prints one line per geo.
+  # Licensing staffing index, every geography in ratios file.
+  # Centre: staff per child = sum_a w_a / r(geo, map(a)) / sum_a w_a, w =
+  # NSECE_CENTRE_ENROLLED ages 0-4, map = age_map, r = licensed children per
+  # staff; index = geo value / PEP children-0-4-weighted mean over 50 states
+  # + DC. Home: 1 / max children, same weighting over states that license
+  # homes; geo w/ home value NA (no home licence) -> index 1. NYC carries own
+  # rows, not in national mean (inside NY).
   #
   # Params:
-  #   - L_req (list): national labor_requirements, sector -> no_ba / ba
-  #   - geo (chr): postal or sub-state code w/ RATIOS rows
+  #   - ratios (chr): csv w/ state, setting, age_group, children_per_staff
+  #   - age_map (chr): age_0..age_4 -> centre age_group in ratios;
+  #     NSECE_AGE_POINT (2017 file, 5 points), NSECE_AGE_BAND (2014 file)
   #
-  # Returns: (list) L_req, centre sectors x centre index, home sectors x home
-  #   index
+  # Returns: (tibble) state, centre, home -- indices
   #----------------------------------------------------------------------------
 
-  require_input(RATIOS)
+  require_input(ratios)
   require_input(POP_0_4)
-  rt <- read_csv(RATIOS, col_types = cols(.default = col_character())) %>%
+  rt <- read_csv(ratios, col_types = cols(.default = col_character())) %>%
     mutate(children_per_staff = suppressWarnings(as.numeric(children_per_staff)))
 
   pop <- read_csv(POP_0_4, col_types = cols(.default = col_character())) %>%
@@ -136,10 +155,10 @@ staffing_index <- function(L_req, geo) {
     stop(POP_0_4, ': expected 50 states + DC')
   }
 
-  # Staff per child, every geography in RATIOS
+  # Staff per child, every geography in ratios
   centre <- rt %>%
     filter(setting == 'center') %>%
-    inner_join(tibble::tibble(age_group = unname(NSECE_AGE_BAND),
+    inner_join(tibble::tibble(age_group = unname(age_map[NSECE_AGES_0_4]),
                               w = unname(NSECE_CENTRE_ENROLLED[NSECE_AGES_0_4])),
                by = 'age_group', relationship = 'many-to-many') %>%
     group_by(state) %>%
@@ -149,8 +168,11 @@ staffing_index <- function(L_req, geo) {
     filter(setting == 'home') %>%
     transmute(state, s = 1 / children_per_staff)
 
-  if (any(centre$n != length(NSECE_AGE_BAND)) || anyNA(centre$s)) {
-    stop(RATIOS, ': centre ratio missing for some age band')
+  if (any(centre$n != length(NSECE_AGES_0_4)) || anyNA(centre$s)) {
+    stop(ratios, ': centre ratio missing for some age point')
+  }
+  if (!setequal(centre$state, home$state)) {
+    stop(ratios, ': centre, home rows cover different geographies')
   }
 
   natl_mean <- function(d) {
@@ -158,12 +180,34 @@ staffing_index <- function(L_req, geo) {
     sum(d$s * d$pop) / sum(d$pop)
   }
 
-  if (!geo %in% centre$state || !geo %in% home$state) {
-    stop(RATIOS, ': no centre or home rows for ', geo)
-  }
-  i_c <- centre$s[centre$state == geo] / natl_mean(centre)
-  i_h <- home$s[home$state == geo] / natl_mean(home)
-  if (is.na(i_h)) i_h <- 1
+  centre %>%
+    transmute(state, centre = s / natl_mean(centre)) %>%
+    inner_join(home %>% transmute(state, home = s / natl_mean(home)), by = 'state') %>%
+    mutate(home = ifelse(is.na(home), 1, home))
+}
+
+
+
+staffing_index <- function(L_req, geo) {
+
+  #----------------------------------------------------------------------------
+  # Scales national labor_requirements by geo's licensing staffing index
+  # (licensing_indices() on RATIOS). Prints one line per geo.
+  #
+  # Params:
+  #   - L_req (list): national labor_requirements, sector -> no_ba / ba
+  #   - geo (chr): postal or sub-state code w/ RATIOS rows
+  #
+  # Returns: (list) L_req, centre sectors x centre index, home sectors x home
+  #   index
+  #----------------------------------------------------------------------------
+
+  ix <- licensing_indices()
+  if (!geo %in% ix$state) stop(RATIOS, ': no centre or home rows for ', geo)
+  i_c <- ix$centre[ix$state == geo]
+  i_h <- ix$home[ix$state == geo]
+  # Staffing test: national worker-hours per child-hour everywhere
+  if (NATIONAL_STAFFING) { i_c <- 1; i_h <- 1 }
 
   cat(sprintf('   staffing index %-4s centre %.3f  home %.3f\n', geo, i_c, i_h))
 
