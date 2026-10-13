@@ -318,7 +318,11 @@ run_acs_processing <- function() {
         region = factor(region)
       )
 
-    # Derive primary caregiver employment choice
+    # Derive primary caregiver employment choice and caregiver/partner ages.
+    # Ages are ordered caregiver first because parent 1 means different
+    # people in the two sources: the NSECE respondent (usually the mother)
+    # versus the lower ACS person number (usually the householder). Raw
+    # parent 1 / parent 2 ages would mismatch training and prediction.
     if (is_nsece) {
       # NSECE: same rule as ACS (mother in two-parent families), so the
       # forest trains on the parent it is applied to. Parent 1 is the
@@ -329,7 +333,9 @@ run_acs_processing <- function() {
         mutate(
           primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
           hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
-          employment_choice_pc = derive_employment_choice(hours_pc)
+          employment_choice_pc = derive_employment_choice(hours_pc),
+          p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
+          p.age_partner = if_else(primary_caregiver == 1L, p.age2, p.age1)
         ) %>%
         select(-hours_pc, -income, -primary_caregiver, -p.male2)
     } else {
@@ -338,7 +344,9 @@ run_acs_processing <- function() {
         mutate(
           primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
           hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
-          employment_choice_pc = derive_employment_choice(hours_pc)
+          employment_choice_pc = derive_employment_choice(hours_pc),
+          p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
+          p.age_partner = if_else(primary_caregiver == 1L, p.age2, p.age1)
         ) %>%
         select(-income, -hours_pc)
     }
@@ -425,7 +433,8 @@ run_acs_processing <- function() {
       pivot_wider(
         id_cols = c(
           family_id, hh_id, parent_unit_id, n_children_original, child_category,
-          income_pctile, n_members, region, p.hhm_id2, p.age1, p.age2, p.male1, employment_choice_pc
+          income_pctile, n_members, region, p.hhm_id2, p.age1, p.age2, p.age_pc, p.age_partner,
+          p.male1, employment_choice_pc
         ),
         names_from  = child_index,
         values_from = all_of(pivot_cols),
@@ -1104,16 +1113,17 @@ run_acs_processing <- function() {
 
       # Feature sets include 'region' (Census region: 1=NE, 2=MW, 3=S, 4=W)
       # employment_choice_pc captures primary caregiver employment status (none/pt/ft)
+      # Two-parent models use caregiver and partner ages, not parent 1 and 2
       feature_sets <- list(
         one_child = list(
           `0` = c('age', 'male', 'income_pctile', 'n_members', 'region'),
           `1` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc'),
-          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.age2', 'employment_choice_pc')
+          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc')
         ),
         two_child = list(
           `0` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'is_3plus'),
           `1` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc', 'is_3plus'),
-          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.age2', 'employment_choice_pc', 'is_3plus')
+          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc', 'is_3plus')
         )
       )
 
@@ -1251,6 +1261,8 @@ run_acs_processing <- function() {
               primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
+              p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
+              p.age_partner = if_else(primary_caregiver == 1L, p.age2, p.age1),
               region = factor(region)
             ) %>%
             select(-income, -hours_pc, -primary_caregiver)
