@@ -65,6 +65,7 @@ nhes_hours <- function() {
 
   d <- read_chr(NHES_FILE)
   d <- d[num(d$AGE2018) <= 4, ]
+  d <- nhes_fix_per_day_hours(d)   # per-day hours answers -> weekly (shared_setup.R)
   v <- function(x) num(d[[x]])
   slot <- function(flag, h) ifelse(v(flag) == 1 & v(h) > 0, v(h), 0)
   h <- cbind(rc  = slot('RCNOW', 'RCHRS'),   rc2 = slot('RCOTHC', 'RCTLHR'),
@@ -81,8 +82,9 @@ nhes_universes <- function(x) {
   # Indicator per child for each universe definition.
   #   any_weekly  any weekly arrangement, any hours (NHES's own universe)
   #   A5          any arrangement >= 5 hrs (NSECE screen, universe A)
-  #   A5_total    every weekly arrangement summed >= 5 (README's 1.194 --
-  #               CAREHOURX >= 5 over >= 10, no per-arrangement screen)
+  #   A5_total    every weekly arrangement summed >= 5 (README universe ratio --
+  #               CAREHOURX >= 5 over >= 10, no per-arrangement screen; 1.194
+  #               as reported, 1.077 w/ per-day answers corrected)
   #   B10_sum     screened (>= 5) arrangements' SUMMED hours >= 10 (NSECE
   #               universe B -- 02_ sums regular arrangements only)
   #   B10_all     every weekly arrangement summed >= 10 (k6q20 reading:
@@ -194,7 +196,7 @@ main_bias <- function() {
   print(round(rbind(share_raw = 100 * s_raw, share_acs_mix = 100 * s_acs,
                     records = colSums(u)), 2))
   rat <- function(s) c('A5 / B10_sum (NSECE construction)' = s[['A5']] / s[['B10_sum']],
-                       'A5_total / B10_all (README 1.194)'  = s[['A5_total']] / s[['B10_all']],
+                       'A5_total / B10_all (README ratio)'  = s[['A5_total']] / s[['B10_all']],
                        'A5 / B10_all'                       = s[['A5']] / s[['B10_all']],
                        'A5 / B10_one'                       = s[['A5']] / s[['B10_one']],
                        'any_weekly / B10_one'               = s[['any_weekly']] / s[['B10_one']],

@@ -9,7 +9,7 @@
 
 # The five boroughs -- county names as Census PEP writes them; 5-digit FIPS in
 # same order from SUBSTATE_GEOGRAPHIES (constants.R), the one definition of
-# NYC. NYC.R, 03_head_start_school_overlap.R, checks read these.
+# NYC. NYC.R, checks read these.
 NYC_BOROUGHS    <- c('Bronx', 'Kings', 'New York', 'Queens', 'Richmond')
 NYC_COUNTY_FIPS <- with(SUBSTATE_GEOGRAPHIES$NYC,
                         sprintf('%02d%03d', statefip, countyfip))
@@ -34,7 +34,8 @@ NY_HEAD_START  <- 36863
 NY_EARLY_HEAD_START  <- 11433
 
 # NYC SHARES. City's OPEN funded slots over New York's, ACF Head Start
-# service-location file (2026-09-23 export -- same file 03_ reads). Head Start
+# service-location file (2026-09-23 export -- check_program_counts_match_sources.R
+# reads it too). Head Start
 # types 1, 3, 5; Early Head Start types 2, 4, 6. Applied to NIEER state counts;
 # assumes city's 2026 share held in 2018-19.
 # tests/check_program_counts_match_sources.R recomputes both from the file.

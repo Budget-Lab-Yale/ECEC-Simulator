@@ -15,7 +15,7 @@
 #                        (2023), state profile, funded-enrollment chart,
 #                        2018-2019 bar -- smaller of the two bars.
 #   NYC shares         = NYC's share of New York's OPEN funded slots in the
-#                        Head Start service-location file 03_ reads, HS types
+#                        Head Start service-location file (states/NY.R), HS types
 #                        and EHS types separately.
 #
 # Every source is a public file in raw/US/.
@@ -35,7 +35,7 @@ NIEER_HS <- file.path(DOC, 'US_NIEER__states_of_head_start_and_early_head_start_
 CCD      <- raw_path('US_CCD__public_school_prekindergarten_children_by_county__2018-19.csv')
 HSSL     <- raw_path('US_HSSL__head_start_funded_slots_by_service_location__2026-09-23.csv')
 
-HS_TYPES  <- c('1', '3', '5')    # as 03_head_start_school_overlap.R
+HS_TYPES  <- c('1', '3', '5')    # Head Start types (as states/NY.R)
 EHS_TYPES <- c('2', '4', '6')
 NYC_COUNTIES <- paste0(load_spec('NYC')$counties, ' County')   # states/NY.R
 NIEER_TOL <- 2

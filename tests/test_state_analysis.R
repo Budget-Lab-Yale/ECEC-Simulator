@@ -754,6 +754,29 @@ stopifnot(fmix_2_32(0xdeadbeef) == 233162409, fmix_2_32(4294967295) == 218008351
                     c(9L, 80L, 39L, 7L, 86L)))
 cat('PASS: draw_price_pctile_idx matches exact 32-bit reference hash\n')
 
+# ACS parent unit ids are text ('1', '1_2', 1b) -> numeric key hhm1 x 1000 +
+# hhm2; draw on text ids = draw on those keys; bad id -> stop
+stopifnot(identical(parent_unit_key(c('1', '1_2', '12_3')), c(1000, 1002, 12003)),
+          identical(parent_unit_key(c(5, 7)), c(5, 7)),
+          all(is.na(parent_unit_key(c('a', '1_2_3', '1000')))),
+          identical(draw_price_pctile_idx(c(2395, 2395, 2397), c('1_2', '3', '1_2'), 79),
+                    draw_price_pctile_idx(c(2395, 2395, 2397), c(1002, 3000, 1002), 79)))
+stopifnot(inherits(tryCatch(draw_price_pctile_idx(1, 'x', 79), error = function(e) e), 'error'))
+cat('PASS: parent_unit_key -- ACS text parent unit ids hash as numeric keys\n')
+
+# Round trip on 1b's own id builder: every one-parent id + every sorted pair
+# (1b sorts hhm_id1 < hhm_id2), person numbers 1-120 -> keys non-NA, one per
+# unit, draw runs. Catches 1b id format change before cluster calibration.
+rt <- rbind(data.frame(h1 = 1:120, h2 = NA_integer_),
+            subset(expand.grid(h1 = 1:120, h2 = 1:120), h1 < h2))
+rt_ids  <- make_parent_unit_id(rt$h1, rt$h2)
+rt_keys <- parent_unit_key(rt_ids)
+stopifnot(is.character(rt_ids), !anyNA(rt_keys), !anyDuplicated(rt_keys),
+          identical(rt_keys, rt$h1 * 1000 + ifelse(is.na(rt$h2), 0, rt$h2)),
+          all(draw_price_pctile_idx(rep(1, nrow(rt)), rt_ids, 79) %in% 1:99))
+cat('PASS: make_parent_unit_id -- 1b ids round-trip through parent_unit_key, ',
+    nrow(rt), ' units\n', sep = '')
+
 k_hh <- rep(1:60000, each = 2); k_pu <- rep(1:2, 60000)
 k_idx <- draw_price_pctile_idx(k_hh, k_pu, random_seed_base + 3)
 perm <- sample(length(k_hh)); sub_i <- sort(sample(length(k_hh), 5000))
@@ -1107,10 +1130,21 @@ stopifnot(apc(1, 25, U, 'center') == 'NA NA',
 stopifnot(apc(0, 0, U, 'home') == 'Parent Only 0',
           apc(numeric(0), numeric(0), character(0), character(0)) == 'Parent Only 0',
           apc(NA, 10, U, U) == 'Parent Only 0')
-# Paid-centre tiers share one rank -- more hours wins
+# Both paid-centre tiers -> High, whatever hours (simulator standard, main 1a)
 stopifnot(apc(c(1, 1), c(10, 20), c('High-Priced Center-Based', 'Low-Priced Center-Based'), c(U, U)) ==
-            'Low-Priced Center-Based 20')
-cat('PASS: assign_primary_care -- missing draw NA, Parent Only / NA buckets, paid-centre tiers by hours\n')
+            'High-Priced Center-Based 10')
+cat('PASS: assign_primary_care -- missing draw NA, Parent Only / NA buckets, both tiers -> High\n')
+
+# Provider care type (classify_nsece_provider(), 1a + 02): home-based needs
+# outside home + no prior relationship; unknown payment -> no label, kind set
+source('src/shared_functions/resolve_regular_care.R')
+cp <- classify_nsece_provider(tibble(
+  is_k8 = c(F, F, F, F, T), is_center = c(T, F, F, F, F), is_home = c(F, T, T, T, F),
+  is_paid = c(T, T, F, F, F), pay_unknown = c(F, F, F, T, F),
+  in_child_home = c(F, F, T, F, F), has_prior_rel = F), 'Center-Based')
+stopifnot(identical(cp$ecec_choice, c('Center-Based', 'Paid Home-Based', 'Other Unpaid', NA, 'K-8')),
+          identical(cp$unknown_kind, c(NA, NA, NA, 'home', NA)))
+cat('PASS: classify_nsece_provider -- centre / home / other / unknown payment / K-8\n')
 
 # Unknown-payment imputation (impute_unknown_payment()) -- reproducible,
 # global RNG untouched, cells from known rows, used only for ambiguous kids

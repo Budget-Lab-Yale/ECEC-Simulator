@@ -3,9 +3,9 @@ assign_primary_care <- function(prov) {
   #----------------------------------------------------------------------------
   # One NSECE child's primary care arrangement (type, hours) from its
   # provider rows -- Borowsky method: rank first (paid before unpaid, centre
-  # first), hours summed within type. Paid-centre tiers share one rank -- tier
-  # w/ more summed hours wins, High on exact tie (2026-10-12; High beat Low
-  # regardless of hours before).
+  # first), hours summed within type. High-price centre outranks low-price,
+  # as simulator standard (main 1a): child using both tiers -> High
+  # (2026-10-13; more summed hours won 10-12 to 10-13).
   #
   # Unknown payment (unknown_kind set): counting unknown rows (regular,
   # hours > 0) take drawn label (imputed_choice, impute_unknown_payment() --
@@ -27,17 +27,7 @@ assign_primary_care <- function(prov) {
   #   (lgl: child has counting unknown-payment row, label uses its draw)
   #----------------------------------------------------------------------------
 
-  category_priority <- c(
-    'K-8',
-    'High-Priced Center-Based',
-    'Low-Priced Center-Based',
-    'Unpaid Center-Based',
-    'Paid Home-Based',
-    'Other Paid',
-    'Unpaid Home-Based',
-    'Other Unpaid'
-  )
-  category_rank <- c(1, 2, 2, 3, 4, 5, 6, 7)
+  category_priority <- ECEC_PRIMARY_PRIORITY   # constants.R
 
   # Unpaid label by unknown_kind -- stands in on non-counting unknown rows
   unpaid_label <- c(center = 'Unpaid Center-Based', home = 'Unpaid Home-Based',
@@ -53,7 +43,7 @@ assign_primary_care <- function(prov) {
       h <- tapply(prov$hours[use], labels[use], sum)
       cats <- names(h)
       pos <- match(cats, category_priority)
-      top <- order(category_rank[pos], -h, pos)[1]
+      top <- order(pos)[1]   # one row per type after summing -- rank alone
       choice <- cats[top]
       hours <- unname(h[top])
     } else {
@@ -63,7 +53,7 @@ assign_primary_care <- function(prov) {
       choice <- 'Parent Only'
       hours <- 0
     }
-    band <- if (is.na(choice)) NA_character_ else if (hours == 0) 'none' else if (hours < 20) 'pt' else 'ft'
+    band <- if (is.na(choice)) NA_character_ else if (hours == 0) 'none' else if (hours < PT_FT_CUT_HOURS) 'pt' else 'ft'
     list(key = paste(choice, band), value = tibble(ecec_choice = choice, hours = hours))
   }
 

@@ -12,7 +12,8 @@
 # NY BUILD INCLUDES THIS ONE. NY minus NYC = rest of state by definition for
 # population, program counts only -- city's rate, p0 mix both ratios per
 # geography, so difference only approximates a rest-of-state built same way:
-# within 0.6% of hours per care type (tests/check_nyc_rest_of_state.R).
+# within 0.8% of hours per care type, Unpaid Home-Based 2.6% (2,864 NY children,
+# 0.01% of all hours) (tests/check_nyc_rest_of_state.R).
 #------------------------------------------------------------------------------
 
 # NYC_* constants, borough lists: NY.R.

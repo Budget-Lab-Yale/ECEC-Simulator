@@ -20,8 +20,8 @@ suppressPackageStartupMessages({library(readr); library(dplyr)})
 CSV <- 'state_data/out/nsece_constants.csv'
 
 # Build reads universe A -- NSECE's own five-hour screener. B = 10-hour
-# subset, kept for universe ratio, sensitivity.
-UNIVERSE_A <- 'A: NSECE, any regular care'
+# subset, kept for universe ratio, sensitivity. UNIVERSE_A: shared_setup.R
+# (via 05 -> 00).
 
 TOL <- 1e-12   # same double, not a rounded copy
 

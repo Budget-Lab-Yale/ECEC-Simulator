@@ -19,8 +19,8 @@
 #      sensitivity only, 14_program_hours_sensitivity.R (header says why)
 # Regional NSECE shares: comparison only, 05_compare_nsece_shares.R.
 #
-# states/<GEO>.R = hand-researched DATA (geo_spec()). NSCH rate and
-# school-overlap share read live from out/ (01_, 03_ write them) -- nothing
+# states/<GEO>.R = hand-researched DATA (geo_spec()). NSCH rate read live
+# from out/ (01_ writes it) -- nothing
 # hand-copied to drift. Everything else here, shared by every geography.
 #
 # Usage: Rscript state_data/code/00_build_demand_targets.R
@@ -127,7 +127,7 @@ P0_TYPE_MAP <- c('Low-Priced Center-Based'  = 'Center-Based',
                  'Other Paid'               = 'Other Paid',
                  'Unpaid Home-Based'        = 'Unpaid Home-Based')
 
-FORMAL_TYPES   <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based')
+# FORMAL_TYPES: shared_setup.R (also 02)
 
 # build_geo() stop phrase when programs fill the total they come out of.
 PROGRAMS_TOO_LARGE <- 'meets or exceeds'

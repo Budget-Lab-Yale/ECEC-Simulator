@@ -818,11 +818,8 @@ run_acs_processing <- function() {
         .groups = 'drop'
       ) %>%
       mutate(
-        parent_unit_id = if_else(
-          is.na(hhm_id2),
-          as.character(hhm_id1),
-          paste0(hhm_id1, '_', hhm_id2)
-        ),
+        # make_parent_unit_id(): inverted by parent_unit_key() (price wedge draw)
+        parent_unit_id = make_parent_unit_id(hhm_id1, hhm_id2),
         n_parents = if_else(is.na(hhm_id2), 1L, 2L),
         .after = child_id
       )

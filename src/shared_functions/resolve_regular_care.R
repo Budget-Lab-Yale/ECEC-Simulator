@@ -25,6 +25,9 @@
 #      36.9% pt, all 374 imputed rows 30 hrs). Before both: such children
 #      Parent Only (6.7% of children 0-4).
 #
+# Also classify_nsece_provider() at end: care type per provider row, one rule for
+# 1a + 02.
+#
 # Called from: 1a_nsece_processing.R (labels -> assign_primary_care()),
 # state_data/code/02_derive_nsece_constants.R (constants). One function ->
 # both count same arrangements w/ same hours, child for child. Both call it
@@ -228,4 +231,51 @@ resolve_regular_care <- function(arr, seed = REGULAR_HOURS_SEED) {
     select(-.toc, -.cell, -.wt, -.draw)
 
   list(arr = arr, cells = cells)
+}
+
+
+classify_nsece_provider <- function(df, paid_centre_label) {
+
+  #----------------------------------------------------------------------------
+  # NSECE care type per provider row, from base groups and payment flags --
+  # one rule for 1a (labels) and state_data 02 (constants). "Home-Based":
+  # individual care (TOC 1-3) outside child's home, no prior relationship;
+  # "Other": individual care in child's home or w/ prior relationship, or
+  # organisational (TOC 5; TOC 7 / 8 land here, never regular). Unknown
+  # payment -> no label; unknown_kind picks candidate labels for the draw.
+  # Callers set flags their own way (1a: status-recoded, MISS -> NA; 02: raw
+  # codes, NA-safe), so each keeps its own outputs.
+  #
+  # Params:
+  #   - df (df): is_k8, is_center, is_home, is_paid, pay_unknown,
+  #       in_child_home, has_prior_rel (lgl)
+  #   - paid_centre_label (chr): paid-centre label -- 'Paid Center-Based' (1a,
+  #       tier set later) | 'Center-Based' (02, one centre row)
+  #
+  # Returns: (df) df + is_home_based, is_other_kind, unknown_kind (chr),
+  #   ecec_choice (chr), in that order
+  #----------------------------------------------------------------------------
+
+  df %>%
+    mutate(
+      is_home_based = is_home & !in_child_home & !has_prior_rel,
+      is_other_kind = (!is_center & !is_k8) & (!is_home | in_child_home | has_prior_rel),
+      unknown_kind = case_when(
+        is_k8 | !pay_unknown ~ NA_character_,
+        is_center            ~ 'center',
+        is_home_based        ~ 'home',
+        is_other_kind        ~ 'other'
+      ),
+      ecec_choice = case_when(
+        is_k8                    ~ 'K-8',
+        pay_unknown              ~ NA_character_,
+        is_center & !is_paid     ~ 'Unpaid Center-Based',
+        is_center & is_paid      ~ paid_centre_label,
+        is_home_based & !is_paid ~ 'Unpaid Home-Based',
+        is_home_based &  is_paid ~ 'Paid Home-Based',
+        is_other_kind & !is_paid ~ 'Other Unpaid',
+        is_other_kind &  is_paid ~ 'Other Paid',
+        TRUE                     ~ NA_character_
+      )
+    )
 }

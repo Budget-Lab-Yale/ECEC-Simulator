@@ -366,7 +366,8 @@ all four care types. The multiplier is clipped to [0.1, 5].
   income quintile. The quintile is `ceiling(income_pctile / 20)`, with the same
   scheme and national cutpoints as the care-choice forest
   (`price_wedge_income_pctiles()`). A household-held-out 5-fold test gave a
-  pinball loss 8-13% lower than one distribution in every fold. A quintile
+  pinball loss 11.3% (low-priced centers) and 8.0% (Other Paid) lower than one
+  distribution, pooled over folds; low-priced centers lose in 1 of 5 folds. A quintile
   cell with fewer than 30 NSECE households uses the one distribution (1a logs
   which). A household with no positive income uses the one distribution.
 - **High-priced center and paid home-based** use one distribution. The same

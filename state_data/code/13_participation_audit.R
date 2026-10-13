@@ -794,7 +794,7 @@ part_e <- function(raw, ak, est, est_old, nsece_root) {
     mutate(toc_group = regular_care_toc_group(type_raw), age_cell = impute_pay_age_cell(age)) %>%
     group_by(toc_group, age_cell) %>%
     summarise(imputed_rows = n(), imputed_median = weighted_median(hours, child_weight),
-              imputed_pt_pct = pct(sum(child_weight * (hours < 20)) / sum(child_weight)),
+              imputed_pt_pct = pct(sum(child_weight * (hours < PT_FT_CUT_HOURS)) / sum(child_weight)),
               .groups = 'drop')
   cells <- rc$cells %>%
     transmute(toc_group, age_cell, donors = n, median_hours, donor_pt_pct = pct(pt_share)) %>%
@@ -808,7 +808,7 @@ part_e <- function(raw, ak, est, est_old, nsece_root) {
   # Labels only read below -- 02's child_weight / M never enters a share
   cc[c('kids', 'prim', 'arr', 'dropped')] <- lapply(cc[c('kids', 'prim', 'arr', 'dropped')], draw0)
   k8 <- cc$arr %>% filter(ecec_choice %in% 'K-8') %>% distinct(hh_id, child_id)
-  band <- function(h) case_when(is.na(h) ~ NA_character_, h == 0 ~ 'none', h < 20 ~ 'pt', TRUE ~ 'ft')
+  band <- function(h) case_when(is.na(h) ~ NA_character_, h == 0 ~ 'none', h < PT_FT_CUT_HOURS ~ 'pt', TRUE ~ 'ft')
   l02 <- cc$kids %>% select(hh_id, child_id) %>%
     left_join(cc$prim %>% select(hh_id, child_id, l02 = ecec_choice, h02 = hours),
               by = c('hh_id', 'child_id')) %>%

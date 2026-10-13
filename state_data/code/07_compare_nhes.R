@@ -58,19 +58,17 @@
 # build_of(), read_chr(), raw_path(), GEOGRAPHIES; main() guarded
 source('state_data/code/00_build_demand_targets.R')
 
-NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'US',
-                       'US_NHES__ecpp_public_use_file__2019.csv')
+NHES_FILE <- raw_path('US_NHES__ecpp_public_use_file__2019.csv')   # 00, honours config_local.yaml
 P0_BY_AGE_FILE <- 'US_ACS__p0_children_by_care_type_hours_age__2019.csv'
 # Census PEP vintage 2019, resident population, 1 July 2019, ages 0-4 -- same
 # file child age reweight in src/1_processing/1b_acs_processing.R reads
 PEP_SINGLE_AGE_FILE <- file.path('resources', 'acs',
                                  'US_PEP__national_population_by_single_year_of_age_0_4__2019.csv')
 NHES_REGION <- c('1' = 'northeast', '2' = 'south', '3' = 'midwest', '4' = 'west')
-PRIORITY <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based', 'Other Paid',
-              'Unpaid Home-Based', 'Other Unpaid')
+PRIORITY <- setdiff(ECEC_PRIMARY_PRIORITY_ONE_CENTRE, 'K-8')   # simulator rank, constants.R
 TYPES <- c(PRIORITY, 'Parent Only')
 MIN_HOURS <- 5    # NSECE regular care: 5+ hours a week
-PT_CUT    <- 20
+# Part-time cut: PT_FT_CUT_HOURS (constants.R, via 00)
 
 
 
@@ -85,6 +83,7 @@ nhes_children <- function() {
   if (!file.exists(NHES_FILE)) stop('no ', NHES_FILE, ' -- copy it from the cluster')
   d <- read_chr(NHES_FILE)
   d <- d[num(d$AGE2018) <= 4, ]
+  d <- nhes_fix_per_day_hours(d)   # per-day hours answers -> weekly (shared_setup.R)
   v <- function(x) num(d[[x]])
   pos <- function(x) !is.na(x) & x > 0
   regular <- function(flag, h) ifelse(v(flag) == 1 & !is.na(v(h)) & v(h) >= MIN_HOURS, v(h), 0)
@@ -119,7 +118,7 @@ nhes_children <- function() {
                  age = num(d$AGE2018),
                  age_group = ifelse(num(d$AGE2018) <= 2, '0-2', '3-4'),
                  type = best_type,
-                 part_time = best_type != 'Parent Only' & best_h < PT_CUT,
+                 part_time = best_type != 'Parent Only' & best_h < PT_FT_CUT_HOURS,
                  FEWT = num(d$FEWT))
 }
 

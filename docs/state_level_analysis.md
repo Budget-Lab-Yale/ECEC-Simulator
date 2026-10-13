@@ -395,7 +395,10 @@ The second is the price wedge (`compute_price_wedge_cache.R`). Since
 a quantile regression forest on income, parents, and child age had negative
 out-of-sample skill. Low-priced center care and Other Paid use one
 distribution per income quintile, because a household-held-out 5-fold test
-gave a pinball loss 8-13% lower than one distribution in every fold. A
+(rerun 13 October 2026 on the urbanicity tiers) gave a pinball loss 11.3%
+lower than one distribution for low-priced centers and 8.0% lower for Other
+Paid, pooled over folds. Other Paid is lower in every fold; low-priced
+centers are lower in 4 of 5 folds and 4.5% higher in one. A
 quintile cell with fewer than 30 NSECE households uses the one distribution.
 High-priced center care and paid home-based care keep one distribution: the
 test showed no gain, and most quintile cells had fewer than 30 households.

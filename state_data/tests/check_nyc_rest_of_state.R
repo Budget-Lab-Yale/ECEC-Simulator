@@ -10,7 +10,8 @@
 #
 #   Rscript state_data/tests/check_nyc_rest_of_state.R
 #
-# Exit status is 1 when any care type differs by MAX_GAP or more.
+# Exit status is 1 when any care type differs by MAX_GAP or more AND by
+# MAX_GAP_TOTAL or more of rest-of-state total hours.
 #-----------------------------------------------------------------------------
 suppressPackageStartupMessages({library(dplyr)})
 
@@ -18,6 +19,11 @@ suppressPackageStartupMessages({library(dplyr)})
 # Unpaid Center-Based -- children match exactly, gap = part-time share (NY, NYC, rest
 # each own p0 ratio).
 MAX_GAP <- 0.01
+# Floor for thin cells: gap as share of rest-of-state total hours, all types.
+# 2026-10-13 build (p0 on 72a57c2): Unpaid Home-Based 2.6% relative -- 2,864 NY
+# children, ~68k hours, 0.011% of total -- each geo's p0 ratio noisy on cell
+# that small.
+MAX_GAP_TOTAL <- 0.001
 
 source('state_data/code/00_build_demand_targets.R')
 
@@ -58,13 +64,16 @@ r_rest <- build_geo(rest)
 d <- tibble::tibble(ecec_type     = r_ny$care$ecec_type,
                     ny_less_nyc   = r_ny$care$annual_hours - r_nyc$care$annual_hours,
                     rest_of_state = r_rest$care$annual_hours) %>%
-  mutate(gap = ny_less_nyc / rest_of_state - 1)
+  mutate(gap       = ny_less_nyc / rest_of_state - 1,
+         gap_total = (ny_less_nyc - rest_of_state) / sum(rest_of_state))
 
 cat('\n== NY minus NYC vs rest-of-state build (annual hours)\n')
 print(as.data.frame(d), row.names = FALSE)
 worst <- max(abs(d$gap))
-cat(sprintf('\nmax |gap| %.2f%% (limit %.0f%%)\n', 100 * worst, 100 * MAX_GAP))
-if (worst >= MAX_GAP) {
+bad   <- abs(d$gap) >= MAX_GAP & abs(d$gap_total) >= MAX_GAP_TOTAL
+cat(sprintf('\nmax |gap| %.2f%% (limit %.0f%%), max |gap_total| %.3f%% (floor %.1f%%)\n',
+            100 * worst, 100 * MAX_GAP, 100 * max(abs(d$gap_total)), 100 * MAX_GAP_TOTAL))
+if (any(bad)) {
   cat('FAIL: NY minus NYC drifts from a rest-of-state build\n')
   quit(status = 1)
 }

@@ -128,6 +128,49 @@ geo_children <- function(ad, n_children, geo_hh) {
 
 
 
+geo_hh_ids <- function(hh, skip_errors = TRUE) {
+
+  #----------------------------------------------------------------------------
+  # Household ids of every simulator geography (50 states + DC, sub-state
+  # geographies), select_geo_hh_ids(). Shared w/ acs_p0_shares_by_age.R.
+  #
+  # Params: hh (tibble): acs_households_2019.csv, skip_errors (lgl): geography
+  #   select_geo_hh_ids() rejects is skipped, said so (else error stops run)
+  # Returns: (named list) geo -> hh_id vector
+  #----------------------------------------------------------------------------
+
+  geo_hh <- list()
+  for (g in c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))) {
+    fips <- if (g %in% names(SUBSTATE_GEOGRAPHIES)) SUBSTATE_GEOGRAPHIES[[g]]$statefip
+            else STATE_POSTAL_TO_FIPS[[g]]
+    ids <- if (skip_errors) {
+      tryCatch(select_geo_hh_ids(hh, g, fips),
+               error = function(e) { cat('  skip', g, '--', conditionMessage(e), '\n'); NULL })
+    } else {
+      select_geo_hh_ids(hh, g, fips)
+    }
+    if (!is.null(ids)) geo_hh[[g]] <- ids
+  }
+  geo_hh
+}
+
+
+
+read_alpha_data <- function(iface, pu_type) {
+
+  #----------------------------------------------------------------------------
+  # National alpha data (p0, child_weights, row_ids) of one parent unit type.
+  #
+  # Params: iface (chr): interface dir, pu_type (chr): 'c1' | 'c2plus'
+  # Returns: (list) alpha data
+  #----------------------------------------------------------------------------
+
+  ad <- readRDS(file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds')))
+  if (!is.null(ad[[pu_type]])) ad[[pu_type]] else ad
+}
+
+
+
 main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   #----------------------------------------------------------------------------
@@ -149,24 +192,14 @@ main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
   cat('households:', nrow(hh), '| countyfip:',
       if ('countyfip' %in% names(hh) && any(!is.na(hh$countyfip))) 'yes' else 'NO', '\n')
 
-  geos <- c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))
-  geo_hh <- list()
-  for (g in geos) {
-    fips <- if (g %in% names(SUBSTATE_GEOGRAPHIES)) SUBSTATE_GEOGRAPHIES[[g]]$statefip
-            else STATE_POSTAL_TO_FIPS[[g]]
-    ids <- tryCatch(select_geo_hh_ids(hh, g, fips),
-                    error = function(e) { cat('  skip', g, '--', conditionMessage(e), '\n'); NULL })
-    if (!is.null(ids)) geo_hh[[g]] <- ids
-  }
+  geo_hh <- geo_hh_ids(hh)
 
   sub_ad <- substate_alpha_data(iface, geo_hh)
   nat_geo_hh <- geo_hh[setdiff(names(geo_hh), names(sub_ad))]
 
   res <- list()
   for (pu_type in c('c1', 'c2plus')) {
-    f <- file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds'))
-    ad <- readRDS(f)
-    ad <- if (!is.null(ad[[pu_type]])) ad[[pu_type]] else ad
+    ad <- read_alpha_data(iface, pu_type)
     n_children <- if (pu_type == 'c1') 1 else 2
     cat(pu_type, ': ', nrow(ad$p0), ' units x ', ncol(ad$p0), ' choices\n', sep = '')
     res[[pu_type]] <- geo_children(ad, n_children, nat_geo_hh) %>% mutate(pu_type = pu_type)

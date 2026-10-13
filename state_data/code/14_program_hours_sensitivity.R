@@ -150,7 +150,7 @@ nhes_weekly_hours <- function() {
   # Returns: (tibble) program, n (records), weekly, se
   #----------------------------------------------------------------------------
 
-  nh <- read_chr(raw_path(NHES_FILE))
+  nh <- nhes_fix_per_day_hours(read_chr(raw_path(NHES_FILE)))   # per-day answers -> weekly
   v  <- function(x) num(nh[[x]])
   base <- v('CPNNOWX') == 1 & v('CPHRS') > 0
   sel <- list('public pre-K'     = base & v('CPPLACEX') == 2 & v('AGE2018') %in% 3:4,

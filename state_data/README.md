@@ -28,8 +28,11 @@ and the simulator's ACS households do not include it. Building it needs a partic
 for one, a wage, and households. New York is all 62 counties, city
 included. New York City is the five boroughs, built on its own. NY includes
 NYC. NY minus NYC is close to a rest-of-state build made the same way, within
-0.9% of the hours in each care type. The rate and the p0 mix of each are
-ratios over its own households, so the difference is not exact
+0.8% of the hours in each care type. The exception is Unpaid Home-Based, at
+2.6%. That cell has only 2,864 NY children, and its gap is 0.01% of all
+rest-of-state hours. The rate and the p0 mix of each are ratios over its own
+households, so the difference is not exact. The check fails a care type only
+when its gap is 1% or more of its own hours and 0.1% or more of all hours
 (`tests/check_nyc_rest_of_state.R`).
 
 This directory writes demand only. The simulator's per-state supply and
@@ -649,9 +652,10 @@ NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
   `code/14_program_hours_sensitivity.R` builds hours for each program from
   the step 4 net children (each child once), and writes
   `out/program_hours_sensitivity.csv`:
-  - **Usual weekly hours** come from NHES-ECPP 2019 (`CPHRS`, weight `FEWT`):
-    pre-K 19.3 (ages 3-4, 354 records), Head Start 22.8 (ages 3-4, 214
-    records), and Early Head Start 24.3 (ages 0-2, 74 records). These are
+  - **Usual weekly hours** come from NHES-ECPP 2019 (`CPHRS`, weight `FEWT`,
+    per-day answers corrected -- see NHES-ECPP below): pre-K 23.3 (ages 3-4,
+    354 records), Head Start 26.8 (ages 3-4, 214 records), and Early Head
+    Start 29.0 (ages 0-2, 74 records). As reported, 19.3, 22.8, and 24.3. These are
     parent reports of usual hours, not an attendance rate. No public
     attendance rate exists at this vintage, so I keep scheduled hours as
     scheduled.
@@ -750,18 +754,52 @@ Its finest geography is the Census region (`CENREG`). The public-use file has
 no state and no county, so it cannot give state values. State exists only in
 the IES restricted-use file, which needs a licence.
 
-Its continuous total hours (`CAREHOURX`) can be cut at any threshold, so NHES
-can measure the universe ratio that `NSECE_UNIVERSE_RATIO` carries. Weighted
-by `FEWT`, ages 0–4, NHES puts the five-hour universe at **1.194** times the
-ten-hour one. NSECE puts it at **1.074** (universe A over universe B; 1.098
-before the 2026-10-12 counting rule), so the two disagree by 11.2%. With the
-NHES ratio, total hours rise by about 11% (8.8–8.9% in the five memo
-geographies against the old 1.098), and the Unpaid Center-Based child count
-does not change. Both ratios use a total-hours cut at 10. NHES enters an arrangement
-on a looser screen ("at least once a week"), but a looser screen pushes its
-ratio down, not up, so the construct difference does not explain the gap.
-The build keeps the NSECE ratio and does not correct one source to the other,
-because it is not settled which ratio is right.
+NHES hours can be cut at any threshold, so NHES can measure the universe ratio
+that `NSECE_UNIVERSE_RATIO` carries (**1.0995**, universe A over universe B).
+
+**Per-day answers.** Some NHES parents give hours per day in the weekly-hours
+items (`RCHRS`, `NCHRS`, `CPHRS`). For example, 111 center records for
+children 0–4 report 8 hours a week on 5 days. I read an answer under 2 hours a
+day on 4 or more days as hours per day, and multiply it by the days
+(`nhes_fix_per_day_hours()`, `code/shared_setup.R`). Short weeks on 2–3 days
+stay as reported, because part-day preschool runs that way. The correction
+changes 324 center, 168 relative, and 61 non-relative records: 13.0%, 12.9%,
+and 9.0% of the weighted children 0–4 with each arrangement. Every script that
+reads NHES hours applies it (`07`, `12`, `14`, and `06` through `07`).
+
+The evidence for this reading:
+
+- The questionnaire (https://nces.ed.gov/nhes/pdf/early/2019_ecpp.pdf, Q7–8,
+  Q25–26, Q47–48) asks "How many
+  days each week" and then "How many hours each week". No item records the
+  unit of the hours answer. `RCUNIT`, `NCUNIT`, and `CPUNIT` are the unit of the
+  cost answer.
+- The corrected answers are reported, not imputed: NCES imputed 8 of the 324
+  center records (2.5%, against 1.5% of all center records). They occur at
+  the same rate in each survey mode (`MODECOMP`, 12–14%).
+- The next question asks how well the arrangement covers the hours needed for
+  work. Corrected center records answer like full-time children: 53.7% "very
+  well" and 3.7% "not well", against 67.9% and 1.3% at 30 or more hours, and
+  20.8% and 22.8% for real short weeks (1–3 days, under 10 hours). Relative
+  and non-relative care show the same pattern.
+
+- **Universe ratio.** As reported, NHES puts the five-hour universe at 1.194
+  times the ten-hour one (`CAREHOURX`, summed per-arrangement hours give
+  1.194 too). Corrected, it is **1.077**, 2.0% below NSECE. The per-day answers
+  made most of the old 11% gap: they put short weeks over the 5-hour line and
+  under the 10-hour line. The build keeps the NSECE ratio.
+- **Part-time share.** Corrected NHES part-time shares agree with NSECE for
+  the three largest care types: paid center 27.3% against 24.5%, unpaid center
+  28.9% against 31.3%, and other unpaid 27.1% against 27.0% (37.0%, 42.3%, and
+  38.4% as reported). Other paid and paid home-based still differ by about 10
+  points, in opposite directions, on 569 and 190 NHES records.
+- **NSECE long weeks.** Some NSECE parents report 168 hours a week for a
+  relative who cares for the child at home. Summed within the type, a few
+  children reach more than 168 hours (24 child-type sums, all eight largest
+  Other Unpaid). These rows are full-time on any reading, and 8 priced rows are
+  over 80 hours (under 2% of weight in each type), so labels and prices barely
+  move. The mean weekly hours of other unpaid care are high for this reason
+  (43 in NSECE, 29 in NHES).
 
 ### Reference documents
 

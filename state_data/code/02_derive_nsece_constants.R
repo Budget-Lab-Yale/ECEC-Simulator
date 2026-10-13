@@ -61,27 +61,24 @@ source('state_data/code/shared_setup.R')
 # (assign_primary_care(), impute_unknown_payment()); with_rng_preserved()
 source('src/shared_functions/impute_unknown_payment.R')
 # Regular care, weekly hours -- same rule as 1a (REGCARE -1 / -2 by TOC,
-# zero-hour regular rows drawn hours, keyed hash from price wedge file)
+# zero-hour regular rows drawn hours, keyed hash from price wedge file) and
+# provider care type, classify_nsece_provider() -- same rules as 1a
 source('src/shared_functions/compute_price_wedge_cache.R')
 source('src/shared_functions/resolve_regular_care.R')
 # Label draws, seeds per draw -- same M, seeds as 1a
 source('src/shared_functions/nsece_mi_draws.R')
-source('src/shared_functions/compute_substate_alpha.R')
 
-# Part-time below this many hrs/wk. src/shared_functions/constants.R sets
-# pt = 10, ft = 40; 1a_nsece_processing.R cuts between them at `hours < 20`.
-PT_FT_CUT <- 20
+# Part-time below PT_FT_CUT_HOURS hrs/wk -- simulator's cut (constants.R, as 1a)
+source('src/shared_functions/constants.R')
 
 # Primary-arrangement ranking, as simulator: paid before unpaid, center before
 # home. Hours summed within type first, so each type one row -- rank alone
 # picks, desc(hours) in arrange() never breaks a tie. Paid centres one type --
 # build has one Center-Based row, price tiers (1a) don't enter its constants.
-CATEGORY_PRIORITY <- c('K-8', 'Center-Based', 'Unpaid Center-Based',
-                       'Paid Home-Based', 'Other Paid', 'Unpaid Home-Based',
-                       'Other Unpaid')
+CATEGORY_PRIORITY <- ECEC_PRIMARY_PRIORITY_ONE_CENTRE   # constants.R
 
 PAID_CENTRE <- 'Center-Based'
-FORMAL      <- c(PAID_CENTRE, 'Unpaid Center-Based', 'Paid Home-Based')
+FORMAL      <- FORMAL_TYPES   # shared_setup.R
 INFORMAL    <- c('Other Unpaid', 'Other Paid', 'Unpaid Home-Based')
 
 # NSECE's published regional formal shares -- universe A printed beside them
@@ -137,23 +134,6 @@ read_household <- function(root) {
     setnames(d, old, str_replace(old, p, 'HH9_HRS_WEEK_PROV_\\2_\\1'))
   }
   d
-}
-
-
-
-build_children <- function(d) {
-
-  #----------------------------------------------------------------------------
-  # One row per child aged 0-4 w/ positive weight.
-  #
-  # Params:
-  #   - d (data.table) from read_household()
-  #
-  # Returns: (tibble) hh_id, child_id, age, child_weight, region
-  #----------------------------------------------------------------------------
-
-  build_children_all(d) %>%
-    filter(age <= 4, !is.na(child_weight), child_weight > 0)
 }
 
 
@@ -281,27 +261,11 @@ classify_arrangements <- function(rc) {
       is_center    = type_raw == 4,
       is_home      = type_raw %in% c(1, 2, 3),
       in_child_home = !is.na(careloc) & careloc == 1,
-      has_prior_rel = !is.na(priorrel) & priorrel == 1,
-      is_home_based = is_home & !in_child_home & !has_prior_rel,
-      is_other_kind = (!is_center & !is_k8) &
-                        (!is_home | in_child_home | has_prior_rel),
-      # Unknown payment: no label, kind picks candidate labels
-      # (primary_arrangement())
-      unknown_kind = case_when(
-        is_k8 | !pay_unknown ~ NA_character_,
-        is_center            ~ 'center',
-        is_home_based        ~ 'home',
-        is_other_kind        ~ 'other'),
-      ecec_choice = case_when(
-        is_k8                              ~ 'K-8',
-        pay_unknown                        ~ NA_character_,
-        is_center & !is_paid               ~ 'Unpaid Center-Based',
-        is_center & is_paid                ~ 'Center-Based',
-        is_home_based & !is_paid           ~ 'Unpaid Home-Based',
-        is_home_based &  is_paid           ~ 'Paid Home-Based',
-        is_other_kind & !is_paid           ~ 'Other Unpaid',
-        is_other_kind &  is_paid           ~ 'Other Paid',
-        TRUE                               ~ NA_character_),
+      has_prior_rel = !is.na(priorrel) & priorrel == 1) %>%
+    # Home-based / other, unknown_kind (candidate labels,
+    # primary_arrangement()), label -- 1a's rule (resolve_regular_care.R)
+    classify_nsece_provider(paid_centre_label = PAID_CENTRE) %>%
+    mutate(
       kind = pay_kind(is_k8, is_center, is_home_based, is_other_kind),
       paid = if_else(pay_unknown, NA, is_paid)) %>%
     filter(regular == 1,
@@ -404,7 +368,7 @@ primary_arrangement <- function(arr) {
   #
   # Unknown payment (unknown_kind set), as 1a assign_primary_care(): unknown
   # rows take drawn labels (imputed_choice, add_imputed_payment()) -- child
-  # whose type x hours band (PT_FT_CUT) payment can't change gets same label
+  # whose type x hours band (PT_FT_CUT_HOURS) payment can't change gets same label
   # from any draw. No draw -> ecec_choice NA, drop_unresolved() takes it out
   # of numerators, denominators (2026-10-12; unknown cost unpaid before,
   # enumerated + drawn where ambiguous same day).
@@ -548,14 +512,14 @@ summarise_universe <- function(kids, label) {
   ptft_nat <- kids %>%
     group_by(ecec_choice) %>%
     summarise(universe = label, children = n_rec(rec),
-              pt_share = w(hours < PT_FT_CUT, child_weight), .groups = 'drop')
+              pt_share = w(hours < PT_FT_CUT_HOURS, child_weight), .groups = 'drop')
 
   ptft <- kids %>%
     filter(!is.na(region)) %>%
     group_by(region, ecec_choice) %>%
     summarise(universe = label, children = n_rec(rec),
-              n_pt = n_rec(rec * (hours < PT_FT_CUT)),
-              pt_share = w(hours < PT_FT_CUT, child_weight), .groups = 'drop')
+              n_pt = n_rec(rec * (hours < PT_FT_CUT_HOURS)),
+              pt_share = w(hours < PT_FT_CUT_HOURS, child_weight), .groups = 'drop')
 
   mix_r <- in_region %>%
     filter(ecec_choice %in% INFORMAL) %>%
@@ -669,7 +633,7 @@ short_share_by <- function(prim, by, quantity) {
 
   #----------------------------------------------------------------------------
   # Short share of part-time (children under 10 total hrs/week over children
-  # w/ primary hours < PT_FT_CUT), weighted, one row per group of `by`.
+  # w/ primary hours < PT_FT_CUT_HOURS), weighted, one row per group of `by`.
   #
   # Params:
   #   - prim (tibble): universe A primary-arrangement rows
@@ -680,7 +644,7 @@ short_share_by <- function(prim, by, quantity) {
   #----------------------------------------------------------------------------
 
   prim %>%
-    filter(hours < PT_FT_CUT, !is.na(.data[[by]])) %>%
+    filter(hours < PT_FT_CUT_HOURS, !is.na(.data[[by]])) %>%
     group_by(key = .data[[by]]) %>%
     summarise(value = sum(child_weight[total_hours < 10]) / sum(child_weight),
               n = n_rec(rec), .groups = 'drop') %>%
@@ -732,8 +696,8 @@ main <- function() {
   arr0 <- filter(arr, draw == 0)
   cat('  child x provider arrangements ', nrow(arr0), '\n', sep = '')
   cat(sprintf('  of which regular by TOC (REGCARE -1/-2) %d, imputed hours %d (pt < %d hrs: %.1f)\n',
-              sum(arr0$regular_by_type), sum(arr0$hours_imputed), PT_FT_CUT,
-              sum(arr$hours_imputed & arr$hours < PT_FT_CUT) / cc$draws))
+              sum(arr0$regular_by_type), sum(arr0$hours_imputed), PT_FT_CUT_HOURS,
+              sum(arr$hours_imputed & arr$hours < PT_FT_CUT_HOURS) / cc$draws))
   show_table('UNKNOWN PAYMENT -- paid share of known-payment arrangements, kind x age cell',
              cc$imp$paid_cells, 4)
   cat(sprintf('  unknown-payment arrangements drawn: %d (paid %.1f)\n',
@@ -785,7 +749,7 @@ main <- function() {
 
   show_table('CENTRE-HOME SPLIT OF PAID FORMAL CARE, by region (step 5, universe A)',
              a$split, 4)
-  show_table(paste0('PART-TIME SHARE (hours < ', PT_FT_CUT, '), by region and type'),
+  show_table(paste0('PART-TIME SHARE (hours < ', PT_FT_CUT_HOURS, '), by region and type'),
              ab('ptft', c('region', 'ecec_choice'),
                 c(n_A = 'children', pt_A = 'n_pt', A = 'pt_share'),
                 c(n_B = 'children', B = 'pt_share')),
@@ -815,14 +779,14 @@ main <- function() {
            value = sum(prim$child_weight) / sum(b_kids$child_weight),
            n = n_rec(prim$rec)),
     # SHORT SHARE OF PART-TIME. Children under 10 total hrs/week over
-    # children part-time in simulator's sense (primary hours < PT_FT_CUT).
+    # children part-time in simulator's sense (primary hours < PT_FT_CUT_HOURS).
     # Every under-10 child part-time -- primary hours <= total hours. Step 1
     # applies it to simulator's predicted part-time children per geography.
     tibble(universe = UNIVERSE_A, quantity = 'short_share_of_part_time',
            key = 'national',
            value = sum(prim$child_weight[!keep]) /
-                   sum(prim$child_weight[prim$hours < PT_FT_CUT]),
-           n = n_rec(prim$rec[prim$hours < PT_FT_CUT])),
+                   sum(prim$child_weight[prim$hours < PT_FT_CUT_HOURS]),
+           n = n_rec(prim$rec[prim$hours < PT_FT_CUT_HOURS])),
     # Same share by region, by primary care type -- 05_compare_nsece_shares.R
     # tests whether either split moves step 1; build keeps national.
     short_share_by(prim, 'region', 'short_share_of_part_time_region'),

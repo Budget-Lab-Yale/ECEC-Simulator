@@ -731,33 +731,13 @@ run_nsece_processing <- function() {
           #   (resolve_regular_care(), TOC 1-5 only) -> never count, never
           #   payment donors / draw targets (2026-10-12; TOC 8 counted Other before)
           in_child_home = careloc == 1,
-          has_prior_rel = priorrel == 1,
+          has_prior_rel = priorrel == 1
+        ) %>%
 
-          is_home_based = is_home & !in_child_home & !has_prior_rel,
-          is_other_kind = (!is_center & !is_k8) & (!is_home | in_child_home | has_prior_rel),
-
-          # Kind of unknown-payment row -- picks its candidate labels
-          # (PAY_UNKNOWN_OPTIONS) in child-level overlay
-          unknown_kind = case_when(
-            is_k8 | !pay_unknown ~ NA_character_,
-            is_center            ~ 'center',
-            is_home_based        ~ 'home',
-            is_other_kind        ~ 'other'
-          ),
-
-          ecec_choice = case_when(
-            is_k8                                               ~ 'K-8',
-            pay_unknown                                         ~ NA,
-            is_center & !is_paid                                ~ 'Unpaid Center-Based',
-            # Paid centre -- tier set below against own market's median
-            is_center & is_paid                                 ~ 'Paid Center-Based',
-            is_home_based & !is_paid                            ~ 'Unpaid Home-Based',
-            is_home_based &  is_paid                            ~ 'Paid Home-Based',
-            is_other_kind & !is_paid                            ~ 'Other Unpaid',
-            is_other_kind &  is_paid                            ~ 'Other Paid',
-            TRUE                                                ~ NA
-          )
-        )
+        # Home-based / other, unknown-payment kind (candidate labels,
+        # PAY_UNKNOWN_OPTIONS, child-level overlay), label -- shared w/ 02.
+        # Paid centre: tier set below against own market's median
+        classify_nsece_provider(paid_centre_label = 'Paid Center-Based')
 
       # Draw stage, NSECE_MI_DRAWS times (multiple imputation,
       # nsece_mi_draws.R): draw m seeds = base + m x NSECE_MI_SEED_STEP, m = 0
@@ -897,7 +877,7 @@ run_nsece_processing <- function() {
             ecec_hours_choice = case_when(
               is.na(ecec_choice) ~ NA,
               hours == 0         ~ 'none',
-              hours < 20         ~ 'pt',
+              hours < PT_FT_CUT_HOURS ~ 'pt',
               TRUE               ~ 'ft'
             )
           ) %>%
@@ -1405,8 +1385,10 @@ run_nsece_processing <- function() {
   # OOP / base price), 99 quantiles. Replaces price QRF (2026-10-12) -- 5-fold
   # household-held-out CV: negative pseudo-R2, negative pinball skill vs
   # constant quantile for every care type, income-rank scheme. Low-price
-  # center, Other Paid add one grid per income quintile (same CV: pinball
-  # loss 8-13% lower every fold); cell < PRICE_WEDGE_MIN_CELL_HH households
+  # center, Other Paid add one grid per income quintile (same CV, rerun
+  # 2026-10-13 on urbanicity tiers, national_rpp: pinball loss 11.3% / 8.0%
+  # lower pooled; Other Paid lower every fold, low-price center 4 of 5 --
+  # fold 2 4.5% higher); cell < PRICE_WEDGE_MIN_CELL_HH households
   # -> unconditional grid
   {
     supply_prices <- supply_params$prices

@@ -113,13 +113,7 @@ main_by_age <- function(args = commandArgs(trailingOnly = TRUE)) {
     paste(k$SERIAL, k$PERNUM)
   }
   hh <- fread(file.path(iface, 'estimation', 'data', 'acs_households_2019.csv')) %>% tibble()
-  geos <- c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))
-  geo_hh <- list()
-  for (g in geos) {
-    fips <- if (g %in% names(SUBSTATE_GEOGRAPHIES)) SUBSTATE_GEOGRAPHIES[[g]]$statefip
-            else STATE_POSTAL_TO_FIPS[[g]]
-    geo_hh[[g]] <- select_geo_hh_ids(hh, g, fips)
-  }
+  geo_hh <- geo_hh_ids(hh, skip_errors = FALSE)
 
   # Sub-state geography w/ own p0 (NYC income ranks) -- as acs_p0_shares.R
   sub_ad <- substate_alpha_data(iface, geo_hh)
@@ -127,8 +121,7 @@ main_by_age <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   res <- list()
   for (pu_type in c('c1', 'c2plus')) {
-    ad <- readRDS(file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds')))
-    ad <- if (!is.null(ad[[pu_type]])) ad[[pu_type]] else ad
+    ad <- read_alpha_data(iface, pu_type)
     n_children <- if (pu_type == 'c1') 1 else 2
     ca <- child_ages(iface, pu_type, ad)
     ages <- ca$ages

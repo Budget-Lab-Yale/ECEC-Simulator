@@ -17,9 +17,11 @@
 
 PRICE_WEDGE_TYPES <- c('center_low', 'center_high', 'home', 'other_paid')
 
-# Types w/ income-quintile grids -- household-held-out 5-fold CV (2026-10-12):
-# pinball loss 8-13% below unconditional grid in every fold. center_high,
-# home: no gain, most quintile cells < 30 households
+# Types w/ income-quintile grids -- household-held-out 5-fold CV (rerun
+# 2026-10-13 on urbanicity tiers, national_rpp): pinball loss vs unconditional
+# grid 11.3% lower pooled for center_low (4 of 5 folds, fold 2 4.5% higher),
+# 8.0% for other_paid (every fold). center_high, home: ~0.5% gain, quintiles
+# 1-3 < 30 training households
 PRICE_WEDGE_QUINTILE_TYPES <- c('center_low', 'other_paid')
 
 # Quintile cell w/ fewer distinct NSECE households -> unconditional grid
@@ -391,8 +393,52 @@ draw_price_pctile_idx <- function(hh_id, parent_unit_id, seed) {
   # Returns: int vector, values in 1:99, one per key
   #----------------------------------------------------------------------------
 
-  h <- keyed_hash_2_32(hh_id, parent_unit_id, seed, 'draw_price_pctile_idx')
+  h <- keyed_hash_2_32(hh_id, parent_unit_key(parent_unit_id), seed, 'draw_price_pctile_idx')
   as.integer(1 + (h * 99) %/% 4294967296)
+}
+
+
+
+parent_unit_key <- function(parent_unit_id) {
+
+  #----------------------------------------------------------------------------
+  # Numeric hash key for parent unit id. ACS ids are text: '<hhm_id1>' (one
+  # parent) or '<hhm_id1>_<hhm_id2>' (two, 1b) -> hhm_id1 x 1000 + hhm_id2
+  # (0 w/out second parent). Person numbers < 1000 -> one key per unit, no
+  # collision. Numeric ids pass through unchanged.
+  #
+  # Params:
+  #   - parent_unit_id (chr | num): parent unit ids
+  #
+  # Returns: (num vec) non-negative integer keys; NA where id unparseable
+  #   (keyed_hash_2_32() then stops)
+  #----------------------------------------------------------------------------
+
+  if (is.numeric(parent_unit_id)) return(parent_unit_id)
+  parts <- strsplit(as.character(parent_unit_id), '_', fixed = TRUE)
+  vapply(parts, function(p) {
+    v <- suppressWarnings(as.numeric(p))
+    if (length(v) < 1 || length(v) > 2 || anyNA(v) || any(v >= 1000)) return(NA_real_)
+    v[1] * 1000 + if (length(v) == 2) v[2] else 0
+  }, numeric(1))
+}
+
+
+
+make_parent_unit_id <- function(hhm_id1, hhm_id2) {
+
+  #----------------------------------------------------------------------------
+  # ACS parent unit id (1b): '<hhm_id1>' one parent, '<hhm_id1>_<hhm_id2>'
+  # two. Lives beside parent_unit_key() -- tests check one inverts other.
+  #
+  # Params:
+  #   - hhm_id1 (int): first parent's person number (PERNUM)
+  #   - hhm_id2 (int): second parent's person number, NA w/out one
+  #
+  # Returns: (chr vec) parent unit ids
+  #----------------------------------------------------------------------------
+
+  dplyr::if_else(is.na(hhm_id2), as.character(hhm_id1), paste0(hhm_id1, '_', hhm_id2))
 }
 
 

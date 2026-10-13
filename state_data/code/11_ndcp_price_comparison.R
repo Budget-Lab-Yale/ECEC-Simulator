@@ -57,6 +57,7 @@ suppressPackageStartupMessages({library(dplyr); library(readr); library(tidyr)})
 
 # STATE_POSTAL_TO_FIPS, SUBSTATE_GEOGRAPHIES; STATE_DATA_ROOT, show_df()
 source('src/shared_functions/constants.R')
+source('src/shared_functions/resolve_regular_care.R')   # weighted_median()
 source('state_data/code/shared_setup.R')
 
 NDCP_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'local',
@@ -115,21 +116,6 @@ read_ndcp <- function() {
 
 
 
-wmedian <- function(x, w) {
-
-  #----------------------------------------------------------------------------
-  # Weighted median -- smallest x with cumulative weight share >= 0.5.
-  #
-  # Params: x (dbl), w (dbl)
-  # Returns: (dbl)
-  #----------------------------------------------------------------------------
-
-  o <- order(x); x <- x[o]; w <- w[o]
-  x[which(cumsum(w) / sum(w) >= 0.5)[1]]
-}
-
-
-
 summarise_prices <- function(nd) {
 
   #----------------------------------------------------------------------------
@@ -146,7 +132,7 @@ summarise_prices <- function(nd) {
       kids0_4_total   = sum(kids0_4),     # new name -- reusing kids0_4 masks column
       pct_kids_no_price = 100 * sum(kids0_4[is.na(price)]) / sum(kids0_4),
       price_child_wmean  = weighted.mean(price[!is.na(price)], kids0_4[!is.na(price)]),
-      price_child_wmedian = wmedian(price[!is.na(price)], kids0_4[!is.na(price)]),
+      price_child_wmedian = weighted_median(price[!is.na(price)], kids0_4[!is.na(price)]),
       price_totalpop_wmean = weighted.mean(price[!is.na(price)], totalpop[!is.na(price)]),
       price_obs_wmean = if (any(!is.na(price) & !imputed))
         weighted.mean(price[!is.na(price) & !imputed], kids0_4[!is.na(price) & !imputed])

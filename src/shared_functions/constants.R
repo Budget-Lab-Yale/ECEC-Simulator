@@ -27,6 +27,7 @@
 # Weekly care hours by type
 FT_CARE_HOURS  <- 40   # Full-time care hours per week
 PT_CARE_HOURS  <- 10   # Part-time care hours per week
+PT_FT_CUT_HOURS <- 20  # Observed weekly hours below this -> 'pt' band (NSECE labels, NHES check)
 
 # Annual schedule
 WEEKS_PER_YEAR <- 50   # Weeks of care per year (assumes 2 weeks off)
@@ -37,6 +38,14 @@ HOURS_ANNUAL <- c(
   'pt'   = PT_CARE_HOURS * WEEKS_PER_YEAR,
   'ft'   = FT_CARE_HOURS * WEEKS_PER_YEAR
 )
+
+# Primary-arrangement rank (Borowsky: paid before unpaid, centre first) --
+# assign_primary_care(), NSECE labels. _ONE_CENTRE: price tiers merged, for
+# state_data builds w/ one Center-Based row (02, 07 NHES check).
+ECEC_PRIMARY_PRIORITY <- c('K-8', 'High-Priced Center-Based', 'Low-Priced Center-Based',
+                           'Unpaid Center-Based', 'Paid Home-Based', 'Other Paid',
+                           'Unpaid Home-Based', 'Other Unpaid')
+ECEC_PRIMARY_PRIORITY_ONE_CENTRE <- unique(sub('^(High|Low)-Priced ', '', ECEC_PRIMARY_PRIORITY))
 
 # Sector mapping (ecec_type -> sector_id)
 SECTOR_MAPPING <- tibble(
@@ -234,24 +243,6 @@ STATE_DEMAND_CONTRACTION_MAX_ITER <- 500L
 
 
 
-#------------------------------------------------------------------------------
-# State-Level Analysis
-#
-# See docs/state_level_analysis.md. Runscripts specify states as USPS postal
-# abbreviations; IPUMS ACS uses numeric FIPS codes (STATEFIP), so we crosswalk
-# here. 50 states + DC.
-#------------------------------------------------------------------------------
-
-STATE_POSTAL_TO_FIPS <- c(
-  AL =  1, AK =  2, AZ =  4, AR =  5, CA =  6, CO =  8, CT =  9, DE = 10,
-  DC = 11, FL = 12, GA = 13, HI = 15, ID = 16, IL = 17, IN = 18, IA = 19,
-  KS = 20, KY = 21, LA = 22, ME = 23, MD = 24, MA = 25, MI = 26, MN = 27,
-  MS = 28, MO = 29, MT = 30, NE = 31, NV = 32, NH = 33, NJ = 34, NM = 35,
-  NY = 36, NC = 37, ND = 38, OH = 39, OK = 40, OR = 41, PA = 42, RI = 44,
-  SC = 45, SD = 46, TN = 47, TX = 48, UT = 49, VT = 50, VA = 51, WA = 53,
-  WV = 54, WI = 55, WY = 56
-)
-
 # Sub-state geographies a runscript may name beside states, selected on
 # STATEFIP + IPUMS COUNTYFIP (3-digit, within state; 0 = not identified).
 # Needs raw ACS pull carrying COUNTYFIP. NYC = Bronx 005, Kings 047, New York
@@ -282,11 +273,8 @@ parent_geo <- function(geo) {
   if (is.null(p)) geo else p
 }
 
-# Convergence settings for the state demand-target contraction
-# (adjust_alpha_for_state): delta_t += log(H_target / H_model), iterated until
-# the max abs log-gap falls below tolerance
-STATE_DEMAND_CONTRACTION_TOL      <- 1e-8
-# 500 sufficed while every care type had own target. Shared centre-band delta
+# Contraction iteration cap -- overrides 500 above (STATE_POSTAL_TO_FIPS block,
+# dev-summer2026). 500 sufficed while every care type had own target. Shared centre-band delta
 # leaves a slow common-level mode Berry update walks down linearly: synthetic
 # six-target test converges in 1,147 iterations. Iterations cheap -- cap
 # generous, not tuned. A run needing thousands signals bad targets, so still
