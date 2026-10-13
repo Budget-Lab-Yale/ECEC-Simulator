@@ -273,12 +273,13 @@ run_acs_processing <- function() {
 
     # Add parent unit information
     if (is_nsece) {
-      # NSECE: respondent (parent 1) is primary caregiver by survey design
+      # NSECE: parent 2's sex inferred in 1a, so primary caregiver follows the
+      # ACS rule below
       rf_tmp <- rf_tmp %>%
         left_join(
           parent_units %>%
             select(hh_id, parent_unit_id, p.hhm_id1 = hhm_id1, p.hhm_id2 = hhm_id2,
-                   p.male1 = male1, p.hours1 = hours1, p.hours2 = hours2),
+                   p.male1 = male1, p.male2 = male2, p.hours1 = hours1, p.hours2 = hours2),
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         left_join(
@@ -319,13 +320,18 @@ run_acs_processing <- function() {
 
     # Derive primary caregiver employment choice
     if (is_nsece) {
-      # NSECE: respondent (parent 1) is primary caregiver
+      # NSECE: same rule as ACS (mother in two-parent families), so the
+      # forest trains on the parent it is applied to. Parent 1 is the
+      # respondent, the father in about 28% of two-parent units (weighted);
+      # using the respondent here mismatched training and prediction.
+      # Parent 2's sex unknown -> parent 1, as before.
       rf_tmp <- rf_tmp %>%
         mutate(
-          hours_pc = p.hours1,
+          primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
+          hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
           employment_choice_pc = derive_employment_choice(hours_pc)
         ) %>%
-        select(-hours_pc, -income)
+        select(-hours_pc, -income, -primary_caregiver, -p.male2)
     } else {
       # ACS: identify primary caregiver then derive employment choice
       rf_tmp <- rf_tmp %>%

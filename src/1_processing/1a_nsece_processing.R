@@ -308,7 +308,30 @@ run_nsece_processing <- function() {
             ) %>%
             select(hh_id = HH9_METH_CASEID, hhm_id1, male1),
           by = c('hh_id', 'hhm_id1')
-        )
+        ) %>%
+
+        # Parent 2's sex. The public file has the respondent's sex only, so
+        # infer the other parent's from household counts of mothers and
+        # fathers (HH9_HHCOMP_NUMMOTHER / NUMFATHER) when parent 1 is the
+        # respondent: respondent father + one father in the household +
+        # 1+ mothers -> parent 2 is a mother, and the reverse. NA otherwise.
+        # Needed so 1b can pick the mother as primary caregiver, as for ACS.
+        left_join(
+          nsece_hh %>%
+            select(hh_id     = HH9_METH_CASEID,
+                   n_mothers = HH9_HHCOMP_NUMMOTHER,
+                   n_fathers = HH9_HHCOMP_NUMFATHER),
+          by = 'hh_id'
+        ) %>%
+        mutate(
+          male2 = case_when(
+            is.na(hhm_id2) | n_mothers < 0 | n_fathers < 0  ~ NA_integer_,
+            male1 %in% 1 & n_fathers == 1 & n_mothers >= 1 ~ 0L,
+            male1 %in% 0 & n_mothers == 1 & n_fathers >= 1 ~ 1L,
+            TRUE                                           ~ NA_integer_
+          )
+        ) %>%
+        select(-n_mothers, -n_fathers)
 
       pu <- {
         labor_hi_cols     <- grep('^HH9_WST_PARCH_HI_[1-9]$',    names(nsece_hh), value = T)
