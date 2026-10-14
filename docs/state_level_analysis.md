@@ -82,12 +82,12 @@ processing (national)  →  calibration (national)
               - override supply params if state yaml present    (§7)
               - resolve state epop file if present              (§8)
               - take the state's rows of the price wedge cache
-                (each care type's weighted empirical NSECE price wedge
-                distribution, one keyed percentile per parent unit;
-                low-priced center and Other Paid by national income
-                quintile; no region input -- the state market price
-                carries the geographic price level; the NYC run takes
-                its own NYC-rank alphas and NYC-rank wedge rows, §5)
+                (each care type's price forest, a quantile regression
+                forest on income percentile, region, parents, and child
+                age, at one random percentile per parent unit as in
+                main (set.seed + sample); the NYC
+                run takes its own NYC-rank alphas and NYC-rank wedge
+                rows, §5)
         →  each simulation year: loop over states               (§6)
               - per-state equilibrium (baseline + counterfactuals)
               - per-state warm-start prices
@@ -332,7 +332,20 @@ rises by 0.14% to 0.20%; Unpaid Center-Based does not change. 1a takes about
    children 0-4 whose respondent said "I pay the provider" were drawn
    unpaid; -2 counted as unpaid. Where both are known, the amount and
    `HH9_PAID` disagree on 6 of 4,456 regular rows (children 0-4).
-6. **The paid-center tier line moves with urban density.** One dollar does
+6. **The paid-center tier line moves with urban density (state runs).**
+   This item applies only when `ECEC_URBAN_DENSITY=1`, which state runs
+   set; the switch turns on all state machinery (density tier line and
+   cells, region donor cells in the hours and paid-status draws,
+   RPP-adjusted income ranks). With `0` (the default, national runs), the
+   label steps equal main: the tier line is the national age band median
+   posted price (`compute_tier_thresholds_age_bin()`), the tier draw takes
+   age cells only, the hours draw takes type of care x age band then type
+   of care, the paid-status draw kind x age band then kind, and incomes are
+   ranked nominally (`national` scheme). 1a, 1b, the
+   price forest file, and the alpha files record the setting. 1b, 2a, 3a,
+   and `load_substate_alpha()` stop when the run's setting differs from the
+   interface's. A file with no record counts as `1` (built before the
+   switch on 2026-10-14). With `1`: one dollar does
    not buy the same care in a rural market and in a dense city. I set the
    line for region `r`, density `d`, and age band `a` to
    `m(r, a | d = 1) x M(d, a) / M(1, a)`: `m` is the regional median posted
@@ -348,7 +361,11 @@ rises by 0.14% to 0.20%; Unpaid Center-Based does not change. 1a takes about
    fewer than 30 raw donor rows falls back to density x age band, then to
    age band. The price multipliers use observed hourly payments only: a
    row with imputed hours or an unknown amount does not enter them.
-7. **The forest takes community urban density as a feature.** NSECE
+7. **Removed 2026-10-14: the forest no longer takes community urban
+   density, and 1b no longer averages over PUMA shares.** Importance checks
+   gave the feature near-zero importance, and dropping it changes nothing.
+   The table and builder stay in `resources/acs/` (no run reads them). The
+   text below records the measure as built 13 October 2026. NSECE
    density is the 2010 Census urban share of the population in tracts
    within 2 miles of the household (distance weighted), cut at 0.85 (high)
    and 0.30 (rural) (NSECE 2019 household user guide, section 15). The
@@ -390,25 +407,30 @@ rises by 0.14% to 0.20%; Unpaid Center-Based does not change. 1a takes about
 Income enters two models through the income percentile. The first is the
 care-choice forest that gives `p0` (`1b_acs_processing.R`). It ranks
 household income (HHINCOME) against cutpoints weighted by children under 5.
-The second is the price wedge (`compute_price_wedge_cache.R`). Since
-2026-10-12 the wedge is a weighted empirical NSECE price distribution, because
-a quantile regression forest on income, parents, and child age had negative
-out-of-sample skill. Low-priced center care and Other Paid use one
-distribution per income quintile, because a household-held-out 5-fold test
-(rerun 13 October 2026 on the urbanicity tiers) gave a pinball loss 11.3%
-lower than one distribution for low-priced centers and 8.0% lower for Other
-Paid, pooled over folds. Other Paid is lower in every fold; low-priced
-centers are lower in 4 of 5 folds and 4.5% higher in one. A
-quintile cell with fewer than 30 NSECE households uses the one distribution.
-High-priced center care and paid home-based care keep one distribution: the
-test showed no gain, and most quintile cells had fewer than 30 households.
-`price_wedge_income_pctiles()` ranks ACS households for the wedge with the
-same scheme and the same national cutpoints as the forest. Ties get a keyed
+The second is the price wedge (`compute_price_wedge_cache.R`). On 14
+October 2026 I restored the price forest for every run: one quantile
+regression forest per care type on income percentile, region, number of
+parents, and the mean age of the children under 5 (500 trees, `mtry` 4,
+minimum node size 10, 50,000-row weighted sample). It replaces the
+empirical quantile grids of 12 to 13 October. As in main, one random
+percentile per unit (`set.seed(random_seed_base + 2)`, then
+`sample(1:99, n, replace = TRUE)`, shared by the care types) picks the
+quantile level; there is no keyed price draw, so the global RNG moves and
+the wedge depends on unit order. The forest predicts the 99-level grid once
+for each distinct feature row; 1a trains it with no own seed, as main.
+`price_wedge_income_pctiles()` ranks ACS parent units for the wedge by
+baseline AGI (`baseline_agi1 + baseline_agi2`, weighted by the mean parent
+weight), as the original simulator did, with the same RPP adjustment as the
+scheme and national cutpoints. The care-choice forest keeps household
+income. AGI of 0 or less gets percentile 1; an unknown AGI gets no wedge.
+Ties get a keyed
 jitter in place of `runif()`, so the global RNG does not move. The scheme
 comes from
-`ECEC_INCOME_RANK` (`income_rank.R`). Both schemes rank nationally:
-`national_rpp` (default) divides income by the state RPP (NSECE: the Census
-region RPP), and `national` uses nominal income as the one sensitivity. The
+`ECEC_INCOME_RANK` (`income_rank.R`); unset, it follows the urban-density
+switch. Both schemes rank nationally:
+`national_rpp` (default with `ECEC_URBAN_DENSITY=1`) divides income by the
+state RPP (NSECE: the Census region RPP), and `national` (default with the
+switch off, as main) uses nominal income. The
 `state` and `region` schemes (ranks within state or Census region) were
 removed on 2026-10-12, because a test showed no difference from
 `national_rpp`. NYC households get two versions of their ranks:
@@ -416,7 +438,7 @@ removed on 2026-10-12, because a test showed no difference from
 1. **The NY run and every national use** divide NYC income by the NY state
    RPP. These are the national `alpha_<type>_2019.rds`, unchanged.
 2. **The NYC run** uses NYC rank inputs (`substate_rank_inputs()`):
-   - `national_rpp` (default): NYC income is divided by the NYC metro RPP
+   - `national_rpp` (default with the switch on): NYC income is divided by the NYC metro RPP
      (`msa_35620`, 114.899) in place of the NY state RPP (109.426). The
      cutpoints stay the national ones, built with the NY value for NYC.
    - `national`: the two versions are identical. The code skips the second
@@ -432,17 +454,16 @@ How the NYC version is built:
 2. **Calibration** first estimates beta and rho nationally, as before. Then
    `compute_substate_alphas()` (`compute_substate_alpha.R`) rebuilds the
    NYC rows of the calibration data with the NYC `p0` and NYC price wedge
-   rows. The NYC wedge rows take the income quintile from the NYC rank
+   rows. The NYC wedge rows take the income percentile from the NYC rank
    inputs (`price_wedge_income_pctiles(..., geo = 'NYC')`), so the
-   low-priced center and Other Paid wedges can differ from the national
-   rows. Each parent unit's drawn percentile comes from a
-   hash of `(hh_id, parent_unit_id)` and a seed
-   (`draw_price_pctile_idx()`), not from the row position. The percentile is
-   the same in the national, state, and NYC runs, so the high-priced center
-   and home wedges are the same in all of them. The cache does not move the
-   global RNG stream. It writes
+   wedges can differ from the national rows. The NYC cache draws its own
+   percentiles (`set.seed(random_seed_base + 2)`, then `sample(1:99)` over
+   the NYC units, as main), so a NYC unit's drawn percentile can differ from
+   its national one. Each cache call sets the seed and so moves the global
+   RNG stream. It writes
    `alpha = log p0_NYC - V_NYC` as `alpha_<type>_2019_NYC.rds` (same fields
-   as the national file, plus `geo` and `income_rank_scheme`). It stops if
+   as the national file, plus `geo`, `income_rank_scheme`, and
+   `urban_density`). It stops if
    the NYC rows or child weights do not match the NYC rows of the national
    file.
 3. **Simulation init** gives the NYC context the NYC alpha file

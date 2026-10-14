@@ -14,9 +14,10 @@
 
 
 # Target groups: a state target file names a GROUP of model care types. All
-# singletons except centre care -- tiers fall below or at/above density-adjusted
-# provider-file line for region x urban density x age band (1a,
-# compute_tier_thresholds()); no state source counts them, state
+# singletons except centre care -- tiers fall below or at/above provider-file
+# line (1a): urban density on (state runs) density-adjusted line for region x
+# urban density x age band (compute_tier_thresholds()), off region x age band
+# median; no state source counts them, state
 # sources support only the SUM. One delta for the pair pins combined hours, no
 # tier-share target: a common additive shift keeps each family's odds between
 # tiers, aggregate split still moves as families reweight (model determines it).

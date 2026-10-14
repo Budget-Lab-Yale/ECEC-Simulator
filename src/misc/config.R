@@ -696,14 +696,30 @@ default_paths <- read_yaml('./config/default_paths.yaml')
 # Make seed_offset globally accessible for simulation
 seed_offset <<- if (exists('seed_offset')) seed_offset else 0
 
-# Income-rank scheme for care-choice forest (income_rank.R).
-# Env var ECEC_INCOME_RANK; unset -> 'national_rpp' (real income ranked
-# nationally -- 10/13 ranking test); 'national' = nominal income, sensitivity
-income_rank_scheme <<- Sys.getenv('ECEC_INCOME_RANK', 'national_rpp')
-if (income_rank_scheme == '') income_rank_scheme <<- 'national_rpp'
+# Urban density switch (urban_density.R): all state machinery. Env var
+# ECEC_URBAN_DENSITY; unset/'0' -> off (default = main: age bin tier line, no
+# region donor cells, nominal income ranks), '1' -> on (state runs: density
+# tier line, region donor cells, RPP-adjusted income ranks). Interface stages
+# record setting -- 2a, 3a stop on mismatch
+urban_density_setting <<- Sys.getenv('ECEC_URBAN_DENSITY', '0')
+if (urban_density_setting == '') urban_density_setting <<- '0'
+if (!urban_density_setting %in% c('0', '1')) {
+  stop('ECEC_URBAN_DENSITY = "', urban_density_setting, '" unknown. Use 0 (default) or 1.')
+}
+cat('Urban density:', if (urban_density_setting == '1') 'on' else 'off', '\n')
+
+# Income-rank scheme for care-choice forest + price forest (income_rank.R).
+# Env var ECEC_INCOME_RANK; unset -> from urban density switch: off ->
+# 'national' (nominal income, = main), on -> 'national_rpp' (real income ranked
+# nationally -- 10/13 ranking test). Explicit value overrides
+income_rank_scheme <<- Sys.getenv('ECEC_INCOME_RANK', '')
+# (same rule as default_income_rank_scheme(), income_rank.R -- not sourced yet)
+if (income_rank_scheme == '') {
+  income_rank_scheme <<- if (urban_density_setting == '1') 'national_rpp' else 'national'
+}
 if (!income_rank_scheme %in% c('national_rpp', 'national')) {
   stop('ECEC_INCOME_RANK = "', income_rank_scheme, '" unknown. ',
-       'Use national_rpp (default) or national -- state, region schemes removed.')
+       'Use national_rpp or national -- state, region schemes removed.')
 }
 cat('Income-rank scheme:', income_rank_scheme, '\n')
 

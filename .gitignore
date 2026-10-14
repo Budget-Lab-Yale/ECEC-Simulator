@@ -8,7 +8,7 @@ nul
 cache/
 config/demand/
 config/supply/
-cache/price_models/price_wedge_quantiles.rds
+cache/price_models/price_qrf_models.rds
 slurm/scratch/
 slurm/logs/
 

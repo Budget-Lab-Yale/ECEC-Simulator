@@ -24,7 +24,8 @@
 IMPUTE_PAY_SEED <- 20261012L
 
 # Min raw donor rows for tier cell finer than age (region x density x age,
-# density x age); thinner cell falls to next level
+# density x age; switch on only -- off = age cells only); thinner cell falls to
+# next level
 TIER_CELL_MIN_N <- 30L
 
 
@@ -108,11 +109,13 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
 
   #----------------------------------------------------------------------------
   # Draws paid status for every counting unknown-payment arrangement from
-  # weighted paid share among known-payment arrangements of same kind x age
-  # cell (child weights). Centre drawn paid -> tier drawn from weighted
-  # High / Low split of known tiered paid centres, region x urban density x
-  # age cell; < TIER_CELL_MIN_N raw donors -> density x age, then age
-  # (2026-10-12; region x age, national age fallback before). Draws made for whole
+  # weighted paid share among known-payment arrangements of same Census
+  # kind x age cell, else kind over all ages (child weights). Urban density
+  # on (`density` column in arr -- state runs, 2026-10-14): region x kind x
+  # age cell first (>= TIER_CELL_MIN_N raw donor rows). Centre drawn paid ->
+  # tier drawn from weighted High / Low split of known tiered paid centres:
+  # on region x urban density x age cell, < TIER_CELL_MIN_N raw donors ->
+  # density x age, then age; off (default, = main) age only. Draws made for whole
   # universe, sorted (hh_id, child_id, provider_id), two uniforms per row
   # (paid, tier) -- draw for a row doesn't depend on which children end up
   # ambiguous, nor on caller's tier labels. Caller applies draws to every
@@ -140,6 +143,7 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
   #       imp_paid TRUE, paid_share / u_paid NA)
   #   - paid_cells (tibble): kind, age_cell, paid_share, n (raw donor rows),
   #       wt (weighted donor children)
+  #   - paid_cells_region (tibble): region, kind, age_cell, paid_share, n, wt
   #   - tier_cells (tibble): level, region, density, age_cell, high_share,
   #       n, wt -- every level, thin cells incl.
   #----------------------------------------------------------------------------
@@ -154,12 +158,32 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
     group_by(kind, age_cell) %>%
     summarise(paid_share = sum(wt * paid) / sum(wt), n = n(), wt = sum(wt),
               .groups = 'drop')
+  # Finer donor cells (2026-10-14, switch on only): Census region x kind x age
+  # cell (used w/ >= TIER_CELL_MIN_N raw donor rows), and kind over all ages
+  # (fallback when kind x age cell empty). Fallback order region x kind x age
+  # -> kind x age -> kind. NSECE has no state id -- region finest geography
+  paid_donors <- arr %>%
+    filter(counts %in% TRUE, !is.na(kind), !is.na(paid), !is.na(age_cell), wt > 0)
+  paid_cells_region <- paid_donors %>%
+    filter(!is.na(region)) %>%
+    group_by(region, kind, age_cell) %>%
+    summarise(paid_share = sum(wt * paid) / sum(wt), n = n(), wt = sum(wt),
+              .groups = 'drop')
+  paid_cells_kind <- paid_donors %>%
+    group_by(kind) %>%
+    summarise(paid_share = sum(wt * paid) / sum(wt), n = n(), wt = sum(wt),
+              .groups = 'drop')
+  # Urban density on = `density` column in arr (1a passes it only w/ switch
+  # on). Off = main: no region cells anywhere -- paid status kind x age ->
+  # kind, tier age only
+  use_density <- 'density' %in% names(arr)
+  if (!use_density) paid_cells_region <- paid_cells_region[0, ]
 
-  # Tier donors: known paid centres w/ tier (caller's labels -- 1a
-  # density-adjusted tier line). Cells region x density x age -> density x
-  # age -> age; finer cell used only w/ >= TIER_CELL_MIN_N raw donor rows,
-  # age cell always. No density column -> age cells only
-  if (!'density' %in% names(arr)) arr$density <- NA_integer_
+  # Tier donors: known paid centres w/ tier (caller's labels -- 1a tier
+  # line). Urban density on (density column): cells region x density x age ->
+  # density x age -> age. Density off (no column): age cells only. Finer
+  # cell used only w/ >= TIER_CELL_MIN_N raw donor rows, age cell always
+  if (!use_density) arr$density <- NA_integer_
   tier_donors <- arr %>%
     filter(counts %in% TRUE, kind %in% 'center', paid %in% TRUE,
            !is.na(tier), !is.na(age_cell), wt > 0)
@@ -175,7 +199,7 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
   tier_da  <- tier_share(filter(tier_donors, !is.na(density)),
                          c('density', 'age_cell'), 'density x age')
   tier_a   <- tier_share(tier_donors, 'age_cell', 'age')
-  tier_cells <- bind_rows(tier_rda, tier_da, tier_a)
+  tier_cells <- if (use_density) bind_rows(tier_rda, tier_da, tier_a) else tier_a
 
   # Draw universe: counting rows, known kind, unknown payment
   universe <- arr %>%
@@ -190,6 +214,13 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
   # Tier share per row: finest cell w/ >= TIER_CELL_MIN_N donors, age always
   ok <- function(t) filter(t, n >= TIER_CELL_MIN_N)
   add_tier_share <- function(d) {
+    if (!use_density) {
+      # Off = main: age cells only, no region
+      return(d %>%
+        left_join(select(tier_a, age_cell, hs_a = high_share), by = 'age_cell') %>%
+        mutate(tier_level = if_else(!is.na(hs_a), 'age', NA_character_),
+               high_share = hs_a))
+    }
     d %>%
       left_join(select(ok(tier_rda), region, density, age_cell, hs_rda = high_share),
                 by = c('region', 'density', 'age_cell')) %>%
@@ -206,7 +237,11 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
   draws <- universe %>%
     select(hh_id, child_id, provider_id, kind, region, density, age_cell, paid_q) %>%
     mutate(u_paid = u[, 1], u_tier = u[, 2]) %>%
-    left_join(select(paid_cells, kind, age_cell, paid_share), by = c('kind', 'age_cell')) %>%
+    left_join(select(filter(paid_cells_region, n >= TIER_CELL_MIN_N), region, kind, age_cell,
+                     ps_region = paid_share), by = c('region', 'kind', 'age_cell')) %>%
+    left_join(select(paid_cells, kind, age_cell, ps_ka = paid_share), by = c('kind', 'age_cell')) %>%
+    left_join(select(paid_cells_kind, kind, ps_k = paid_share), by = 'kind') %>%
+    mutate(paid_share = coalesce(ps_region, ps_ka, ps_k)) %>%
     add_tier_share() %>%
     # Questionnaire answer wins; draw only where HH9_PAID unknown
     mutate(imp_paid = coalesce(as.logical(paid_q), u_paid < paid_share),
@@ -237,5 +272,6 @@ impute_unknown_payment <- function(arr, seed = IMPUTE_PAY_SEED) {
            tier_only = TRUE) %>%
     select(names(draws))
 
-  list(draws = bind_rows(draws, tier_draws), paid_cells = paid_cells, tier_cells = tier_cells)
+  list(draws = bind_rows(draws, tier_draws), paid_cells = paid_cells,
+       paid_cells_region = paid_cells_region, tier_cells = tier_cells)
 }

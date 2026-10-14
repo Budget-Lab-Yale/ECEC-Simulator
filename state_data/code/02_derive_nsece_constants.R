@@ -60,6 +60,8 @@ source('state_data/code/shared_setup.R')
 # Unknown-payment imputation -- same rule, same draws as 1a
 # (assign_primary_care(), impute_unknown_payment()); with_rng_preserved()
 source('src/shared_functions/impute_unknown_payment.R')
+# Urban-density switch (ECEC_URBAN_DENSITY, require_urban_density_on())
+source('src/shared_functions/urban_density.R')
 # Regular care, weekly hours -- same rule as 1a (REGCARE -1 / -2 by TOC,
 # zero-hour regular rows drawn hours, keyed hash from price wedge file) and
 # provider care type, classify_nsece_provider() -- same rules as 1a
@@ -184,8 +186,8 @@ build_arrangements <- function(d, kids_all, draws = NSECE_MI_DRAWS) {
   #
   # Params:
   #   - d (data.table) from read_household()
-  #   - kids_all (tibble): build_children_all() rows (age, child_weight --
-  #       hours imputation cells, donor weights)
+  #   - kids_all (tibble): build_children_all() rows (age, child_weight,
+  #       region -- hours imputation cells, donor weights)
   #   - draws (int): label draws (M)
   #
   # Returns: (tibble) hh_id, child_id, provider_id, ecec_choice,
@@ -224,11 +226,12 @@ build_arrangements <- function(d, kids_all, draws = NSECE_MI_DRAWS) {
               cost     = HH9_WEEKLY_PAYMENT_TC,
               # Questionnaire paid status, as 1a paid_hh -> paid_q
               paid_q   = case_when(HH9_PAID %in% 1 ~ TRUE, HH9_PAID %in% 0 ~ FALSE)) %>%
-    left_join(select(kids_all, hh_id, child_id, age, child_weight),
+    # region: hours-draw donor cells (region x TOC group x age), as 1a
+    left_join(select(kids_all, hh_id, child_id, age, child_weight, region),
               by = c('hh_id', 'child_id'))
 
   bind_rows(lapply(seq_len(draws) - 1L, function(m) classify_arrangements(
-    resolve_regular_care(base, seed = nsece_mi_seed(REGULAR_HOURS_SEED, m))$arr) %>%
+    select(resolve_regular_care(base, seed = nsece_mi_seed(REGULAR_HOURS_SEED, m))$arr, -region)) %>%
       mutate(draw = m)))
 }
 
@@ -681,6 +684,10 @@ main <- function() {
   #
   # Returns: (tibble) written quantities, invisibly
   #----------------------------------------------------------------------------
+
+  # Reads NSECE community urban density (tier donor cells, as 1a): state setup
+  # runs w/ urban density on (urban_density.R, state_data/README.md)
+  require_urban_density_on('state_data/code/02_derive_nsece_constants.R')
 
   root <- cli_value('--nsece', Sys.getenv('NSECE_ROOT'))
   if (!nzchar(root)) stop('pass --nsece <dir> or set NSECE_ROOT')

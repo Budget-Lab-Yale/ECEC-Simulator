@@ -12,6 +12,21 @@ Rscript state_data/code/00_build_demand_targets.R --all            # build all 5
 Rscript state_data/code/00_build_demand_targets.R --all --check    # with invariants
 ```
 
+**State setup must run with `ECEC_URBAN_DENSITY=1`.** The simulator's urban
+density switch turns on all state machinery: the NSECE community density
+tier threshold and tier-draw cells, region donor cells in the hours and
+paid-status draws, and RPP-adjusted income ranks (the care-choice forest has
+no density feature). It is off by default (= main) and on for state runs.
+Unset `ECEC_INCOME_RANK` follows the switch. The interface
+whose `p0` feeds the demand targets must be built under `1` (1a, 1b, 2a). Set
+the variable in the shell for the interface build and for
+`state_data/cluster/acs_p0_shares.R`, `acs_p0_shares_by_age.R`,
+`nsece_shares_by_age.R`, and `state_data/code/02_derive_nsece_constants.R`,
+which stop with a clear message if it is `0`. `acs_p0_shares.R` also stops if
+the interface's alpha files record `0`. Alpha files with no record were built
+before the switch (2026-10-14) and count as `1`. Example:
+`ECEC_URBAN_DENSITY=1 Rscript state_data/cluster/acs_p0_shares.R <interface> <out.csv>`.
+
 **The method memos, `docs/<date>_summary.pdf`, are the documents to read.** They
 say what every number means, where it comes from, and how solid it is. Finished
 memos (PDF) are in `docs/archive/`; the memo in progress and the .tex sources
@@ -299,7 +314,7 @@ so.
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
 | Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-point map) | 2019 | supply centre staffing index weights |
 | Licensing ratios | 2017 Child Care Licensing Study, ICPSR 37700: centre child-staff ratios at 11 months, 18 months, 35 months, 3 years, and 4 years (one point per year of age 0–4); small family home maximum children; ID centres and NYC centres from the 2014 file (3 bands mapped onto the 5 points) | `raw/US/US_ICPSR37700__licensing_*__2017.rda` → `resources/supply/US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv` (`resources/supply/licensing_ratios_2017.R`) | 2017 | supply staffing index |
-| PUMA urban density | 2010 Census SF1 Urban/Rural Update, tract level (`www2.census.gov/census_2010/04-Summary_File_1/Urban_Rural_Update/`): P2 total, urban, and rural population, P12 children under 5; 2010 tract population centroids (`www2.census.gov/geo/docs/reference/cenpop2010/tract/CenPop2010_Mean_TR.txt`); 2010 Gazetteer tract land area (`www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_tracts_national.zip`); 2010 tract-to-PUMA relationship file (`www2.census.gov/geo/docs/maps-data/data/rel/2010_Census_Tract_to_2010_PUMA.txt`). NSECE community urban share per tract (2-mile community, inverse-distance weights), cut at 0.85 / 0.30, then the share of each PUMA's children 0–4 at each level | `raw/US/US_Census__tract_urban_rural_population_children_0_4__2010.csv` (SF1 extract; the state zips are about 11 GB and are not kept), `raw/US/US_Census__tract_population_centroids__2010.txt`, `raw/US/US_Census__gazetteer_tracts__2010.zip`, `raw/US/US_Census__tract_to_puma_relationship__2010.txt` → `resources/acs/puma_urban_density_2010.csv` (`resources/acs/puma_urban_density_2010.R`) | 2010 | simulator care-choice forest feature `density` (1b) |
+| PUMA urban density | 2010 Census SF1 Urban/Rural Update, tract level (`www2.census.gov/census_2010/04-Summary_File_1/Urban_Rural_Update/`): P2 total, urban, and rural population, P12 children under 5; 2010 tract population centroids (`www2.census.gov/geo/docs/reference/cenpop2010/tract/CenPop2010_Mean_TR.txt`); 2010 Gazetteer tract land area (`www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_tracts_national.zip`); 2010 tract-to-PUMA relationship file (`www2.census.gov/geo/docs/maps-data/data/rel/2010_Census_Tract_to_2010_PUMA.txt`). NSECE community urban share per tract (2-mile community, inverse-distance weights), cut at 0.85 / 0.30, then the share of each PUMA's children 0–4 at each level | `raw/US/US_Census__tract_urban_rural_population_children_0_4__2010.csv` (SF1 extract; the state zips are about 11 GB and are not kept), `raw/US/US_Census__tract_population_centroids__2010.txt`, `raw/US/US_Census__gazetteer_tracts__2010.zip`, `raw/US/US_Census__tract_to_puma_relationship__2010.txt` → `resources/acs/puma_urban_density_2010.csv` (`resources/acs/puma_urban_density_2010.R`) | 2010 | none -- no run reads it since 2026-10-14 (the care-choice forest dropped `density`) |
 | CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `raw/US/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
 | Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `raw/US/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
 | Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `raw/local/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `raw/US/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |

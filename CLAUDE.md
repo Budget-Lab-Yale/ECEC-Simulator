@@ -66,8 +66,9 @@ src/
     ├── write_employment_targeting_diagnostics.R # Targeting diagnostics CSV (shared 3b + slurm)
     ├── prepare_donor_pool.R           # Tax donor pool preparation + AGI binning helpers
     ├── reconstruct_tax_unit_agi.R     # Corrected-tax-unit AGI from legacy fragments
-    ├── compute_price_wedge_cache.R   # Price wedge cache (weighted empirical NSECE quantile grids, keyed draw;
-    │                                  #   center_low / other_paid by ACS income quintile, price_wedge_income_pctiles())
+    ├── compute_price_wedge_cache.R   # Price wedge cache (price forest QRF at main's set.seed + sample percentile draw;
+    │                                  #   features income percentile via price_wedge_income_pctiles(), region, n_parents, child age)
+    ├── urban_density.R                # ECEC_URBAN_DENSITY switch (0 default, 1 state runs), tier lines, region donor cells, default income-rank scheme (off = main; no forest feature)
     ├── assign_income_pctile.R         # Income percentile within group (region, state) from per-group cutpoints
     ├── load_policy.R                  # Base policy loader (isolated environments)
     ├── load_cdctc_policy.R            # CDCTC policy loader

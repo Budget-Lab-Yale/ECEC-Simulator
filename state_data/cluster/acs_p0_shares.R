@@ -25,9 +25,11 @@
 # always national p0.
 #
 # Runs on the cluster (interfaces live there). Writes the summary only.
+# Needs ECEC_URBAN_DENSITY=1 (state setup) and an interface built under it --
+# stops otherwise.
 #
 # Usage, from repo root:
-#   Rscript state_data/cluster/acs_p0_shares.R <interface_dir> <out.csv>
+#   ECEC_URBAN_DENSITY=1 Rscript state_data/cluster/acs_p0_shares.R <interface_dir> <out.csv>
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -39,6 +41,7 @@ source('src/shared_functions/constants.R')
 source('src/shared_functions/get_choice_catalog.R')
 source('src/shared_functions/select_geo_hh_ids.R')
 source('src/shared_functions/compute_substate_alpha.R')   # substate_alpha_path()
+source('src/shared_functions/urban_density.R')            # ECEC_URBAN_DENSITY switch
 
 
 
@@ -59,7 +62,11 @@ substate_alpha_data <- function(iface, geo_hh) {
       substate_alpha_path(file.path(iface, 'estimation'), t, 2019, g)
     }, character(1))
     if (all(file.exists(paths))) {
+      require_urban_density_on('state_data/cluster/acs_p0_shares.R')
       out[[g]] <- lapply(paths, readRDS)
+      for (t in names(out[[g]])) {
+        check_urban_density_built(out[[g]][[t]]$urban_density, paste0('Sub-state alpha ', paths[[t]]), '2a')
+      }
       cat(g, ': own p0 (', paste(basename(paths), collapse = ', '), ', scheme ',
           if (is.null(out[[g]]$c1$income_rank_scheme)) '?' else out[[g]]$c1$income_rank_scheme,
           ')\n', sep = '')
@@ -165,8 +172,12 @@ read_alpha_data <- function(iface, pu_type) {
   # Returns: (list) alpha data
   #----------------------------------------------------------------------------
 
-  ad <- readRDS(file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds')))
-  if (!is.null(ad[[pu_type]])) ad[[pu_type]] else ad
+  require_urban_density_on('state_data/cluster/acs_p0_shares.R')
+  alpha_f <- file.path(iface, 'estimation', paste0('alpha_', pu_type, '_2019.rds'))
+  ad <- readRDS(alpha_f)
+  ad <- if (!is.null(ad[[pu_type]])) ad[[pu_type]] else ad
+  check_urban_density_built(ad$urban_density, paste0('Alpha matrix ', alpha_f), '2a')
+  ad
 }
 
 

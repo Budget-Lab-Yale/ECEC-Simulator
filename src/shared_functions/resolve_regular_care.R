@@ -39,6 +39,12 @@
 # Dedicated hours-draw seed -- keyed hash, no RNG stream, global RNG untouched
 REGULAR_HOURS_SEED <- 20261013L
 
+# Min raw donor rows for region x TOC group x age cell (2026-10-14, urban
+# density switch on only -- 1a, 02 pass `region` then); thinner cell falls to
+# TOC group x age, then TOC group. Off = main: no region column, TOC group x
+# age -> TOC group. NSECE has no state id -- Census region finest geography
+REGULAR_HOURS_CELL_MIN_N <- 30L
+
 
 
 regular_care_toc_group <- function(type_raw) {
@@ -163,7 +169,9 @@ resolve_regular_care <- function(arr, seed = REGULAR_HOURS_SEED) {
   # Applies both rules to child x provider rows (HH9_CHILDREN = 1). Donors
   # for hours: REGCARE = 1 w/ TOC 1-6 (regular), reported hours > 0,
   # positive weight, known age.
-  # Cell TOC group x age cell (impute_pay_age_cell()); empty cell -> TOC
+  # Cell region x TOC group x age cell (impute_pay_age_cell(); region only
+  # when arr has `region` and cell holds >= REGULAR_HOURS_CELL_MIN_N donor
+  # rows); else TOC group x age cell; empty cell -> TOC
   # group over all ages. Imputed row's hours: weighted donor quantile at
   # regular_hours_unif() -- independent of row order, global RNG.
   #
@@ -171,7 +179,7 @@ resolve_regular_care <- function(arr, seed = REGULAR_HOURS_SEED) {
   #   - arr (df): hh_id, child_id, provider_id, regcare (num: raw
   #       HH9_REGCARE), type_raw (num: HH9_TYPEOFCARE_AGG), hours (num: raw
   #       HH9_HRS_WEEK_PROV; negative / NA = missing), age (num, years),
-  #       child_weight (num)
+  #       child_weight (num); optional region (Census region, donor cells)
   #   - seed (int): hours-draw seed
   #
   # Returns: (list)
@@ -208,20 +216,32 @@ resolve_regular_care <- function(arr, seed = REGULAR_HOURS_SEED) {
     mutate(hours_imputed = regular == 1 & (is.na(hours_reported) | hours_reported == 0),
            .draw = NA_real_)
 
-  # Donor pool per imputed row: own cell when it has donors, else TOC group
-  # over all ages; none -> NA hours
+  # Donor pool per imputed row, finest first: Census region x TOC group x age
+  # cell when it has >= REGULAR_HOURS_CELL_MIN_N raw donor rows (needs `region`
+  # in arr), else TOC group x age cell when it has donors, else TOC group over
+  # all ages; none -> NA hours
   imp_i <- which(arr$hours_imputed)
   if (length(imp_i) > 0) {
     u <- regular_hours_unif(arr$hh_id[imp_i], arr$child_id[imp_i],
                             arr$provider_id[imp_i], seed)
     toc <- arr$.toc[imp_i]
     cell <- arr$.cell[imp_i]
+    reg <- if ('region' %in% names(arr)) as.character(arr$region[imp_i]) else rep(NA_character_, length(imp_i))
     in_cell <- paste(toc, cell) %in% paste(cells$toc_group, cells$age_cell)
-    pool <- if_else(in_cell, paste('cell', toc, cell), paste('pooled', toc))
+    reg_n <- if ('region' %in% names(arr)) table(paste(donors$region, donors$.toc, donors$.cell)) else table(character(0))
+    in_reg <- !is.na(reg) & paste(reg, toc, cell) %in% names(reg_n)[reg_n >= REGULAR_HOURS_CELL_MIN_N]
+    pool <- case_when(in_reg  ~ paste('region', reg, toc, cell),
+                      in_cell ~ paste('cell', toc, cell),
+                      TRUE    ~ paste('pooled', toc))
     for (p in unique(pool)) {
       j <- pool == p
-      dn <- if (in_cell[j][1]) donors[donors$.toc == toc[j][1] & donors$.cell %in% cell[j][1], ]
-            else donors[donors$.toc == toc[j][1], ]
+      dn <- if (in_reg[j][1]) {
+        donors[donors$region %in% reg[j][1] & donors$.toc == toc[j][1] & donors$.cell %in% cell[j][1], ]
+      } else if (in_cell[j][1]) {
+        donors[donors$.toc == toc[j][1] & donors$.cell %in% cell[j][1], ]
+      } else {
+        donors[donors$.toc == toc[j][1], ]
+      }
       arr$.draw[imp_i[j]] <- weighted_quantile_draw(dn$hours_reported, dn$.wt, u[j])
     }
   }

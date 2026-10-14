@@ -114,6 +114,10 @@ initialize_simulation <- function() {
     }), table_names)
     sim_base_hh <- compact(sim_base_hh)
 
+    # Interface stages (1a, 1b) built under this run's urban-density setting?
+    # (urban_density.R; alphas, price forest checked on load below)
+    check_interface_urban_density(base_path)
+
     # Read SPM data files (optional - for poverty analysis)
     spm_units_path <- file.path(base_path, paste0('acs_spm_units_', acs_base_year, '.csv'))
     pu_spm_xwalk_path <- file.path(base_path, paste0('acs_pu_spm_xwalk_', acs_base_year, '.csv'))
@@ -157,12 +161,12 @@ initialize_simulation <- function() {
     }
   }
 
-  # Price wedge income ranks (quintile grids: center_low, other_paid) on full
+  # Price wedge income ranks (price forests, income percentile) on full
   # calibration sample, before sub-sampling -- same ranks as 2a cache, so
   # base-year wedges match alphas. Wedge off -> not needed
   price_wedge_on <- !(exists('disable_price_wedge') && isTRUE(disable_price_wedge))
   price_income_pctiles <- if (price_wedge_on) {
-    price_wedge_income_pctiles(sim_base_hh$households, sim_base_hh$children)
+    price_wedge_income_pctiles(sim_base_hh$parent_units, sim_base_hh$households)
   } else {
     NULL
   }
@@ -306,6 +310,8 @@ initialize_simulation <- function() {
       alpha_path <- file.path(estimation_dir, paste0('alpha_', pu_type, '_', calibration_year, '.rds'))
       if (file.exists(alpha_path)) {
         alpha_data <- readRDS(alpha_path)
+        # Interface built under this run's urban-density setting? (urban_density.R)
+        check_urban_density_built(alpha_data$urban_density, paste0('Alpha matrix ', alpha_path), '2a')
         base_demand_params[[pu_type]]$alpha <- alpha_data$alpha
         base_demand_params[[pu_type]]$row_ids <- alpha_data$row_ids
         if (is_state_run) {
@@ -314,11 +320,11 @@ initialize_simulation <- function() {
       }
     }
 
-    # Load other_paid_base_price from price wedge quantiles cache
-    price_quantiles_path <- file.path('./cache/price_models', 'price_wedge_quantiles.rds')
-    if (file.exists(price_quantiles_path)) {
-      price_quantiles <- readRDS(price_quantiles_path)
-      base_demand_params$other_paid_base_price <- price_quantiles$summary_stats$other_paid_base_price
+    # Load other_paid_base_price from price forest cache
+    price_models_path <- file.path('./cache/price_models', 'price_qrf_models.rds')
+    if (file.exists(price_models_path)) {
+      price_qrf_models <- readRDS(price_models_path)
+      base_demand_params$other_paid_base_price <- price_qrf_models$summary_stats$other_paid_base_price
       if (!is.null(base_demand_params$other_paid_base_price)) {
         cat('  Loaded other_paid_base_price: $', round(base_demand_params$other_paid_base_price, 2), '/hr\n', sep = '')
       }
@@ -358,8 +364,8 @@ initialize_simulation <- function() {
     )
   }
 
-  # Load price wedge quantile grids (1a), compute price_wedge cache
-  price_quantiles <- readRDS(file.path('./cache/price_models', 'price_wedge_quantiles.rds'))
+  # Load price forests (1a, QRF), compute price_wedge cache
+  price_qrf_models <- readRDS(file.path('./cache/price_models', 'price_qrf_models.rds'))
 
   wedge_disabled <- exists('disable_price_wedge') && isTRUE(disable_price_wedge)
   if (wedge_disabled) {
@@ -367,15 +373,16 @@ initialize_simulation <- function() {
   }
 
   # One cache over all households in state runs too, each state context takes
-  # its rows (below) -- keyed draws, same grids as calibration cache, so
+  # its rows (below) -- keyed draws, same forests as calibration cache, so
   # base-year wedges match alphas.
   cached_price_wedge <- NULL
   if (!wedge_disabled) {
     cached_price_wedge <- compute_price_wedge_cache(
-      parent_units    = sim_base_hh$parent_units,
-      children        = sim_base_hh$children,
-      price_quantiles = price_quantiles,
-      income_pctiles  = price_income_pctiles
+      parent_units     = sim_base_hh$parent_units,
+      children         = sim_base_hh$children,
+      households       = sim_base_hh$households,
+      price_qrf_models = price_qrf_models,
+      income_pctiles   = price_income_pctiles
     )
   }
 
@@ -509,17 +516,18 @@ initialize_simulation <- function() {
       }
 
       # State's rows of price wedge cache. Sub-state (NYC) w/ own alphas: own
-      # wedge rows -- quintile grids at geo's own income ranks, as
+      # wedge rows -- forest at geo's own income percentile, as
       # compute_substate_alphas() (2a), so base-year wedges match own alphas
       st_price_wedge <- if (is.null(cached_price_wedge)) {
         NULL
       } else if (!is.null(substate_alpha)) {
         compute_price_wedge_cache(
-          parent_units    = sim_base_hh$parent_units %>% filter(hh_id %in% state_hh_ids),
-          children        = sim_base_hh$children %>% filter(hh_id %in% state_hh_ids),
-          price_quantiles = price_quantiles,
-          income_pctiles  = price_wedge_income_pctiles(sim_base_hh$households,
-                                                       sim_base_hh$children, st)
+          parent_units     = sim_base_hh$parent_units %>% filter(hh_id %in% state_hh_ids),
+          children         = sim_base_hh$children %>% filter(hh_id %in% state_hh_ids),
+          households       = sim_base_hh$households %>% filter(hh_id %in% state_hh_ids),
+          price_qrf_models = price_qrf_models,
+          income_pctiles   = price_wedge_income_pctiles(sim_base_hh$parent_units,
+                                                        sim_base_hh$households, st)
         )
       } else {
         cached_price_wedge %>% filter(hh_id %in% state_hh_ids)

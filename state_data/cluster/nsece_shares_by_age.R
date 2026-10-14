@@ -60,6 +60,9 @@ shares_by <- function(kids, prim, cell) {
 
 main_by_age <- function() {
 
+  # Reads NSECE urban density (02_ read_household()): state setup setting
+  require_urban_density_on('state_data/cluster/nsece_shares_by_age.R')
+
   root <- cli_value('--nsece', Sys.getenv('NSECE_ROOT'))
   if (!nzchar(root)) stop('pass --nsece <dir> or set NSECE_ROOT')
   out <- cli_value('--out', 'nsece_shares_by_age.csv')

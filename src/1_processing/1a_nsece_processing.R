@@ -1,7 +1,7 @@
 # 1a_nsece_processing.R
 #
 # NSECE processing: household demand data, supply parameters,
-# and price heterogeneity quantile grids. Called from main.R.
+# and price heterogeneity forests (QRF). Called from main.R.
 #
 # Label draws (nsece_mi_draws.R): nsece_enrollment_2019.csv one row per
 # child x draw (NSECE_MI_DRAWS draws; columns draw, draw_weight = 1 / M) --
@@ -13,7 +13,7 @@ run_nsece_processing <- function() {
 
   #----------------------------------------------------------------------------
   # Processes 2019 NSECE data: household demand data, supply parameters,
-  # and price heterogeneity quantile grids. Writes to estimation output folder.
+  # and price heterogeneity forests (QRF). Writes to estimation output folder.
   #
   # Params: none
   #
@@ -22,6 +22,13 @@ run_nsece_processing <- function() {
 
   # Get estimation data info
   estimation_info <- get_estimation_info()
+
+  # Urban density (urban_density.R): off (default) = main -- no density
+  # columns, age bin tier line, no region donor cells in the hours, paid-status,
+  # or tier draws; on (state runs) -> density-adjusted tier line, region donor
+  # cells
+  use_density <- urban_density_enabled()
+  cat('Urban density:', if (use_density) 'on' else 'off', '\n')
 
 
   # Helper functions
@@ -100,6 +107,58 @@ run_nsece_processing <- function() {
   }
 
 
+  train_single_qrf <- function(df, target_col, name) {
+
+    #--------------------------------------------------------------------------
+    # Trains a single quantile regression forest model.
+    #
+    # Params:
+    #   - df (df): Input dataframe with predictor and target columns
+    #   - target_col (chr): Name of the target column to predict
+    #   - name (chr): Display name for logging progress
+    #
+    # Returns: (ranger) Trained QRF model with region_levels attached
+    #--------------------------------------------------------------------------
+
+    # Filter out NAs
+    df <- df %>%
+      filter(
+        !is.na(income_pctile),
+        !is.na(region),
+        !is.na(n_parents),
+        !is.na(child_age),
+        !is.na(.data[[target_col]])
+      )
+
+    sample_size  <- 50000
+    replace_flag <- nrow(df) < sample_size
+
+    # Global RNG, no own seed (as main)
+    train_df <- df %>%
+      sample_n(size = sample_size, weight = weight, replace = replace_flag) %>%
+      rename(target = !!sym(target_col)) %>%
+      select(target, income_pctile, region, n_parents, child_age)
+
+    # Train ranger with quantreg = TRUE for quantile regression forest
+    qrf <- ranger(
+      formula       = target ~ income_pctile + region + n_parents + child_age,
+      data          = train_df,
+      num.trees     = 500,
+      mtry          = 4,
+      min.node.size = 10,
+      quantreg      = TRUE,
+      keep.inbag    = TRUE
+    )
+
+    # Store factor levels for prediction alignment
+    qrf$region_levels <- levels(df$region)
+
+    cat('  Price forest ', name, ': ', nrow(df), ' provider rows, sample ', sample_size,
+        if (replace_flag) ' w/ replacement' else ' w/out replacement', '\n', sep = '')
+    qrf
+  }
+
+
   # --- Centre posted prices and tier boundary (sections 1 and 2) ---
   cat('Processing 2019 NSECE centre prices...\n')
 
@@ -122,7 +181,8 @@ run_nsece_processing <- function() {
       center_weight    = CB9_METH_WEIGHT,
       region           = CB9_REGION,
       # Community urban density 1 high / 2 moderate / 3 rural (urban_density.R)
-      density          = CB9_COMM_URBAN_DENSITY,
+      # -- only w/ urban density on
+      all_of(if (use_density) c(density = 'CB9_COMM_URBAN_DENSITY') else character(0)),
       all_of(enroll_cols),
       all_of(ft_share_cols),
       all_of(price_cols),
@@ -158,7 +218,7 @@ run_nsece_processing <- function() {
     group_by(
       id,
       region,
-      density,
+      across(any_of('density')),
       age_bin = case_when(
         age_bin %in% c('INF', '1YR') ~ '0-1',
         age_bin %in% c('2YR', '3YR') ~ '2-3',
@@ -193,24 +253,37 @@ run_nsece_processing <- function() {
     mutate(
       enrollment_fte = 1 * (enrollment * share_ft) + 0.5 * (enrollment * (1 - share_ft))
     ) %>%
-    select(id, center_weight, region, density, age_bin, enrollment, enrollment_fte, price)
+    select(id, center_weight, region, any_of('density'), age_bin, enrollment, enrollment_fte, price)
 
 
-  # Tier boundary: density-adjusted line per Census region x community urban
-  # density x age bin (2026-10-12; region x age median before, 2026-10-09) --
-  # regional high-density median x national density price ratio
-  # (compute_tier_thresholds(), urban_density.R), FTE x survey weighted,
-  # positive prices. One line both sides -- centres (section 2, posted price,
-  # own CB9 density) and families (section 1, hourly payment, own HH9
-  # density) fall below it (low) or at/above it (high). Same $10 reads
-  # higher tier in rural market than in dense city
-  tier_thresholds <- compute_tier_thresholds(processed_nsece_cb)
+  # Tier boundary, one dollar line both sides -- centres (section 2, posted
+  # price) and families (section 1, hourly payment) fall below it (low) or
+  # at/above it (high). FTE x survey weighted, positive prices. Rule by
+  # urban density setting (urban_density.R):
+  #   - off (default, = main): national median posted price by age bin
+  #     only, no region (compute_tier_thresholds_age_bin())
+  #   - on (state runs): density-adjusted line per Census region x community
+  #     urban density x age bin (2026-10-12) -- regional high-density median
+  #     x national density price ratio (compute_tier_thresholds()); centres
+  #     use own CB9 density, families own HH9 density. Same $10 reads higher
+  #     tier in rural market than in dense city
+  tier_keys <- if (use_density) c('region', 'density', 'age_bin') else 'age_bin'
+  tier_thresholds <- if (use_density) {
+    compute_tier_thresholds(processed_nsece_cb)
+  } else {
+    compute_tier_thresholds_age_bin(processed_nsece_cb)
+  }
   medians <- tier_thresholds %>%
-    select(region, density, age_bin, median = threshold)
-  cat('  Paid-centre tier line ($/hr), region x density (1 high, 2 moderate, 3 rural) x age:\n')
+    select(all_of(tier_keys), median = threshold)
+  tier_rule <- if (use_density) 'region x density x age bin (density-adjusted)' else 'age bin median (main)'
+  cat('  Paid-centre tier line ($/hr), rule: ', tier_rule, if (use_density) {
+    ' (density 1 high, 2 moderate, 3 rural)'
+  }, ':\n', sep = '')
   print(as.data.frame(tier_thresholds %>%
-                        mutate(across(c(median_high, national_ratio, threshold), ~ round(.x, 3)))))
-  fwrite(tier_thresholds, file.path(estimation_info$paths$data, 'nsece_tier_thresholds_2019.csv'))
+                        mutate(across(any_of(c('median_high', 'national_ratio', 'threshold')),
+                                      ~ round(.x, 3)))))
+  fwrite(tier_thresholds %>% mutate(rule = tier_rule),
+         file.path(estimation_info$paths$data, 'nsece_tier_thresholds_2019.csv'))
 
 
   # --- SECTION 1: Process household (demand-side) NSECE data ---
@@ -247,10 +320,7 @@ run_nsece_processing <- function() {
           ),
           resp_partner = if_else(HH9_RSPOUSEPARTNER_LOOP < 0, NA, HH9_RSPOUSEPARTNER_LOOP),
           # Census region: 1=Northeast, 2=Midwest, 3=South, 4=West
-          region = HH9_REGION,
-          # Community urban density 1 high / 2 moderate / 3 rural -- tier
-          # line, care-forest feature (urban_density.R)
-          density = HH9_COMM_URBAN_DENSITY
+          region = HH9_REGION
         ) %>%
         select(
           hh_id        = HH9_METH_CASEID,
@@ -258,7 +328,9 @@ run_nsece_processing <- function() {
           n_members    = HH9_HHCOMP_MEMBERS,
           income       = HH9_ECON_INCOME_ANNUAL,
           region,
-          density,
+          # Community urban density 1 high / 2 moderate / 3 rural -- tier
+          # line (urban_density.R); only w/ urban density on. Not a forest feature
+          all_of(if (use_density) c(density = 'HH9_COMM_URBAN_DENSITY') else character(0)),
           resp_male,
           resp_has_partner,
           resp_partner
@@ -767,16 +839,21 @@ run_nsece_processing <- function() {
         rc <- providers_base %>%
           left_join(children %>% select(hh_id, child_id, age, child_weight),
                     by = c('hh_id', 'child_id')) %>%
+          {
+            # Region donor cells only w/ urban density on (off = main: TOC x age)
+            if (use_density) left_join(., households %>% select(hh_id, region), by = 'hh_id') else .
+          } %>%
           resolve_regular_care(seed = nsece_mi_seed(REGULAR_HOURS_SEED, m))
-        providers <- rc$arr %>% select(-child_weight)
+        providers <- rc$arr %>% select(-child_weight, -any_of('region'))
         if (show) {
           cat('  Regular care: REGCARE -1/-2 rows regular by TOC ', sum(providers$regular_by_type),
               ', regular rows w/ imputed hours ', sum(providers$hours_imputed), '\n', sep = '')
         }
 
         # Paid-centre tier: family's hourly payment vs centre tier boundary
-        # (`medians`, provider posted price) for household's region x community
-        # density x child's age bin -- same dollar line as centres. Payment net of third-party
+        # (`medians`, provider posted price) for child's age bin (off = main;
+        # w/ urban density on household's region x community density x age
+        # bin) -- same dollar line as centres. Payment net of third-party
         # payments, so subsidised families fall low more often (limitation).
         # Hourly payment on reported hours only. Paid centre w/ imputed hours
         # (no reference-week care): weekly payment over donor-drawn hours
@@ -785,12 +862,12 @@ run_nsece_processing <- function() {
         # imputed hours before, 42 rows). No hours -> no tier, label NA (row
         # can't count)
         providers <- providers %>%
-          left_join(households %>% select(hh_id, region, density), by = 'hh_id') %>%
+          left_join(households %>% select(hh_id, region, any_of('density')), by = 'hh_id') %>%
           mutate(age_bin = centre_age_bin(age),
                  tier_unknown = ecec_choice %in% 'Paid Center-Based' & hours_imputed,
                  tier_price = if_else(!hours_imputed & !is.na(hours) & hours > 0,
                                       net_weekly_cost / hours, NA_real_)) %>%
-          left_join(medians, by = c('region', 'density', 'age_bin')) %>%
+          left_join(medians, by = tier_keys) %>%
           mutate(
             ecec_choice = case_when(
               is.na(ecec_choice) | ecec_choice != 'Paid Center-Based' ~ ecec_choice,
@@ -800,9 +877,9 @@ run_nsece_processing <- function() {
               TRUE                                                    ~ 'Low-Priced Center-Based'
             )
           ) %>%
-          select(-age, -region, -density, -age_bin, -median, -tier_price)
+          select(-age, -region, -any_of('density'), -age_bin, -median, -tier_price)
         if (any(providers$ecec_choice %in% 'Paid Center-Based')) {
-          stop('NSECE paid-centre arrangements w/out a tier boundary (region x density x age bin). ',
+          stop('NSECE paid-centre arrangements w/out a tier boundary (', tier_rule, '). ',
                'Check HH9_REGION / HH9_COMM_URBAN_DENSITY codes and child ages.')
         }
 
@@ -813,9 +890,9 @@ run_nsece_processing <- function() {
         imp_in <- providers %>%
           left_join(children %>% select(hh_id, child_id, age, child_weight),
                     by = c('hh_id', 'child_id')) %>%
-          left_join(households %>% select(hh_id, region, density), by = 'hh_id') %>%
+          left_join(households %>% select(hh_id, region, any_of('density')), by = 'hh_id') %>%
           transmute(
-            hh_id, child_id, provider_id, age, region, density, child_weight,
+            hh_id, child_id, provider_id, age, region, across(any_of('density')), child_weight,
             kind   = pay_kind(is_k8, is_center, is_home_based, is_other_kind),
             paid   = if_else(pay_unknown, NA, is_paid),
             paid_q = case_when(paid_hh %in% 1 ~ TRUE, paid_hh %in% 0 ~ FALSE),
@@ -1008,7 +1085,7 @@ run_nsece_processing <- function() {
     processed_centers <- {
       # Then do classification and return
       processed_nsece_cb %>%
-        left_join(medians, by = c('region', 'density', 'age_bin')) %>%
+        left_join(medians, by = tier_keys) %>%
         mutate(
           ecec_choice = case_when(
             is.na(price)    ~ NA,
@@ -1380,21 +1457,16 @@ run_nsece_processing <- function() {
   }
 
 
-  # --- SECTION 3: Price heterogeneity quantile grids ---
-  # Per care type: weighted empirical distribution of price_wedge (household
-  # OOP / base price), 99 quantiles. Replaces price QRF (2026-10-12) -- 5-fold
-  # household-held-out CV: negative pseudo-R2, negative pinball skill vs
-  # constant quantile for every care type, income-rank scheme. Low-price
-  # center, Other Paid add one grid per income quintile (same CV, rerun
-  # 2026-10-13 on urbanicity tiers, national_rpp: pinball loss 11.3% / 8.0%
-  # lower pooled; Other Paid lower every fold, low-price center 4 of 5 --
-  # fold 2 4.5% higher); cell < PRICE_WEDGE_MIN_CELL_HH households
-  # -> unconditional grid
+  # --- SECTION 3: Price heterogeneity forests ---
+  # Per care type: quantile regression forest (ranger, quantreg) of price_wedge
+  # (household OOP / base price) on income percentile, region, n_parents, child
+  # age -- same forest every run (restored 2026-10-14; empirical quantile grids
+  # 2026-10-12 to 2026-10-13). compute_price_wedge_cache.R predicts it
   {
     supply_prices <- supply_params$prices
     tc_output_root <- estimation_info$paths$output
 
-    price_data <- {
+    qrf_data <- {
 
       # Extract supply-side prices by sector
       supply_price_center_low  <- supply_prices['Low-Priced Center-Based']
@@ -1403,10 +1475,9 @@ run_nsece_processing <- function() {
 
 
       # Income percentiles (child-weighted), ranked nationally per scheme
-      # (income_rank.R): national_rpp (default) deflates income by region RPP,
-      # national keeps nominal income. Quintile grids (center_low, other_paid),
-      # price_by_income_quintile.csv; ACS side ranks same scheme
-      # (price_wedge_income_pctiles())
+      # (income_rank.R): national_rpp (default w/ urban density on) deflates
+      # income by region RPP, national (default off = main) keeps nominal income. Price forests, price_by_income_quintile.csv;
+      # ACS side ranks same scheme (price_wedge_income_pctiles())
       rank_hh <- processed_nsece_hh$households %>%
         filter(!is.na(region))
       ri <- income_rank_inputs(rank_hh$income, rank_hh$region, NULL, 'nsece')
@@ -1456,10 +1527,6 @@ run_nsece_processing <- function() {
             }
             p
           },
-          # Quintile for grids; NA w/out positive income (ACS side same:
-          # unconditional grid)
-          income_quintile = if_else(!is.na(income) & income > 0,
-                                    as.integer(ceiling(income_pctile / 20)), NA_integer_),
           region = factor(region),
           child_age = age
         )
@@ -1473,8 +1540,8 @@ run_nsece_processing <- function() {
         #   - choice (chr): ECEC care type choice label
         #   - base_price (dbl): Base supply price for the care type
         #
-        # Returns: (df) Price wedge data with hh_id, income_pctile,
-        #   income_quintile, region, n_parents, child_age, price_wedge, weight
+        # Returns: (df) Price wedge data with income_pctile, region, n_parents,
+        #   child_age, price_wedge, weight
         #--------------------------------------------------------------------------
 
         provider_base %>%
@@ -1484,8 +1551,7 @@ run_nsece_processing <- function() {
             net_hourly_cost > 0
           ) %>%
           mutate(price_wedge = net_hourly_cost / base_price) %>%
-          select(hh_id, income_pctile, income_quintile, region, n_parents, child_age,
-                 price_wedge, weight = child_weight)
+          select(income_pctile, region, n_parents, child_age, price_wedge, weight = child_weight)
       }
 
       # Other Paid has no supply sector; use weighted mean OOP as base price
@@ -1511,39 +1577,16 @@ run_nsece_processing <- function() {
       )
     }
 
-    price_wedge_quantiles <- {
+    price_qrf_models <- {
+
+      qrf_center_low_price  <- train_single_qrf(qrf_data$center_low_price, 'price_wedge', 'center_low_price')
+      qrf_center_high_price <- train_single_qrf(qrf_data$center_high_price, 'price_wedge', 'center_high_price')
+      qrf_home_price        <- train_single_qrf(qrf_data$home_price, 'price_wedge', 'home_price')
+      qrf_other_paid_price  <- train_single_qrf(qrf_data$other_paid_price, 'price_wedge', 'other_paid_price')
 
       model_keys <- c('center_low_price', 'center_high_price', 'home_price', 'other_paid_price')
-
-      # Wedge grids at percentiles 1..99, child-weighted, all care type's
-      # provider rows (compute_price_wedge_cache.R reads grid[[type]][idx])
-      quantile_grid <- map(model_keys, function(key) {
-        d <- price_data[[key]]
-        price_wedge_quantile_grid(d$price_wedge, d$weight)
-      }) %>% set_names(PRICE_WEDGE_TYPES)
-
-      # Income-quintile grids (PRICE_WEDGE_QUINTILE_TYPES): one per quintile,
-      # thin cell -> unconditional grid (compute_price_wedge_cache.R reads
-      # grid_by_quintile[[type]][[q]][idx])
-      quintile_fits <- map(PRICE_WEDGE_QUINTILE_TYPES, function(k) {
-        d <- price_data[[model_keys[match(k, PRICE_WEDGE_TYPES)]]]
-        fit <- price_wedge_quintile_grids(d$price_wedge, d$weight, d$hh_id, d$income_quintile)
-        cat('  Price wedge quintile grids ', k, ': households per quintile ',
-            paste(fit$n_hh, collapse = ', '),
-            '; effective sample size ', paste(round(fit$ess), collapse = ', '),
-            '; largest weight share ', paste(round(fit$max_w_share, 3), collapse = ', '),
-            if (length(fit$fallback) > 0) {
-              paste0(' -- quintile(s) ', paste(fit$fallback, collapse = ', '), ' < ',
-                     PRICE_WEDGE_MIN_CELL_HH, ' households, use unconditional grid')
-            } else {
-              ' -- no fallback'
-            }, '\n', sep = '')
-        fit
-      }) %>% set_names(PRICE_WEDGE_QUINTILE_TYPES)
-      quantile_grid_by_quintile <- map(quintile_fits, 'grids')
-
       summary_stats <- map(model_keys, function(key) {
-        d <- price_data[[key]]
+        d <- qrf_data[[key]]
         list(
           n    = nrow(d),
           mean = weighted.mean(d$price_wedge, d$weight),
@@ -1553,20 +1596,21 @@ run_nsece_processing <- function() {
           q75  = wtd.quantile(d$price_wedge, d$weight, 0.75)
         )
       }) %>% set_names(model_keys)
-      summary_stats$supply_price_center_low  <- price_data$supply_price_center_low
-      summary_stats$supply_price_center_high <- price_data$supply_price_center_high
-      summary_stats$supply_price_home        <- price_data$supply_price_home
-      summary_stats$other_paid_base_price    <- price_data$other_paid_base_price
+      summary_stats$supply_price_center_low  <- qrf_data$supply_price_center_low
+      summary_stats$supply_price_center_high <- qrf_data$supply_price_center_high
+      summary_stats$supply_price_home        <- qrf_data$supply_price_home
+      summary_stats$other_paid_base_price    <- qrf_data$other_paid_base_price
 
+      # Forests + settings they were built under: 2a, 3a stop when income-rank
+      # scheme or urban density (tier labels of provider rows) differs
       list(
-        quantile_grid             = quantile_grid,
-        quantile_grid_by_quintile = quantile_grid_by_quintile,
-        quintile_n_hh             = map(quintile_fits, 'n_hh'),
-        quintile_ess              = map(quintile_fits, 'ess'),
-        quintile_max_w_share      = map(quintile_fits, 'max_w_share'),
-        quintile_fallback         = map(quintile_fits, 'fallback'),
-        income_rank_scheme        = get_income_rank_scheme(),
-        summary_stats             = summary_stats
+        center_low_price   = qrf_center_low_price,
+        center_high_price  = qrf_center_high_price,
+        home_price         = qrf_home_price,
+        other_paid_price   = qrf_other_paid_price,
+        income_rank_scheme = get_income_rank_scheme(),
+        urban_density      = get_urban_density_setting(),
+        summary_stats      = summary_stats
       )
     }
 
@@ -1582,33 +1626,15 @@ run_nsece_processing <- function() {
       base_price_keys <- c('supply_price_center_low', 'supply_price_center_high',
                            'supply_price_home', 'other_paid_base_price')
       summary_df <- map_dfr(seq_along(model_keys), function(i) {
-        s <- price_wedge_quantiles$summary_stats[[model_keys[i]]]
+        s <- price_qrf_models$summary_stats[[model_keys[i]]]
         tibble(
           model = model_keys[i], n_obs = s$n, mean = s$mean, sd = s$sd,
           q25 = s$q25, q50 = s$q50, q75 = s$q75,
-          base_price_2019 = price_wedge_quantiles$summary_stats[[base_price_keys[i]]]
+          base_price_2019 = price_qrf_models$summary_stats[[base_price_keys[i]]]
         )
       })
 
       write_csv(summary_df, file.path(models_dir, 'price_summary.csv'))
-
-      # Quantile grids, one column per care type (as cached)
-      write_csv(bind_cols(tibble(pctile = 1:99), as_tibble(price_wedge_quantiles$quantile_grid)),
-                file.path(models_dir, 'price_wedge_quantiles.csv'))
-
-      # Quintile grids, long: care type x quintile x pctile (as cached;
-      # fallback = cell on unconditional grid)
-      write_csv(
-        map_dfr(PRICE_WEDGE_QUINTILE_TYPES, function(k) {
-          map_dfr(1:5, function(q) {
-            tibble(care_type = k, income_quintile = q, pctile = 1:99,
-                   price_wedge = price_wedge_quantiles$quantile_grid_by_quintile[[k]][[q]],
-                   n_hh = price_wedge_quantiles$quintile_n_hh[[k]][q],
-                   fallback = q %in% price_wedge_quantiles$quintile_fallback[[k]])
-          })
-        }),
-        file.path(models_dir, 'price_wedge_quantiles_by_quintile.csv')
-      )
 
       #----------------------------------
       # 2. Distribution by region CSV
@@ -1617,7 +1643,7 @@ run_nsece_processing <- function() {
       care_type_map <- c(center_low_price = 'center_low', center_high_price = 'center_high',
                          home_price = 'home', other_paid_price = 'other_paid')
       price_by_region <- map_dfr(names(care_type_map), function(key) {
-        price_data[[key]] %>%
+        qrf_data[[key]] %>%
           group_by(region) %>%
           summarise(
             n                = n(),
@@ -1638,7 +1664,7 @@ run_nsece_processing <- function() {
       #----------------------------------
 
       price_by_income <- map_dfr(names(care_type_map), function(key) {
-        price_data[[key]] %>%
+        qrf_data[[key]] %>%
           mutate(income_quintile = cut(income_pctile, c(0, 20, 40, 60, 80, 100), labels = 1:5)) %>%
           group_by(income_quintile) %>%
           summarise(
@@ -1656,7 +1682,7 @@ run_nsece_processing <- function() {
       # 4. Supply prices and price_wedge info text file
       #----------------------------------
 
-      ss <- price_wedge_quantiles$summary_stats
+      ss <- price_qrf_models$summary_stats
       base_prices <- list(
         'Low-priced center-based (supply)'  = ss$supply_price_center_low,
         'High-priced center-based (supply)' = ss$supply_price_center_high,
@@ -1686,8 +1712,11 @@ run_nsece_processing <- function() {
     cache_dir <- './cache/price_models'
     dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
 
-    saveRDS(price_wedge_quantiles, file.path(cache_dir, 'price_wedge_quantiles.rds'))
+    saveRDS(price_qrf_models, file.path(cache_dir, 'price_qrf_models.rds'))
   }
+
+  # Setting this stage ran under (2a, 3a check it; urban_density.R)
+  write_urban_density_marker(estimation_info$paths$data, '1a')
 
   cat('NSECE estimation data preparation complete!\n')
 }

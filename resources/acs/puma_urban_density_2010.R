@@ -1,9 +1,9 @@
 #------------------------------------------------------------------------------
 # puma_urban_density_2010.R -- writes puma_urban_density_2010.csv, share of
 # 2010 children 0-4 at each community urban density level (1 high,
-# 2 moderate, 3 rural) per 2010 PUMA (statefip, puma). 1b averages care-forest
-# predictions over three levels by PUMA's shares (mix_density_predictions(),
-# care-forest feature `density`).
+# 2 moderate, 3 rural) per 2010 PUMA (statefip, puma). No longer read (2026-10-14):
+# 1b no longer averages care-forest predictions over PUMA shares
+# (care forest has no density feature).
 #
 # MEASURE. NSECE density (HH9_COMM_URBAN_DENSITY) = 2010 Census urban share
 # of tracts in 2-mile community around household's tract, weights inversely

@@ -14,15 +14,26 @@
 #   - tract_urban_share(): NSECE measure for every 2010 tract
 #   - aggregate_puma_density(): child-weighted (2010 children 0-4) share of
 #     PUMA's tracts at each level
-#   - mix_density_predictions(): forest probabilities averaged over the
-#     PUMA's three levels, weighted by shares (2026-10-13; one keyed draw
-#     per household before)
-# Table built by resources/acs/puma_urban_density_2010.R.
+# Table built by resources/acs/puma_urban_density_2010.R. No longer read by
+# the simulator (2026-10-14): density left care forest (importance
+# ~0), ACS PUMA mixing removed; builder + these helpers kept.
 #
 # Uses:
-#   - density-adjusted paid-centre tier line (compute_tier_thresholds(), 1a)
-#   - care-forest feature `density` (1b)
+#   - density-adjusted paid-centre tier line (compute_tier_thresholds(), 1a;
+#     NSECE community density only, no ACS data) -- switch on only
+#
+# Switch (2026-10-14): env var ECEC_URBAN_DENSITY (config.R ->
+# urban_density_setting), '0' default, '1' on -- state runs. Off = main: no
+# region or density in any NSECE label step -- tier line national age bin
+# median (compute_tier_thresholds_age_bin()), tier draw cells age, paid-status
+# cells kind x age -> kind, hours cells TOC x age -> TOC. On = all state
+# machinery: region x density x age tier line cells, region donor cells in
+# the paid-status and hours draws. Setting recorded in every calibration-interface stage (1a, 1b
+# markers; price forest rds; alpha rds) -- 2a, 3a, compute_substate_alpha.R
+# stop on mismatch (check_urban_density_built()), as income-rank scheme.
 #------------------------------------------------------------------------------
+
+URBAN_DENSITY_SETTINGS <- c('0', '1')
 
 # NSECE cuts on urban share: >= HIGH -> 1, >= MODERATE -> 2, else 3
 URBAN_DENSITY_CUT_HIGH     <- 0.85
@@ -33,6 +44,134 @@ URBAN_DENSITY_RADIUS_MI <- 2
 
 # Mean Earth radius, miles (haversine)
 EARTH_RADIUS_MI <- 3958.8
+
+
+
+
+get_urban_density_setting <- function() {
+
+  #----------------------------------------------------------------------------
+  # Active urban-density setting -- global urban_density_setting (config.R),
+  # else env var ECEC_URBAN_DENSITY, else '0'.
+  #
+  # Returns: (chr) '0' (off, national default) or '1' (on, state runs)
+  #----------------------------------------------------------------------------
+
+  s <- if (exists('urban_density_setting', envir = globalenv())) {
+    get('urban_density_setting', envir = globalenv())
+  } else {
+    Sys.getenv('ECEC_URBAN_DENSITY', '0')
+  }
+  if (is.null(s) || s == '') s <- '0'
+  if (!s %in% URBAN_DENSITY_SETTINGS) {
+    stop('ECEC_URBAN_DENSITY = "', s, '" unknown. Use 0 (default) or 1.')
+  }
+  s
+}
+
+
+
+urban_density_enabled <- function() {
+
+  #----------------------------------------------------------------------------
+  # Urban density on? (get_urban_density_setting() == '1')
+  #
+  # Returns: (lgl)
+  #----------------------------------------------------------------------------
+
+  get_urban_density_setting() == '1'
+}
+
+
+
+require_urban_density_on <- function(caller) {
+
+  #----------------------------------------------------------------------------
+  # Stops unless urban density on -- state_data scripts read density / tier
+  # inputs built w/ it.
+  #
+  # Params:
+  #   - caller (chr): script name for message
+  #
+  # Returns: nothing; stops when setting '0'
+  #----------------------------------------------------------------------------
+
+  if (!urban_density_enabled()) {
+    stop(caller, ' needs urban density on. Set ECEC_URBAN_DENSITY=1 ',
+         '(state setup, state_data/README.md) and rerun.')
+  }
+  invisible(NULL)
+}
+
+
+
+check_urban_density_built <- function(built, what, rebuild_step) {
+
+  #----------------------------------------------------------------------------
+  # Stops when run's urban-density setting differs from setting an interface
+  # piece was built under. Unlabeled piece (built before switch, 2026-10-14)
+  # = '1': every interface since 2026-10-12 used density.
+  #
+  # Params:
+  #   - built (chr): label stored w/ piece, NULL if none
+  #   - what (chr): piece name for message (file path or description)
+  #   - rebuild_step (chr): step to rerun, e.g. '1a'
+  #
+  # Returns: nothing; stops on mismatch
+  #----------------------------------------------------------------------------
+
+  run <- get_urban_density_setting()
+  label <- if (is.null(built)) '1' else as.character(built)
+  if (!identical(label, run)) {
+    stop(what, ' built under ECEC_URBAN_DENSITY=', label,
+         if (is.null(built)) ' (unlabeled: built before the switch, density on)' else '',
+         ', this run uses ', run, '. Set ECEC_URBAN_DENSITY=', label,
+         ', or rerun ', rebuild_step, ' and later stages under ECEC_URBAN_DENSITY=', run, '.')
+  }
+  invisible(NULL)
+}
+
+
+
+write_urban_density_marker <- function(data_dir, step) {
+
+  #----------------------------------------------------------------------------
+  # Records run's urban-density setting beside a stage's data files.
+  #
+  # Params:
+  #   - data_dir (chr): estimation/data
+  #   - step (chr): '1a' or '1b'
+  #
+  # Returns: (chr, invisible) marker path
+  #----------------------------------------------------------------------------
+
+  path <- file.path(data_dir, paste0('urban_density_', step, '.txt'))
+  writeLines(get_urban_density_setting(), path)
+  invisible(path)
+}
+
+
+
+check_interface_urban_density <- function(data_dir, steps = c('1a', '1b')) {
+
+  #----------------------------------------------------------------------------
+  # Stops when a stage's marker (write_urban_density_marker()) differs from
+  # run's setting. Missing marker = legacy, '1' (check_urban_density_built()).
+  #
+  # Params:
+  #   - data_dir (chr): estimation/data
+  #   - steps (chr vec): stages to check
+  #
+  # Returns: nothing; stops on mismatch
+  #----------------------------------------------------------------------------
+
+  for (s in steps) {
+    path <- file.path(data_dir, paste0('urban_density_', s, '.txt'))
+    built <- if (file.exists(path)) trimws(readLines(path, n = 1, warn = FALSE)) else NULL
+    check_urban_density_built(built, paste0('Calibration interface stage ', s, ' (', data_dir, ')'), s)
+  }
+  invisible(NULL)
+}
 
 
 
@@ -182,67 +321,6 @@ aggregate_puma_density <- function(tract_density) {
 
 
 
-modal_density <- function(share_1, share_2) {
-
-  #----------------------------------------------------------------------------
-  # Level w/ largest PUMA share (tie -> denser level). Placeholder `density`
-  # column of ACS rows -- forest predictions average over all three levels
-  # (mix_density_predictions()), modal level never enters them.
-  #
-  # Params:
-  #   - share_1, share_2 (num): PUMA shares at levels 1, 2, same length
-  #
-  # Returns: (int vec) 1 high, 2 moderate, 3 rural
-  #----------------------------------------------------------------------------
-
-  if (length(share_1) != length(share_2)) stop('modal_density: share_1, share_2 must have same length.')
-  if (anyNA(share_1) || anyNA(share_2)) stop('modal_density: NA share -- household w/out PUMA match.')
-  share_3 <- 1 - share_1 - share_2
-  dplyr::case_when(share_1 >= share_2 & share_1 >= share_3 ~ 1L,
-                   share_2 >= share_3                       ~ 2L,
-                   TRUE                                     ~ 3L)
-}
-
-
-
-mix_density_predictions <- function(data, predict_fn) {
-
-  #----------------------------------------------------------------------------
-  # Care-forest class probabilities averaged over PUMA density mix:
-  #
-  #   P(class | X, PUMA) = sum over u of share(PUMA, u) x P(class | X, u)
-  #
-  # Rows w/ share_1, share_2 (ACS) -> predict_fn run once per level w/
-  # `density` set to that level, weighted by shares (share_3 = 1 - share_1 -
-  # share_2). No share columns (NSECE, own density) -> predict_fn(data) as is.
-  # Assumes PUMA mix holds for every household in PUMA -- doesn't recover
-  # within-PUMA link of density to income / family type.
-  #
-  # Params:
-  #   - data (df): prediction frame; `density` factor levels 1:3
-  #   - predict_fn (function): data frame -> probability matrix (rows =
-  #       rows of data, same columns every call)
-  #
-  # Returns: (matrix) class probabilities, rows = rows of data
-  #----------------------------------------------------------------------------
-
-  if (!all(c('share_1', 'share_2') %in% names(data))) return(predict_fn(data))
-  if (anyNA(data$share_1) || anyNA(data$share_2)) {
-    stop('mix_density_predictions: NA PUMA share -- household w/out PUMA match.')
-  }
-  s <- cbind(data$share_1, data$share_2, pmax(0, 1 - data$share_1 - data$share_2))
-  out <- NULL
-  for (u in 1:3) {
-    d <- data
-    d$density <- factor(u, levels = 1:3)
-    p <- predict_fn(d) * s[, u]
-    out <- if (is.null(out)) p else out + p
-  }
-  out
-}
-
-
-
 compute_tier_thresholds <- function(prices) {
 
   #----------------------------------------------------------------------------
@@ -297,4 +375,33 @@ compute_tier_thresholds <- function(prices) {
     stop('compute_tier_thresholds: density x age bin w/out national median -- no positive-price centres.')
   }
   out
+}
+
+
+
+compute_tier_thresholds_age_bin <- function(prices) {
+
+  #----------------------------------------------------------------------------
+  # Paid-centre tier line w/ urban density off -- national median posted
+  # price by age bin only, no region (main 1a). Median weighted
+  # (center_weight x enrollment_fte), positive prices only.
+  #
+  # Params:
+  #   - prices (df): age_bin, price (hourly), center_weight, enrollment_fte --
+  #     one row per centre x age bin (other columns ignored)
+  #
+  # Returns: (tibble) age_bin, n_centers (positive-price centres in cell),
+  #   threshold (median)
+  #----------------------------------------------------------------------------
+
+  prices %>%
+    dplyr::filter(!is.na(price), price > 0) %>%
+    dplyr::group_by(age_bin) %>%
+    dplyr::summarise(
+      n_centers = dplyr::n(),
+      threshold = unname(Hmisc::wtd.quantile(x = price, weights = center_weight * enrollment_fte,
+                                             probs = 0.5)),
+      .groups   = 'drop'
+    ) %>%
+    dplyr::arrange(age_bin)
 }

@@ -673,9 +673,11 @@ expect_error(assign_income_pctile(c(1, 2), 'a', tied),
 #------------------------------
 
 source('src/shared_functions/income_rank.R')
+source('src/shared_functions/urban_density.R')
 source('src/shared_functions/compute_price_wedge_cache.R')
 source('src/shared_functions/compute_substate_alpha.R')
 random_seed_base <- 76
+urban_density_setting <- '0'   # default run setting; tests below flip it, restore
 
 # NY (36): 150 NYC households (Manhattan 061), richer, 150 rest of NY (Albany
 # 001); NJ (34): 300. One parent unit, one child under 5 each
@@ -686,8 +688,10 @@ tw_hh <- tibble(hh_id     = 1:600,
                 region    = 1L,
                 income    = c(rexp(n_nyc, 1 / 120000), rexp(450, 1 / 60000)))
 is_nyc <- tw_hh$countyfip == 61L & tw_hh$statefip == 36L
-tw_pu <- tibble(hh_id = tw_hh$hh_id, parent_unit_id = 1L, n_parents = 1L)
-tw_ch <- tibble(hh_id = tw_hh$hh_id, parent_unit_id = 1L, child_id = 1L, age = 2,
+tw_pu <- tibble(hh_id = tw_hh$hh_id, parent_unit_id = 1L,
+                n_parents = rep_len(c(1L, 2L), 600))
+tw_ch <- tibble(hh_id = tw_hh$hh_id, parent_unit_id = 1L, child_id = 1L,
+                age = rep_len(c(0, 1, 2, 3, 4, 2), 600),
                 child_weight = runif(600, 50, 150))
 
 # -- removed schemes stop
@@ -722,260 +726,285 @@ cat('PASS: national -- NYC ranks same in both versions, own version skipped\n')
 expect_error(substate_rank_inputs(1:3, 1:3, 1:3, c(TRUE, NA, FALSE), 'NYC'),
              'one non-NA flag', 'NA geo flag stops')
 
-# -- Price wedge quantile grid: weighted empirical inverse CDF
-# Hand example: x 1..4, weights 1, 1, 2, 4 (total 8) -> cumulative shares
-# 0.125, 0.25, 0.5, 1. q(p) = smallest x w/ share >= p
-hq <- price_wedge_quantile_grid(c(3, 1, 4, 2), c(2, 1, 4, 1),
-                                probs = c(0.01, 0.125, 0.126, 0.25, 0.3, 0.5, 0.51, 0.99, 1))
-stopifnot(identical(hq, c(1, 1, 2, 2, 3, 3, 4, 4, 4)))
-# Default grid: 99 values; equal weights on 1..100 -> grid = 1..99
-stopifnot(identical(price_wedge_quantile_grid(as.numeric(1:100), rep(1, 100)), as.numeric(1:99)))
-# Weights as frequencies: weight-3 value = three copies
-gx <- rexp(200); gw <- sample(1:3, 200, replace = TRUE)
-stopifnot(identical(price_wedge_quantile_grid(gx, gw), price_wedge_quantile_grid(rep(gx, gw), rep(1, sum(gw)))))
-# NA rows dropped, row order irrelevant
-stopifnot(identical(price_wedge_quantile_grid(c(gx, NA), c(gw, 1)), price_wedge_quantile_grid(gx, gw)),
-          identical(price_wedge_quantile_grid(rev(gx), rev(gw)), price_wedge_quantile_grid(gx, gw)))
-cat('PASS: price_wedge_quantile_grid matches hand example, frequency-weight copies, ignores NA / order\n')
-
-# Monotone, values observed wedges
-lx <- rlnorm(3000, 0, 0.6); lw <- runif(3000, 10, 500)
-lg <- price_wedge_quantile_grid(lx, lw)
-stopifnot(length(lg) == 99, all(diff(lg) >= 0), all(lg %in% lx))
-cat('PASS: price_wedge_quantile_grid monotone, 99 observed values\n')
-
-expect_error(price_wedge_quantile_grid(c(1, 2), c(0, 0)), 'positive total', 'zero total weight stops')
-expect_error(price_wedge_quantile_grid(c(1, 2), 1), 'one weight per value', 'length mismatch stops')
-
-# -- Price wedge draws keyed on (hh_id, parent_unit_id), own streams
+# -- Keyed hash helpers (income-rank jitter, NSECE label draws; no longer the
+# price wedge draw, which is main's set.seed + sample)
 # Reference values from Python big-int fmix32 (exact 32-bit arithmetic)
-stopifnot(fmix_2_32(0xdeadbeef) == 233162409, fmix_2_32(4294967295) == 2180083513,
-          identical(draw_price_pctile_idx(c(1, 2, 1, 123456789, 4294967295), c(1, 1, 2, 3, 1), 79),
-                    c(9L, 80L, 39L, 7L, 86L)))
-cat('PASS: draw_price_pctile_idx matches exact 32-bit reference hash\n')
+stopifnot(fmix_2_32(0xdeadbeef) == 233162409, fmix_2_32(4294967295) == 2180083513)
+cat('PASS: fmix_2_32 matches exact 32-bit reference hash\n')
 
 # ACS parent unit ids are text ('1', '1_2', 1b) -> numeric key hhm1 x 1000 +
-# hhm2; draw on text ids = draw on those keys; bad id -> stop
+# hhm2; jitter on text ids = jitter on those keys; bad id -> stop
 stopifnot(identical(parent_unit_key(c('1', '1_2', '12_3')), c(1000, 1002, 12003)),
           identical(parent_unit_key(c(5, 7)), c(5, 7)),
           all(is.na(parent_unit_key(c('a', '1_2_3', '1000')))),
-          identical(draw_price_pctile_idx(c(2395, 2395, 2397), c('1_2', '3', '1_2'), 79),
-                    draw_price_pctile_idx(c(2395, 2395, 2397), c(1002, 3000, 1002), 79)))
-stopifnot(inherits(tryCatch(draw_price_pctile_idx(1, 'x', 79), error = function(e) e), 'error'))
+          identical(keyed_unif_2_32(c(2395, 2395, 2397), parent_unit_key(c('1_2', '3', '1_2')), 79),
+                    keyed_unif_2_32(c(2395, 2395, 2397), c(1002, 3000, 1002), 79)))
+stopifnot(inherits(tryCatch(keyed_unif_2_32(1, parent_unit_key('x'), 79), error = function(e) e), 'error'))
 cat('PASS: parent_unit_key -- ACS text parent unit ids hash as numeric keys\n')
 
 # Round trip on 1b's own id builder: every one-parent id + every sorted pair
 # (1b sorts hhm_id1 < hhm_id2), person numbers 1-120 -> keys non-NA, one per
-# unit, draw runs. Catches 1b id format change before cluster calibration.
+# unit, jitter runs. Catches 1b id format change before cluster calibration.
 rt <- rbind(data.frame(h1 = 1:120, h2 = NA_integer_),
             subset(expand.grid(h1 = 1:120, h2 = 1:120), h1 < h2))
 rt_ids  <- make_parent_unit_id(rt$h1, rt$h2)
 rt_keys <- parent_unit_key(rt_ids)
 stopifnot(is.character(rt_ids), !anyNA(rt_keys), !anyDuplicated(rt_keys),
           identical(rt_keys, rt$h1 * 1000 + ifelse(is.na(rt$h2), 0, rt$h2)),
-          all(draw_price_pctile_idx(rep(1, nrow(rt)), rt_ids, 79) %in% 1:99))
+          all(keyed_unif_2_32(rep(1, nrow(rt)), rt_keys, 79) >= 0))
 cat('PASS: make_parent_unit_id -- 1b ids round-trip through parent_unit_key, ',
     nrow(rt), ' units\n', sep = '')
 
 k_hh <- rep(1:60000, each = 2); k_pu <- rep(1:2, 60000)
-k_idx <- draw_price_pctile_idx(k_hh, k_pu, random_seed_base + 3)
-perm <- sample(length(k_hh)); sub_i <- sort(sample(length(k_hh), 5000))
-stopifnot(all(k_idx %in% 1:99), length(unique(k_idx)) == 99,
-          chisq.test(tabulate(k_idx, 99))$p.value > 1e-3,
-          identical(draw_price_pctile_idx(k_hh[perm], k_pu[perm], random_seed_base + 3), k_idx[perm]),
-          identical(draw_price_pctile_idx(k_hh[sub_i], k_pu[sub_i], random_seed_base + 3), k_idx[sub_i]),
-          mean(draw_price_pctile_idx(k_hh, k_pu, random_seed_base + 4) == k_idx) < 0.03)
-cat('PASS: keyed draw uniform on 1:99, same index under row shuffle / subset, seed moves it\n')
+k_u <- keyed_unif_2_32(k_hh, k_pu, random_seed_base + 4)
+k_perm <- sample(length(k_hh)); k_sub <- sort(sample(length(k_hh), 5000))
+stopifnot(all(k_u >= 0 & k_u < 1), chisq.test(tabulate(1 + floor(k_u * 99), 99))$p.value > 1e-3,
+          identical(keyed_unif_2_32(k_hh[k_perm], k_pu[k_perm], random_seed_base + 4), k_u[k_perm]),
+          identical(keyed_unif_2_32(k_hh[k_sub], k_pu[k_sub], random_seed_base + 4), k_u[k_sub]),
+          mean(keyed_unif_2_32(k_hh, k_pu, random_seed_base + 5) == k_u) < 0.001)
+cat('PASS: keyed uniform in [0, 1), uniform, same value under row shuffle / subset, seed moves it\n')
 
-# -- Price wedge cache: wedge = grid[[type]][keyed idx], clipped [0.1, 5]
-# Grids encode index: center_low = 1 + idx / 100 (decodes idx), center_high
-# spans 0.01..5.9 (clip both ends), home / other_paid constant
-tw_grid <- list(center_low  = 1 + (1:99) / 100,
-                center_high = seq(0.01, 5.9, length.out = 99),
-                home        = rep(0.8, 99),
-                other_paid  = rep(1.2, 99))
-# Quintile grids encode quintile + index: center_low q -> 0.5 q + idx / 1000,
-# other_paid q -> 0.2 q + idx / 1000. Base tests: no percentile -> unconditional
-tw_qgrid <- list(center_low = lapply(1:5, function(q) 0.5 * q + (1:99) / 1000),
-                 other_paid = lapply(1:5, function(q) 0.2 * q + (1:99) / 1000))
-tw_pq <- list(quantile_grid = tw_grid, quantile_grid_by_quintile = tw_qgrid,
-              income_rank_scheme = 'national', summary_stats = list(other_paid_base_price = 10))
-tw_ip_na <- tibble(hh_id = tw_hh$hh_id, income_pctile = NA_integer_)
-tw_cache <- function(pu = tw_pu, ch = tw_ch, ip = tw_ip_na, pq = tw_pq) {
-  compute_price_wedge_cache(pu, ch, pq, ip)
+# -- Price wedge cache: wedge = price forest quantile at keyed index, clipped
+# [0.1, 5]. Toy forests (ranger quantreg, 1a train_single_qrf() settings bar
+# size) on income percentile, region, n_parents, child age
+make_toy_qrf <- function(target_fn, seed, n = 1500) {
+  with_rng_preserved({
+    set.seed(seed)
+    d <- data.frame(income_pctile = sample(1:100, n, replace = TRUE),
+                    region        = factor(sample(c('1', '2'), n, replace = TRUE), levels = c('1', '2')),
+                    n_parents     = sample(1:2, n, replace = TRUE),
+                    child_age     = sample(0:4, n, replace = TRUE))
+    d$target <- target_fn(d)
+    m <- ranger::ranger(target ~ income_pctile + region + n_parents + child_age, data = d,
+                        num.trees = 30, mtry = 4, min.node.size = 10, quantreg = TRUE, seed = seed)
+    m$region_levels <- levels(d$region)
+    m
+  })
+}
+tw_models <- list(
+  center_low_price   = make_toy_qrf(function(d) 1 + d$income_pctile / 50 + rnorm(nrow(d), 0, 0.3), 1),
+  center_high_price  = make_toy_qrf(function(d) 2 + 0.1 * d$n_parents + rnorm(nrow(d), 0, 0.5), 2),
+  home_price         = make_toy_qrf(function(d) 0.8 + 0.05 * d$child_age + rnorm(nrow(d), 0, 0.2), 3),
+  other_paid_price   = make_toy_qrf(function(d) 1.2 + rnorm(nrow(d), 0, 0.4), 4),
+  income_rank_scheme = 'national', urban_density = '0',
+  summary_stats      = list(other_paid_base_price = 10))
+# Parent unit percentiles; NA = AGI unknown (-> no wedge)
+tw_ip <- tibble(hh_id = tw_hh$hh_id, parent_unit_id = 1L,
+                income_pctile = rep_len(c(1L, 20L, 21L, 40L, 55L, 80L, 81L, 100L, NA), 600))
+tw_cache <- function(pu = tw_pu, ch = tw_ch, hh = tw_hh, ip = tw_ip, pm = tw_models) {
+  compute_price_wedge_cache(pu, ch, hh, pm, ip)
 }
 wedge_cols <- c('price_wedge.center_low', 'price_wedge.center_high', 'price_wedge.home', 'price_wedge.other_paid')
+wedge_models <- c(price_wedge.center_low = 'center_low_price', price_wedge.center_high = 'center_high_price',
+                  price_wedge.home = 'home_price', price_wedge.other_paid = 'other_paid_price')
 
 base_w <- tw_cache()
-base_idx <- draw_price_pctile_idx(tw_pu$hh_id, tw_pu$parent_unit_id, random_seed_base + 3)
+# Main's draw: set.seed(random_seed_base + 2), then sample(1:99, n_complete,
+# replace = TRUE) over complete units in table order, one index per unit
+# shared by the four care types
+base_cmp <- !is.na(tw_ip$income_pctile)
+set.seed(random_seed_base + 2)
+base_idx <- rep(NA_integer_, nrow(tw_pu))
+base_idx[base_cmp] <- sample(1:99, sum(base_cmp), replace = TRUE)
 stopifnot(identical(names(base_w), c('hh_id', 'parent_unit_id', wedge_cols)),
           identical(base_w$hh_id, tw_pu$hh_id),
-          identical(round((base_w$price_wedge.center_low - 1) * 100), as.numeric(base_idx)),
-          isTRUE(all.equal(base_w$price_wedge.center_high, pmax(0.1, pmin(5, tw_grid$center_high[base_idx])))),
-          all(base_w$price_wedge.home == 0.8), all(base_w$price_wedge.other_paid == 1.2))
-cat('PASS: price wedge cache -- columns unchanged, wedge = grid at keyed index, all types share index\n')
+          identical(is.na(base_w$price_wedge.center_low), is.na(tw_ip$income_pctile)),
+          all(as.matrix(base_w[!is.na(tw_ip$income_pctile), wedge_cols]) >= 0.1 &
+                as.matrix(base_w[!is.na(tw_ip$income_pctile), wedge_cols]) <= 5))
 
-# Clipping: grid beyond [0.1, 5] -> bounds
-clip_pq <- tw_pq; clip_pq$quantile_grid$center_low <- c(rep(0.001, 50), rep(50, 49))
-clip_w <- tw_cache(pq = clip_pq)
-stopifnot(all(clip_w$price_wedge.center_low %in% c(0.1, 5)),
-          identical(clip_w$price_wedge.center_low == 0.1, base_idx <= 50),
-          all(base_w$price_wedge.center_high >= 0.1 & base_w$price_wedge.center_high <= 5))
+# Reference: forest predicts quantile idx / 100 at each unit's own features,
+# one unit at a time (what vectorised cache must equal)
+ref_i <- which(!is.na(tw_ip$income_pctile))[1:150]
+for (cl in wedge_cols) {
+  ref <- vapply(ref_i, function(i) {
+    f <- data.frame(income_pctile = tw_ip$income_pctile[i],
+                    region = factor(tw_hh$region[i], levels = c('1', '2')),
+                    n_parents = tw_pu$n_parents[i], child_age = tw_ch$age[i])
+    q <- predict(tw_models[[wedge_models[[cl]]]], data = f, type = 'quantiles',
+                 quantiles = base_idx[i] / 100)$predictions
+    pmax(0.1, pmin(5, q[1, 1]))
+  }, numeric(1))
+  stopifnot(isTRUE(all.equal(base_w[[cl]][ref_i], ref)))
+}
+cat('PASS: price wedge cache -- wedge = price forest quantile (main sample(1:99) index / 100) at unit features, ',
+    'equals per-unit forest prediction, clipped [0.1, 5]\n', sep = '')
+
+# Wedge rises w/ drawn index among units w/ same features (all four types, one
+# index shared); forest responds to income percentile (center_low)
+fkey <- paste(tw_ip$income_pctile, tw_pu$n_parents, tw_ch$age)
+mono <- vapply(split(which(!is.na(tw_ip$income_pctile)), fkey[!is.na(tw_ip$income_pctile)]), function(i) {
+  i <- i[order(base_idx[i])]
+  all(vapply(wedge_cols, function(cl) all(diff(base_w[[cl]][i]) >= -1e-12), logical(1)))
+}, logical(1))
+stopifnot(all(mono), any(table(fkey) > 3))
+lo <- tw_ip$income_pctile %in% c(1L, 20L); hi <- tw_ip$income_pctile %in% c(81L, 100L)
+stopifnot(mean(base_w$price_wedge.center_low[hi]) > mean(base_w$price_wedge.center_low[lo]) + 0.5)
+cat('PASS: price wedge cache -- non-decreasing in drawn index for same features, center_low rises w/ income\n')
+
+# Clipping: forest w/ wedges beyond [0.1, 5] -> bounds
+clip_pm <- tw_models
+clip_pm$center_low_price <- make_toy_qrf(function(d) ifelse(runif(nrow(d)) < 0.5, 0.001, 50), 5)
+clip_w <- tw_cache(pm = clip_pm)
+stopifnot(all(clip_w$price_wedge.center_low >= 0.1 & clip_w$price_wedge.center_low <= 5, na.rm = TRUE),
+          any(clip_w$price_wedge.center_low == 0.1, na.rm = TRUE),
+          any(clip_w$price_wedge.center_low == 5, na.rm = TRUE),
+          identical(clip_w$price_wedge.center_high, base_w$price_wedge.center_high))
 cat('PASS: price wedge cache clips multipliers to [0.1, 5]\n')
 
-# Rows shuffled, NY-only subset, income reversed -> same wedge per unit
+# Main's behavior: draw depends on global RNG only through set.seed inside the
+# call (same inputs -> same wedge whatever the global state before), and on
+# unit order / set (shuffled rows or a state subset draw a different stream)
+set.seed(1); r_a <- tw_cache()
+set.seed(2); r_b <- tw_cache()
+stopifnot(identical(r_a, base_w), identical(r_b, base_w))
 shuf <- sample(nrow(tw_pu))
-r_shuf <- tw_cache(tw_pu[shuf, ], tw_ch[sample(nrow(tw_ch)), ])
+r_shuf <- tw_cache(tw_pu[shuf, ], tw_ch[sample(nrow(tw_ch)), ], ip = tw_ip[sample(nrow(tw_ip)), ])
 ny_ids <- tw_hh$hh_id[tw_hh$statefip == 36L]
-r_ny <- tw_cache(tw_pu %>% filter(hh_id %in% ny_ids), tw_ch %>% filter(hh_id %in% ny_ids))
-stopifnot(identical(r_shuf[match(base_w$hh_id, r_shuf$hh_id), ], base_w),
-          identical(r_ny, base_w %>% filter(hh_id %in% ny_ids)))
-cat('PASS: price wedge cache same per unit under shuffled rows, state subset\n')
+r_ny <- tw_cache(tw_pu %>% filter(hh_id %in% ny_ids), tw_ch %>% filter(hh_id %in% ny_ids),
+                 tw_hh %>% filter(hh_id %in% ny_ids))
+stopifnot(!identical(r_shuf[match(base_w$hh_id, r_shuf$hh_id), ], base_w),
+          identical(is.na(r_ny$price_wedge.home), is.na(base_w$price_wedge.home[base_w$hh_id %in% ny_ids])))
+cat('PASS: price wedge cache -- main draw: seeded inside call, depends on unit order / set\n')
 
 # Units w/out child under 5 get NA; children 5+ / extra rows change nothing
 tw_ch8 <- bind_rows(tw_ch %>% filter(hh_id > 10),
                     tibble(hh_id = 1:20, parent_unit_id = 1L, child_id = 2L, age = 8, child_weight = 1e6))
 r8 <- tw_cache(ch = tw_ch8)
 stopifnot(all(is.na(as.matrix(r8[r8$hh_id <= 10, wedge_cols]))),
-          identical(r8[r8$hh_id > 10, ], base_w[base_w$hh_id > 10, ]))
+          identical(is.na(r8$price_wedge.home[r8$hh_id > 10]), is.na(base_w$price_wedge.home[base_w$hh_id > 10])))
 # Employment-choice expansion (3 rows per unit) -> one row per unit
 r3 <- tw_cache(bind_rows(tw_pu, tw_pu, tw_pu))
 stopifnot(identical(r3, base_w))
-cat('PASS: price wedge cache -- NA w/out child under 5, one row per unit\n')
+# Two children under 5: forest takes mean age
+tw_ch2 <- bind_rows(tw_ch, tw_ch %>% filter(hh_id <= 50) %>% mutate(child_id = 2L, age = 4))
+r2c <- tw_cache(ch = tw_ch2)
+stopifnot(identical(r2c[r2c$hh_id > 50, ], base_w[base_w$hh_id > 50, ]),
+          !identical(r2c[r2c$hh_id <= 50, ], base_w[base_w$hh_id <= 50, ]))
+cat('PASS: price wedge cache -- NA w/out child under 5, one row per unit, mean child age\n')
 
-expect_error(tw_cache(pq = list(quantile_grid = tw_grid[1:3])),
-             'Rerun NSECE processing', 'cache w/out all four grids stops')
-expect_error(tw_cache(pq = list(center_low_price = list())),
-             'Rerun NSECE processing', 'old QRF cache object stops')
-expect_error(tw_cache(pq = list(quantile_grid = tw_grid, income_rank_scheme = 'national')),
-             'lacks quantile_grid_by_quintile.*Rerun NSECE', 'cache w/out quintile grids stops')
-bad_q <- tw_pq; bad_q$quantile_grid_by_quintile$other_paid <- tw_qgrid$other_paid[1:4]
-expect_error(tw_cache(pq = bad_q), 'lacks quantile_grid_by_quintile', 'cache w/ 4 quintile grids stops')
+# Percentile: NA (AGI unknown) or unit absent from income_pctiles -> no wedge
+# (callers fill 1.0); region NA -> no wedge
+r_miss <- tw_cache(ip = tw_ip %>% filter(hh_id > 100))
+stopifnot(all(is.na(as.matrix(r_miss[r_miss$hh_id <= 100, wedge_cols]))),
+          identical(is.na(r_miss$price_wedge.home[-(1:100)]), is.na(base_w$price_wedge.home[-(1:100)])))
+r_reg <- tw_cache(hh = tw_hh %>% mutate(region = if_else(hh_id <= 5, NA_integer_, region)))
+stopifnot(all(is.na(as.matrix(r_reg[r_reg$hh_id <= 5, wedge_cols]))),
+          identical(is.na(r_reg$price_wedge.home[-(1:5)]), is.na(base_w$price_wedge.home[-(1:5)])))
+cat('PASS: price wedge cache -- unit w/ NA percentile, absent from income_pctiles, or w/out region gets no wedge\n')
+
+set.seed(5); invisible(tw_cache()); r_after <- runif(3)
+set.seed(random_seed_base + 2); invisible(sample(1:99, sum(base_cmp), replace = TRUE))
+stopifnot(!identical(r_after, { set.seed(5); runif(3) }))   # call moves global stream (as main)
+cat('PASS: price wedge cache moves global RNG stream (set.seed inside call, as main)\n')
+
+# Scale: 300,000 units predict one forest row per distinct feature row, not per
+# unit -- finishes in seconds; timing printed, not asserted
+big_n <- 300000
+big_pu <- tibble(hh_id = 1:big_n, parent_unit_id = 1L, n_parents = sample(1:2, big_n, replace = TRUE))
+big_ch <- tibble(hh_id = 1:big_n, parent_unit_id = 1L, age = sample(0:4, big_n, replace = TRUE))
+big_hh <- tibble(hh_id = 1:big_n, region = sample(1:2, big_n, replace = TRUE))
+big_ip <- tibble(hh_id = 1:big_n, parent_unit_id = 1L, income_pctile = sample(1:100, big_n, replace = TRUE))
+big_t <- system.time(big_w <- compute_price_wedge_cache(big_pu, big_ch, big_hh, tw_models, big_ip))
+stopifnot(nrow(big_w) == big_n, !anyNA(as.matrix(big_w[, wedge_cols])))
+cat('PASS: price wedge cache -- ', format(big_n, scientific = FALSE), ' units in ', round(big_t[['elapsed']], 1), ' s\n', sep = '')
+
+expect_error(tw_cache(pm = tw_models[c('center_low_price', 'center_high_price', 'home_price')]),
+             'Rerun NSECE processing', 'cache w/out all four forests stops')
+expect_error(tw_cache(pm = list(quantile_grid = list())),
+             'Rerun NSECE processing', 'old grid cache object stops')
+expect_error(tw_cache(hh = tw_hh %>% select(-region)), 'households needs hh_id, region',
+             'households w/out region stops')
 
 # -- Scheme mismatch, unlabeled cache stop
-mis_pq <- tw_pq; mis_pq$income_rank_scheme <- 'national_rpp'
-expect_error(tw_cache(pq = mis_pq),
+mis_pm <- tw_models; mis_pm$income_rank_scheme <- 'national_rpp'
+expect_error(tw_cache(pm = mis_pm),
              'built under income-rank scheme "national_rpp", this run uses "national"',
-             'price grids from other income-rank scheme stop')
-unl_pq <- tw_pq; unl_pq$income_rank_scheme <- NULL
-expect_error(tw_cache(pq = unl_pq), 'scheme "unlabeled"', 'unlabeled price grids stop')
-expect_error(compute_price_wedge_cache(tw_pu, tw_ch, tw_pq, NULL),
+             'price forest from other income-rank scheme stops')
+unl_pm <- tw_models; unl_pm$income_rank_scheme <- NULL
+expect_error(tw_cache(pm = unl_pm), 'scheme "unlabeled"', 'unlabeled price forest stops')
+expect_error(compute_price_wedge_cache(tw_pu, tw_ch, tw_hh, tw_models, NULL),
              'income_pctiles needs hh_id', 'missing income_pctiles stops')
 
-# -- Quintile grids (1a): one per quintile, thin cell -> unconditional
-# 2 provider rows per household; q1-q4 40 households each, q5 10 (< 30),
-# 15 households w/out rank (NA) enter unconditional grid only
-qg_n <- c(40, 40, 40, 40, 10, 15)
-qg_hh <- rep(seq_len(sum(qg_n)), each = 2)
-qg_q <- rep(rep(c(1:5, NA), qg_n), each = 2)
-qg_x <- rlnorm(length(qg_hh), log(ifelse(is.na(qg_q), 3, qg_q)), 0.3)
-qg_w <- runif(length(qg_hh), 10, 200)
-qg <- price_wedge_quintile_grids(qg_x, qg_w, qg_hh, qg_q)
-qg_uncond <- price_wedge_quantile_grid(qg_x, qg_w)
-stopifnot(identical(qg$n_hh, c(40L, 40L, 40L, 40L, 10L)), identical(qg$fallback, 5L),
-          identical(qg$grids[[5]], qg_uncond),
-          all(vapply(1:4, function(q) {
-            i <- !is.na(qg_q) & qg_q == q
-            identical(qg$grids[[q]], price_wedge_quantile_grid(qg_x[i], qg_w[i]))
-          }, logical(1))),
-          all(diff(vapply(qg$grids[1:4], median, numeric(1))) > 0))
-# Cell size counts households, not rows: 20 households x 2 rows -> 20 < 30
-qg2 <- price_wedge_quintile_grids(qg_x[1:40], qg_w[1:40], qg_hh[1:40], qg_q[1:40])
-stopifnot(qg2$n_hh[1] == 20L, 1L %in% qg2$fallback,
-          identical(qg2$grids[[1]], price_wedge_quantile_grid(qg_x[1:40], qg_w[1:40])))
-# Row order irrelevant
-qp <- sample(length(qg_x))
-stopifnot(identical(price_wedge_quintile_grids(qg_x[qp], qg_w[qp], qg_hh[qp], qg_q[qp]), qg))
-cat('PASS: price_wedge_quintile_grids -- grid per quintile, < 30 households -> unconditional, ',
-    'counts households, ignores row order\n', sep = '')
-expect_error(price_wedge_quintile_grids(1:3, 1:3, 1:3, c(1, 6, NA)), 'must be 1-5',
-             'quintile outside 1-5 stops')
+# -- Urban-density mismatch stops (price forest built under other setting);
+# unlabeled forest = built before switch = density on
+den_pm <- tw_models; den_pm$urban_density <- '1'
+expect_error(tw_cache(pm = den_pm), 'built under ECEC_URBAN_DENSITY=1, this run uses 0',
+             'price forest built w/ density on stops under density off')
+unl_den <- tw_models; unl_den$urban_density <- NULL
+expect_error(tw_cache(pm = unl_den), 'unlabeled: built before the switch, density on',
+             'unlabeled price forest stops under density off')
+urban_density_setting <- '1'
+stopifnot(identical(tw_cache(pm = den_pm), base_w), identical(tw_cache(pm = unl_den), base_w))
+expect_error(tw_cache(), 'built under ECEC_URBAN_DENSITY=0, this run uses 1',
+             'price forest built w/ density off stops under density on')
+urban_density_setting <- '0'
+cat('PASS: price wedge cache -- price forest from other urban-density setting stops, unlabeled = density on\n')
 
-# -- Cache w/ household percentiles: center_low / other_paid read quintile
-# grid at shared idx; center_high / home unchanged; NA percentile -> unconditional
-tw_ip <- tibble(hh_id = tw_hh$hh_id, income_pctile = rep_len(c(1L, 20L, 21L, 40L, 55L, 80L, 81L, 100L, NA), 600))
-tw_q <- as.integer(ceiling(tw_ip$income_pctile / 20))
-q_w <- tw_cache(ip = tw_ip)
-has_q <- !is.na(tw_q)
-stopifnot(identical(names(q_w), c('hh_id', 'parent_unit_id', wedge_cols)),
-          isTRUE(all.equal(q_w$price_wedge.center_low[has_q], 0.5 * tw_q[has_q] + base_idx[has_q] / 1000)),
-          isTRUE(all.equal(q_w$price_wedge.other_paid[has_q], 0.2 * tw_q[has_q] + base_idx[has_q] / 1000)),
-          identical(q_w$price_wedge.center_low[!has_q], base_w$price_wedge.center_low[!has_q]),
-          identical(q_w$price_wedge.other_paid[!has_q], base_w$price_wedge.other_paid[!has_q]),
-          identical(q_w$price_wedge.center_high, base_w$price_wedge.center_high),
-          identical(q_w$price_wedge.home, base_w$price_wedge.home),
-          identical(sort(unique(tw_q[has_q])), 1:5))
-# Household missing from income_pctiles -> unconditional
-q_miss <- tw_cache(ip = tw_ip %>% filter(hh_id > 100))
-stopifnot(identical(q_miss$price_wedge.center_low[1:100], base_w$price_wedge.center_low[1:100]),
-          identical(q_miss[-(1:100), ], q_w[-(1:100), ]))
-cat('PASS: price wedge cache -- center_low / other_paid from household quintile grid at shared idx, ',
-    'center_high / home unchanged, no percentile -> unconditional\n', sep = '')
-
-# Clip applies to quintile grids too
-cq_pq <- tw_pq; cq_pq$quantile_grid_by_quintile$center_low[[1]] <- rep(9, 99)
-cq_w <- tw_cache(ip = tw_ip, pq = cq_pq)
-stopifnot(all(cq_w$price_wedge.center_low[which(tw_q == 1L)] == 5))
-cat('PASS: price wedge cache clips quintile-grid multipliers to [0.1, 5]\n')
-
-# Shuffled rows (units, children, percentiles), state subset -> same wedge
-r_qs <- tw_cache(tw_pu[shuf, ], tw_ch[sample(nrow(tw_ch)), ], tw_ip[sample(nrow(tw_ip)), ])
-r_qny <- tw_cache(tw_pu %>% filter(hh_id %in% ny_ids), tw_ch %>% filter(hh_id %in% ny_ids), tw_ip)
-stopifnot(identical(r_qs[match(q_w$hh_id, r_qs$hh_id), ], q_w),
-          identical(r_qny, q_w %>% filter(hh_id %in% ny_ids)))
-cat('PASS: price wedge cache w/ quintiles same per unit under shuffled rows, state subset\n')
-
-set.seed(5); r1 <- runif(3)
-set.seed(5); invisible(tw_cache()); invisible(tw_cache(ip = tw_ip)); r2 <- runif(3)
-stopifnot(identical(r1, r2))
-cat('PASS: price wedge cache leaves global RNG stream untouched\n')
-
-# -- ACS income percentiles for price quintile (price_wedge_income_pctiles())
-# national scheme: cutpoints = child-weighted quantiles of income + keyed
-# jitter over children under 5 w/ positive income
-tw_hh0 <- tw_hh; tw_hh0$income[c(5, 6)] <- c(0, -100)
-ip_nat <- price_wedge_income_pctiles(tw_hh0, tw_ch)
-ok_k <- tw_hh0$income > 0
-jit <- keyed_unif_2_32(tw_ch$hh_id, tw_ch$child_id, random_seed_base + 4)
-man_cut <- Hmisc::wtd.quantile(tw_hh0$income[ok_k] + jit[ok_k], tw_ch$child_weight[ok_k],
-                               seq(0.01, 0.99, 0.01))
-man_p <- assign_income_pctile(tw_hh0$income, rep(0L, 600), list(`0` = man_cut))
-man_p[!ok_k] <- NA_integer_
-stopifnot(identical(ip_nat$hh_id, tw_hh0$hh_id), identical(ip_nat$income_pctile, man_p),
-          all(is.na(ip_nat$income_pctile[5:6])), all(jit >= 0 & jit < 1))
-# Child-weighted quintile shares ~ 20% each
-qs <- tapply(tw_ch$child_weight[ok_k], ceiling(man_p[ok_k] / 20), sum) / sum(tw_ch$child_weight[ok_k])
+# -- ACS parent unit AGI percentiles for price forest (price_wedge_income_pctiles()),
+# as original simulator: unit AGI = baseline_agi1 + baseline_agi2, weight =
+# mean parent weights. national scheme: cutpoints = weighted quantiles of AGI
+# + keyed jitter over every unit w/ AGI; AGI <= 0 -> bin 1; AGI NA -> NA
+tw_pua <- tw_pu %>%
+  mutate(baseline_agi1 = tw_hh$income * 0.6,
+         baseline_agi2 = if_else(n_parents == 2L, tw_hh$income * 0.4, NA_real_),
+         per_weight1   = runif(600, 50, 150),
+         per_weight2   = if_else(n_parents == 2L, runif(600, 50, 150), NA_real_))
+tw_pua0 <- tw_pua
+tw_pua0$baseline_agi1[c(5, 6)] <- c(0, -100); tw_pua0$baseline_agi2[c(5, 6)] <- NA
+tw_pua0$baseline_agi1[7] <- NA; tw_pua0$baseline_agi2[7] <- NA
+ip_nat <- price_wedge_income_pctiles(tw_pua0, tw_hh)
+agi0 <- tw_pua0$baseline_agi1 + coalesce(tw_pua0$baseline_agi2, 0)
+agi0[7] <- NA
+wt0 <- (tw_pua0$per_weight1 + coalesce(tw_pua0$per_weight2, tw_pua0$per_weight1)) / 2
+ok_k <- !is.na(agi0)
+jit <- keyed_unif_2_32(tw_pua0$hh_id, parent_unit_key(tw_pua0$parent_unit_id), random_seed_base + 4)
+man_cut <- Hmisc::wtd.quantile(agi0[ok_k] + jit[ok_k], wt0[ok_k], seq(0.01, 0.99, 0.01))
+man_p <- assign_income_pctile(agi0, rep(0L, 600), list(`0` = man_cut))
+stopifnot(identical(names(ip_nat), c('hh_id', 'parent_unit_id', 'income_pctile')),
+          identical(ip_nat$hh_id, tw_pua0$hh_id), identical(ip_nat$income_pctile, man_p),
+          all(ip_nat$income_pctile[5:6] == 1L), is.na(ip_nat$income_pctile[7]), all(jit >= 0 & jit < 1))
+# Weighted quintile shares ~ 20% each
+qs <- tapply(wt0[ok_k], ceiling(man_p[ok_k] / 20), sum) / sum(wt0[ok_k])
 stopifnot(max(abs(qs - 0.2)) < 0.03)
-# Row order irrelevant; households w/out child under 5 dropped
-ip_shuf <- price_wedge_income_pctiles(tw_hh0[sample(600), ], tw_ch[sample(600), ])
+# Row order irrelevant; employment-choice rows collapse to first row per unit
+ip_shuf <- price_wedge_income_pctiles(tw_pua0[sample(600), ], tw_hh[sample(600), ])
 stopifnot(identical(ip_shuf[match(ip_nat$hh_id, ip_shuf$hh_id), ], ip_nat))
-ip_old <- price_wedge_income_pctiles(tw_hh0, tw_ch %>% mutate(age = if_else(hh_id <= 3, 7, age)))
-stopifnot(!any(1:3 %in% ip_old$hh_id))
-cat('PASS: price_wedge_income_pctiles -- national cutpoints w/ keyed jitter, NA w/out positive income, ',
-    'row order irrelevant\n', sep = '')
+ip_dup <- price_wedge_income_pctiles(bind_rows(tw_pua0, tw_pua0 %>% mutate(baseline_agi1 = baseline_agi1 + 1e6)), tw_hh)
+stopifnot(identical(ip_dup, ip_nat))
+# Second parent adds to AGI: unit w/ two parents ranks on the sum
+two_k <- !is.na(tw_pua0$baseline_agi2) & ok_k
+stopifnot(any(two_k), all(agi0[two_k] > tw_pua0$baseline_agi1[two_k]))
+expect_error(price_wedge_income_pctiles(select(tw_pua0, -per_weight1), tw_hh), 'parent_units needs columns',
+             'parent_units w/out weights stops')
+cat('PASS: price_wedge_income_pctiles -- unit baseline AGI (both parents), weighted national cutpoints w/ keyed jitter, ',
+    'AGI <= 0 bin 1, NA AGI NA, row order irrelevant\n', sep = '')
 set.seed(5); r1 <- runif(3)
-set.seed(5); invisible(price_wedge_income_pctiles(tw_hh0, tw_ch)); r2 <- runif(3)
+set.seed(5); invisible(price_wedge_income_pctiles(tw_pua0, tw_hh)); r2 <- runif(3)
 stopifnot(identical(r1, r2))
 cat('PASS: price_wedge_income_pctiles leaves global RNG stream untouched\n')
 
-# Geo version: NULL under national; national_rpp -- NYC at NYC RPP vs same
-# cutpoints, rest identical to national version
-invisible(capture.output(ip_g <- price_wedge_income_pctiles(tw_hh, tw_ch, 'NYC')))
+# Geo version: NULL under national; national_rpp -- AGI / state RPP for
+# cutpoints, NYC units at NYC RPP vs same cutpoints, rest identical to
+# national version
+invisible(capture.output(ip_g <- price_wedge_income_pctiles(tw_pua, tw_hh, 'NYC')))
 stopifnot(is.null(ip_g))
 income_rank_scheme <- 'national_rpp'
-ip_rpp <- price_wedge_income_pctiles(tw_hh, tw_ch)
-invisible(capture.output(ip_nyc <- price_wedge_income_pctiles(tw_hh, tw_ch, 'NYC')))
-ri_rpp <- income_rank_inputs(tw_hh$income, tw_hh$region, tw_hh$statefip, 'acs')
-rpp_cut <- Hmisc::wtd.quantile(ri_rpp$income + jit, tw_ch$child_weight, seq(0.01, 0.99, 0.01))
+agi <- tw_pua$baseline_agi1 + coalesce(tw_pua$baseline_agi2, 0)
+wt <- (tw_pua$per_weight1 + coalesce(tw_pua$per_weight2, tw_pua$per_weight1)) / 2
+jit <- keyed_unif_2_32(tw_pua$hh_id, parent_unit_key(tw_pua$parent_unit_id), random_seed_base + 4)
+ip_rpp <- price_wedge_income_pctiles(tw_pua, tw_hh)
+invisible(capture.output(ip_nyc <- price_wedge_income_pctiles(tw_pua, tw_hh, 'NYC')))
+ri_rpp <- income_rank_inputs(agi, tw_hh$region, tw_hh$statefip, 'acs')
+rpp_cut <- Hmisc::wtd.quantile(ri_rpp$income + jit, wt, seq(0.01, 0.99, 0.01))
 stopifnot(identical(ip_rpp$income_pctile,
                     assign_income_pctile(ri_rpp$income, rep(0L, 600), list(`0` = rpp_cut))),
           identical(ip_nyc$income_pctile[!is_nyc], ip_rpp$income_pctile[!is_nyc]),
           identical(ip_nyc$income_pctile[is_nyc],
-                    assign_income_pctile(tw_hh$income[is_nyc] / 1.14899, rep(0L, sum(is_nyc)),
+                    assign_income_pctile(agi[is_nyc] / 1.14899, rep(0L, sum(is_nyc)),
                                          list(`0` = rpp_cut))),
           all(ip_nyc$income_pctile[is_nyc] <= ip_rpp$income_pctile[is_nyc]),
           any(ip_nyc$income_pctile[is_nyc] < ip_rpp$income_pctile[is_nyc]))
-cat('PASS: price_wedge_income_pctiles -- NYC own version at NYC RPP vs national cutpoints, ',
+cat('PASS: price_wedge_income_pctiles -- national_rpp AGI / state RPP; NYC own version at NYC RPP vs national cutpoints, ',
     'rest unchanged; NULL under national\n', sep = '')
 income_rank_scheme <- 'national'
 
@@ -994,10 +1023,11 @@ invisible(capture.output(r <- load_substate_alpha('NYC', est_dir, 2019)))
 stopifnot(is.null(r))
 invisible(capture.output(r <- load_substate_alpha('NY', est_dir, 2019)))
 stopifnot(is.null(r))
-write_alpha_rds <- function(scheme) {
+write_alpha_rds <- function(scheme, density = '0') {
   for (t in PARENT_UNIT_NAMES) {
     a <- list(alpha = matrix(0, 1, 1), geo = 'NYC')
     a$income_rank_scheme <- scheme
+    a$urban_density <- density
     saveRDS(a, substate_alpha_path(est_dir, t, 2019, 'NYC'))
   }
 }
@@ -1015,6 +1045,26 @@ for (s in list(NULL, 'state', 'region')) {
                paste0('sub-state alpha w/ scheme ', if (is.null(s)) 'unlabeled' else s,
                       ' stops, asks to recalibrate'))
 }
+
+# Urban-density setting of sub-state alpha vs run: mismatch stops, unlabeled
+# = built before switch = density on
+write_alpha_rds('national_rpp', density = '1')
+expect_error(load_substate_alpha('NYC', est_dir, 2019),
+             'built under ECEC_URBAN_DENSITY=1, this run uses 0',
+             'sub-state alpha built w/ density on stops under density off')
+write_alpha_rds('national_rpp', density = NULL)
+expect_error(load_substate_alpha('NYC', est_dir, 2019),
+             'unlabeled: built before the switch, density on',
+             'unlabeled sub-state alpha stops under density off')
+urban_density_setting <- '1'
+invisible(capture.output(r <- load_substate_alpha('NYC', est_dir, 2019)))
+stopifnot(identical(names(r), PARENT_UNIT_NAMES))
+write_alpha_rds('national_rpp', density = '0')
+expect_error(load_substate_alpha('NYC', est_dir, 2019),
+             'built under ECEC_URBAN_DENSITY=0, this run uses 1',
+             'sub-state alpha built w/ density off stops under density on')
+urban_density_setting <- '0'
+cat('PASS: load_substate_alpha -- urban-density setting mismatch stops, unlabeled = density on\n')
 unlink(est_dir, recursive = TRUE)
 
 # -- 2a helper: NYC alpha w/ national wedge rows, national beta / rho, NYC rows only
@@ -1025,7 +1075,8 @@ dir.create(est_dir, showWarnings = FALSE)
 writeLines('hh_id,child_id', file.path(est_dir, 'acs_enrollment_2019_NYC.csv'))
 tw_puw <- tibble(hh_id = tw_hh$hh_id, parent_unit_id = 1L, pseudofamily_id = 1L,
                  child_category = '1', child_weight.1 = runif(600, 50, 150)) %>%
-  left_join(base_w, by = c('hh_id', 'parent_unit_id'))
+  left_join(base_w, by = c('hh_id', 'parent_unit_id')) %>%
+  mutate(across(all_of(wedge_cols), ~ coalesce(.x, 1.0)))   # callers fill 1.0 (2a)
 # Stand-in for 2a build_calibration_type_data(): cost = wedge x 100 x choice
 # index, p0 uniform -- alpha then reads back wedge used
 mock_build <- function(pu_type, n_children, child_cat, parent_units_wide, enrollment,
@@ -1046,7 +1097,7 @@ saveRDS(list(row_ids = as.data.frame(tw_puw[, c('hh_id', 'parent_unit_id', 'pseu
         file.path(est_dir, 'alpha_c1_2019.rds'))
 run_helper <- function() {
   capture.output(r <- compute_substate_alphas(
-    parent_units_wide = tw_puw, acs_tables = list(households = tw_hh, parent_units = tw_pu, children = tw_ch),
+    parent_units_wide = tw_puw, acs_tables = list(households = tw_hh, parent_units = tw_pua, children = tw_ch),
     build_type_data = mock_build, compute_V = mock_V,
     supply_prices = c(0, 1, 1, 1), other_paid_base_price = 1, wage_perturbation = 1.01,
     tax_max = 1, data_dir = est_dir, estimation_dir = est_dir, year = 2019))
@@ -1054,7 +1105,7 @@ run_helper <- function() {
 }
 stopifnot(identical(run_helper(), 'NYC'))
 ad <- readRDS(substate_alpha_path(est_dir, 'c1', 2019, 'NYC'))
-geo_w <- base_w[is_nyc, ]
+geo_w <- tw_puw[is_nyc, ]
 stopifnot(identical(ad$row_ids$hh_id, tw_hh$hh_id[is_nyc]), ad$beta == 2.5,
           ad$income_rank_scheme == 'national_rpp', ad$geo == 'NYC',
           isTRUE(all.equal(ad$child_weights$child_weight.1, tw_puw$child_weight.1[is_nyc])))
@@ -1063,24 +1114,27 @@ stopifnot(max(abs(ad$alpha - (-(V_exp - V_exp[, 1])[, -1]))) < 1e-10,
           max(abs(compute_probs_from_alpha(ad$alpha, V_exp) - 1 / 45)) < 1e-12)
 cat('PASS: compute_substate_alphas -- NYC rows, national wedge rows in V, national beta, alpha recovers p0\n')
 
-# w/ price grids: NYC wedge rows rebuilt on NYC's own income ranks
-rpp_pq <- tw_pq; rpp_pq$income_rank_scheme <- 'national_rpp'
+# w/ price forests: NYC wedge rows rebuilt on NYC's own income ranks
+rpp_pm <- tw_models; rpp_pm$income_rank_scheme <- 'national_rpp'
 invisible(capture.output({
   compute_substate_alphas(
-    parent_units_wide = tw_puw, acs_tables = list(households = tw_hh, parent_units = tw_pu, children = tw_ch),
+    parent_units_wide = tw_puw, acs_tables = list(households = tw_hh, parent_units = tw_pua, children = tw_ch),
     build_type_data = mock_build, compute_V = mock_V,
     supply_prices = c(0, 1, 1, 1), other_paid_base_price = 1, wage_perturbation = 1.01,
     tax_max = 1, data_dir = est_dir, estimation_dir = est_dir, year = 2019,
-    price_quantiles = rpp_pq)
-  ip_nyc <- price_wedge_income_pctiles(tw_hh, tw_ch, 'NYC')
+    price_qrf_models = rpp_pm)
+  ip_nyc <- price_wedge_income_pctiles(tw_pua, tw_hh, 'NYC')
 }))
 ad_q <- readRDS(substate_alpha_path(est_dir, 'c1', 2019, 'NYC'))
-q_nyc <- as.integer(ceiling(ip_nyc$income_pctile[match(tw_hh$hh_id[is_nyc], ip_nyc$hh_id)] / 20))
-cl_nyc <- 0.5 * q_nyc + base_idx[is_nyc] / 1000
+nyc_w <- compute_price_wedge_cache(tw_pua[is_nyc, ], tw_ch[is_nyc, ], tw_hh[is_nyc, ], rpp_pm, ip_nyc)
+cl_nyc <- coalesce(nyc_w$price_wedge.center_low, 1)
 V_q <- 2.5 * log(50000 - outer(cl_nyc, 1:45) * 100)
 stopifnot(max(abs(ad_q$alpha - (-(V_q - V_q[, 1])[, -1]))) < 1e-10,
-          identical(ad_q$row_ids$hh_id, tw_hh$hh_id[is_nyc]))
-cat('PASS: compute_substate_alphas -- w/ price grids, NYC wedge rows from NYC own income quintiles\n')
+          identical(ad_q$row_ids$hh_id, tw_hh$hh_id[is_nyc]),
+          identical(nyc_w$hh_id, tw_hh$hh_id[is_nyc]),
+          any(abs(cl_nyc - geo_w$price_wedge.center_low) > 1e-9),
+          ad_q$urban_density == '0')
+cat('PASS: compute_substate_alphas -- w/ price forests, NYC wedge rows from NYC own income percentiles, density setting recorded\n')
 
 # Misaligned national rds stops; scheme w/ identical versions writes nothing
 nat_bad <- readRDS(file.path(est_dir, 'alpha_c1_2019.rds'))
@@ -1093,7 +1147,7 @@ stopifnot(length(run_helper()) == 0,
           !file.exists(substate_alpha_path(est_dir, 'c1', 2019, 'NYC')))
 cat('PASS: compute_substate_alphas -- nothing written under national scheme\n')
 unlink(est_dir, recursive = TRUE)
-rm(income_rank_scheme)
+rm(income_rank_scheme, urban_density_setting)
 
 
 #------------------------------
@@ -1209,11 +1263,57 @@ tdv <- ti$draws %>% arrange(hh_id)
 stopifnot(identical(tdv$tier_level, c('region x density x age', 'density x age', 'age')),
           isTRUE(all.equal(tdv$high_share, c(1, 30 / 35, 30 / 45))),
           all(tdv$imp_paid))
-# Without density column: age cell only, paid uniforms unchanged
-ti0 <- impute_unknown_payment(bind_rows(td, tu) %>% select(-density))
-stopifnot(all(ti0$draws$tier_level == 'age'), identical(ti0$draws$u_paid, ti$draws$u_paid),
-          identical(ti0$draws$imp_paid, ti$draws$imp_paid))
 cat('PASS: impute_unknown_payment -- tier cells region x density x age -> density x age -> age (>= 30 donors)\n')
+# Urban density off (no density column) = main: tier cells age only, no
+# region. 30 High + 15 Low donors -> 30 / 45 for every row, whatever region.
+# Paid uniforms unchanged; paid shares kind x age (no region cells)
+ti0 <- impute_unknown_payment(bind_rows(td, tu) %>% select(-density))
+tdv0 <- ti0$draws %>% arrange(hh_id)
+stopifnot(all(tdv0$tier_level == 'age'), isTRUE(all.equal(tdv0$high_share, rep(30 / 45, 3))),
+          identical(ti0$draws$u_paid, ti$draws$u_paid), identical(ti0$draws$imp_paid, ti$draws$imp_paid),
+          !'density' %in% names(ti0$tier_cells), identical(unique(ti0$tier_cells$level), 'age'),
+          nrow(ti0$paid_cells_region) == 0)
+cat('PASS: impute_unknown_payment -- urban density off: tier cells age only (= main)\n')
+
+# Paid-status draw cells (2026-10-14): region x kind x age (>= 30 donors) ->
+# kind x age -> kind. Centre donors age 2: region 1 40 rows all paid, region 2
+# 40 rows all unpaid, region 3 5 rows unpaid (thin). Unknown rows: region 1
+# -> 1, region 2 -> 0, region 3 -> kind x age (45 donors, 40 paid) = 40 / 85,
+# region 1 age 4 (no donors at age) -> kind (same 40 / 85)
+pd_arr <- bind_rows(
+  tibble(hh_id = 100 + 1:85, child_id = 1, provider_id = 1, kind = 'center', paid = rep(c(TRUE, FALSE), c(40, 45)),
+         tier = NA_character_, counts = TRUE, age = 2, region = rep(c(1, 2, 3), c(40, 40, 5)), child_weight = 1),
+  tibble(hh_id = 1:4, child_id = 1, provider_id = 1, kind = 'center', paid = NA, tier = NA_character_,
+         counts = TRUE, age = c(2, 2, 2, 4), region = c(1, 2, 3, 1), child_weight = 1))
+pd <- impute_unknown_payment(mutate(pd_arr, density = 1))   # switch on: density column
+pdd <- pd$draws %>% filter(!tier_only) %>% arrange(hh_id)
+stopifnot(isTRUE(all.equal(pdd$paid_share, c(1, 0, 40 / 85, 40 / 85))),
+          nrow(pd$paid_cells_region) == 3, all(pdd$imp_paid[1], !pdd$imp_paid[2]))
+cat('PASS: impute_unknown_payment -- switch on: paid-status cells region x kind x age -> kind x age -> kind\n')
+# Switch off (no density column) = main: kind x age -> kind, region ignored
+pd0 <- impute_unknown_payment(pd_arr)
+pdd0 <- pd0$draws %>% filter(!tier_only) %>% arrange(hh_id)
+stopifnot(isTRUE(all.equal(pdd0$paid_share, rep(40 / 85, 4))), nrow(pd0$paid_cells_region) == 0,
+          identical(pdd0$u_paid, pdd$u_paid))
+cat('PASS: impute_unknown_payment -- switch off: paid-status cells kind x age -> kind, no region\n')
+
+# Hours draw cells (resolve_regular_care(), 2026-10-14): region x TOC group x
+# age (>= 30 donors) -> TOC group x age -> TOC group. Centre donors age 2:
+# region 1 40 rows 10 hrs, region 2 40 rows 40 hrs, region 3 5 rows 25 hrs.
+# Imputed rows: region 1 -> 10, region 2 -> 40, region 3 (thin) -> pooled
+# TOC x age cell, hours in {10, 25, 40}; no region column -> pooled cell
+hr_arr <- bind_rows(
+  tibble(hh_id = 100 + 1:85, child_id = 1, provider_id = 1, regcare = 1, type_raw = 4,
+         hours = rep(c(10, 40, 25), c(40, 40, 5)), age = 2, child_weight = 1,
+         region = rep(c(1, 2, 3), c(40, 40, 5))),
+  tibble(hh_id = 1:90, child_id = 1, provider_id = 1, regcare = 1, type_raw = 4,
+         hours = 0, age = 2, child_weight = 1, region = rep(c(1, 2, 3), each = 30)))
+hr <- resolve_regular_care(hr_arr)$arr %>% filter(hours_imputed)
+stopifnot(all(hr$hours[hr$region == 1] == 10), all(hr$hours[hr$region == 2] == 40),
+          all(hr$hours[hr$region == 3] %in% c(10, 25, 40)), length(unique(hr$hours[hr$region == 3])) > 1)
+hr0 <- resolve_regular_care(select(hr_arr, -region))$arr %>% filter(hours_imputed)
+stopifnot(all(hr0$hours %in% c(10, 25, 40)), length(unique(hr0$hours)) == 3)
+cat('PASS: resolve_regular_care -- hours donor cells region x TOC group x age -> TOC group x age -> TOC group\n')
 apc_imp <- function(regular, hours, choice, kind, imputed) {
   r <- assign_primary_care(tibble(regular = regular, hours = hours, ecec_choice = choice,
                                   unknown_kind = kind, imputed_choice = imputed))
@@ -1470,7 +1570,7 @@ pr_en <- pr_ch %>%
 pr_pu <- tibble(hh_id = 1:6, parent_unit_id = '1', hhm_id1 = 1, hhm_id2 = NA_real_,
                 male1 = 0, male2 = NA_real_, emp1 = 'ft', emp2 = NA_character_)
 pr_hm <- tibble(hh_id = 1:6, hhm_id = 1, age = 30)
-pr_hh <- tibble(hh_id = 1:6, income = 1e4 * 1:6, n_members = 4, region = 1, density = 1, rank_group = 1)
+pr_hh <- tibble(hh_id = 1:6, income = 1e4 * 1:6, n_members = 4, region = 1, rank_group = 1)
 pr_rf <- prepare_data_for_rf(pr_ch, pr_pu, pr_hh, pr_hm, pr_en,
                              list(`1` = seq(1e4, 6e4, length.out = 99)), 'rank_group',
                              'NSECE', is_nsece = TRUE)
@@ -1492,7 +1592,7 @@ ce_pu <- tibble(hh_id = 1:5, parent_unit_id = '1_2', hhm_id1 = 1, hhm_id2 = 2,
                 male1 = c(1, 1, 1, 0, 0), male2 = c(0, NA, 0, 1, 1),
                 emp1 = c('ft', 'ft', 'ft', 'pt', NA), emp2 = c('none', 'pt', NA, 'ft', 'ft'))
 ce_hm <- tibble(hh_id = rep(1:5, each = 2), hhm_id = rep(1:2, 5), age = 30)
-ce_hh <- tibble(hh_id = 1:5, income = 1e4 * 1:5, n_members = 4, region = 1, density = 1, rank_group = 1)
+ce_hh <- tibble(hh_id = 1:5, income = 1e4 * 1:5, n_members = 4, region = 1, rank_group = 1)
 ce_rf <- prepare_data_for_rf(ce_ch, ce_pu, ce_hh, ce_hm, ce_en,
                              list(`1` = seq(1e4, 5e4, length.out = 99)), 'rank_group',
                              'NSECE', is_nsece = TRUE)
@@ -1502,11 +1602,6 @@ stopifnot(identical(sort(as.numeric(ce$hh_id)), c(1, 4)),
           as.character(ce$employment_choice_pc[ce$hh_id == 4]) == 'pt',
           nrow(ce_rf$two_child$`2`) == 0)
 cat('PASS: prepare_data_for_rf -- NSECE caregiver = mother, her band; unknown mother / band -> out\n')
-
-# Density feature passes through as factor w/ fixed levels 1-3
-stopifnot(identical(levels(one$density), c('1', '2', '3')), all(as.character(one$density) == '1'),
-          identical(levels(two$density), c('1', '2', '3')))
-cat('PASS: prepare_data_for_rf -- density feature carried, levels 1-3 fixed\n')
 
 # Stacked label draws (1a, nsece_mi_draws.R): 2 draws. hh 2 (one child)
 # and hh 3 (two children) labels differ by draw; family size counted within
@@ -1564,6 +1659,76 @@ th_w <- compute_tier_thresholds(tp %>% mutate(enrollment_fte = if_else(price %in
 stopifnot(th_w$median_high[th_w$region == 1][1] == 6)
 cat('PASS: compute_tier_thresholds -- regional high-density median x national density ratio, weighted\n')
 
+# Urban density off = main: national median posted price by age bin only, no
+# region, same weights, positive prices only (compute_tier_thresholds_age_bin()).
+# Positive prices 3, 4, 5, 6 (region 1) and 2, 7, 8, 9.5 (region 2), one bin
+tr <- compute_tier_thresholds_age_bin(tp)
+stopifnot(nrow(tr) == 1, tr$age_bin == '0-1', tr$n_centers == 8L,
+          isTRUE(all.equal(tr$threshold, wm(c(3, 4, 5, 6, 2, 7, 8, 9.5)))),
+          identical(names(tr), c('age_bin', 'n_centers', 'threshold')))
+tr_w <- compute_tier_thresholds_age_bin(tp %>% mutate(enrollment_fte = if_else(price %in% 9.5, 100, 1)))
+stopifnot(tr_w$threshold == 9.5)
+tp_a <- bind_rows(tp, tp %>% mutate(age_bin = '2-3', price = price * 2))
+tr_a <- compute_tier_thresholds_age_bin(tp_a)
+stopifnot(nrow(tr_a) == 2, isTRUE(all.equal(tr_a$threshold[tr_a$age_bin == '2-3'], 2 * tr$threshold)))
+cat('PASS: compute_tier_thresholds_age_bin -- age bin weighted median, positive prices, no region\n')
+
+# Urban-density switch: global urban_density_setting (config.R) else env var
+# ECEC_URBAN_DENSITY else '0'; interface markers; built-under check
+urban_density_setting <- '0'
+stopifnot(identical(get_urban_density_setting(), '0'), !urban_density_enabled())
+urban_density_setting <- ''
+stopifnot(identical(get_urban_density_setting(), '0'))
+urban_density_setting <- '1'
+stopifnot(identical(get_urban_density_setting(), '1'), urban_density_enabled())
+urban_density_setting <- '2'
+expect_error(get_urban_density_setting(), 'unknown. Use 0 \\(default\\) or 1', 'density setting 2 stops')
+rm(urban_density_setting)
+old_env <- Sys.getenv('ECEC_URBAN_DENSITY', NA)
+Sys.unsetenv('ECEC_URBAN_DENSITY')
+stopifnot(identical(get_urban_density_setting(), '0'))
+Sys.setenv(ECEC_URBAN_DENSITY = '1')
+stopifnot(identical(get_urban_density_setting(), '1'))
+if (is.na(old_env)) Sys.unsetenv('ECEC_URBAN_DENSITY') else Sys.setenv(ECEC_URBAN_DENSITY = old_env)
+# Income-rank scheme default follows the switch (RPP adjustment = state
+# machinery): off -> 'national' (nominal, = main), on -> 'national_rpp';
+# explicit ECEC_INCOME_RANK wins. Global income_rank_scheme absent here
+stopifnot(!exists('income_rank_scheme', envir = globalenv()))
+old_rank_env <- Sys.getenv('ECEC_INCOME_RANK', NA)
+Sys.unsetenv('ECEC_INCOME_RANK')
+urban_density_setting <- '0'
+stopifnot(identical(default_income_rank_scheme(), 'national'), identical(get_income_rank_scheme(), 'national'))
+urban_density_setting <- '1'
+stopifnot(identical(default_income_rank_scheme(), 'national_rpp'), identical(get_income_rank_scheme(), 'national_rpp'))
+Sys.setenv(ECEC_INCOME_RANK = 'national')
+stopifnot(identical(get_income_rank_scheme(), 'national'))
+urban_density_setting <- '0'
+Sys.setenv(ECEC_INCOME_RANK = 'national_rpp')
+stopifnot(identical(get_income_rank_scheme(), 'national_rpp'))
+if (is.na(old_rank_env)) Sys.unsetenv('ECEC_INCOME_RANK') else Sys.setenv(ECEC_INCOME_RANK = old_rank_env)
+cat('PASS: income-rank scheme default follows urban-density switch (off nominal, on RPP), env var overrides\n')
+urban_density_setting <- '0'
+expect_error(require_urban_density_on('state script'), 'state script needs urban density on.*ECEC_URBAN_DENSITY=1',
+             'state script stops w/ density off')
+check_urban_density_built('0', 'piece', '1a')
+expect_error(check_urban_density_built('1', 'piece', '1a'), 'piece built under ECEC_URBAN_DENSITY=1, this run uses 0.*rerun 1a',
+             'piece built w/ density on stops under off')
+expect_error(check_urban_density_built(NULL, 'piece', '1a'), 'unlabeled', 'unlabeled piece = density on, stops under off')
+ud_dir <- file.path(tempdir(), 'ud_markers'); dir.create(ud_dir, showWarnings = FALSE)
+invisible(write_urban_density_marker(ud_dir, '1a'))
+stopifnot(identical(readLines(file.path(ud_dir, 'urban_density_1a.txt')), '0'))
+check_interface_urban_density(ud_dir, '1a')
+expect_error(check_interface_urban_density(ud_dir), 'stage 1b.*built under ECEC_URBAN_DENSITY=1',
+             'missing 1b marker = legacy density on, stops under off')
+urban_density_setting <- '1'
+require_urban_density_on('state script')
+expect_error(check_interface_urban_density(ud_dir, '1a'), 'stage 1a.*built under ECEC_URBAN_DENSITY=0, this run uses 1',
+             '1a marker density off stops under on')
+check_interface_urban_density(ud_dir, '1b')
+unlink(ud_dir, recursive = TRUE)
+rm(urban_density_setting)
+cat('PASS: urban-density switch -- setting from global / env var, default off, markers, mismatch stops\n')
+
 
 #------------------------------
 # Tract -> PUMA urban density, ACS draw (urban_density.R)
@@ -1604,30 +1769,6 @@ stopifnot(nrow(pd) == 2, pd$n_tracts[1] == 3, pd$children[1] == 40,
           isTRUE(all.equal(c(pd$share_1[1], pd$share_2[1], pd$share_3[1]), c(0.25, 0, 0.75))),
           pd$share_2[2] == 1)
 stopifnot(inherits(tryCatch(aggregate_puma_density(td_t %>% mutate(children = 1)), error = function(e) e), 'error'))
-
-# Modal level: largest share, tie -> denser
-stopifnot(identical(modal_density(c(0.6, 0.2, 0.1, 0.4, 0.5), c(0.3, 0.5, 0.2, 0.4, 0.0)),
-                    c(1L, 2L, 3L, 1L, 1L)))
-stopifnot(inherits(tryCatch(modal_density(c(0.5, NA), c(0.5, 0)), error = function(e) e), 'error'))
-
-# Mixture: toy predictor P(class A) = 0.9 / 0.5 / 0.1 at density 1 / 2 / 3.
-# Shares (0.6, 0.3, 0.1) -> 0.54 + 0.15 + 0.01 = 0.70; pure PUMA -> its level;
-# no share columns -> predictor on own density; rows independent
-toy_fn <- function(d) {
-  pa <- c(0.9, 0.5, 0.1)[as.integer(as.character(d$density))]
-  cbind(A = pa, B = 1 - pa)
-}
-mx <- tibble(density = factor(c(1, 3, 2), levels = 1:3),
-             share_1 = c(0.6, 1, 0), share_2 = c(0.3, 0, 0))
-pm <- mix_density_predictions(mx, toy_fn)
-stopifnot(isTRUE(all.equal(unname(pm[, 'A']), c(0.70, 0.9, 0.1))),
-          isTRUE(all.equal(unname(rowSums(pm)), rep(1, 3))),
-          isTRUE(all.equal(mix_density_predictions(select(mx, density), toy_fn),
-                           toy_fn(select(mx, density)))),
-          isTRUE(all.equal(mix_density_predictions(mx[3:1, ], toy_fn), pm[3:1, ])))
-stopifnot(inherits(tryCatch(mix_density_predictions(mutate(mx, share_1 = NA), toy_fn),
-                            error = function(e) e), 'error'))
-
 # Committed table: one row per PUMA, shares sum to 1, covers every ACS
 # household's (statefip, puma) in crosswalk
 pdt <- read_csv('resources/acs/puma_urban_density_2010.csv', show_col_types = FALSE)
@@ -1637,7 +1778,7 @@ stopifnot(!any(duplicated(pdt[c('statefip', 'puma')])),
           all(abs(pdt$share_1 + pdt$share_2 + pdt$share_3 - 1) < 1e-5),
           all(pdt$children > 0),
           nrow(anti_join(xw_t, pdt, by = c('statefip', 'puma'))) == 0)
-cat('PASS: tract_urban_share / aggregate_puma_density / mix_density_predictions -- distance weighting, overlap, child-weighted PUMA shares, predictions averaged over PUMA mix\n')
+cat('PASS: tract_urban_share / aggregate_puma_density -- distance weighting, overlap, child-weighted PUMA shares (resource builder helpers)\n')
 
 
 cat('\nAll state-analysis tests passed.\n')

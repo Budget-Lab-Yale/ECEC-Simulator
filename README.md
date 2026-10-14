@@ -270,11 +270,27 @@ nationally (see `docs/state_level_analysis.md` for the full design):
   summary tibbles gain a `state` column and per-state output is written under
   `simulation/{scenario_id}/states/<ST>/`. Run provenance (deltas, supply and
   epop sources) is recorded in `metadata/state_analysis.yaml`.
+- **Urban density**: `ECEC_URBAN_DENSITY` is `0` (default) or `1`. State runs
+  set it to `1`. With `0`, the NSECE label steps equal main: the tier line is
+  the national median posted price by age band (no region), the three random
+  draws (hours, paid status, tier) use no region cells, and incomes are ranked
+  nominally. With `1`, all state machinery turns on: the density tier line and
+  tier-draw cells, region donor cells in the hours and paid-status draws, and
+  RPP-adjusted income ranks (below). The care-choice forest has no density
+  feature in either setting.
+  Every calibration-interface stage records the setting: 1a and 1b write
+  `estimation/data/urban_density_1a.txt` and `urban_density_1b.txt`, the price
+  forest file records it, and the alpha files record it. 1b, 2a, 3a, and
+  `load_substate_alpha()` stop when the run's setting differs from the one the
+  interface was built under. A file with no record was built before the switch
+  (2026-10-14) and counts as `1`. State setup (`state_data/`) needs
+  `ECEC_URBAN_DENSITY=1`.
 - **Income ranks**: `ECEC_INCOME_RANK` selects how income is ranked for the
-  care-choice forest and for the income-quintile price wedge distributions
-  (low-priced center and Other Paid). Both schemes rank
-  nationally. The default `national_rpp` divides income by the state price level (BEA RPP);
-  `national` uses nominal income and is the one sensitivity. The `state` and
+  care-choice forest and for the income percentile of the price forest. Both
+  schemes rank nationally. With no `ECEC_INCOME_RANK`, the scheme follows
+  `ECEC_URBAN_DENSITY`: `0` gives `national` (nominal income, as main), `1`
+  gives `national_rpp`, which divides income by the state price level (BEA
+  RPP). An explicit `ECEC_INCOME_RANK` overrides. The `state` and
   `region` schemes were removed: a test showed no difference from
   `national_rpp`.
 - **Experiment switches** (env vars, off by default; with the switch off,
@@ -308,6 +324,52 @@ State runs require an interface generated after state support was added
 older interfaces fail loudly at initialization. Known v1 limitations (state
 income taxes, national wage/CPI growth factors) are documented in the design
 doc.
+
+### What differs from main
+
+This branch changes the model in two ways. The first group applies to every run,
+including a national run with `ECEC_URBAN_DENSITY=0`. The second group is state
+machinery. Nothing else in the model differs from main on the points below.
+
+Applies to every run:
+
+- NSECE regular-care labels. Only care types 1 to 5 count as regular care. A
+  missing regular-care answer follows a fixed rule: it counts when the type is 1
+  to 5. A regular provider with zero or missing survey-week hours counts as care,
+  and its hours come from a weighted draw from regular providers with the same
+  care type and child age. Main drops those rows.
+- Random draws for unknown payment and for a paid center with no hourly price.
+  The paid status and the price tier are drawn from donors with the same kind of
+  provider and the same child age. Main has no such draws.
+- 50 imputations. Every label draw is repeated 50 times, each with one-fiftieth of
+  the child's weight, and the care forest trains on all 50 together. Main makes
+  one draw. The label draws are keyed hashes of the household and child IDs, so
+  they do not depend on row order.
+- Primary care assignment uses main's priority order in every run. A provider row
+  with unknown payment takes a drawn care type; main skips it.
+- The caregiver rule. In two-parent families the NSECE primary caregiver is the
+  mother, as in ACS, and her hours enter the forest. Main uses the respondent's
+  hours. Pull request 7 makes the same change on main.
+
+State machinery. It applies only when a run names states or when
+`ECEC_URBAN_DENSITY=1`:
+
+- State demand targets and the re-anchoring of the demand parameters.
+- State supply: OES wages and the staffing indexes from the 2017 licensing
+  ratios.
+- State employment files.
+- The state household filter and the NYC sub-state alpha.
+- The five-hour factor in the state demand targets.
+- With `ECEC_URBAN_DENSITY=1`: the tier line by region, community urbanicity, and
+  child age; the tier draw cells by region, urbanicity, and age; region donor
+  cells in the hours and paid-status draws; and the price-adjusted (RPP) income
+  ranks for both forests.
+
+With `ECEC_URBAN_DENSITY=0` (the default), the model matches main on region and
+urbanicity: the tier line is the national median by age band, the three draws use
+no region cells, and incomes are ranked nominally. State setup needs the switch
+set to `1`. Every calibration stage records the setting, and a mismatch between
+stages stops the run.
 
 ### When to recalibrate
 
@@ -346,38 +408,42 @@ calibration's mix:
    center tier.
 4. Rebuild the supply files: `Rscript resources/supply/state_supply_params.R`.
 
-A fresh clone also needs `cache/price_models/price_wedge_quantiles.rds`, which
+A fresh clone also needs `cache/price_models/price_qrf_models.rds`, which
 is not in git and which `-C` does not copy. Copy it from an existing checkout
-before the first run, or run NSECE processing (1a), which writes it. The file
-replaced `price_qrf_models.rds` on 2026-10-12. An old checkout must rerun 1a
-once: calibration and simulation stop if the file is missing, or if it has no
-income-quintile grids. They also stop if the file was built under a different
-`ECEC_INCOME_RANK` scheme than the run.
+before the first run, or run NSECE processing (1a), which writes it. The
+price forest file is back (2026-10-14); `price_wedge_quantiles.rds` (empirical
+quantile grids, 2026-10-12 to 2026-10-13) is no longer read. An old checkout
+must rerun 1a once: calibration and simulation stop if the file is missing.
+They also stop if the file was built under a different `ECEC_INCOME_RANK`
+scheme or `ECEC_URBAN_DENSITY` setting than the run.
 
 **Price wedge**: each parent unit with a child under 5 gets one price
 multiplier per paid care type (low-priced center, high-priced center, paid
-home-based, and Other Paid). The multiplier is a weighted empirical quantile
-of the NSECE price wedge (household out-of-pocket price divided by the base
-price), at a percentile from 1 to 99. The percentile comes from a hash of
-`(hh_id, parent_unit_id)` (`draw_price_pctile_idx()`), and it is the same for
-all four care types. The multiplier is clipped to [0.1, 5].
-
-- **Low-priced center and Other Paid** use the distribution of the household's
-  income quintile. The quintile is `ceiling(income_pctile / 20)`, with the same
-  scheme and national cutpoints as the care-choice forest
-  (`price_wedge_income_pctiles()`). A household-held-out 5-fold test gave a
-  pinball loss 11.3% (low-priced centers) and 8.0% (Other Paid) lower than one
-  distribution, pooled over folds; low-priced centers lose in 1 of 5 folds. A quintile
-  cell with fewer than 30 NSECE households uses the one distribution (1a logs
-  which). A household with no positive income uses the one distribution.
-- **High-priced center and paid home-based** use one distribution. The same
-  test showed no gain, and most quintile cells had fewer than 30 households.
-
-The wedge does not use parents or child age. A quantile regression forest on
-income, parents, and child age was removed on 2026-10-12: the 5-fold test gave
-negative out-of-sample skill for every care type. 1a writes the grids to
-`estimation/models/price_wedge_quantiles.csv` and
-`estimation/models/price_wedge_quantiles_by_quintile.csv`.
+home-based, and Other Paid). The multiplier is a quantile of a price forest
+(a quantile regression forest, `ranger` with `quantreg = TRUE`, 500 trees,
+`mtry` 4, minimum node size 10, trained by 1a on a 50,000-row weighted sample
+of NSECE provider rows). The forest target is the NSECE price wedge (household
+out-of-pocket price divided by the base price). Its features are the
+parent unit's income percentile, Census region, number of parents, and the mean
+age of the children under 5. On the ACS side, the income percentile ranks the
+parent unit's baseline AGI (`baseline_agi1 + baseline_agi2`), as the original
+simulator did, weighted by the mean of the two parent weights
+(`price_wedge_income_pctiles()`). The care-choice forest ranks household income
+instead. AGI is divided by the state price level (RPP / 100) under
+`national_rpp` (switch on), nominal under `national` (switch off), ranked
+against national cutpoints with a keyed jitter. AGI of 0
+or less gets percentile 1, and an unknown AGI gets no wedge (callers use 1.0).
+1a trains on the NSECE household income rank of the active scheme. The
+quantile level is a percentile from 1 to 99, drawn as in main: the cache calls
+`set.seed(random_seed_base + 2)`, then `sample(1:99, n, replace = TRUE)` once
+per parent unit, shared by the four care types. So the draw depends on the
+order and number of units, and each call moves the global random stream (no
+keyed price draw). The multiplier is
+clipped to [0.1, 5]. The forest predicts the 99-level grid once for each
+distinct feature row, and each unit takes its level, so a national ACS sample
+runs in seconds. 1a trains the forests on the global random stream, with no
+own seed, as main. 1a writes `estimation/models/price_summary.csv`,
+`price_by_region.csv`, `price_by_income_quintile.csv`, and `price_info.txt`.
 
 **NSECE label draws**: three NSECE labels need a random draw for an
 uncertain record (the hours of a regular provider with zero reference-week
@@ -391,28 +457,37 @@ one row per child and draw, with the columns `draw` (0-49) and
 draw from before. See `docs/state_level_analysis.md`.
 
 **Center price tiers and urban density**: a paid center is high-priced when
-its price is at or above a tier line for its Census region, community urban
-density, and age band (0-1, 2-3, 4-5). Centers use their posted price;
-families use their hourly payment, so one dollar line applies to both. Since
-2026-10-12 the line is the region's median posted price among high-density
-centers, times the national ratio of the density level's median to the
-high-density median (`compute_tier_thresholds()`,
-`src/shared_functions/urban_density.R`). Medians are weighted by survey weight
-times FTE enrollment, over positive prices. Density is the NSECE code
+its price is at or above a tier line. Centers use their posted price;
+families use their hourly payment, so one dollar line applies to both. With
+`ECEC_URBAN_DENSITY=0` (the default, as main) the line is the national median
+posted price for the age band (0-1, 2-3, 4-5), weighted by survey weight
+times FTE enrollment, over positive prices
+(`compute_tier_thresholds_age_bin()`). The tier draw for an unknown payment
+amount uses donor cells by age band only. With `ECEC_URBAN_DENSITY=1`
+(state runs) the line is for the region, community urban density, and age
+band. Since 2026-10-12 it is the region's median posted price among
+high-density centers, times the national ratio of the density level's median to
+the high-density median (`compute_tier_thresholds()`,
+`src/shared_functions/urban_density.R`); the tier draw cells are region x
+density x age, then density x age, then age. Density is the NSECE code
 (`HH9_` / `CB9_COMM_URBAN_DENSITY`: 1 high, 2 moderate, 3 rural). 1a prints
-the line and writes it to `estimation/data/nsece_tier_thresholds_2019.csv`.
-The care-choice forest also takes `density` as a feature. ACS has no tract,
-so 1b builds the NSECE measure at tract level and pools it to the 2010 PUMA.
-For each 2010 tract, I compute the urban share of the population in the
-tracts within 2 miles, with inverse-distance weights, and cut it at the NSECE
-thresholds (0.85, 0.30). For each PUMA, I take the share of its 2010
-children 0-4 at each level. For each ACS household, 1b predicts the care
-probabilities at all three levels and averages them with its PUMA's shares
-(`mix_density_predictions()`), so no random draw enters.
-`resources/acs/puma_urban_density_2010.R` builds the table
-`resources/acs/puma_urban_density_2010.csv`. 1b reads the household's PUMA
-from `resources/acs/US_ACS__household_county_puma_crosswalk__2019.csv.gz`
-and stops if a household has no PUMA or no row in the table.
+the line and writes it, with the rule it used, to
+`estimation/data/nsece_tier_thresholds_2019.csv`.
+The care-choice forest has no `density` feature in any run (removed
+2026-10-14: importance near 0, and dropping it changes nothing), and
+1b does not average predictions over ACS PUMA density shares.
+`resources/acs/puma_urban_density_2010.csv` and its builder
+`resources/acs/puma_urban_density_2010.R` stay in the repo, but no run reads
+them.
+
+**Region in the draw cells (`ECEC_URBAN_DENSITY=1` only)**: the NSECE draws
+take donors from the household's Census region first (NSECE has no state id).
+With `0` they equal main: hours by type of care x age band, then type of care;
+paid status by kind x age band, then kind; tier by age band. With `1`, the hours draw uses
+region x type of care x age band, then type of care x age band, then type of
+care. The paid-status draw uses region x kind x age band, then kind x age
+band, then kind. A region cell needs at least 30 raw donor rows. The tier
+draw cells are in the paragraph above.
 
 ## Output Structure
 

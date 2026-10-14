@@ -3,14 +3,16 @@
 #
 # Income-rank scheme for care-choice forest (1b), price wedge income-quintile
 # grids (center_low, other_paid: 1a builds on NSECE ranks,
-# price_wedge_income_pctiles() ranks ACS -- compute_price_wedge_cache.R),
+# price_wedge_income_pctiles() ranks ACS parent unit baseline AGI --
+# compute_price_wedge_cache.R),
 # 1a price-by-income diagnostic. One scheme for training (NSECE) and
 # prediction (ACS). Set by env var ECEC_INCOME_RANK (config.R ->
-# income_rank_scheme). Both rank NSECE, ACS nationally (one group):
-#   - national_rpp (default): income / price level (RPP / 100).
-#     ACS: state RPP (BEA all items 2019; NYC = NY state). NSECE: region RPP =
-#     ACS under-5 child-weighted mean of state RPPs in region
-#   - national: nominal income (sensitivity)
+# income_rank_scheme); unset -> derived from ECEC_URBAN_DENSITY
+# (default_income_rank_scheme()). Both rank NSECE, ACS nationally (one group):
+#   - national_rpp (default w/ urban density on, state runs): income / price
+#     level (RPP / 100). ACS: state RPP (BEA all items 2019; NYC = NY state).
+#     NSECE: region RPP = ACS under-5 child-weighted mean of state RPPs in region
+#   - national (default w/ urban density off = main): nominal income
 # Within-state / within-region schemes ('state', 'region') removed 2026-10-12
 # -- ranking test found them indistinguishable from national_rpp.
 #
@@ -20,7 +22,7 @@
 # metro, msa_35620) vs national cutpoints; national: versions identical,
 # second skipped.
 #
-# Called from: 1a (price wedge quintile grids, price-by-income diagnostic),
+# Called from: 1a (price forest training ranks, price-by-income diagnostic),
 # 1b (care-choice forest), compute_price_wedge_cache.R
 # (price_wedge_income_pctiles()), compute_substate_alpha.R
 #------------------------------------------------------------------------------
@@ -34,11 +36,35 @@ INCOME_RANK_RPP_PATH <- file.path('resources', 'supply',
 
 
 
+default_income_rank_scheme <- function() {
+
+  #----------------------------------------------------------------------------
+  # Scheme when ECEC_INCOME_RANK unset: urban-density switch ('1' -> RPP
+  # adjusted 'national_rpp', else nominal 'national' = main). Reads global
+  # urban_density_setting (config.R), else env var ECEC_URBAN_DENSITY, so no
+  # dependency on urban_density.R.
+  #
+  # Returns: (chr) 'national_rpp' | 'national'
+  #----------------------------------------------------------------------------
+
+  ud <- if (exists('urban_density_setting', envir = globalenv())) {
+    get('urban_density_setting', envir = globalenv())
+  } else {
+    Sys.getenv('ECEC_URBAN_DENSITY', '0')
+  }
+  if (identical(as.character(ud), '1')) 'national_rpp' else 'national'
+}
+
+
+
 get_income_rank_scheme <- function() {
 
   #----------------------------------------------------------------------------
   # Active income-rank scheme -- global income_rank_scheme (config.R), else
-  # env var ECEC_INCOME_RANK, else 'national_rpp'.
+  # env var ECEC_INCOME_RANK, else default derived from urban-density switch
+  # (RPP adjustment is state machinery, 2026-10-14): switch off (default) =
+  # main -> 'national' (nominal income); on -> 'national_rpp'. Explicit
+  # ECEC_INCOME_RANK wins.
   #
   # Returns: (chr) one of INCOME_RANK_SCHEMES
   #----------------------------------------------------------------------------
@@ -46,9 +72,9 @@ get_income_rank_scheme <- function() {
   s <- if (exists('income_rank_scheme', envir = globalenv())) {
     get('income_rank_scheme', envir = globalenv())
   } else {
-    Sys.getenv('ECEC_INCOME_RANK', 'national_rpp')
+    Sys.getenv('ECEC_INCOME_RANK', '')
   }
-  if (is.null(s) || s == '') s <- 'national_rpp'
+  if (is.null(s) || s == '') s <- default_income_rank_scheme()
   if (!s %in% INCOME_RANK_SCHEMES) {
     stop('Income-rank scheme "', s, '" unknown. Set ECEC_INCOME_RANK to one of: ',
          paste(INCOME_RANK_SCHEMES, collapse = ', '), '.')

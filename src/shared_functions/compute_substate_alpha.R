@@ -9,12 +9,14 @@
 # income_rank.R):
 #   - p0: 1b forest prediction on geo rank inputs ->
 #     acs_enrollment[_joint]_2019_<geo>.csv
-#   - V: geo's own price wedge rows -- center_low, other_paid wedges from
-#     income-quintile grids at geo's own income ranks
-#     (price_wedge_income_pctiles(geo), compute_price_wedge_cache.R);
-#     center_high, home same as national (unconditional grid, same keyed draw)
+#   - V: geo's own price wedge rows -- all four wedges from price forests at
+#     geo's own income percentile (price_wedge_income_pctiles(geo),
+#     compute_price_wedge_cache.R), geo's own percentile draw (main:
+#     set.seed + sample over geo's units)
 #   - alpha = log p0 - V, normalised to choice 1, as 2a compute_alpha_matrix()
 # Scheme national: versions identical, nothing written, national alphas used.
+# Alpha rds record urban-density setting (urban_density.R) --
+# load_substate_alpha() stops when run's differs.
 #
 # Called from: 2a (run_calibration, end -- compute_substate_alphas()), 3a
 # (initialize_simulation -- load_substate_alpha()), 1b (with_rng_preserved()),
@@ -72,7 +74,7 @@ compute_substate_alphas <- function(parent_units_wide, acs_tables,
                                     build_type_data, compute_V, supply_prices,
                                     other_paid_base_price, wage_perturbation,
                                     tax_max, data_dir, estimation_dir,
-                                    year = 2019, price_quantiles = NULL) {
+                                    year = 2019, price_qrf_models = NULL) {
 
   #----------------------------------------------------------------------------
   # Writes alpha_<type>_<year>_<geo>.rds for every sub-state geography, after
@@ -97,9 +99,9 @@ compute_substate_alphas <- function(parent_units_wide, acs_tables,
   #   - estimation_dir (chr): estimation/ -- reads national alpha rds (beta,
   #       rho at full precision, rows to align), writes geo rds beside it
   #   - year (int): calibration year
-  #   - price_quantiles (list): price wedge grids (1a,
-  #       price_wedge_quantiles.rds) -- geo's wedges recomputed on own income
-  #       ranks; NULL (wedge off) keeps parent_units_wide wedges (1.0)
+  #   - price_qrf_models (list): price forests (1a, price_qrf_models.rds) --
+  #       geo's wedges recomputed on own income ranks; NULL (wedge off) keeps
+  #       parent_units_wide wedges (1.0)
   #
   # Returns: (chr vec, invisible) geos written
   #----------------------------------------------------------------------------
@@ -135,17 +137,18 @@ compute_substate_alphas <- function(parent_units_wide, acs_tables,
       next
     }
 
-    # Geo rows: own price wedge -- quintile grids at geo's own income ranks
+    # Geo rows: own price wedge -- forest wedge at geo's own income ranks
     # (center_low, other_paid differ from national); wedge off -> national
     # 1.0 wedges
     pu_geo <- parent_units_wide %>% filter(hh_id %in% geo_ids)
-    if (!is.null(price_quantiles)) {
-      geo_pctiles <- price_wedge_income_pctiles(acs_tables$households, acs_tables$children, geo)
+    if (!is.null(price_qrf_models)) {
+      geo_pctiles <- price_wedge_income_pctiles(acs_tables$parent_units, acs_tables$households, geo)
       geo_wedge <- compute_price_wedge_cache(
-        parent_units    = acs_tables$parent_units %>% filter(hh_id %in% geo_ids),
-        children        = acs_tables$children %>% filter(hh_id %in% geo_ids),
-        price_quantiles = price_quantiles,
-        income_pctiles  = geo_pctiles
+        parent_units     = acs_tables$parent_units %>% filter(hh_id %in% geo_ids),
+        children         = acs_tables$children %>% filter(hh_id %in% geo_ids),
+        households       = acs_tables$households %>% filter(hh_id %in% geo_ids),
+        price_qrf_models = price_qrf_models,
+        income_pctiles   = geo_pctiles
       )
       wedge_cols <- paste0('price_wedge.', PRICE_WEDGE_TYPES)
       pu_geo <- pu_geo %>%
@@ -248,7 +251,8 @@ compute_substate_alphas <- function(parent_units_wide, acs_tables,
         beta               = beta,
         rho                = rho,
         geo                = geo,
-        income_rank_scheme = get_income_rank_scheme()
+        income_rank_scheme = get_income_rank_scheme(),
+        urban_density      = get_urban_density_setting()
       ), out_path)
       cat('  ', pu_type, ': ', nrow(alpha), ' units -> ', basename(out_path), '\n', sep = '')
     }
@@ -313,6 +317,7 @@ load_substate_alpha <- function(geo, estimation_dir, calibration_year) {
            '", this run uses "', scheme, '". Set ECEC_INCOME_RANK=', built,
            ' or recalibrate.')
     }
+    check_urban_density_built(out[[t]]$urban_density, paste0('Sub-state alpha ', paths[[t]]), '2a')
   }
   cat('  Sub-state ', geo, ': own alphas (', paste(basename(paths), collapse = ', '),
       ', scheme ', scheme, ')\n', sep = '')
