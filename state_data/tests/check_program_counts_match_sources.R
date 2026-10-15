@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------------
-# Do the step 4 program counts in states/<GEO>.R match their public sources?
+# Do the step 4 program counts in states.R match their public sources?
 #
 # Every count is hand-transcribed into a spec file -- a typo or stale snapshot
 # would reach build, memo unchallenged. One source per program, compared
@@ -15,7 +15,7 @@
 #                        (2023), state profile, funded-enrollment chart,
 #                        2018-2019 bar -- smaller of the two bars.
 #   NYC shares         = NYC's share of New York's OPEN funded slots in the
-#                        Head Start service-location file (states/NY.R), HS types
+#                        Head Start service-location file (states.R), HS types
 #                        and EHS types separately.
 #
 # Every source is a public file in raw/US/.
@@ -35,9 +35,9 @@ NIEER_HS <- file.path(DOC, 'US_NIEER__states_of_head_start_and_early_head_start_
 CCD      <- raw_path('US_CCD__public_school_prekindergarten_children_by_county__2018-19.csv')
 HSSL     <- raw_path('US_HSSL__head_start_funded_slots_by_service_location__2026-09-23.csv')
 
-HS_TYPES  <- c('1', '3', '5')    # Head Start types (as states/NY.R)
+HS_TYPES  <- c('1', '3', '5')    # Head Start types (as states.R)
 EHS_TYPES <- c('2', '4', '6')
-NYC_COUNTIES <- paste0(load_spec('NYC')$counties, ' County')   # states/NY.R
+NYC_COUNTIES <- paste0(load_spec('NYC')$counties, ' County')   # states.R
 NIEER_TOL <- 2
 BAR_POINTS <- 25                 # bar label within this many points of axis label
 STATE_NAME <- c(setNames(state.name, state.abb), DC = 'District of Columbia')

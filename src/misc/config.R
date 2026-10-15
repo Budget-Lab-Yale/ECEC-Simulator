@@ -697,9 +697,9 @@ default_paths <- read_yaml('./config/default_paths.yaml')
 seed_offset <<- if (exists('seed_offset')) seed_offset else 0
 
 # Urban density switch (urban_density.R): all state machinery. Env var
-# ECEC_URBAN_DENSITY; unset/'0' -> off (default = main: age bin tier line, no
-# region donor cells, nominal income ranks), '1' -> on (state runs: density
-# tier line, region donor cells, RPP-adjusted income ranks). Interface stages
+# ECEC_URBAN_DENSITY; unset/'0' -> off (default = main: age bin tier line,
+# nominal income ranks), '1' -> on (state runs: density tier line,
+# RPP-adjusted income ranks). Interface stages
 # record setting -- 2a, 3a stop on mismatch
 urban_density_setting <<- Sys.getenv('ECEC_URBAN_DENSITY', '0')
 if (urban_density_setting == '') urban_density_setting <<- '0'
@@ -743,6 +743,29 @@ if (!state_calibration_mode %in% c('hours', 'counts')) {
        'Use hours (default) or counts.')
 }
 if (state_calibration_mode == 'counts') cat('EXPERIMENT: state re-anchoring on two-count targets\n')
+
+# State runs: alpha built at the state's own 2019 supply prices
+# (reprice_alpha_to_state_supply.R), before demand re-anchoring. Env var
+# ECEC_STATE_ALPHA_PRICE; unset/'state' -> on (default); 'national' -> off
+# (national runs never read it)
+state_alpha_price_mode <<- Sys.getenv('ECEC_STATE_ALPHA_PRICE', 'state')
+if (state_alpha_price_mode == '') state_alpha_price_mode <<- 'state'
+if (!state_alpha_price_mode %in% c('national', 'state')) {
+  stop('ECEC_STATE_ALPHA_PRICE = "', state_alpha_price_mode, '" unknown. ',
+       'Use state (default) or national.')
+}
+
+# Experiment: state runs age weights with national population growth x state/
+# national growth ratio by age (config/state/aging/state_age_ratios.csv, built by
+# state_data/code/15_state_age_ratios.R). Env var ECEC_STATE_AGING; unset/
+# 'national' -> off (default, outputs unchanged); 'state' -> on
+state_aging_mode <<- Sys.getenv('ECEC_STATE_AGING', 'national')
+if (state_aging_mode == '') state_aging_mode <<- 'national'
+if (!state_aging_mode %in% c('national', 'state')) {
+  stop('ECEC_STATE_AGING = "', state_aging_mode, '" unknown. ',
+       'Use state (default) or national.')
+}
+if (state_aging_mode == 'state') cat('EXPERIMENT: state runs age weights with state population growth by age\n')
 
 # Create output root (append seed suffix for non-default seeds to avoid collisions)
 time_stamp <- format(Sys.time(), '%Y%m%d%H%M')

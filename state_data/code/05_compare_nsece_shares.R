@@ -37,144 +37,139 @@ source('state_data/code/00_build_demand_targets.R')
 
 # NATIONAL annual hours per child -- weekly mean in primary arrangement x
 # WEEKS_PER_YEAR (50, constants.R). Fallback for thin regional cell.
-# Center-Based = one paid-centre row. 02_ run 2026-10-12 -- unknown payment
-# drawn paid status on every unknown row (as 1a); regular care per
-# resolve_regular_care() (zero-hour regular providers imputed hours, REGCARE
-# -1 / -2 regular when TOC 1-5). Hours, part-time tables: imputed hours drawn
-# from cell's weighted donor hours (keyed; cell weighted median before).
-# TOC 7 / 8 never regular (NSECE regular care = TOC 1-5; TOC 8 counted
-# Other before) -- universe A 3,462 -> 3,427 children. Label draws averaged
-# over NSECE_MI_DRAWS = 50 (nsece_mi_draws.R, 2026-10-12) -- record counts
-# below = mean per draw, may be fractional.
+# Center-Based = one paid-centre row. Constants below from 02_ run on cluster
+# 2026-10-14 under NSECE label rules back to pre-2026-10-12 (one label draw,
+# regular care = REGCARE 1 w/ positive reference-week hours, TOC 8 counts
+# Other); record counts = unweighted children.
 NSECE_ANNUAL_HOURS <- c(
-  'Center-Based'        = WEEKS_PER_YEAR * 33.75893415200879,
-  'Unpaid Center-Based' = WEEKS_PER_YEAR * 29.175548621735036,
-  'Paid Home-Based'     = WEEKS_PER_YEAR * 37.77749862719917,
-  'Other Unpaid'        = WEEKS_PER_YEAR * 43.41002195705766,
-  'Other Paid'          = WEEKS_PER_YEAR * 32.896281600626324,
-  'Unpaid Home-Based'   = WEEKS_PER_YEAR * 41.41512678974394)
+  'Center-Based'        = WEEKS_PER_YEAR * 33.840936175175059,
+  'Unpaid Center-Based' = WEEKS_PER_YEAR * 28.733041207982051,
+  'Paid Home-Based'     = WEEKS_PER_YEAR * 38.389082189644242,
+  'Other Unpaid'        = WEEKS_PER_YEAR * 38.587712836110917,
+  'Other Paid'          = WEEKS_PER_YEAR * 31.085307060488336,
+  'Unpaid Home-Based'   = WEEKS_PER_YEAR * 42.447909360764569)
 
 # Step 2. Share of children in regular care whose primary type is formal
-# (FORMAL_TYPES), by Census region. Records: NE 540, MW 654, S 1,263, W 970.
-NSECE_FORMAL_SHARE <- c(northeast = 0.5411036844553323,
-                        midwest   = 0.45966512852533986,
-                        south     = 0.4901581223944361,
-                        west      = 0.4272777402156575)
+# (FORMAL_TYPES), by Census region. Records: NE 456, MW 539, S 1,062, W 757.
+NSECE_FORMAL_SHARE <- c(northeast = 0.56526531752316456,
+                        midwest   = 0.52922849008705364,
+                        south     = 0.53156573832827003,
+                        west      = 0.48328153589694967)
 
 # NATIONAL informal mix. Fallback for thin regional cell.
 NSECE_RESIDUAL_MIX <- local({
-  w <- c('Other Unpaid'      = 0.6217837919880265,
-         'Other Paid'        = 0.362584539667172,
-         'Unpaid Home-Based' = 0.015631668344801536)
+  w <- c('Other Unpaid'      = 0.60414352783601066,
+         'Other Paid'        = 0.3607068983264482,
+         'Unpaid Home-Based' = 0.035149573837541151)
   w / sum(w)
 })
 
 # Regional cell under this many unweighted NSECE children ("thin") takes
 # national value. NOT from a reliability rule -- none cited anywhere in build.
-# Exact number inconsequential: every real cell either <=19 (four Unpaid
-# Home-Based cells -- 6, 6, 7, 19 records) or >=40, so any threshold 20 to 40
+# Exact number inconsequential: every real cell either <=14 (four Unpaid
+# Home-Based cells -- 5, 8, 11, 14 records) or >=33, so any threshold 15 to 33
 # makes same fallback decisions; 30 sits in gap.
 NSECE_MIN_RECORDS <- 30
 
 # Step 4 cross-check. Weighted children w/ primary type Unpaid Center-Based
-# over those w/ formal primary type, by region. Formal records: NE 269.62, MW
-# 300, S 551, W 330 (Unpaid Center-Based 89.16, 97.22, 154.62, 105.12).
-NSECE_UNPAID_CENTRE_SHARE <- c(northeast = 0.25137990444390057,
-                               midwest   = 0.27243648838996287,
-                               south     = 0.23564578015766885,
-                               west      = 0.2135218139866267)
+# over those w/ formal primary type, by region. Records w/ Unpaid Center-Based
+# primary type: NE 245, MW 269, S 507, W 299.
+NSECE_UNPAID_CENTRE_SHARE <- c(northeast = 0.29858157955075193,
+                               midwest   = 0.30548525748105915,
+                               south     = 0.30277851159431718,
+                               west      = 0.27074481379107573)
 
 # Step 5. Paid centers (both price bands) over paid centers + Paid Home-Based.
-# Records: NE 180.46, MW 202.78, S 396.38, W 224.88.
-NSECE_CENTRE_HOME_SPLIT <- c(northeast = 0.8637412679802096,
-                             midwest   = 0.6685571184246332,
-                             south     = 0.8226720949604892,
-                             west      = 0.8248516058000019)
+# Records: NE 154, MW 175, S 337, W 187.
+NSECE_CENTRE_HOME_SPLIT <- c(northeast = 0.87993883317805333,
+                             midwest   = 0.69717000392022277,
+                             south     = 0.81634871993532276,
+                             west      = 0.81017363509609863)
 
 # Step 3. Share within informal care, w/ unweighted records.
 NSECE_MIX_REGION <- tibble::tribble(
   ~region,     ~type,                 ~share,               ~n,
-  'midwest',   'Other Paid',          0.34372910790294786, 128.98,
-  'midwest',   'Other Unpaid',        0.6490111667469648, 219.02,
-  'midwest',   'Unpaid Home-Based',   0.007259725350087429,   6,
-  'northeast', 'Other Paid',          0.29513932520751407, 87.26,
-  'northeast', 'Other Unpaid',        0.6579617423062342, 177.74,
-  'northeast', 'Unpaid Home-Based',   0.046898932486251786, 5.38,
-  'south',     'Other Paid',          0.4211813241925467, 289.04,
-  'south',     'Other Unpaid',        0.5728478737905269, 415.96,
-  'south',     'Unpaid Home-Based',   0.005970802016926425,   7,
-  'west',      'Other Paid',          0.3365998444062576, 241.18,
-  'west',      'Other Unpaid',        0.6457316216202467, 379.82,
-  'west',      'Unpaid Home-Based',   0.017668533973495652,  19)
+  'midwest',   'Other Paid',          0.38719871480736601, 100,
+  'midwest',   'Other Unpaid',        0.55903149493096027, 159,
+  'midwest',   'Unpaid Home-Based',   0.053769790261673722,   11,
+  'northeast', 'Other Paid',          0.29552600016602532, 63,
+  'northeast', 'Other Unpaid',        0.6244886593258383, 140,
+  'northeast', 'Unpaid Home-Based',   0.07998534050813641, 8,
+  'south',     'Other Paid',          0.40564007560413312, 221,
+  'south',     'Other Unpaid',        0.58323004377712584, 329,
+  'south',     'Unpaid Home-Based',   0.011129880618741055,   5,
+  'west',      'Other Paid',          0.31282122991262645, 152,
+  'west',      'Other Unpaid',        0.66362639205927221, 292,
+  'west',      'Unpaid Home-Based',   0.023552378028101305,  14)
 
 # Step 6 cross-check. Mean weekly hours in primary arrangement, paid centers
 # pooled into one Center-Based row (no price-band blend).
 NSECE_HOURS_REGION <- tibble::tribble(
   ~region,     ~type,                 ~weekly,              ~n,
-  'midwest',   'Center-Based',        30.341162291698772, 121.78,
-  'midwest',   'Unpaid Center-Based', 30.41135342419286,  97.22,
-  'midwest',   'Paid Home-Based',     37.12185490505811,     81,
-  'midwest',   'Other Unpaid',        37.347726821099975, 219.02,
-  'midwest',   'Other Paid',          28.013073792841798, 128.98,
-  'midwest',   'Unpaid Home-Based',   41.49039374373457,      6,
-  'northeast', 'Center-Based',        31.780220620611612, 139.84,
-  'northeast', 'Unpaid Center-Based', 27.95670890699668,  89.16,
-  'northeast', 'Paid Home-Based',     37.063522280642864, 40.62,
-  'northeast', 'Other Unpaid',        52.04813848616243, 177.74,
-  'northeast', 'Other Paid',          31.128140382910612, 87.26,
-  'northeast', 'Unpaid Home-Based',   40.08323532897601,   5.38,
-  'south',     'Center-Based',        36.89108017243702, 329.38,
-  'south',     'Unpaid Center-Based', 29.745532565490652, 154.62,
-  'south',     'Paid Home-Based',     39.133961353218396,    67,
-  'south',     'Other Unpaid',        45.04692123420868, 415.96,
-  'south',     'Other Paid',          36.264342117082805, 289.04,
-  'south',     'Unpaid Home-Based',   52.175666482670835,     7,
-  'west',      'Center-Based',        32.70702949850111, 174.88,
-  'west',      'Unpaid Center-Based', 27.720194625526045, 105.12,
-  'west',      'Paid Home-Based',     36.98632658852082,     50,
-  'west',      'Other Unpaid',        41.26988444609215, 379.82,
-  'west',      'Other Paid',          32.3371974351913,  241.18,
-  'west',      'Unpaid Home-Based',   38.223165692480336,    19)
+  'midwest',   'Center-Based',        30.056770015436204, 108,
+  'midwest',   'Unpaid Center-Based', 30.44888583275668,  94,
+  'midwest',   'Paid Home-Based',     38.889637633062954,     67,
+  'midwest',   'Other Unpaid',        30.626601346026423, 159,
+  'midwest',   'Other Paid',          26.706524100014814, 100,
+  'midwest',   'Unpaid Home-Based',   28.317133199873044,      11,
+  'northeast', 'Center-Based',        32.382220313348391, 121,
+  'northeast', 'Unpaid Center-Based', 25.846815562406483,  91,
+  'northeast', 'Paid Home-Based',     36.652663067839313, 33,
+  'northeast', 'Other Unpaid',        49.338755267291035, 140,
+  'northeast', 'Other Paid',          30.587391167993445, 63,
+  'northeast', 'Unpaid Home-Based',   37.524592804705385,   8,
+  'south',     'Center-Based',        36.736110919401, 282,
+  'south',     'Unpaid Center-Based', 31.038765111462236, 170,
+  'south',     'Paid Home-Based',     39.765481785223919,    55,
+  'south',     'Other Unpaid',        38.513523650777842, 329,
+  'south',     'Other Paid',          34.826621780664269, 221,
+  'south',     'Unpaid Home-Based',   86.487033556365958,     5,
+  'west',      'Center-Based',        33.206642538858546, 144,
+  'west',      'Unpaid Center-Based', 24.877819112834029, 112,
+  'west',      'Paid Home-Based',     36.140299365834373,     43,
+  'west',      'Other Unpaid',        36.862572646348276, 292,
+  'west',      'Other Paid',          28.251129470021411,  152,
+  'west',      'Unpaid Home-Based',   49.797052589825938,    14)
 
 # NATIONAL part-time share. Fallback for thin regional cell -- Unpaid
 # Home-Based rests on 6 to 19 children per region.
 NSECE_PART_TIME <- c(
-  'Center-Based'        = 0.24472582731000103,
-  'Unpaid Center-Based' = 0.3128599785835478,
-  'Paid Home-Based'     = 0.10299640506681328,
-  'Other Unpaid'        = 0.2701702045320909,
-  'Other Paid'          = 0.2961192234237463,
-  'Unpaid Home-Based'   = 0.06748315729195549)
+  'Center-Based'        = 0.23845679514677057,
+  'Unpaid Center-Based' = 0.32374404913138011,
+  'Paid Home-Based'     = 0.077045563749482557,
+  'Other Unpaid'        = 0.29237982925281691,
+  'Other Paid'          = 0.28619765711509221,
+  'Unpaid Home-Based'   = 0.11530630069636505)
 
 # Share of type's children whose primary arrangement runs under 20 hrs/week --
 # 1a_nsece_processing.R's cut, so build, simulator call same children
 # part-time.
 NSECE_PART_TIME_REGION <- tibble::tribble(
   ~region,     ~type,                 ~pt_share,            ~n,
-  'midwest',   'Center-Based',        0.3480211620150312, 121.78,
-  'midwest',   'Unpaid Center-Based', 0.36165824010589226, 97.22,
-  'midwest',   'Paid Home-Based',     0.1547124732991101,    81,
-  'midwest',   'Other Unpaid',        0.3120250647142747, 219.02,
-  'midwest',   'Other Paid',          0.3957723546553799, 128.98,
-  'midwest',   'Unpaid Home-Based',   0.04635660441158015,    6,
-  'northeast', 'Center-Based',        0.2766457581938724, 139.84,
-  'northeast', 'Unpaid Center-Based', 0.25833619321943724, 89.16,
-  'northeast', 'Paid Home-Based',     0.1172632377150076, 40.62,
-  'northeast', 'Other Unpaid',        0.19011259457010213, 177.74,
-  'northeast', 'Other Paid',          0.21847048852370984, 87.26,
-  'northeast', 'Unpaid Home-Based',   0.0,                 5.38,
-  'south',     'Center-Based',        0.1997696000676197, 329.38,
-  'south',     'Unpaid Center-Based', 0.2846602690863041, 154.62,
-  'south',     'Paid Home-Based',     0.0755038620951855,    67,
-  'south',     'Other Unpaid',        0.23073442705685568, 415.96,
-  'south',     'Other Paid',          0.2639640969004947, 289.04,
-  'south',     'Unpaid Home-Based',   0.09950403723102844,    7,
-  'west',      'Center-Based',        0.21170843977265288, 174.88,
-  'west',      'Unpaid Center-Based', 0.37206355499682225, 105.12,
-  'west',      'Paid Home-Based',     0.045633309492679845,  50,
-  'west',      'Other Unpaid',        0.336305585449333, 379.82,
-  'west',      'Other Paid',          0.30406105518629495, 241.18,
-  'west',      'Unpaid Home-Based',   0.17732985648227523,   19)
+  'midwest',   'Center-Based',        0.36621291696208463, 108,
+  'midwest',   'Unpaid Center-Based', 0.35141495654904287, 94,
+  'midwest',   'Paid Home-Based',     0.11617270708924447,    67,
+  'midwest',   'Other Unpaid',        0.37785895560814797, 159,
+  'midwest',   'Other Paid',          0.41808597522294039, 100,
+  'midwest',   'Unpaid Home-Based',   0.28106570943939091,    11,
+  'northeast', 'Center-Based',        0.25109310206151403, 121,
+  'northeast', 'Unpaid Center-Based', 0.33255851125278985, 91,
+  'northeast', 'Paid Home-Based',     0.14580574806693766, 33,
+  'northeast', 'Other Unpaid',        0.15614414994326181, 140,
+  'northeast', 'Other Paid',          0.202731670977534, 63,
+  'northeast', 'Unpaid Home-Based',   0,                 8,
+  'south',     'Center-Based',        0.19456310771704727, 282,
+  'south',     'Unpaid Center-Based', 0.27279750254859914, 170,
+  'south',     'Paid Home-Based',     0.041364009479663379,    55,
+  'south',     'Other Unpaid',        0.26191405725939559, 329,
+  'south',     'Other Paid',          0.22327817599035985, 221,
+  'south',     'Unpaid Home-Based',   0.21655714153438207,    5,
+  'west',      'Center-Based',        0.19650704782041981, 144,
+  'west',      'Unpaid Center-Based', 0.39448633165072772, 112,
+  'west',      'Paid Home-Based',     0.034311770992339015,  43,
+  'west',      'Other Unpaid',        0.37178280597886115, 292,
+  'west',      'Other Paid',          0.33648929621069606, 152,
+  'west',      'Unpaid Home-Based',   0,   14)
 
 
 

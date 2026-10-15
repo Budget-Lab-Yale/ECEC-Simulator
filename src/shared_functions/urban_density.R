@@ -24,11 +24,9 @@
 #
 # Switch (2026-10-14): env var ECEC_URBAN_DENSITY (config.R ->
 # urban_density_setting), '0' default, '1' on -- state runs. Off = main: no
-# region or density in any NSECE label step -- tier line national age bin
-# median (compute_tier_thresholds_age_bin()), tier draw cells age, paid-status
-# cells kind x age -> kind, hours cells TOC x age -> TOC. On = all state
-# machinery: region x density x age tier line cells, region donor cells in
-# the paid-status and hours draws. Setting recorded in every calibration-interface stage (1a, 1b
+# region or density in tier line -- national age bin median
+# (compute_tier_thresholds_age_bin()). On = all state machinery: region x
+# density x age tier line cells, RPP income ranks. Setting recorded in every calibration-interface stage (1a, 1b
 # markers; price forest rds; alpha rds) -- 2a, 3a, compute_substate_alpha.R
 # stop on mismatch (check_urban_density_built()), as income-rank scheme.
 #------------------------------------------------------------------------------

@@ -265,36 +265,24 @@ run_acs_processing <- function() {
 
     # Add enrollment info (NSECE only - ACS children don't have observed enrollment)
     if (is_nsece && !is.null(enrollment)) {
-      # Label draws (1a, nsece_mi_draws.R): child x draw rows, child_weight
-      # x draw_weight (1 / M) -- weighted totals unchanged. Family count,
-      # censoring, two-child pairing below run within draw. No draw column
-      # -> one draw, weight 1
-      if (!'draw' %in% names(enrollment)) enrollment <- mutate(enrollment, draw = 0L, draw_weight = 1)
       rf_tmp <- rf_tmp %>%
         left_join(
-          enrollment %>% select(hh_id, child_id, draw, draw_weight, ecec_choice, ecec_hours_choice),
+          enrollment %>% select(hh_id, child_id, ecec_choice, ecec_hours_choice),
           by = c('hh_id', 'child_id')
         ) %>%
-        mutate(draw = coalesce(draw, 0L), child_weight = child_weight * coalesce(draw_weight, 1)) %>%
-        select(-draw_weight) %>%
-        # Unlabelled children kept here, NA class -- family size counted
-        # below from every child 0-4; one-child / two-child filters drop
-        # them after (2026-10-12; dropped before family count before)
-        mutate(ecec_class = if_else(is.na(ecec_choice) | is.na(ecec_hours_choice), NA_character_,
-                                    paste0(ecec_choice, '_', ecec_hours_choice)),
-               .after = child_weight) %>%
+        filter(!is.na(ecec_choice), !is.na(ecec_hours_choice)) %>%
+        mutate(ecec_class = paste0(ecec_choice, '_', ecec_hours_choice), .after = child_weight) %>%
         select(-ecec_choice, -ecec_hours_choice)
     }
 
     # Add parent unit information
     if (is_nsece) {
-      # NSECE: parent sex both parents (1a infer_parent_sex()), employment
-      # band per parent (1a nsece_person_employment())
+      # NSECE: respondent (parent 1) is primary caregiver by survey design
       rf_tmp <- rf_tmp %>%
         left_join(
           parent_units %>%
             select(hh_id, parent_unit_id, p.hhm_id1 = hhm_id1, p.hhm_id2 = hhm_id2,
-                   p.male1 = male1, p.male2 = male2, p.emp1 = emp1, p.emp2 = emp2),
+                   p.male1 = male1, p.hours1 = hours1, p.hours2 = hours2),
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         left_join(
@@ -337,19 +325,13 @@ run_acs_processing <- function() {
 
     # Derive primary caregiver employment choice
     if (is_nsece) {
-      # NSECE: caregiver chosen as ACS (mother in two-parent unit, else
-      # parent 1; NA when mother unknown), band from 1a (same 35-hr cut,
-      # ACS concept). NA -> family out of frame below (2026-10-12; parent
-      # 1's work + school + training + commute hours, NA -> none before)
+      # NSECE: respondent (parent 1) is primary caregiver
       rf_tmp <- rf_tmp %>%
         mutate(
-          primary_caregiver = nsece_primary_caregiver(p.hhm_id2, p.male1, p.male2),
-          employment_choice_pc = factor(case_when(
-            primary_caregiver == 1L ~ p.emp1,
-            primary_caregiver == 2L ~ p.emp2
-          ), levels = c('none', 'pt', 'ft'))
+          hours_pc = p.hours1,
+          employment_choice_pc = derive_employment_choice(hours_pc)
         ) %>%
-        select(-primary_caregiver, -p.male2, -p.emp1, -p.emp2, -income)
+        select(-hours_pc, -income)
     } else {
       # ACS: identify primary caregiver then derive employment choice
       rf_tmp <- rf_tmp %>%
@@ -361,7 +343,7 @@ run_acs_processing <- function() {
         select(-income, -hours_pc)
     }
 
-    # Build family_id and count children (within label draw, NSECE)
+    # Build family_id and count children (NSECE)
     rf_tmp <- rf_tmp %>%
       mutate(
         family_id = if_else(
@@ -370,7 +352,7 @@ run_acs_processing <- function() {
           paste0('pu_', hh_id, '_', parent_unit_id)
         )
       ) %>%
-      group_by(family_id, across(any_of('draw'))) %>%
+      group_by(family_id) %>%
       mutate(n_children = n()) %>%
       ungroup() %>%
       mutate(
@@ -389,7 +371,7 @@ run_acs_processing <- function() {
 
     rf_tmp <- rf_tmp %>%
       arrange(family_id, age, child_id) %>%
-      group_by(family_id, across(any_of('draw'))) %>%
+      group_by(family_id) %>%
       mutate(child_index_temp = row_number()) %>%
       ungroup() %>%
       filter(child_index_temp <= 2) %>%
@@ -413,7 +395,7 @@ run_acs_processing <- function() {
 
     # Update n_children to reflect effective count after censoring
     rf_tmp <- rf_tmp %>%
-      group_by(family_id, across(any_of('draw'))) %>%
+      group_by(family_id) %>%
       mutate(n_children = n()) %>%
       ungroup()
 
@@ -428,13 +410,8 @@ run_acs_processing <- function() {
     # Two-child families: reshape wide
     two_child_base <- rf_tmp %>% filter(n_children == 2)
     if (is_nsece) {
-      # Whole family out when either kept child lacks label / age / sex --
-      # never re-enters as one-child family (2026-10-12; row filter before
-      # left a one-row family pivoting to 'class__NA')
       two_child_base <- two_child_base %>%
-        group_by(family_id, across(any_of('draw'))) %>%
-        filter(all(!is.na(ecec_class) & !is.na(age) & !is.na(male))) %>%
-        ungroup()
+        filter(!is.na(ecec_class), !is.na(age), !is.na(male))
     }
 
     pivot_cols <- if (is_nsece) {
@@ -444,12 +421,12 @@ run_acs_processing <- function() {
     }
     two_child_wide <- two_child_base %>%
       arrange(family_id, age, child_id) %>%
-      group_by(family_id, across(any_of('draw'))) %>%
+      group_by(family_id) %>%
       mutate(child_index = row_number()) %>%
       ungroup() %>%
       pivot_wider(
         id_cols = c(
-          family_id, any_of('draw'), hh_id, parent_unit_id, n_children_original, child_category,
+          family_id, hh_id, parent_unit_id, n_children_original, child_category,
           income_pctile, n_members, region,
           p.hhm_id2, p.age1, p.age2, p.male1, employment_choice_pc
         ),
@@ -470,17 +447,16 @@ run_acs_processing <- function() {
         mutate(is_3plus = as.integer(n_children_original >= 3))
     }
 
-    # Filter to complete cases w/ valid region. Employment NA only on NSECE
-    # (hours / recency / caregiver unknown) -- family out
+    # Filter to complete cases with valid region
     one_child_split <- list(
       `0` = one_child %>% filter(is.na(parent_unit_id), !is.na(region)),
-      `1` = one_child %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region), !is.na(employment_choice_pc)),
-      `2` = one_child %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region), !is.na(employment_choice_pc))
+      `1` = one_child %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
+      `2` = one_child %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
     )
     two_child_split <- list(
       `0` = two_child_wide %>% filter(is.na(parent_unit_id), !is.na(region)),
-      `1` = two_child_wide %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region), !is.na(employment_choice_pc)),
-      `2` = two_child_wide %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region), !is.na(employment_choice_pc))
+      `1` = two_child_wide %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
+      `2` = two_child_wide %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
     )
 
     list(one_child = one_child_split, two_child = two_child_split)
@@ -702,35 +678,6 @@ run_acs_processing <- function() {
       select(hh_id, child_id, tax_unit_id, tax_unit_id_legacy, child_weight, age, male) %>%
       arrange(hh_id, child_id)
 
-    # Align single-year age mix of children 0-4 with Census. ACS 2019 holds too
-    # few infants (persons age 0 = 0.926 x Census) and too many four-year-olds
-    # (1.016 x); ACS controls weights to Census only for ages 0-4 as a group.
-    # Factor per age = Census share / ACS share within 0-4, so 0-4 weighted
-    # total unchanged; ages 5-12 untouched. Census: PEP vintage 2019, national
-    # resident population, 1 July 2019.
-    census_0_4 <- read_csv(
-      'resources/acs/US_PEP__national_population_by_single_year_of_age_0_4__2019.csv',
-      show_col_types = FALSE
-    ) %>%
-      transmute(age = AGE, census_share = TOT_POP / sum(TOT_POP))
-    age_factors <- children %>%
-      filter(age <= 4) %>%
-      group_by(age) %>%
-      summarise(acs_wt = sum(child_weight), .groups = 'drop') %>%
-      mutate(acs_share = acs_wt / sum(acs_wt)) %>%
-      inner_join(census_0_4, by = 'age') %>%
-      transmute(age, age_factor = census_share / acs_share)
-    if (nrow(age_factors) != 5) {
-      stop('Child age reweight: expected ages 0-4 in both ACS children and ',
-           'Census file, found ', nrow(age_factors), '. Check the Census file.')
-    }
-    cat('  Child age factors (Census / ACS share, ages 0-4):',
-        paste(sprintf('%d=%.3f', age_factors$age, age_factors$age_factor), collapse = ' '), '\n')
-    children <- children %>%
-      left_join(age_factors, by = 'age') %>%
-      mutate(child_weight = child_weight * coalesce(age_factor, 1)) %>%
-      select(-age_factor)
-
 
     #---------------------------------------
     # Household members (all persons in HH)
@@ -789,8 +736,11 @@ run_acs_processing <- function() {
         .groups = 'drop'
       ) %>%
       mutate(
-        # make_parent_unit_id(): inverted by parent_unit_key() (price wedge draw)
-        parent_unit_id = make_parent_unit_id(hhm_id1, hhm_id2),
+        parent_unit_id = if_else(
+          is.na(hhm_id2),
+          as.character(hhm_id1),
+          paste0(hhm_id1, '_', hhm_id2)
+        ),
         n_parents = if_else(is.na(hhm_id2), 1L, 2L),
         .after = child_id
       )
@@ -1170,7 +1120,8 @@ run_acs_processing <- function() {
       filter(age < 5) %>%
       distinct(hh_id) %>%
       left_join(processed_acs_2019$households %>% select(hh_id, any_of('statefip')), by = 'hh_id')
-    if (!'statefip' %in% names(acs_no_state) || anyNA(acs_no_state$statefip)) {
+    if (get_income_rank_scheme() != 'national' &&
+        (!'statefip' %in% names(acs_no_state) || anyNA(acs_no_state$statefip))) {
       n_miss <- if ('statefip' %in% names(acs_no_state)) sum(is.na(acs_no_state$statefip)) else nrow(acs_no_state)
       stop('Care-choice income ranks: ', n_miss, ' ACS households w/ children under 5 lack statefip. ',
            'Check households table statefip (1b_acs_processing.R) -- raw ACS pull needs STATEFIP.')
@@ -1254,15 +1205,8 @@ run_acs_processing <- function() {
             return(NULL)
           }
 
-          # Weighted resample always w/ replacement -- draw probability
-          # proportional to model_weight. Stacked label draws (1a, M rows per
-          # child) can exceed 50,000 rows; w/out replacement heavy rows
-          # would be capped at one pick (2026-10-12; replacement only under
-          # 50,000 rows before -- every NSECE frame was, so no change at one
-          # draw). Copies of one child fall in-bag and OOB alike -> OOB
-          # error optimistic, as already w/ repeated resampled rows
           sample_size  <- 50000
-          replace_flag <- TRUE
+          replace_flag <- nrow(train_raw) < sample_size
 
           train_df <- train_raw %>%
             sample_n(
@@ -1576,19 +1520,15 @@ run_acs_processing <- function() {
   #-------------------------------------------
   {
 
-    # NSECE distribution -- child x label draw rows, child_weight x
-    # draw_weight (1a, nsece_mi_draws.R); older 1a output w/out draws ->
-    # weight 1
+    # NSECE distribution
     nsece_enr <- processed_nsece_hh$enrollment
-    if (!'draw_weight' %in% names(nsece_enr)) nsece_enr$draw_weight <- 1
     nsece_children <- processed_nsece_hh$children %>%
       filter(age < 5) %>%
       left_join(
         nsece_enr %>%
-          select(hh_id, child_id, draw_weight, ecec_choice, ecec_hours_choice),
+          select(hh_id, child_id, ecec_choice, ecec_hours_choice),
         by = c('hh_id', 'child_id')
       ) %>%
-      mutate(child_weight = child_weight * draw_weight) %>%
       filter(!is.na(ecec_choice), !is.na(ecec_hours_choice))
 
     total_nsece_weight <- sum(nsece_children$child_weight)

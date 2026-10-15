@@ -137,9 +137,6 @@ code/05_compare_nsece_shares.R          comparison: the build against regional N
                                         shares (writes nothing the simulator reads)
 code/07_compare_nhes.R                 validation: the build against NHES-ECPP 2019, same
                                         population and care-type rules, by Census region
-code/08_nieer_prek_sensitivity.R        sensitivity: demand targets with NIEER pre-K and
-                                        NIEER Head Start overlap in place of CCD and the
-                                        fallback share (writes nothing the simulator reads)
 code/09_ccdf_subsidy_children.R         diagnostic: CCDF FY2019 children 0-4 by setting,
                                         hours, and $0 copay, against Unpaid Center-Based
                                         (writes nothing the simulator reads)
@@ -154,13 +151,6 @@ code/11_ndcp_price_comparison.R         diagnostic: NDCP 2019 centre prices by a
 code/12_participation_bias.R            diagnostic: national non-parental share in NSECE,
                                         p0, NSCH, targets, and NHES; aligned NHES
                                         five-to-ten-hour ratio (prints only)
-code/13_participation_audit.R           diagnostic (cluster, NSECE microdata): OPRE
-                                        published rates reproduced, then one restriction
-                                        at a time to model population; fixed-denominator
-                                        count of excluded vs relabeled children; NSECE vs
-                                        ACS forest predictions within cells; with
-                                        --est-old, label changes from the 2026-10-12
-                                        counting, parent sex, and employment rules
 code/14_program_hours_sensitivity.R     sensitivity: Unpaid Center-Based hours program by
                                         program (NHES usual weekly hours, PIR schedule
                                         mix, operating weeks) against step 6 (writes
@@ -178,7 +168,7 @@ cluster/nsece_shares_by_age.R           NSECE care-type shares of children 0-4 b
 cluster/acs_kindergarten_flags_2019.py  ACS 2019 children 0-4 already in kindergarten
                                         (IPUMS usa:34 GRADEATT), dropped from the NHES
                                         check because NHES leaves them out
-states/<GEO>.R                          one per geography: a geo_spec() call with program
+states.R                                one geo_spec() call per geography, with program
                                         counts (funded slots) and Census region,
                                         hand-researched
 code/01_nsch_participation_rate.R       derives each state's rate and standard error
@@ -207,8 +197,6 @@ out/nhes_comparison.csv                 build vs NHES-ECPP 2019 by region and ca
 out/nhes_comparison_by_age.csv          the same, ages 0-2 and 3-4
 out/nhes_age_mix.csv                    single-year age mix of children 0-4 not in
                                         kindergarten: NHES, model ACS, Census PEP 2019
-out/nieer_sensitivity/<GEO>.csv         NIEER sensitivity demand targets, simulator schema
-out/nieer_sensitivity_summary.csv       hours by geography and care type, main vs NIEER
 out/program_hours_sensitivity.csv       14_: children and annual hours by geography and
                                         program, four versions (grid_50, usual_50,
                                         usual_ow, sched_ow)
@@ -228,14 +216,14 @@ out/licensing_ratio_change_3pt_5pt.csv  2017 centre ratios at 5 age points, cent
 
 ## Adding a geography
 
-A state file is **data, not logic**: one `geo_spec()` call. Copy the closest existing one.
+`states.R` is **data, not logic**: one `geo_spec()` call per geography. Copy the closest existing one.
 
-1. Write `states/<GEO>.R`: one `SPEC_<GEO> <- geo_spec(...)` call (helper in
+1. Add to `states.R`: one `SPEC_<GEO> <- geo_spec(...)` call (helper in
    `00_build_demand_targets.R`) with `geo`, `name`, `fips`, `region`, and the
    three program counts `prek`, `head_start`, and `early_head_start`, each with its source
    beside it. A sub-state geography also passes `county_fips`, which selects
    its population, and `counties`, the same counties by name for the files
-   with no FIPS, like NYC (see `states/NYC.R`). The simulator needs a matching entry in
+   with no FIPS, like NYC (see `SPEC_NYC` in `states.R`). The simulator needs a matching entry in
    `SUBSTATE_GEOGRAPHIES` (`src/shared_functions/constants.R`). Do NOT write
    `nonparental_rate` -- `load_spec()` fills it in live; see below.
 2. `GEOGRAPHIES` in `00_build_demand_targets.R` takes every code in
@@ -260,7 +248,7 @@ filter k6q20 in (1,2), sc_age_years <= 4, weight by fwc, subset fipsst
 
 `nonparental_rate` is not hand-researched -- it is the output of
 `01_nsch_participation_rate.R`, a single deterministic pass over raw data with
-no per-geography judgment call. Keeping a hand copy in `states/<GEO>.R` bought
+no per-geography judgment call. Keeping a hand copy in `states.R` bought
 nothing but a second place for it to drift, so `load_spec()` reads it live,
 after sourcing the state file: that geography's row of
 `out/nsch_participation_rate_base.csv` (`BASE_WAVE`, the 2016-19 pool). NYC
@@ -320,14 +308,13 @@ so.
 | Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `raw/local/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `raw/US/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |
 
 A **file** is read by the code. A **constant** is read by hand once and written
-into `states/<GEO>.R` next to its provenance comment.
+into `states.R` next to its provenance comment.
 
 ### NSCH — the participation rate
 
 `k6q20` asks whether the child receives at least 10 hours a week of care from
 someone other than a parent or guardian. The prompt names every arrangement
-type and never asks which one applies. Wording is in
-`raw/US/US_NSCH__topical_variable_list__2019.pdf`.
+type and never asks which one applies.
 
 The build reads each rate from `out/nsch_participation_rate_base.csv`.
 `01_nsch_participation_rate.R` derives that file from the survey:
@@ -398,63 +385,18 @@ It writes each constant with its unweighted record count to
   `NSECE_UNIVERSE_RATIO` carries the NSCH rate from B up to A; B is otherwise
   used only for sensitivity.
 
-**Which arrangements count (2026-10-12).** 02 and the simulator (1a) use one
-function, `src/shared_functions/resolve_regular_care.R`:
+**Which arrangements count (2026-10-14).** 02 and the simulator (1a) use the
+same rule, back to the one before 2026-10-12. A provider with `HH9_REGCARE` = 1
+and positive reference-week hours counts. A type 8 (type unknown) row counts as
+Other. A payment amount the file does not hold takes an unpaid label. 02 and 1a
+make one label draw. The 2026-10-12 rules (zero-hour regular providers with
+imputed hours, `REGCARE` -1 / -2 by type of care, type 7 / 8 never regular,
+`HH9_PAID` for unknown amounts, and 50 averaged draws) are removed.
 
-- A provider with `HH9_REGCARE` = 1 counts even when the reference-week
-  calendar shows zero hours for the child. Its hours are a draw from the
-  weighted hours of the `REGCARE` = 1 arrangements with hours above 0 in the
-  same type-of-care group and age cell. The draw is a keyed uniform on
-  (`hh_id`, `child_id`, `provider_id`), so it does not depend on row order
-  or the global random stream, and the cell keeps the donors' part-time
-  share. Before, every imputed row took the cell's weighted median.
-- `REGCARE` -1 or -2 (not known) counts as regular when `HH9_TYPEOFCARE_AGG`
-  is 1-5, NSECE's own regular-care test. `REGCARE` = 0 never counts.
-- Only `HH9_TYPEOFCARE_AGG` 1-5 counts as non-parental care, as in NSECE's
-  own definition. Type 7 (irregular), type 8 (type unknown), and a missing
-  type never count, whatever `REGCARE` says. These rows are not hours
-  donors, payment donors, or payment draw targets. Type 6 (K-8) stays out
-  of the build as before. Before, a type 8 row with `REGCARE` = 1 counted
-  as Other: 35 children 0-4 (unweighted), 0.57% of weighted children 0-4,
-  were in care through type 8 alone.
-- A row with imputed hours keeps its reported payment. `HH9_PAID`
-  (question J1, which does not refer to last week) confirms "not paid" on
-  993 of the 996 zero-payment rows with imputed hours (children 0-4).
-- A payment amount the file does not hold (`HH9_WEEKLY_PAYMENT_TC` -1 DK or
-  refused, -2 not asked Section J) takes its paid status from `HH9_PAID`
-  when that is 1 or 0. Only the rest are drawn
-  (`src/shared_functions/impute_unknown_payment.R`, same draws as 1a).
-  Before, all of them were drawn, and -2 counted as unpaid.
-
-This rule grows universe A from 2,814 to 3,462 children (unweighted) and
-moves `NSECE_UNIVERSE_RATIO` from 1.0981 to 1.0739. The drawn imputed hours
-put more imputed rows under 10 hours. Universe B falls from 3,239 to 3,157
-children (unweighted), and the ratio moves from 1.0739 to 1.0979. The
-national short share of part-time children (`NSECE_SHORT_SHARE_OF_PT`)
-moves from 0.302 to 0.350. Most added children are
-in informal care, so the formal shares now sit 4 to 10 points below NSECE's
-published figures, which rest on reference-week care only. The old exact
-match no longer holds.
-
-The type 1-5 rule then takes universe A from 3,462 to 3,427 children and
-universe B from 3,157 to 3,124 (unweighted). The share of weighted children
-0-4 in care falls from 55.55% to 54.98%, which is NSECE's own rate for type
-1-5 care. The ratio moves from 1.09786 to 1.09806, and the short share from
-0.350 to 0.348. The demand targets rise by 0.017% to 0.029%; Unpaid
-Center-Based does not change.
-
-**Label draws (2026-10-12).** The hours of an imputed row and the paid
-status of an unknown amount are random draws. With one draw, the seed moved
-`NSECE_UNIVERSE_RATIO` between 1.094 and 1.105 over 20 seed pairs. 02 and 1a
-now make the draws `NSECE_MI_DRAWS` = 50 times
-(`src/shared_functions/nsece_mi_draws.R`) and give each child one row per
-draw with the child weight divided by 50, so every constant is the pooled
-average over the draws. The record counts in `out/nsece_constants.csv` are
-the mean count per draw, so some are fractional (for example, 128.98). Over 5
-base seed pairs, the ratio stays between 1.0990 and 1.0996. With the base
-seeds, the ratio moves from 1.09806 to 1.09949 and the short share from
-0.348 to 0.350. The demand targets rise by 0.14% to 0.20%; Unpaid
-Center-Based does not change.
+**The constants are stale until 02 is rerun.** `NSECE_UNIVERSE_RATIO`,
+`NSECE_SHORT_SHARE_OF_PT`, the constants in `05_compare_nsece_shares.R`, and
+`out/nsece_constants.csv` still hold the values of the 2026-10-12 50-draw run.
+Rerun 02 on the cluster, copy the values in, and rebuild the demand targets.
 
 A regional cell under 30 records takes the national value; only Unpaid
 Home-Based falls below it, in all four regions (Northeast 6, Midwest 6, South
@@ -833,7 +775,6 @@ them).
 | `raw/US/` | `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots, home-based and family child care slots |
 | `raw/US/` | `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots, home-based and family child care slots, and age mix, for the HS/EHS split |
 | `raw/US/` | `US_OHS__biennial_report_to_congress__FY2019.pdf` | Appendix C (national PIR) feeds the enrolled-per-slot factors. Its state HS + EHS funded enrollment was evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
-| `raw/US/` | `US_NSCH__topical_variable_list__2019.pdf` | NSCH 2019 variable list, incl. `k6q20` wording |
 | `raw/US/` | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019: Exhibit 1 enrollment by age 0–4, the supply staffing index weights |
 
 ## Checks
@@ -890,7 +831,7 @@ split between them.
 NYC gets a simulator file too. The simulator selects NYC households by
 STATEFIP 36 and COUNTYFIP 005, 047, 061, 081, and 085 (`SUBSTATE_GEOGRAPHIES`
 in `src/shared_functions/constants.R`). The build selects NYC's population on
-the same five codes (`county_fips` in `states/NY.R`). The county names in
+the same five codes (`county_fips` in `states.R`). The county names in
 `counties` are kept only for the one file that carries no FIPS: the Head Start
 site file. A NYC run needs an interface built from a raw
 ACS pull that carries `COUNTYFIP`; without one, the run stops at

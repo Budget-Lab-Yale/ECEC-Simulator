@@ -922,7 +922,7 @@ expect_error(tw_cache(pm = mis_pm),
              'price forest from other income-rank scheme stops')
 unl_pm <- tw_models; unl_pm$income_rank_scheme <- NULL
 expect_error(tw_cache(pm = unl_pm), 'scheme "unlabeled"', 'unlabeled price forest stops')
-expect_error(compute_price_wedge_cache(tw_pu, tw_ch, tw_hh, tw_models, NULL),
+expect_error(compute_price_wedge_cache_state(tw_pu, tw_ch, tw_hh, tw_models, NULL),
              'income_pctiles needs hh_id', 'missing income_pctiles stops')
 
 # -- Urban-density mismatch stops (price forest built under other setting);
@@ -1151,483 +1151,6 @@ rm(income_rank_scheme, urban_density_setting)
 
 
 #------------------------------
-# NSECE unknown payment (1a assign_primary_care()) -- counting unknown rows
-# take drawn label; label payment can't change same from any draw
-#------------------------------
-
-source('src/shared_functions/assign_primary_care.R')
-apc <- function(regular, hours, choice, kind, imputed = rep(NA_character_, length(regular))) {
-  r <- assign_primary_care(tibble(regular = regular, hours = hours, ecec_choice = choice,
-                                  unknown_kind = kind, imputed_choice = imputed))
-  paste(r$ecec_choice, r$hours)
-}
-U <- NA_character_
-# Label that payment cannot change -> same label from every draw
-stopifnot(apc(c(1, 1), c(10, 30), c(U, 'Low-Priced Center-Based'), c('home', U),
-              c('Unpaid Home-Based', U)) == 'Low-Priced Center-Based 30',
-          apc(c(1, 1), c(10, 30), c(U, 'Low-Priced Center-Based'), c('home', U),
-              c('Paid Home-Based', U)) == 'Low-Priced Center-Based 30',
-          apc(c(1, 1), c(5, 30), c(U, 'Unpaid Center-Based'), c('other', U),
-              c('Other Paid', U)) == 'Unpaid Center-Based 30',
-          apc(c(1, 1), c(5, 30), c(U, 'Unpaid Center-Based'), c('other', U),
-              c('Other Unpaid', U)) == 'Unpaid Center-Based 30')
-# Other Paid pt either way -- band invariant, primary hours follow draw (3 vs 15)
-stopifnot(apc(c(1, 1), c(12, 3), c(U, 'Other Paid'), c('other', U), c('Other Unpaid', U)) == 'Other Paid 3',
-          apc(c(1, 1), c(12, 3), c(U, 'Other Paid'), c('other', U), c('Other Paid', U)) == 'Other Paid 15')
-cat('PASS: assign_primary_care -- unknown payment that cannot change label: same label from any draw\n')
-# Counting unknown row w/out draw -> NA
-stopifnot(apc(1, 25, U, 'center') == 'NA NA',
-          apc(c(1, 1), c(10, 30), c(U, 'Low-Priced Center-Based'), c('home', U)) == 'NA NA')
-# Non-regular unknown row -> Parent Only (no draw needed); no rows -> Parent
-# Only; no counting row -> Parent Only (no NA bucket since 2026-10-12 --
-# regularity resolved upstream, as 02)
-stopifnot(apc(0, 0, U, 'home') == 'Parent Only 0',
-          apc(numeric(0), numeric(0), character(0), character(0)) == 'Parent Only 0',
-          apc(NA, 10, U, U) == 'Parent Only 0')
-# Both paid-centre tiers -> High, whatever hours (simulator standard, main 1a)
-stopifnot(apc(c(1, 1), c(10, 20), c('High-Priced Center-Based', 'Low-Priced Center-Based'), c(U, U)) ==
-            'High-Priced Center-Based 10')
-cat('PASS: assign_primary_care -- missing draw NA, Parent Only / NA buckets, both tiers -> High\n')
-
-# Provider care type (classify_nsece_provider(), 1a + 02): home-based needs
-# outside home + no prior relationship; unknown payment -> no label, kind set
-source('src/shared_functions/resolve_regular_care.R')
-cp <- classify_nsece_provider(tibble(
-  is_k8 = c(F, F, F, F, T), is_center = c(T, F, F, F, F), is_home = c(F, T, T, T, F),
-  is_paid = c(T, T, F, F, F), pay_unknown = c(F, F, F, T, F),
-  in_child_home = c(F, F, T, F, F), has_prior_rel = F), 'Center-Based')
-stopifnot(identical(cp$ecec_choice, c('Center-Based', 'Paid Home-Based', 'Other Unpaid', NA, 'K-8')),
-          identical(cp$unknown_kind, c(NA, NA, NA, 'home', NA)))
-cat('PASS: classify_nsece_provider -- centre / home / other / unknown payment / K-8\n')
-
-# Unknown-payment imputation (impute_unknown_payment()) -- reproducible,
-# global RNG untouched, cells from known rows, used only for ambiguous kids
-source('src/shared_functions/impute_unknown_payment.R')
-imp_arr <- tibble(
-  hh_id = c(1, 1, 2, 2, 3, 4, 5, 6), child_id = 1, provider_id = c(1, 2, 1, 2, 1, 1, 1, 1),
-  kind  = c('other', 'center', 'other', 'other', 'other', 'center', 'center', 'center'),
-  paid  = c(NA, TRUE, NA, FALSE, TRUE, NA, TRUE, FALSE),
-  tier  = c(NA, 'Low', NA, NA, NA, NA, 'High', NA),
-  counts = TRUE, age = c(2, 2, 3, 3, 2, 1, 1, 0), region = 1,
-  child_weight = c(1, 1, 2, 2, 3, 1, 1, 3))
-set.seed(11); g0 <- runif(1); set.seed(11)
-i1 <- impute_unknown_payment(imp_arr)
-g1 <- runif(1)
-i2 <- impute_unknown_payment(imp_arr[sample(nrow(imp_arr)), ])
-stopifnot(identical(g0, g1), identical(i1$draws, i2$draws),
-          nrow(i1$draws) == 3,
-          # other 2-3: known rows hh 2 (unpaid, wt 2), hh 3 (paid, wt 3) -> 0.6
-          isTRUE(all.equal(i1$paid_cells$paid_share[i1$paid_cells$kind == 'other'], 0.6)),
-          # centre 0-1: hh 5 paid (wt 1), hh 6 unpaid (wt 3) -> 0.25; tier 0-1 all High
-          isTRUE(all.equal(i1$paid_cells$paid_share[i1$paid_cells$kind == 'center' &
-                                                      i1$paid_cells$age_cell == '0-1'], 0.25)),
-          all(i1$draws$imp_tier[i1$draws$kind == 'center' & i1$draws$imp_paid] %in% 'High'),
-          all(is.na(i1$draws$imp_tier[i1$draws$kind != 'center' | !i1$draws$imp_paid])))
-cat('PASS: impute_unknown_payment -- same draws on reshuffled input, global RNG restored, weighted cells\n')
-
-# Questionnaire paid status (paid_q, HH9_PAID) wins over draw; other rows'
-# draws unchanged. Paid centre w/ imputed hours (tier_unknown) -> tier
-# alone drawn, own stream -- main draws unchanged
-i3 <- impute_unknown_payment(mutate(imp_arr, paid_q = c(FALSE, NA, TRUE, NA, NA, TRUE, NA, NA)))
-d1 <- arrange(i1$draws, hh_id); d3 <- arrange(i3$draws, hh_id)
-stopifnot(identical(d3$imp_paid, c(FALSE, TRUE, TRUE)),
-          identical(d3$u_paid, d1$u_paid), identical(d3$u_tier, d1$u_tier),
-          # hh 4: centre, paid by questionnaire -> tier from 0-1 cell (all High)
-          d3$imp_tier[d3$hh_id == 4] == 'High',
-          !any(d3$tier_only))
-i4 <- impute_unknown_payment(mutate(imp_arr, tier_unknown = hh_id == 5,
-                                    tier = if_else(hh_id == 5, NA_character_, tier)))
-d4 <- arrange(i4$draws, hh_id)
-stopifnot(nrow(d4) == 4, identical(d4$tier_only, c(FALSE, FALSE, FALSE, TRUE)),
-          identical(d4$u_paid[1:3], d1$u_paid), identical(d4$imp_paid[1:3], d1$imp_paid),
-          d4$imp_paid[4], is.na(d4$u_paid[4]),
-          # hh 5 no longer tier donor -> only donor hh 1 (Low, 2-3 cell);
-          # 0-1 cell empty, regional + national -> no tier
-          is.na(d4$imp_tier[4]))
-i5 <- impute_unknown_payment(mutate(imp_arr, tier_unknown = hh_id == 3))
-stopifnot(!any(i5$draws$tier_only))   # tier_unknown on non-centre row ignored
-cat('PASS: impute_unknown_payment -- HH9_PAID answer wins, tier-only draws on own stream\n')
-# Tier cells: region x density x age (>= 30 donors) -> density x age -> age.
-# Donors age 2-3: region 1 density 1: 30 rows all High; region 2 density 1:
-# 5 rows all Low (thin -> density 1 x age: 30 High + 5 Low = 30/35);
-# density 3: 10 rows Low in region 1 (thin both finer levels -> age:
-# 30 / 45 High). Paid share forced 1 by known paid donors only.
-td <- tibble(hh_id = 100 + 1:45, child_id = 1, provider_id = 1, kind = 'center', paid = TRUE,
-             tier = c(rep('High', 30), rep('Low', 15)), counts = TRUE, age = 2,
-             region = c(rep(1, 30), rep(2, 5), rep(1, 10)),
-             density = c(rep(1, 35), rep(3, 10)), child_weight = 1)
-tu <- tibble(hh_id = 1:3, child_id = 1, provider_id = 1, kind = 'center', paid = NA, tier = NA,
-             counts = TRUE, age = 2, region = c(1, 2, 1), density = c(1, 1, 3), child_weight = 1)
-ti <- impute_unknown_payment(bind_rows(td, tu))
-tdv <- ti$draws %>% arrange(hh_id)
-stopifnot(identical(tdv$tier_level, c('region x density x age', 'density x age', 'age')),
-          isTRUE(all.equal(tdv$high_share, c(1, 30 / 35, 30 / 45))),
-          all(tdv$imp_paid))
-cat('PASS: impute_unknown_payment -- tier cells region x density x age -> density x age -> age (>= 30 donors)\n')
-# Urban density off (no density column) = main: tier cells age only, no
-# region. 30 High + 15 Low donors -> 30 / 45 for every row, whatever region.
-# Paid uniforms unchanged; paid shares kind x age (no region cells)
-ti0 <- impute_unknown_payment(bind_rows(td, tu) %>% select(-density))
-tdv0 <- ti0$draws %>% arrange(hh_id)
-stopifnot(all(tdv0$tier_level == 'age'), isTRUE(all.equal(tdv0$high_share, rep(30 / 45, 3))),
-          identical(ti0$draws$u_paid, ti$draws$u_paid), identical(ti0$draws$imp_paid, ti$draws$imp_paid),
-          !'density' %in% names(ti0$tier_cells), identical(unique(ti0$tier_cells$level), 'age'),
-          nrow(ti0$paid_cells_region) == 0)
-cat('PASS: impute_unknown_payment -- urban density off: tier cells age only (= main)\n')
-
-# Paid-status draw cells (2026-10-14): region x kind x age (>= 30 donors) ->
-# kind x age -> kind. Centre donors age 2: region 1 40 rows all paid, region 2
-# 40 rows all unpaid, region 3 5 rows unpaid (thin). Unknown rows: region 1
-# -> 1, region 2 -> 0, region 3 -> kind x age (45 donors, 40 paid) = 40 / 85,
-# region 1 age 4 (no donors at age) -> kind (same 40 / 85)
-pd_arr <- bind_rows(
-  tibble(hh_id = 100 + 1:85, child_id = 1, provider_id = 1, kind = 'center', paid = rep(c(TRUE, FALSE), c(40, 45)),
-         tier = NA_character_, counts = TRUE, age = 2, region = rep(c(1, 2, 3), c(40, 40, 5)), child_weight = 1),
-  tibble(hh_id = 1:4, child_id = 1, provider_id = 1, kind = 'center', paid = NA, tier = NA_character_,
-         counts = TRUE, age = c(2, 2, 2, 4), region = c(1, 2, 3, 1), child_weight = 1))
-pd <- impute_unknown_payment(mutate(pd_arr, density = 1))   # switch on: density column
-pdd <- pd$draws %>% filter(!tier_only) %>% arrange(hh_id)
-stopifnot(isTRUE(all.equal(pdd$paid_share, c(1, 0, 40 / 85, 40 / 85))),
-          nrow(pd$paid_cells_region) == 3, all(pdd$imp_paid[1], !pdd$imp_paid[2]))
-cat('PASS: impute_unknown_payment -- switch on: paid-status cells region x kind x age -> kind x age -> kind\n')
-# Switch off (no density column) = main: kind x age -> kind, region ignored
-pd0 <- impute_unknown_payment(pd_arr)
-pdd0 <- pd0$draws %>% filter(!tier_only) %>% arrange(hh_id)
-stopifnot(isTRUE(all.equal(pdd0$paid_share, rep(40 / 85, 4))), nrow(pd0$paid_cells_region) == 0,
-          identical(pdd0$u_paid, pdd$u_paid))
-cat('PASS: impute_unknown_payment -- switch off: paid-status cells kind x age -> kind, no region\n')
-
-# Hours draw cells (resolve_regular_care(), 2026-10-14): region x TOC group x
-# age (>= 30 donors) -> TOC group x age -> TOC group. Centre donors age 2:
-# region 1 40 rows 10 hrs, region 2 40 rows 40 hrs, region 3 5 rows 25 hrs.
-# Imputed rows: region 1 -> 10, region 2 -> 40, region 3 (thin) -> pooled
-# TOC x age cell, hours in {10, 25, 40}; no region column -> pooled cell
-hr_arr <- bind_rows(
-  tibble(hh_id = 100 + 1:85, child_id = 1, provider_id = 1, regcare = 1, type_raw = 4,
-         hours = rep(c(10, 40, 25), c(40, 40, 5)), age = 2, child_weight = 1,
-         region = rep(c(1, 2, 3), c(40, 40, 5))),
-  tibble(hh_id = 1:90, child_id = 1, provider_id = 1, regcare = 1, type_raw = 4,
-         hours = 0, age = 2, child_weight = 1, region = rep(c(1, 2, 3), each = 30)))
-hr <- resolve_regular_care(hr_arr)$arr %>% filter(hours_imputed)
-stopifnot(all(hr$hours[hr$region == 1] == 10), all(hr$hours[hr$region == 2] == 40),
-          all(hr$hours[hr$region == 3] %in% c(10, 25, 40)), length(unique(hr$hours[hr$region == 3])) > 1)
-hr0 <- resolve_regular_care(select(hr_arr, -region))$arr %>% filter(hours_imputed)
-stopifnot(all(hr0$hours %in% c(10, 25, 40)), length(unique(hr0$hours)) == 3)
-cat('PASS: resolve_regular_care -- hours donor cells region x TOC group x age -> TOC group x age -> TOC group\n')
-apc_imp <- function(regular, hours, choice, kind, imputed) {
-  r <- assign_primary_care(tibble(regular = regular, hours = hours, ecec_choice = choice,
-                                  unknown_kind = kind, imputed_choice = imputed))
-  paste(r$ecec_choice, r$hours, r$imputed)
-}
-# Counting unknown row -> imputed flag set, even when label invariant
-stopifnot(apc_imp(c(1, 1), c(5, 30), c(U, 'Unpaid Center-Based'), c('other', U),
-                  c('Other Paid', U)) == 'Unpaid Center-Based 30 TRUE',
-          apc_imp(c(1, 1), c(5, 30), c('Other Unpaid', 'Unpaid Center-Based'), c(U, U),
-                  c(U, U)) == 'Unpaid Center-Based 30 FALSE')
-# Label payment can change -> drawn label used
-stopifnot(apc_imp(c(1, 1), c(30, 5), c(U, 'Other Unpaid'), c('other', U),
-                  c('Other Paid', U)) == 'Other Paid 30 TRUE',
-          apc_imp(c(1, 1), c(30, 5), c(U, 'Other Unpaid'), c('other', U),
-                  c('Other Unpaid', U)) == 'Other Unpaid 35 TRUE',
-          apc_imp(1, 25, U, 'center', 'Low-Priced Center-Based') == 'Low-Priced Center-Based 25 TRUE',
-          # Ambiguous, no draw -> NA
-          apc_imp(1, 25, U, 'center', U) == 'NA NA FALSE')
-stopifnot(identical(imputed_pay_label(c('center', 'center', 'home', 'other'), c(TRUE, FALSE, TRUE, NA),
-                                      c('Low', NA, NA, NA)),
-                    c('Low-Priced Center-Based', 'Unpaid Center-Based', 'Paid Home-Based', NA)),
-          imputed_pay_label('center', TRUE, NA, paid_centre = 'Center-Based') == 'Center-Based')
-cat('PASS: assign_primary_care -- drawn labels on counting unknown rows\n')
-
-
-#------------------------------
-# NSECE regular care (resolve_regular_care(), 1a + 02): zero-hour regular
-# provider counts w/ imputed hours (fix 1); REGCARE -1 / -2 regular when TOC
-# 1-5 (fix 2); REGCARE 0 stays out
-#------------------------------
-
-source('src/shared_functions/resolve_regular_care.R')
-rc_arr <- tibble(
-  hh_id = 1:9, child_id = 1, provider_id = 1,
-  regcare  = c(1, 1, 1, 1, 1, -2, -1, -1, 0),
-  type_raw = c(4, 4, 4, 4, 2, 2, 6, 5, 4),
-  hours    = c(10, 30, 45, 0, 25, -1, 0, NA, 0),
-  age = 2, child_weight = c(1, 2, 1, 1, 1, 1, 1, 1, 1))
-rc <- resolve_regular_care(rc_arr)$arr
-# Centre 2-3 donors: 10 (wt 1), 30 (wt 2), 45 (wt 1) -> drawn hours one of them
-stopifnot(identical(rc$regular, c(1, 1, 1, 1, 1, 1, 0, 1, 0)),
-          rc$hours[4] %in% c(10, 30, 45), rc$hours_imputed[4],
-          !any(rc$hours_imputed[c(1:3, 5, 7, 9)]),
-          # REGCARE -2, TOC 2 -> regular, hours from individual cell (25)
-          rc$regular_by_type[6], rc$hours[6] == 25,
-          # REGCARE -1, TOC 6 (K-8) -> not regular; TOC 5 -> regular, no TOC 5
-          # donors -> NA hours (no pooled cell either)
-          !rc$regular_by_type[7], rc$regular_by_type[8], is.na(rc$hours[8]),
-          # REGCARE 0 -> out, hours as reported
-          rc$regular[9] == 0, rc$hours[9] == 0)
-stopifnot(weighted_median(c(1, 2, 3), c(1, 1, 1)) == 2, weighted_median(c(5, 1), c(3, 1)) == 5,
-          is.na(weighted_median(numeric(0), numeric(0))))
-# Imputed hours make child count: Parent Only before, centre after
-stopifnot(apc(rc$regular[4], 30, 'Unpaid Center-Based', U) == 'Unpaid Center-Based 30',
-          apc(1, 0, 'Unpaid Center-Based', U) == 'Parent Only 0')
-cat('PASS: resolve_regular_care -- zero-hour regular rows imputed, REGCARE -1/-2 by TOC 1-5, REGCARE 0 out\n')
-
-# TOC gate (2026-10-12): only TOC 1-5 non-parental care (NSECE's definition)
-# -- TOC 7 / 8 / NA never regular even w/ REGCARE 1, no hours donors, no
-# payment donors / draw targets; TOC 6 (K-8) w/ REGCARE 1 still regular
-tg_arr <- tibble(
-  hh_id = 1:6, child_id = 1, provider_id = 1,
-  regcare  = c(1, 1, 1, 1, 1, -2),
-  type_raw = c(8, 7, NA, 6, 5, 8),
-  hours    = c(20, 15, 10, 30, 0, 12),
-  age = 2, child_weight = 1)
-tg <- resolve_regular_care(tg_arr)$arr
-stopifnot(identical(tg$regular, c(0, 0, 0, 1, 1, 0)),
-          !any(tg$hours_imputed[c(1:4, 6)]),
-          # TOC 5 zero-hour row: TOC 8 / 7 / NA rows (same 'other' group) not
-          # donors -> no donor, NA hours
-          tg$hours_imputed[5], is.na(tg$hours[5]),
-          identical(regular_care_flag(c(1, 1, 1, -1, -2), c(8, 7, 6, 8, 3)), c(0, 0, 1, 0, 1)))
-# Child in care through TOC 8 alone -> Parent Only
-stopifnot(apc(tg$regular[1], 20, 'Other Unpaid', U) == 'Parent Only 0')
-# Payment imputation: TOC 8 row (kind 'other', counts FALSE) neither donor nor target
-tg_imp <- impute_unknown_payment(tibble(
-  hh_id = 1:3, child_id = 1, provider_id = 1, kind = 'other',
-  paid = c(TRUE, FALSE, NA), tier = NA_character_,
-  counts = c(FALSE, TRUE, FALSE), age = 2, region = 1, child_weight = 1))
-stopifnot(nrow(tg_imp$draws) == 0, tg_imp$paid_cells$n == 1,
-          tg_imp$paid_cells$paid_share == 0)
-cat('PASS: resolve_regular_care -- TOC 7 / 8 / NA never regular, not donors; TOC 6 REGCARE 1 kept\n')
-
-# Drawn hours (2026-10-12): weighted donor quantile at keyed uniform on
-# (hh_id, child_id, provider_id). Toy centre 0-1 cell: 600 donors 37.5% pt
-# by weight, 4000 imputed rows
-stopifnot(identical(weighted_quantile_draw(c(10, 30), c(1, 3), c(0, 0.2499, 0.25, 0.9999)),
-                    c(10, 10, 30, 30)),
-          all(is.na(weighted_quantile_draw(numeric(0), numeric(0), c(0.1, 0.5)))))
-set.seed(4242)
-dn_h <- c(rep(c(8, 12, 15), each = 100), rep(c(30, 40, 50), each = 100))
-# pt weight 300 of 800 -> 37.5%
-dn_w <- c(rep(1, 300), rep(c(5 / 3, 5 / 3, 5 / 3), each = 100))
-dr_arr <- bind_rows(
-  tibble(hh_id = 1:600, child_id = 1, provider_id = 1, regcare = 1, type_raw = 4,
-         hours = dn_h, age = 0, child_weight = dn_w)[sample(600), ],
-  tibble(hh_id = 1001:5000, child_id = rep(1:2, 2000), provider_id = rep(1:4, 1000),
-         regcare = 1, type_raw = 4, hours = 0, age = 0, child_weight = 1))
-rng_before <- .Random.seed
-dr <- resolve_regular_care(dr_arr)
-rng_after <- .Random.seed
-dr_imp <- dr$arr %>% filter(hours_imputed)
-perm <- sample(nrow(dr_arr))
-dr_shuf <- resolve_regular_care(dr_arr[perm, ])$arr %>% filter(hours_imputed)
-imp_pt <- mean(dr_imp$hours < 20)
-stopifnot(identical(rng_before, rng_after),
-          nrow(dr_imp) == 4000, all(dr_imp$hours %in% dn_h),
-          abs(dr$cells$pt_share - 0.375) < 1e-12,
-          abs(imp_pt - 0.375) < 0.025,
-          # same draw per arrangement under row shuffle, subset
-          identical(dr_shuf$hours[order(dr_shuf$hh_id)], dr_imp$hours[order(dr_imp$hh_id)]),
-          identical(resolve_regular_care(dr_arr[c(1:600, 3401:4001), ])$arr$hours[601:1201],
-                    dr_imp$hours[match(dr_arr$hh_id[3401:4001], dr_imp$hh_id)]),
-          # other seed -> other draws
-          mean(resolve_regular_care(dr_arr, seed = 1L)$arr$hours[601:4600] == dr_imp$hours) < 0.6)
-cat(sprintf('PASS: resolve_regular_care drawn hours -- donor pt 37.5%%, imputed pt %.1f%%, shuffle-invariant, global RNG untouched\n',
-            100 * imp_pt))
-
-
-#------------------------------
-# NSECE label draws (nsece_mi_draws.R, 1a + 02): draw stage M times, draw m
-# seeds base + m x NSECE_MI_SEED_STEP; draw 0 = single draw before; stacked
-# child weights sum to original; result independent of row order
-#------------------------------
-
-source('src/shared_functions/nsece_mi_draws.R')
-stopifnot(NSECE_MI_DRAWS >= 2, NSECE_MI_SEED_STEP > 1,
-          nsece_mi_seed(IMPUTE_PAY_SEED, 0) == IMPUTE_PAY_SEED,
-          nsece_mi_seed(REGULAR_HOURS_SEED, 0) == REGULAR_HOURS_SEED,
-          nsece_mi_seed(5L, 3L) == 5L + 3L * NSECE_MI_SEED_STEP)
-
-# Toy draw stage as 1a: hours (resolve_regular_care()), paid status
-# (impute_unknown_payment()), primary arrangement (assign_primary_care()).
-# hh 1-40: centre donors (hours 10 / 30, paid half); hh 41-60: zero-hour
-# regular centre, payment unknown -> hours, paid status drawn; hh 61-70:
-# known unpaid centre, 25 hrs -> same label every draw
-mi_arr <- bind_rows(
-  tibble(hh_id = 1:40, hours = rep(c(10, 30), 20), net = rep(c(0, 50), each = 20)),
-  tibble(hh_id = 41:60, hours = 0, net = NA_real_),
-  tibble(hh_id = 61:70, hours = 25, net = 0)) %>%
-  mutate(child_id = 1, provider_id = 1, regcare = 1, type_raw = 4, age = 2,
-         child_weight = 1 + hh_id %% 3)
-mi_label <- function(a, m = NULL) {
-  # m NULL -> functions' default seeds (single draw before MI)
-  rc <- if (is.null(m)) resolve_regular_care(a)$arr else
-    resolve_regular_care(a, seed = nsece_mi_seed(REGULAR_HOURS_SEED, m))$arr
-  imp_in <- rc %>%
-    transmute(hh_id, child_id, provider_id, kind = 'center', paid = if_else(is.na(net), NA, net > 0),
-              tier = if_else(net %in% 50, 'High', NA_character_),
-              counts = regular == 1 & !is.na(hours) & hours > 0, age, region = 1, child_weight)
-  imp <- if (is.null(m)) impute_unknown_payment(imp_in) else
-    impute_unknown_payment(imp_in, seed = nsece_mi_seed(IMPUTE_PAY_SEED, m))
-  rc %>%
-    left_join(select(imp$draws, hh_id, child_id, provider_id, imp_paid, imp_tier),
-              by = c('hh_id', 'child_id', 'provider_id')) %>%
-    mutate(unknown_kind = if_else(is.na(net), 'center', NA_character_),
-           ecec_choice = case_when(is.na(net) ~ NA_character_, net > 0 ~ 'High-Priced Center-Based',
-                                   TRUE ~ 'Unpaid Center-Based'),
-           imputed_choice = imputed_pay_label(unknown_kind, imp_paid, imp_tier)) %>%
-    group_by(hh_id, child_id) %>%
-    group_modify(~ assign_primary_care(.x)) %>%
-    ungroup() %>%
-    select(hh_id, child_id, ecec_choice, hours) %>%
-    arrange(hh_id, child_id)
-}
-mi_stack <- function(a) stack_mi_draws(lapply(seq_len(NSECE_MI_DRAWS) - 1L, function(m) mi_label(a, m)))
-mi <- mi_stack(mi_arr)
-mi_w <- mi %>% left_join(select(mi_arr, hh_id, child_id, child_weight), by = c('hh_id', 'child_id'))
-mi_var <- mi %>% group_by(hh_id) %>% summarise(k = n_distinct(paste(ecec_choice, hours)), .groups = 'drop')
-stopifnot(
-  # Draw 0 = single draw w/ default seeds, child for child
-  identical(select(filter(mi, draw == 0), hh_id, child_id, ecec_choice, hours), mi_label(mi_arr)),
-  # M rows per child, draw weights 1 / M, weighted total exact
-  nrow(mi) == NSECE_MI_DRAWS * nrow(mi_arr), all(count(mi, hh_id)$n == NSECE_MI_DRAWS),
-  isTRUE(all.equal(sum(mi_w$child_weight * mi_w$draw_weight), sum(mi_arr$child_weight))),
-  # Drawn children vary across draws, certain children never
-  any(mi_var$k[mi_var$hh_id %in% 41:60] > 1), all(mi_var$k[mi_var$hh_id %in% c(1:40, 61:70)] == 1),
-  # Row order free
-  identical(mi_stack(mi_arr[sample(nrow(mi_arr)), ]), mi))
-# Stack refuses draws w/ different records or duplicate keys
-stopifnot(inherits(try(stack_mi_draws(list(mi_label(mi_arr), mi_label(mi_arr)[-1, ])), silent = TRUE), 'try-error'),
-          inherits(try(stack_mi_draws(list(bind_rows(mi_label(mi_arr), mi_label(mi_arr)[1, ]))), silent = TRUE),
-                   'try-error'))
-cat('PASS: NSECE label draws -- draw 0 = single draw, M rows per child, weights sum to original, row order free\n')
-
-
-#------------------------------
-# NSECE parent sex (infer_parent_sex(), 1a; fix 3) + caregiver employment
-# (nsece_person_employment(), fix 4)
-#------------------------------
-
-source('src/shared_functions/nsece_parent_attributes.R')
-ps <- infer_parent_sex(
-  tibble(hh_id = c(1, 1, 2, 3, 3, 4, 5), hhm_id = c(1, 2, 2, 2, 3, 2, 1)),
-  tibble(hh_id = 1:5, resp_male = c(0, 1, 1, NA, NA),
-         n_mothers = c(1, 1, 1, 0, 1), n_fathers = c(1, 1, 1, 0, 0)))
-ps_m <- function(h, m) ps$male[ps$hh_id == h & ps$hhm_id == m]
-# hh 1: respondent mother -> partner father; hh 2: respondent not a parent,
-# 2 counted parents vs 1 linked -> NA; hh 3: counts 0 vs 2 parents ->
-# inconsistent NA; hh 5: respondent parent, sex unknown, only mother in
-# hh -> 0. ps4: respondent not a parent, one father -> parent 2 male
-stopifnot(ps_m(1, 1) == 0, ps_m(1, 2) == 1, is.na(ps_m(2, 2)),
-          is.na(ps_m(3, 2)), is.na(ps_m(3, 3)), ps_m(5, 1) == 0)
-ps4 <- infer_parent_sex(tibble(hh_id = 4, hhm_id = 2),
-                        tibble(hh_id = 4, resp_male = 0, n_mothers = 0, n_fathers = 1))
-stopifnot(ps4$male == 1, ps4$sex_source == 'household counts')
-emp <- nsece_person_employment(
-  worked     = c(1, 1, 1, 1, 2, 2, 2, 2, 2, 3),
-  wst_hours  = c(20, 35, 0, NA, 0, 0, 0, 0, 0, 40),
-  last_work  = c(NA, NA, NA, NA, 2019, 2018.5, 2017, NA, 9999.99, NA),
-  last_hours = c(NA, NA, NA, NA, 1, 3, 3, NA, 2, NA),
-  last_work_cutoff = 2018.25)
-# 9999.99 = still holds job (User's Guide p.159) -> recent, banded by D5C
-stopifnot(identical(emp, c('pt', 'ft', NA, NA, 'pt', 'ft', 'none', 'none', 'pt', NA)))
-stopifnot(isTRUE(all.equal(nsece_interview_time(c(10, 20, 5), c(2, -3, NA)),
-                           c(2018 + 16 / 12, NA, NA))))
-stopifnot(identical(nsece_primary_caregiver(c(NA, 2, 2, 2, 2), c(1, 1, 0, 1, NA), c(NA, 0, 1, 1, 0)),
-                    c(1L, 2L, 1L, 1L, 2L)),
-          is.na(nsece_primary_caregiver(2, 1, NA)))
-cat('PASS: NSECE parent sex from household counts, employment bands (ACS concept), caregiver = mother\n')
-
-
-#------------------------------
-# 1b prepare_data_for_rf() -- family size from every child 0-4, before
-# unlabelled children drop; family w/ unlabelled kept child never trains
-# one-child forest
-#------------------------------
-
-local({
-  body_1b <- body(eval(parse('src/1_processing/1b_acs_processing.R')[[1]][[3]]))
-  for (e in as.list(body_1b)) {
-    if (is.call(e) && identical(e[[1]], as.name('<-')) && is.name(e[[2]]) &&
-        as.character(e[[2]]) %in% c('derive_employment_choice', 'prepare_data_for_rf',
-                                    'get_primary_caregiver')) {
-      eval(e, envir = globalenv())
-    }
-  }
-})
-stopifnot(exists('prepare_data_for_rf'), exists('derive_employment_choice'))
-
-# hh 1: 2 kids, one NA -> out; hh 2: 1 kid -> one-child; hh 3: 2 kids -> two-child;
-# hh 4: 3 kids, oldest NA (censored) -> two-child, is_3plus; hh 5: 3 kids,
-# youngest NA -> out; hh 6: 1 kid NA -> out
-pr_ch <- tibble(hh_id    = c(1, 1, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6),
-                child_id = c(1, 2, 1, 1, 2, 1, 2, 3, 1, 2, 3, 1),
-                parent_unit_id = '1', child_weight = 100,
-                age      = c(1, 3, 2, 0, 4, 0, 2, 4, 0, 2, 4, 3), male = 1)
-pr_en <- pr_ch %>%
-  transmute(hh_id, child_id,
-            ecec_choice = if_else(paste(hh_id, child_id) %in% c('1 2', '4 3', '5 1', '6 1'),
-                                  NA_character_, 'Parent Only'),
-            ecec_hours_choice = if_else(is.na(ecec_choice), NA_character_, 'none'))
-pr_pu <- tibble(hh_id = 1:6, parent_unit_id = '1', hhm_id1 = 1, hhm_id2 = NA_real_,
-                male1 = 0, male2 = NA_real_, emp1 = 'ft', emp2 = NA_character_)
-pr_hm <- tibble(hh_id = 1:6, hhm_id = 1, age = 30)
-pr_hh <- tibble(hh_id = 1:6, income = 1e4 * 1:6, n_members = 4, region = 1, rank_group = 1)
-pr_rf <- prepare_data_for_rf(pr_ch, pr_pu, pr_hh, pr_hm, pr_en,
-                             list(`1` = seq(1e4, 6e4, length.out = 99)), 'rank_group',
-                             'NSECE', is_nsece = TRUE)
-one <- bind_rows(pr_rf$one_child)
-two <- bind_rows(pr_rf$two_child)
-stopifnot(identical(sort(unique(one$hh_id)), 2), identical(sort(unique(two$hh_id)), c(3, 4)))
-stopifnot(two$n_children_original[two$hh_id == 4] == 3, two$is_3plus[two$hh_id == 4] == 1,
-          !any(grepl('NA', two$ecec_class)))
-cat('PASS: prepare_data_for_rf -- family w/ unlabelled kept child out of both forests, size counted before drop\n')
-
-# NSECE caregiver employment (fix 4): caregiver = mother in two-parent unit
-# (parent 2 here), band from her emp2; mother unknown or band NA -> family
-# out (never coded 'none')
-# hh 5: two-child family, mother's band NA -> whole family out
-ce_ch <- tibble(hh_id = c(1:5, 5), child_id = c(1, 1, 1, 1, 1, 2), parent_unit_id = '1_2',
-                child_weight = 100, age = c(2, 2, 2, 2, 1, 3), male = 0)
-ce_en <- ce_ch %>% transmute(hh_id, child_id, ecec_choice = 'Parent Only', ecec_hours_choice = 'none')
-ce_pu <- tibble(hh_id = 1:5, parent_unit_id = '1_2', hhm_id1 = 1, hhm_id2 = 2,
-                male1 = c(1, 1, 1, 0, 0), male2 = c(0, NA, 0, 1, 1),
-                emp1 = c('ft', 'ft', 'ft', 'pt', NA), emp2 = c('none', 'pt', NA, 'ft', 'ft'))
-ce_hm <- tibble(hh_id = rep(1:5, each = 2), hhm_id = rep(1:2, 5), age = 30)
-ce_hh <- tibble(hh_id = 1:5, income = 1e4 * 1:5, n_members = 4, region = 1, rank_group = 1)
-ce_rf <- prepare_data_for_rf(ce_ch, ce_pu, ce_hh, ce_hm, ce_en,
-                             list(`1` = seq(1e4, 5e4, length.out = 99)), 'rank_group',
-                             'NSECE', is_nsece = TRUE)
-ce <- ce_rf$one_child$`2`
-stopifnot(identical(sort(as.numeric(ce$hh_id)), c(1, 4)),
-          as.character(ce$employment_choice_pc[ce$hh_id == 1]) == 'none',
-          as.character(ce$employment_choice_pc[ce$hh_id == 4]) == 'pt',
-          nrow(ce_rf$two_child$`2`) == 0)
-cat('PASS: prepare_data_for_rf -- NSECE caregiver = mother, her band; unknown mother / band -> out\n')
-
-# Stacked label draws (1a, nsece_mi_draws.R): 2 draws. hh 2 (one child)
-# and hh 3 (two children) labels differ by draw; family size counted within
-# draw (copies never make one-child family two-child), two-child classes
-# paired within draw, weights x draw_weight -> totals unchanged
-pr_en2 <- stack_mi_draws(list(
-  pr_en,
-  pr_en %>% mutate(ecec_choice = if_else(hh_id %in% c(2, 3) & !is.na(ecec_choice), 'Other Unpaid',
-                                         ecec_choice),
-                   ecec_hours_choice = if_else(hh_id %in% c(2, 3) & !is.na(ecec_choice), 'ft',
-                                               ecec_hours_choice))))
-pr_rf2 <- prepare_data_for_rf(pr_ch, pr_pu, pr_hh, pr_hm, pr_en2,
-                              list(`1` = seq(1e4, 6e4, length.out = 99)), 'rank_group',
-                              'NSECE', is_nsece = TRUE)
-one2 <- bind_rows(pr_rf2$one_child)
-two2 <- bind_rows(pr_rf2$two_child)
-stopifnot(identical(sort(unique(one2$hh_id)), 2), identical(sort(unique(two2$hh_id)), c(3, 4)),
-          nrow(one2) == 2, nrow(two2) == 4, all(two2$n_children_original[two2$hh_id == 3] == 2),
-          identical(sort(two2$ecec_class[two2$hh_id == 3]),
-                    c('Other Unpaid_ft__Other Unpaid_ft', 'Parent Only_none__Parent Only_none')),
-          isTRUE(all.equal(sum(one2$model_weight), sum(one$model_weight))),
-          isTRUE(all.equal(sum(two2$model_weight), sum(two$model_weight))))
-cat('PASS: prepare_data_for_rf -- stacked label draws: family size, pairing within draw, weights / M\n')
-
-
-#------------------------------
 # Density-adjusted tier line (compute_tier_thresholds(), urban_density.R)
 #------------------------------
 
@@ -1779,6 +1302,178 @@ stopifnot(!any(duplicated(pdt[c('statefip', 'puma')])),
           all(pdt$children > 0),
           nrow(anti_join(xw_t, pdt, by = c('statefip', 'puma'))) == 0)
 cat('PASS: tract_urban_share / aggregate_puma_density -- distance weighting, overlap, child-weighted PUMA shares (resource builder helpers)\n')
+
+
+#------------------------------
+# State-price alpha experiment (reprice_alpha_to_state_supply.R)
+#------------------------------
+
+source('src/shared_functions/reprice_alpha_to_state_supply.R')
+source('src/shared_functions/get_sector_hours_matrices.R')
+rp_V <- function(x, beta, rho) beta * log(pmax(x, 1))
+
+# State base supply prices: unit cost (L_req %*% w) + residual, sector 1 = 0
+rp_sp <- list(L_req = rbind(c(0.04, 0.05), c(0.16, 0.04), c(0.13, 0.06), c(0.18, 0.04)),
+              w = c(10, 18), delta_0 = c(NA, 0.5, 4.6, 2.9))
+stopifnot(isTRUE(all.equal(state_base_supply_prices(rp_sp),
+                           c(0, 0.16 * 10 + 0.04 * 18 + 0.5, 0.13 * 10 + 0.06 * 18 + 4.6,
+                             0.18 * 10 + 0.04 * 18 + 2.9))))
+
+# Mode switch: default state, national off, unknown stops
+old_mode <- if (exists('state_alpha_price_mode', envir = globalenv())) get('state_alpha_price_mode', envir = globalenv()) else NULL
+for (m in c('national', 'state')) {
+  assign('state_alpha_price_mode', m, envir = globalenv())
+  stopifnot(identical(get_state_alpha_price_mode(), m))
+}
+assign('state_alpha_price_mode', 'bogus', envir = globalenv())
+stopifnot(inherits(tryCatch(get_state_alpha_price_mode(), error = function(e) e), 'error'))
+if (is.null(old_mode)) rm('state_alpha_price_mode', envir = globalenv()) else assign('state_alpha_price_mode', old_mode, envir = globalenv())
+
+rp_build <- function(n_children, n_units, hh_start) {
+  catalog <- get_choice_catalog(n_children)
+  K <- nrow(catalog)
+  wedge <- list(center_low = runif(n_units, 0.5, 1.5), center_high = runif(n_units, 0.5, 1.5),
+                home = runif(n_units, 0.5, 1.5), other_paid = runif(n_units, 0.5, 1.5))
+  Y <- matrix(runif(n_units * K, 40000, 90000), n_units)
+  P_nat <- c(0, 3.5, 7.8, 5.0); P_state <- c(0, 2.6, 6.0, 4.0)
+  op <- 5.4
+  C_nat <- compute_care_cost_matrix(catalog, n_children, wedge, P_nat, op)
+  V_nat <- rp_V(Y - C_nat, 2.5, 0.05)
+  p0 <- matrix(runif(n_units * K, 0.01, 1), n_units); p0 <- p0 / rowSums(p0)
+  raw <- log(p0) - V_nat
+  alpha <- (raw - raw[, 1])[, -1, drop = FALSE]
+  ids <- data.frame(hh_id = hh_start:(hh_start + n_units - 1), parent_unit_id = 1, pseudofamily_id = 1)
+  wts <- data.frame(child_weight.1 = runif(n_units, 50, 150))
+  if (n_children == 2) wts$child_weight.2 <- runif(n_units, 50, 150)
+  list(ad = list(alpha = alpha, p0 = p0, child_weights = wts, row_ids = ids, beta = 2.5, rho = 0.05),
+       Y = Y, NI = Y - C_nat, wedge = wedge, P_nat = P_nat, P_state = P_state, op = op, K = K, ids = ids)
+}
+rp_write_csv <- function(b, dir, type, ni = b$NI) {
+  d <- cbind(b$ids, setNames(as.data.frame(b$Y), paste0('Y.', 1:b$K)),
+             setNames(as.data.frame(ni), paste0('net_income.', 1:b$K)))
+  utils::write.csv(d, file.path(dir, paste0('calibration_', type, '_2019.csv')), row.names = FALSE)
+}
+rp_wedge_rows <- function(b) {
+  tibble(hh_id = b$ids$hh_id, parent_unit_id = b$ids$parent_unit_id,
+         price_wedge.center_low = b$wedge$center_low, price_wedge.center_high = b$wedge$center_high,
+         price_wedge.home = b$wedge$home, price_wedge.other_paid = b$wedge$other_paid)
+}
+rp_dir <- file.path(tempdir(), 'reprice_alpha_test'); dir.create(rp_dir, showWarnings = FALSE)
+b1 <- rp_build(1, 40, 1); b2 <- rp_build(2, 8, 1001)
+rp_write_csv(b1, rp_dir, 'c1'); rp_write_csv(b2, rp_dir, 'c2plus')
+rp_ads <- list(c1 = b1$ad, c2plus = b2$ad)
+rp_wedges <- bind_rows(rp_wedge_rows(b1), rp_wedge_rows(b2))
+rp_ids <- c(1:30, 1001:1006)    # geography: first 30 one-child units, first 6 two-child units
+rp_call <- function(ads = rp_ads, P_state = b1$P_state, csv_dir = rp_dir) {
+  reprice_alpha_to_supply(ads, rp_ids, csv_dir, rp_wedges, b1$P_nat, P_state, b1$op,
+                          state_postal = 'XX', v_fn = rp_V)
+}
+r_same <- rp_call(P_state = b1$P_nat)
+for (t in c('c1', 'c2plus')) {
+  ins <- rp_ads[[t]]$row_ids$hh_id %in% rp_ids
+  # State prices = national prices: alpha unchanged
+  stopifnot(max(abs(r_same$alpha_data_by_type[[t]]$alpha - rp_ads[[t]]$alpha[ins, ])) < 1e-9)
+}
+r <- rp_call()
+for (t in c('c1', 'c2plus')) {
+  ins <- rp_ads[[t]]$row_ids$hh_id %in% rp_ids
+  a_new <- r$alpha_data_by_type[[t]]
+  # Rows restricted to the geography, alpha moved, identity: p0 recovered at state V
+  stopifnot(nrow(a_new$alpha) == sum(ins), max(abs(a_new$alpha - rp_ads[[t]]$alpha[ins, ])) > 1e-3,
+            max(abs(compute_probs_from_alpha(a_new$alpha, r$V_by_type[[t]]) - rp_ads[[t]]$p0[ins, ])) < 1e-9)
+}
+stopifnot(all(r$diagnostics$identity_error < 1e-9), all(r$diagnostics$ni_check_error < 1e-9))
+# Direction. Stored alpha is normalised to choice 1, a high-price center choice
+# whose price falls. A choice with no care cost (employment none, Parent Only)
+# keeps its V, so its alpha moves by -dV_1, positive when state prices are lower
+cat1 <- get_choice_catalog(1)
+po <- which(cat1$child1_ecec_type == 'Parent Only' & cat1$employment_choice == 'none')
+stopifnot(length(po) == 1, po > 1)
+d_po <- r$alpha_data_by_type$c1$alpha[, po - 1] - rp_ads$c1$alpha[rp_ads$c1$row_ids$hh_id %in% rp_ids, po - 1]
+stopifnot(all(d_po > 0))
+# Net income check: calibration net income that disagrees with rebuilt Y - C stops
+b1_bad <- b1; ni_bad <- b1$NI; ni_bad[3, 5] <- ni_bad[3, 5] + 50
+rp_dir_bad <- file.path(tempdir(), 'reprice_alpha_test_bad'); dir.create(rp_dir_bad, showWarnings = FALSE)
+rp_write_csv(b1_bad, rp_dir_bad, 'c1', ni = ni_bad); rp_write_csv(b2, rp_dir_bad, 'c2plus')
+stopifnot(inherits(tryCatch(rp_call(csv_dir = rp_dir_bad), error = function(e) e), 'error'))
+# Missing calibration row stops
+stopifnot(inherits(tryCatch(rp_call(ads = list(c1 = modifyList(b1$ad, list(row_ids = transform(b1$ad$row_ids, parent_unit_id = 99)))),
+                                    csv_dir = rp_dir), error = function(e) e), 'error'))
+
+# Frozen base year: no re-anchoring shift -> sector hours at state V equal the
+# hours implied by p0; a 1% different expectation stops
+expected <- rep(0, 4)
+for (t in c('c1', 'c2plus')) {
+  nc <- PARENT_UNIT_N_CHILDREN[match(t, PARENT_UNIT_NAMES)]
+  sh <- get_sector_hours_matrices(nc)
+  w <- r$alpha_data_by_type[[t]]$child_weights
+  e <- crossprod(w$child_weight.1, r$alpha_data_by_type[[t]]$p0) %*% sh$H1
+  if (nc == 2) e <- e + crossprod(w$child_weight.2, r$alpha_data_by_type[[t]]$p0) %*% sh$H2
+  expected <- expected + as.vector(e)
+}
+alpha_only <- lapply(r$alpha_data_by_type, function(x) x$alpha)
+capture.output(gap <- check_state_base_year(alpha_only, r$V_by_type, r$alpha_data_by_type, expected, 'XX'))
+stopifnot(gap < 1e-9)
+capture.output(bad <- tryCatch(check_state_base_year(alpha_only, r$V_by_type, r$alpha_data_by_type, expected * 1.01, 'XX'),
+                               error = function(e) e))
+stopifnot(inherits(bad, 'error'))
+cat('PASS: state-price alpha -- supply prices, switch, unchanged at equal prices, p0 identity at state V, net income check, frozen base year\n')
+
+
+#------------------------------------------------------------------------------
+# State aging ratios (ECEC_STATE_AGING)
+#------------------------------------------------------------------------------
+
+source('src/shared_functions/state_age_ratios.R')
+stopifnot(get_state_aging_mode() == 'national')   # off by default
+ar <- read.csv('config/state/aging/state_age_ratios.csv', stringsAsFactors = FALSE)
+stopifnot(length(unique(ar$state)) == 52, all(is.finite(ar$ratio)), all(ar$ratio > 0),
+          setequal(unique(ar$age), 0:85), setequal(unique(ar$year), 2020:2024))
+# NYC carries NY's ratios
+stopifnot(isTRUE(all.equal(ar$ratio[ar$state == 'NYC'], ar$ratio[ar$state == 'NY'])))
+# Years past 2024 use 2024; 2022 differs from 2024
+ky <- load_state_age_ratios('KY')
+stopifnot(identical(state_age_ratio_for_year(ky, 2031), state_age_ratio_for_year(ky, 2024)),
+          !isTRUE(all.equal(state_age_ratio_for_year(ky, 2022)$ratio, state_age_ratio_for_year(ky, 2024)$ratio)))
+stopifnot(inherits(tryCatch(load_state_age_ratios('ZZ'), error = function(e) e), 'error'))
+# Identity (2020, single vintage): 2019-population-weighted mean of ratio over the 51 states = 1 at every age
+# (state growth sums to national growth; later years chain two vintages)
+p19 <- read.csv('state_data/raw/US/US_Census__state_population_by_age_sex__vintage2020.csv', stringsAsFactors = FALSE)
+p19 <- p19[p19$SEX == 0 & p19$AGE <= 85 & p19$STATE > 0, c('STATE', 'AGE', 'POPEST2019_CIV')]
+p19$state <- names(STATE_POSTAL_TO_FIPS)[match(p19$STATE, STATE_POSTAL_TO_FIPS)]
+chk <- merge(p19, ar[ar$year == 2020 & ar$state != 'NYC', ], by.x = c('state', 'AGE'), by.y = c('state', 'age'))
+wm <- tapply(chk$POPEST2019_CIV * chk$ratio, chk$AGE, sum) / tapply(chk$POPEST2019_CIV, chk$AGE, sum)
+stopifnot(max(abs(wm - 1)) < 1e-9)
+cat('PASS: state aging ratios -- 52 geographies, NYC = NY, years past 2024 frozen, population-weighted ratio 1 at every age\n')
+
+
+# age_demographics() (3b) with state ratios: function extracted by parse, no 3b side effects
+suppressPackageStartupMessages(library(tidyr))
+for (e in parse('src/3_simulation/3b_run_simulation_year.R')) {
+  if (is.call(e) && identical(e[[1]], as.name('<-')) && as.character(e[[2]]) == 'age_demographics') eval(e)
+}
+ag_ages <- 0:100
+ag_macro <- function(y, f) {
+  v <- 100 * sapply(ag_ages, f)
+  r <- tibble::as_tibble(as.list(c(setNames(v, paste0('married_', ag_ages)),
+                                   setNames(v, paste0('unmarried_', ag_ages)))))
+  r$year <- y
+  r
+}
+ag_mp <- dplyr::bind_rows(ag_macro(2019, function(a) 1), ag_macro(2026, function(a) 1 + 0.01 * (a < 5)))
+ag_acs <- list(
+  parent_units      = tibble::tibble(hh_id = 1, hhm_id1 = 1, hhm_id2 = NA, per_weight1 = 1, per_weight2 = 1),
+  households        = tibble::tibble(hh_id = 1:3, hh_weight = 1),
+  household_members = tibble::tibble(hh_id = 1:3, hhm_id = 1:3, child_id = c(NA, NA, 1), tax_unit_id = 1:3,
+                                     age = c(30, 3, 90), married = 0, per_weight = 1),
+  children          = tibble::tibble(hh_id = 3, child_id = 1, child_weight = 1),
+  tax_units         = tibble::tibble(tax_unit_id = 1:3, tax_unit_weight = 1))
+ag_nat <- age_demographics(ag_acs, ag_mp, 2026, 2019)
+ag_acs$state_age_ratios <- tibble::tibble(age = 0:85, year = 2024L, ratio = ifelse(0:85 < 5, 0.9, 1.1))
+ag_st <- age_demographics(ag_acs, ag_mp, 2026, 2019)
+stopifnot(isTRUE(all.equal(ag_nat$household_members$per_weight, c(1, 1.01, 1))),
+          isTRUE(all.equal(ag_st$household_members$per_weight, c(1.1, 1.01 * 0.9, 1.1))))
+cat('PASS: age_demographics -- state ratio multiplies national growth by age, ages above 85 take the 85 ratio, no ratio = national\n')
 
 
 cat('\nAll state-analysis tests passed.\n')

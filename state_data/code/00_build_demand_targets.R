@@ -19,7 +19,7 @@
 #      sensitivity only, 14_program_hours_sensitivity.R (header says why)
 # Regional NSECE shares: comparison only, 05_compare_nsece_shares.R.
 #
-# states/<GEO>.R = hand-researched DATA (geo_spec()). NSCH rate read live
+# states.R = hand-researched DATA (geo_spec()). NSCH rate read live
 # from out/ (01_ writes it) -- nothing
 # hand-copied to drift. Everything else here, shared by every geography.
 #
@@ -62,27 +62,20 @@ ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
 # unpaid; hours break ties.
 
 # Step 1. Weighted children in ANY regular non-parental care over weighted
-# children at 10+ hrs/week (what NSCH asks). 3,427 children. One national
-# ratio for every geography (2026-10-12; scaled by geography's p0 part-time
-# share 2026-10-07 to 10-12 -- moved ratio +-2.5%, made targets depend on
-# forest, income-rank scheme). Regular care per resolve_regular_care()
-# (2026-10-12: zero-hour regular providers count w/ imputed hours, REGCARE
-# -1 / -2 regular when TOC 1-5) -- ratio 1.0981 -> 1.0739, 2,814 children
-# before. Imputed hours drawn from cell's weighted donor hours (keyed,
-# 2026-10-12; cell weighted median before) -- more imputed rows under 10
-# hrs, universe B 3,239 -> 3,157 children, ratio 1.0739 -> 1.0979. TOC 7 /
-# 8 never regular (NSECE regular care = TOC 1-5, 2026-10-12; TOC 8 counted
-# Other before) -- universe A 3,462 -> 3,427, B 3,157 -> 3,124 children,
-# ratio 1.09786 -> 1.09806. Label draws averaged over NSECE_MI_DRAWS = 50
-# (nsece_mi_draws.R, 2026-10-12; one draw before, seed moved ratio
-# 1.094-1.105) -- ratio 1.09806 -> 1.09949; 5 base seed pairs 1.0990-1.0996.
-NSECE_UNIVERSE_RATIO <- 1.0994893847297402
+# children at 10+ hrs/week (what NSCH asks). One national ratio for every
+# geography (2026-10-12; scaled by geography's p0 part-time share 2026-10-07
+# to 10-12 -- moved ratio +-2.5%, made targets depend on forest, income-rank
+# scheme). NSECE label rules back to pre-2026-10-12 (2026-10-14): regular
+# care = REGCARE 1 w/ positive reference-week hours, TOC 8 counts Other,
+# one label draw. Value below from 02_derive_nsece_constants.R rerun on
+# cluster 2026-10-14 under these rules (2,814 children).
+NSECE_UNIVERSE_RATIO <- 1.0980541895845115
 
 # Short share: NSECE children under 10 total hrs/week over children part-time
 # in simulator's sense (primary hours < 20). Every under-10 child part-time.
 # 02_derive_nsece_constants.R, quantity short_share_of_part_time. Not used by
 # build since national ratio -- 05_compare_nsece_shares.R reads it.
-NSECE_SHORT_SHARE_OF_PT <- 0.34957429599815637
+NSECE_SHORT_SHARE_OF_PT <- 0.3414628024535046
 
 # SIMULATOR'S HOURS GRID -- PT_CARE_HOURS, FT_CARE_HOURS, WEEKS_PER_YEAR from
 # src/shared_functions/constants.R, no copy here. Simulator places a child at
@@ -449,7 +442,8 @@ nieer_prek_inputs <- function(spec) {
 get_spec <- function(geo) {
 
   #----------------------------------------------------------------------------
-  # SPEC_<GEO> as states/<GEO>.R writes it -- no live out/ reads.
+  # SPEC_<GEO> as states.R writes it -- no live out/ reads. states.R
+  # sourced once.
   #
   # Params:
   #   - geo (chr)
@@ -457,10 +451,14 @@ get_spec <- function(geo) {
   # Returns: (list) geo_spec() result
   #----------------------------------------------------------------------------
 
-  f <- file.path(STATE_DATA_ROOT, 'states', paste0(geo, '.R'))
-  if (!file.exists(f)) stop('no spec for ', geo, ' at ', f)
-  source(f, local = FALSE)
-  get(paste0('SPEC_', geo))
+  if (!exists('SPEC_KY', envir = globalenv())) {
+    f <- file.path(STATE_DATA_ROOT, 'states.R')
+    if (!file.exists(f)) stop('no spec file at ', f)
+    source(f, local = FALSE)
+  }
+  nm <- paste0('SPEC_', geo)
+  if (!exists(nm, envir = globalenv())) stop('no spec for ', geo, ' in states.R')
+  get(nm, envir = globalenv())
 }
 
 
@@ -851,7 +849,7 @@ geo_spec <- function(geo, name, fips, region, prek, head_start,
                      early_head_start, ...) {
 
   #----------------------------------------------------------------------------
-  # SPEC_<GEO> for states/<GEO>.R: hand-researched inputs only. load_spec()
+  # SPEC_<GEO> in states.R: hand-researched inputs only. load_spec()
   # adds NSCH rate, universe ratio, NIEER pre-K inputs.
   #
   # Params:
@@ -880,7 +878,7 @@ geo_spec <- function(geo, name, fips, region, prek, head_start,
 load_spec <- function(geo) {
 
   #----------------------------------------------------------------------------
-  # Sources states/<GEO>.R into global env, returns SPEC_<GEO> plus
+  # Sources states.R into global env, returns SPEC_<GEO> plus
   # nonparental_rate (parent state's for NYC), universe_ratio,
   # prek_all_settings, nieer_hs_share (nieer_prek_inputs()) -- machine-derived,
   # so a hand copy would only drift.

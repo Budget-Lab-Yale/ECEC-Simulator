@@ -1,0 +1,53 @@
+"geo","bea_geography","bea_name","rpp_housing_services_2019"
+"AL","state","Alabama",60.277
+"AK","state","Alaska",101.303
+"AZ","state","Arizona",93.582
+"AR","state","Arkansas",56.808
+"CA","state","California",164.636
+"CO","state","Colorado",131.041
+"CT","state","Connecticut",118.018
+"DE","state","Delaware",96.016
+"DC","state","District of Columbia",170.405
+"FL","state","Florida",112.019
+"GA","state","Georgia",81.847
+"HI","state","Hawaii",142.64
+"ID","state","Idaho",75.677
+"IL","state","Illinois",97.68
+"IN","state","Indiana",71.873
+"IA","state","Iowa",69.467
+"KS","state","Kansas",71.86
+"KY","state","Kentucky",64.286
+"LA","state","Louisiana",70.841
+"ME","state","Maine",71.507
+"MD","state","Maryland",128.3
+"MA","state","Massachusetts",130.075
+"MI","state","Michigan",81.969
+"MN","state","Minnesota",97.472
+"MS","state","Mississippi",55.388
+"MO","state","Missouri",70.921
+"MT","state","Montana",79.513
+"NE","state","Nebraska",72.715
+"NV","state","Nevada",105.623
+"NH","state","New Hampshire",110.728
+"NJ","state","New Jersey",141.15
+"NM","state","New Mexico",74.035
+"NY","state","New York",129.316
+"NC","state","North Carolina",75.422
+"ND","state","North Dakota",76.983
+"OH","state","Ohio",73.452
+"OK","state","Oklahoma",64.105
+"OR","state","Oregon",110.213
+"PA","state","Pennsylvania",86.474
+"RI","state","Rhode Island",108.689
+"SC","state","South Carolina",74.444
+"SD","state","South Dakota",66.283
+"TN","state","Tennessee",76.012
+"TX","state","Texas",95.836
+"UT","state","Utah",97.326
+"VT","state","Vermont",94.259
+"VA","state","Virginia",107.425
+"WA","state","Washington",129.503
+"WV","state","West Virginia",58.662
+"WI","state","Wisconsin",79.352
+"WY","state","Wyoming",79.122
+"NYC","msa_35620","New York-Newark-Jersey City, NY-NJ (Metropolitan Statistical Area)",159.436

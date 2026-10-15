@@ -2,7 +2,7 @@
 # 01_nsch_participation_rate.R -- non-parental rate, its standard error:
 # build's one soft input. load_spec() (00_build_demand_targets.R) reads
 # BASE_WAVE row live from out/nsch_participation_rate_base.csv -- no copy in
-# states/<GEO>.R to go stale.
+# states.R to go stale.
 #
 # BASE = 2016-19 POOL (2026-10-06), not 2019 alone. One wave is half noise:
 # state 2019 rates spread 7.8 pts (SD), median design SE 5.8 pts, so only

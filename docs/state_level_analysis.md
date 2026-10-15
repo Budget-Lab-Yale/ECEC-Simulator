@@ -138,7 +138,7 @@ Other Unpaid,...
 - **Every group is a singleton except `Center-Based`**, which covers both
   `Low-Priced Center-Based` and `High-Priced Center-Based`. The tiers fall
   below or at/above a density-adjusted tier line for the Census region,
-  community urban density, and age band (`1a_nsece_processing.R`, rule 5
+  community urban density, and age band (`1a_nsece_processing.R`, rule 6
   below); the public-use NSECE files do not
   identify state, and no state source counts the tiers. The pair shares ONE
   delta: it calibrates total paid-center hours with no tier-share target. A
@@ -171,7 +171,8 @@ Solved by the standard contraction:
 δ_t ← δ_t + log( H_t^target / H_t(δ) )
 ```
 
-iterated to convergence (`max |log(H_target/H_model)| < tol`). With one
+iterated to convergence (`max |log(H_target/H_model)| < tol`, with
+`tol = 1e-8` and at most 5,000 rounds). With one
 delta per targeted type and one target per type, the system is exactly
 identified.
 
@@ -196,152 +197,21 @@ probabilities are invariant to it).
 
 ### NSECE care labels and forest features
 
-The care-choice forest that gives `p0` trains on NSECE children. Since
-2026-10-12, seven rules decide the labels and features
-(`resolve_regular_care.R`, `nsece_parent_attributes.R`,
-`impute_unknown_payment.R`, `urban_density.R`; 1a and
-`state_data/code/02_derive_nsece_constants.R` use the same functions):
+The care-choice forest that gives `p0` trains on NSECE children, and every run
+follows main on the labels and features: a regular provider counts with
+positive reference-week hours, a type 8 row counts as Other, 1a makes one label
+draw, the caregiver is the respondent parent in NSECE and the mother in a
+two-parent unit (else the parent) in ACS, and the employment band comes from
+weekly hours with a 35-hour cutoff. State setup changes only the tier line
+(item 6) and the income-rank scheme.
 
-**Label draws are averaged (multiple imputation).** Three rules make a
-random draw for an uncertain record: the hours of a regular provider with
-zero reference-week hours (rule 1), the paid status of an unknown payment
-amount (rule 5), and the price tier of a paid center with an unknown amount
-or imputed hours (rules 1 and 5). With one draw, the choice of seed changed
-the results. Across 20 seed pairs, among children 0-4 (weighted), the
-paid-center share went from 15.7% to 16.1%, the high-price share of
-paid-center children from 50.3% to 52.7%, the part-time share of children in
-care from 25.1% to 26.5%, and `NSECE_UNIVERSE_RATIO` from 1.094 to 1.105.
-That moved every non-program demand target by up to about 1%. Since
-2026-10-12 I make the draws `NSECE_MI_DRAWS` = 50 times
-(`nsece_mi_draws.R`). Draw m uses the base seed plus m times
-`NSECE_MI_SEED_STEP` (7919), for both seeds. Draw 0 is the single draw from
-before.
-
-- 1a writes 50 rows per child to `nsece_enrollment_2019.csv`, one for each
-  draw, with the columns `draw` and `draw_weight` (1/50). Over a child's
-  rows, the child weight times `draw_weight` adds up to the child weight,
-  so weighted totals do not change. I give every child 50 rows, also a
-  child whose label no draw can change, so that every reader can use one
-  rule. `nsece_providers_2019.csv` keeps draw 0 only. The price inputs
-  (home price, price wedges) use only observed payments over reported
-  hours, so no drawn row enters them.
-- 02 computes each constant on the same stacked rows, with the child weight
-  divided by 50. A constant is thus the pooled average over the draws. The
-  record counts in `nsece_constants.csv` are the mean count per draw, and
-  some are fractional.
-- 1b trains the forest on the stacked rows. It counts family size,
-  censors to the two youngest children, and pairs the two children of a
-  family within each draw, so a copy never turns a one-child family into a
-  two-child family. The weighted resample of 50,000 rows now always draws
-  with replacement, so the draw probability stays proportional to the
-  weight when a frame holds more than 50,000 rows. The out-of-bag error is
-  a little optimistic, because the copies of one child can fall in-bag and
-  out-of-bag. The resample already repeated rows, so this is not new.
-- `13_participation_audit.R` reads draw 0 only, so that it stays child for
-  child.
-
-I tested M = 10, 30, and 50, each with 5 base seed pairs. At M = 50, the
-high-price share of paid-center children is 51.1% to 51.3%, the part-time
-share of children in care is 25.9% to 26.0%, and `NSECE_UNIVERSE_RATIO` is
-1.0990 to 1.0996 (at M = 10: 51.1% to 51.4%, 25.7% to 26.2%, and 1.0979 to
-1.1004). The share of children 0-4 in care (55.0%) and the paid-center share
-(15.9%) do not depend on the draws in a visible way. With the base seeds,
-the ratio moves from 1.09806 to 1.09949, so every non-program demand target
-rises by 0.14% to 0.20%; Unpaid Center-Based does not change. 1a takes about
-11 minutes at M = 50 (about 3.5 at M = 10), and 02 about 2 minutes.
-
-1. **A regular provider counts as care even with zero reference-week hours.**
-   `HH9_HRS_WEEK_PROV` holds calendar hours for one reference week. A
-   provider with `HH9_REGCARE` = 1 who gave no care that week (or whose
-   calendar is missing) gets imputed hours. The donors are the `REGCARE` = 1
-   rows with hours above 0 in the same type-of-care group and age cell. I
-   draw each imputed row's hours from the donors' weighted distribution
-   (child weights), so the cell keeps the donors' part-time and full-time
-   mix. The draw is a keyed uniform on (`hh_id`, `child_id`,
-   `provider_id`) with its own seed. It does not use the global random
-   stream and does not depend on row order, so 1a and 02 give each child
-   the same hours. Before this, every imputed row in a cell took the cell's
-   weighted median: for example, individual care at ages 0-1 has 36.9%
-   part-time donors, but all 374 imputed rows got 30 hours. Before the
-   imputation itself, these children were Parent Only. Such a row keeps its
-   reported payment. I checked whether a zero payment on these rows only
-   reflects a week without care: it does not. `HH9_PAID` (question J1, "do
-   you pay the provider anything directly", which does not refer to last
-   week) says "not paid" on 993 of the 996 zero-payment rows with imputed
-   hours (children 0-4). The rows are mostly unpaid because most of them are
-   relative care. These rows never enter the price data (their hourly cost
-   has no reported hours). A paid center row with imputed hours takes a
-   drawn price tier, as a row with an unknown amount does, because its
-   weekly payment over imputed hours is not the family's own
-   hourly price (42 rows before).
-2. **An undetermined regularity code uses the NSECE test.** `REGCARE` -1 or
-   -2 counts as regular when `HH9_TYPEOFCARE_AGG` is 1-5, as in NSECE's own
-   regular-care measure. A child with no counting arrangement is Parent
-   Only in 1a and in 02 alike; there is no NA label for this case. I count
-   only types 1-5 as non-parental care, as NSECE does. Type 7 (irregular),
-   type 8 (type unknown), and a missing type never count, whatever
-   `REGCARE` says, and these rows are not hours or payment donors. Type 6
-   (K-8) stays out as before. Before, a type 8 row with `REGCARE` = 1
-   counted as Other: 35 children 0-4 (unweighted, 0.57% of weighted
-   children 0-4) were in care through type 8 alone. Now the share of
-   weighted children 0-4 in care is 55.0%, NSECE's own rate for type 1-5
-   care (55.5% before), and the Parent Only share is 45.0% (44.5% before).
-3. **Parent sex comes from the household counts.** The public file holds
-   the sex of the respondent only. For other parents I read sex from the
-   household's count of mothers and fathers, after I take out the
-   respondent. A unit where the count cannot tell the parents apart stays
-   out of the frame.
-4. **The caregiver employment feature follows the ACS concept.** I keep the
-   ACS band on `UHRSWORK` (usual hours worked per week, past 12 months),
-   because the same variable sets the simulator's employment choice, hourly
-   earnings, and counterfactual employment states. The forest's employment
-   feature must mean the same thing when the simulator uses it. I do not
-   use the ACS reference-week status (`EMPSTAT`): it would put a mother who
-   worked earlier in the year in `none` while the simulator holds her in
-   `pt` or `ft`. I choose the caregiver as ACS does (the mother in a
-   two-parent unit, else the parent) and map each NSECE work status to
-   `UHRSWORK`:
-   - **At work last week.** The reference-week hours of work, school,
-     training, and commuting (`HH9_WST_HRS_TOT_PHI/PLO`). The public file
-     has no work-only hours: the calendar comes out only as these totals,
-     and the commute minutes are not released. A parent who also attended
-     school or training last week keeps the band of these totals. I tested
-     removing such a family when the totals reach 35 hours: 4.0% of
-     children 0-4 left the frame, 84% of them in non-parental care, the
-     frame's Parent Only share rose from 43.5% to 44.7%, and the ACS-NSECE
-     gap grew from 3.2 to 3.9 points. That selection on the outcome is worse
-     than the band error, so I did not adopt it.
-   - **Holds a job but was not at work** (last-job date 9999.99, e.g. on
-     leave; the ACS "with a job, not at work"). The usual hours of that job
-     (`HH9_D5C_HOUR`).
-   - **Job ended in the 12 months before the interview** (the ACS
-     unemployed or not in the labor force with `UHRSWORK` above 0). The
-     usual hours of that job.
-   - **No job in the past 12 months.** `none`.
-   The bands are the ACS bands (pt under 35 hours). Unknown hours or
-   recency remove the family from the frame; they are never `none`. Two
-   differences remain: the hours of a current worker include commuting,
-   school, and training, and they are reference-week hours, where ACS
-   carries usual hours.
-5. **A payment amount the file does not hold takes the questionnaire's
-   paid status.** `HH9_WEEKLY_PAYMENT_TC` -1 (DK or refused) and -2
-   (not asked Section J) leave the amount unknown. The paid status then
-   comes from `HH9_PAID` when it is 1 or 0, and it is drawn
-   (`impute_unknown_payment()`) only when `HH9_PAID` is unknown too.
-   Before, every unknown amount was drawn, and 195 of the 295 rows among
-   children 0-4 whose respondent said "I pay the provider" were drawn
-   unpaid; -2 counted as unpaid. Where both are known, the amount and
-   `HH9_PAID` disagree on 6 of 4,456 regular rows (children 0-4).
 6. **The paid-center tier line moves with urban density (state runs).**
    This item applies only when `ECEC_URBAN_DENSITY=1`, which state runs
    set; the switch turns on all state machinery (density tier line and
-   cells, region donor cells in the hours and paid-status draws,
    RPP-adjusted income ranks). With `0` (the default, national runs), the
-   label steps equal main: the tier line is the national age band median
-   posted price (`compute_tier_thresholds_age_bin()`), the tier draw takes
-   age cells only, the hours draw takes type of care x age band then type
-   of care, the paid-status draw kind x age band then kind, and incomes are
-   ranked nominally (`national` scheme). 1a, 1b, the
+   tier line is the national age band median posted price
+   (`compute_tier_thresholds_age_bin()`), and incomes are ranked nominally
+   (`national` scheme). 1a, 1b, the
    price forest file, and the alpha files record the setting. 1b, 2a, 3a,
    and `load_substate_alpha()` stop when the run's setting differs from the
    interface's. A file with no record counts as `1` (built before the
@@ -355,12 +225,8 @@ rises by 0.14% to 0.20%; Unpaid Center-Based does not change. 1a takes about
    `urban_density.R`). I use the national ratio, not the cell median,
    because a region x rural x age cell holds only 5-35 centers. A center
    uses its own `CB9_COMM_URBAN_DENSITY`; a family uses its
-   `HH9_COMM_URBAN_DENSITY`. The unknown-payment tier draw
-   (`impute_unknown_payment()`, 1a and 02 alike) takes its donor tiers from
-   these labels. Its cells are region x density x age band. A cell with
-   fewer than 30 raw donor rows falls back to density x age band, then to
-   age band. The price multipliers use observed hourly payments only: a
-   row with imputed hours or an unknown amount does not enter them.
+   `HH9_COMM_URBAN_DENSITY`. The price multipliers use observed hourly
+   payments only.
 7. **Removed 2026-10-14: the forest no longer takes community urban
    density, and 1b no longer averages over PUMA shares.** Importance checks
    gave the feature near-zero importance, and dropping it changes nothing.
@@ -652,13 +518,21 @@ consistent input. Ten centre rows and one home row (MA, 10 to 6) change;
 `state_data/out/licensing_ratio_change_2014_2017.csv` lists them, with both
 years at the three points.
 
-`per_unit_residual` stays national. The equilibrium solves
+`per_unit_residual` is state-specific (changed 15 October 2026; before, one
+national value per sector in all 52 files). The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
 residual in **dollars** covering everything that is not labour — rent, food,
-insurance, administration, margin. No reliable sector-specific geographic
-adjustment exists (the all-items Regional Price Parity measures consumer
-prices, not child care costs), so it stays national; state prices still
-differ through wages and staffing.
+insurance, administration, margin. Each national residual (0.510055 low-price
+centre, 4.6145667 high-price centre, 2.8273432 paid home; unpaid centre stays
+unset) is multiplied by the state's BEA 2019 housing-services RPP / 100
+(`resources/supply/US_BEA__regional_price_parities_housing_services__2019.csv`,
+line "RPPs: Services: Housing"; NYC = New York MSA 35620). Factor range 0.55
+to 1.70. Rent is the main non-labour centre cost. Across the 46 states with an NDCP price (unweighted) the
+housing parity correlates 0.71 with the residual implied by NDCP 2019 prices,
+and the correlation of the model's 40-hour centre price with the NDCP state
+price rises from 0.78 to 0.89 (mean $217.0 vs $196.6). No power is fitted
+(k = 1). `state_supply_params.R --national-residual`
+restores the national value.
 
 `elasticities` stay national (no-BA 4, BA 2). The national values are
 assumptions (Borowsky et al. 2022, NBER w30140, section 4.4); no state
@@ -699,8 +573,8 @@ relative rate(2024) ÷ relative rate(2019). The state files leave out the
 60–64, 65+, and 16+ cells, which the simulator does not read.
 Base-year employment *levels* always come from the state-filtered data; only
 the growth path is taken from the file. The level is the mean of the model's
-2019 employment probabilities, weighted by each primary caregiver's un-aged
-2019 weight (`per_weight_pc_base`), so it is a 2019 rate in every run year.
+2019 employment probabilities, weighted by each primary caregiver's weight
+aged to the run year, as in main.
 
 ## 9. Sampling
 
@@ -815,6 +689,54 @@ contraction, unchanged.
 4. **Output.** The return has the same shape as the hours path, so base-year
    labor, metadata, and the simulation use it with no other change.
    `demand_deltas` in the metadata then has the cell names.
+
+### State-price alpha: `ECEC_STATE_ALPHA_PRICE=state`
+
+Calibration builds `alpha = log p0 - V` at the national supply prices. A
+state run prices care at the state's own wages and staffing. The §5
+contraction shifts the stored alpha with `p0` only, so a state's base year sits
+at national prices while its supply sits at state prices. The first simulated
+year then jumps by the gap. The default (`state`) rebuilds alpha at state prices first. `ECEC_STATE_ALPHA_PRICE=national` is the §5 contraction
+on the stored alpha, unchanged. Adopted 15 October 2026: across 52 geographies the 2026 paid-center shift fell from -9.4 to +7.0 points (mean absolute 3.4) to -0.8 to +2.2 (0.9).
+
+1. **Rebuild.** `reprice_alpha_to_supply()` (`reprice_alpha_to_state_supply.R`)
+   sets `alpha_state = log p0 - V_state`, where `V_state` uses the state's base-year
+   supply prices: state `L_req %*% wages` plus the state residual (housing-parity
+   scaled, §7), with
+   sector 1 at zero. Only the cost of sectors 2--4 changes (cost = wedge x
+   price x hours). The Other Paid base price stays national. The stored alpha
+   has choice 1 as reference, so
+   `alpha_state[, j] = alpha[, j] + dV[, j] - dV[, 1]` with
+   `dV = V_nat - V_state`. `Y` comes from
+   `estimation/data/calibration_<type>_2019.csv`. Re-anchoring to the hours
+   targets then runs on this alpha, as in §5.
+2. **Checks at simulation start.** Each stops the run on a gap.
+   - Net income rebuilt at national prices (`Y - C_nat`) equals the
+     calibration's `net_income` (skipped for sub-state geographies, which use
+     their own wedges).
+   - Identity: `softmax(alpha_state + V_state)` reproduces `p0`.
+   - Frozen base year (`check_state_base_year()`): after re-anchoring, sector
+     hours at `V_state` equal the demand adjustment's sector hours, which set
+     base-year labor.
+3. **Metadata.** `alpha_price` in `state_analysis.yaml` is `state` or
+   `national` for each geography.
+4. **Needs.** The state supply file and demand target file for the geography,
+   the price wedge (not `--no-price-wedge`), and the calibration data of the
+   interface.
+
+### State aging: `ECEC_STATE_AGING=state`
+
+The simulator ages 2019 ACS weights with national population growth by age and
+marital status (`age_demographics()`, 3b). With the switch on, each state run
+multiplies the factor of each (age, married) cell by the state's growth
+relative to the nation at that age:
+`ratio(state, age, t) = [P_t / P_2019]_state / [P_t / P_2019]_US`, from Census
+civilian estimates by single year of age (0--85+). `15_state_age_ratios.R`
+chains vintage 2020 (2019 to 2020) with vintage 2024 (2020 to 2024) so each
+step uses one vintage. Years after 2024 reuse the 2024 ratio. NYC uses NY.
+3a loads the geography's ratios into its base households, and `age_demographics()`
+reads them there. Ages above 85 take the 85 ratio. National runs and the default
+are unchanged. `aging` in `state_analysis.yaml` records `state` or `national`.
 
 ### How to run each test on Bouchet
 

@@ -57,8 +57,19 @@ suppressPackageStartupMessages({library(dplyr); library(readr); library(tidyr)})
 
 # STATE_POSTAL_TO_FIPS, SUBSTATE_GEOGRAPHIES; STATE_DATA_ROOT, show_df()
 source('src/shared_functions/constants.R')
-source('src/shared_functions/resolve_regular_care.R')   # weighted_median()
 source('state_data/code/shared_setup.R')
+
+
+
+# Weighted median: smallest x whose cumulative weight share reaches 0.5.
+# Deterministic, no interpolation. x (num vec), w (num vec, > 0); returns NA when x empty
+weighted_median <- function(x, w) {
+  if (length(x) == 0) return(NA_real_)
+  o <- order(x)
+  x <- x[o]
+  cw <- cumsum(w[o]) / sum(w)
+  x[which(cw >= 0.5 - 1e-12)[1]]
+}
 
 NDCP_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'local',
                        'US_DOL__national_database_childcare_prices_county__2008-2022.xlsx')

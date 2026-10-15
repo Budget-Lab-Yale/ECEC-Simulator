@@ -9,8 +9,7 @@
 # quantile grids replaced it 2026-10-12).
 # Also holds price_wedge_income_pctiles() (ACS parent unit baseline AGI ranks,
 # as original simulator; RPP-adjusted per income-rank scheme) and keyed-hash
-# helpers (keyed_unif_2_32(), parent_unit_key()) -- income-rank jitter, NSECE
-# label draws.
+# helpers (keyed_unif_2_32(), parent_unit_key()) -- income-rank jitter.
 #
 # Called from: 2a (run_calibration), 3a (initialize_simulation),
 # compute_substate_alpha.R (geo's own wedges)
@@ -106,8 +105,143 @@ price_wedge_income_pctiles <- function(parent_units, households, geo = NULL) {
 
 
 
-compute_price_wedge_cache <- function(parent_units, children, households, price_qrf_models,
-                                      income_pctiles) {
+compute_price_wedge_cache <- function(parent_units, children, households, price_qrf_models = NULL,
+                                      income_pctiles = NULL, qrf_models = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Dispatcher. income_pctiles NULL -> national default: main's code verbatim
+  # (compute_price_wedge_cache_main(), arg qrf_models; draw stream
+  # set.seed(random_seed_base + 2), runif jitter, sample). income_pctiles
+  # given -> state / sub-state path (compute_price_wedge_cache_state(), arg
+  # price_qrf_models). Either arg name accepts the forest list.
+  #----------------------------------------------------------------------------
+
+  models <- if (!is.null(price_qrf_models)) price_qrf_models else qrf_models
+  if (is.null(models)) stop('compute_price_wedge_cache: pass the price forest list (qrf_models).')
+  if (is.null(income_pctiles)) {
+    return(compute_price_wedge_cache_main(parent_units, children, households, models))
+  }
+  compute_price_wedge_cache_state(parent_units, children, households, models, income_pctiles)
+}
+
+
+
+compute_price_wedge_cache_main <- function(parent_units, children, households, qrf_models) {
+
+  #----------------------------------------------------------------------------
+  # National default: origin/main's compute_price_wedge_cache(), unchanged.
+  # Draws price_wedge ONCE at init; baseline AGI percentile thresholds
+  # computed from data (wtd.quantile, runif jitter), one random percentile
+  # per unit shared by all four care types.
+  #
+  # Returns: tibble (hh_id, parent_unit_id, price_wedge.center_low,
+  #   price_wedge.center_high, price_wedge.home, price_wedge.other_paid)
+  #----------------------------------------------------------------------------
+
+  # Set seed for reproducible random operations
+  set.seed(random_seed_base + 2)
+
+
+  # Get one row per parent unit (deduplicate from employment choice expansion)
+  parent_units_unique <- parent_units %>%
+    distinct(hh_id, parent_unit_id, .keep_all = TRUE)
+
+  # Calculate mean child age per parent unit
+  child_ages <- children %>%
+    filter(age < 5) %>%
+    group_by(hh_id, parent_unit_id) %>%
+    summarise(child_age = mean(age, na.rm = TRUE), .groups = 'drop')
+
+  # Join parent units with child ages and region
+  # Use averaged parent weights (consistent with fiscal_cost.R, distributional_impact.R)
+  cache_df <- parent_units_unique %>%
+    mutate(weight = (per_weight1 + coalesce(per_weight2, per_weight1)) / 2) %>%
+    select(hh_id, parent_unit_id, n_parents, baseline_agi1, baseline_agi2, weight) %>%
+    left_join(child_ages, by = c('hh_id', 'parent_unit_id')) %>%
+    left_join(households %>% select(hh_id, region), by = 'hh_id') %>%
+    mutate(
+      # Use sum of baseline AGI for income percentile
+      baseline_agi = baseline_agi1 + replace_na(baseline_agi2, 0)
+    )
+
+  # Compute income percentile thresholds from the data (99 values for 100 bins)
+  # This matches the QRF training which used seq(0.01, 0.99, 0.01)
+  income_pctiles <- wtd.quantile(
+    x      = cache_df$baseline_agi + runif(nrow(cache_df)),  # small jitter for ties
+    weight = cache_df$weight,
+    probs  = seq(0.01, 0.99, 0.01)
+  )
+
+  cache_df <- cache_df %>%
+    mutate(
+      income_pctile = cut(baseline_agi, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
+        as.character() %>% as.integer(),
+      region_factor = factor(region, levels = qrf_models$center_low_price$region_levels)
+    )
+
+  n_total <- nrow(cache_df)
+
+  # Identify complete cases for imputation
+  complete_mask <- !is.na(cache_df$income_pctile) &
+                   !is.na(cache_df$region_factor) &
+                   !is.na(cache_df$n_parents) &
+                   !is.na(cache_df$child_age)
+
+  n_complete <- sum(complete_mask)
+
+  # Initialize price_wedge columns with NA (will be filled for complete cases only)
+  cache_df$price_wedge.center_low <- NA_real_
+  cache_df$price_wedge.center_high <- NA_real_
+  cache_df$price_wedge.home <- NA_real_
+  cache_df$price_wedge.other_paid <- NA_real_
+
+  if (n_complete > 0) {
+    # Prepare prediction data frame for complete cases only
+    pred_df <- cache_df[complete_mask, ] %>%
+      select(income_pctile, region = region_factor, n_parents, child_age)
+
+    # Draw a SINGLE random percentile for each parent unit (consistent across care types)
+    # This ensures that if a family is at the 80th percentile for center prices,
+    # they're also at the 80th percentile for home prices (same underlying factors)
+    quantile_levels <- seq(0.01, 0.99, 0.01)
+    drawn_pctile_idx <- sample(1:99, n_complete, replace = TRUE)
+
+    # Get full quantile grid from each model (n_complete x 99 matrix)
+    # Then extract each row's value at its drawn percentile
+    q_center_low  <- predict(qrf_models$center_low_price, data = pred_df, type = 'quantiles', quantiles = quantile_levels)$predictions
+    q_center_high <- predict(qrf_models$center_high_price, data = pred_df, type = 'quantiles', quantiles = quantile_levels)$predictions
+    q_home        <- predict(qrf_models$home_price, data = pred_df, type = 'quantiles', quantiles = quantile_levels)$predictions
+    q_other_paid  <- predict(qrf_models$other_paid_price, data = pred_df, type = 'quantiles', quantiles = quantile_levels)$predictions
+
+    # Extract the drawn percentile for each parent unit
+    price_wedge.center_low  <- q_center_low[cbind(1:n_complete, drawn_pctile_idx)]
+    price_wedge.center_high <- q_center_high[cbind(1:n_complete, drawn_pctile_idx)]
+    price_wedge.home        <- q_home[cbind(1:n_complete, drawn_pctile_idx)]
+    price_wedge.other_paid  <- q_other_paid[cbind(1:n_complete, drawn_pctile_idx)]
+
+    # Clip to reasonable bounds
+    price_wedge.center_low  <- pmax(0.1, pmin(5.0, price_wedge.center_low))
+    price_wedge.center_high <- pmax(0.1, pmin(5.0, price_wedge.center_high))
+    price_wedge.home        <- pmax(0.1, pmin(5.0, price_wedge.home))
+    price_wedge.other_paid  <- pmax(0.1, pmin(5.0, price_wedge.other_paid))
+
+    # Assign to complete cases
+    cache_df$price_wedge.center_low[complete_mask]  <- price_wedge.center_low
+    cache_df$price_wedge.center_high[complete_mask] <- price_wedge.center_high
+    cache_df$price_wedge.home[complete_mask]        <- price_wedge.home
+    cache_df$price_wedge.other_paid[complete_mask]  <- price_wedge.other_paid
+  }
+
+
+  # Return only the columns needed for joining
+  cache_df %>%
+    select(hh_id, parent_unit_id, price_wedge.center_low, price_wedge.center_high, price_wedge.home, price_wedge.other_paid)
+}
+
+
+
+compute_price_wedge_cache_state <- function(parent_units, children, households, price_qrf_models,
+                                            income_pctiles) {
 
   #----------------------------------------------------------------------------
   # Computes price heterogeneity (price_wedge) cache for all parent units.

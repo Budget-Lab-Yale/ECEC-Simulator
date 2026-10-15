@@ -37,9 +37,10 @@ state_data/raw/local/
 __pycache__/
 
 # Anna's state documentation -- in-progress memo, drafts, source register kept
-# local; finished memos in docs/archive/ committed
+# local; current memo PDF (methodology-<date>.pdf) and docs/archive/ committed
 state_data/docs/*
 !state_data/docs/archive/
+!state_data/docs/methodology-*.pdf
 
 # Editor settings (memo LaTeX) -- local only
 .vscode/

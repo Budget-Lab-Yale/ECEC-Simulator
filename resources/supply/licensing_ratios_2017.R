@@ -13,7 +13,6 @@
 #     (da37700.0002; PS_RAT_* 'Ratio by Age', text 'N:1')
 #   state_data/raw/US/US_ICPSR37700__licensing_small_family_home_regulations__2017.rda
 #     (da37700.0003; F_D_CH_MAXCHLD 'Maximum Number of Children Allowed', text)
-#   dictionaries: same names w/ _dictionary__2017.xlsx
 # Former input (2014 study via CAP 2018 Table 1, PN3 2020 Table 6):
 #   state_data/raw/US/US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv
 #

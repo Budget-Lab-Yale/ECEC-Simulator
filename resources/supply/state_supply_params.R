@@ -51,18 +51,27 @@
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
 # delta_0 (per_unit_residual; non-labour cost + margin, P_supply = unit_cost +
-# delta_0 * cpi_factor) stays national -- no reliable sector-specific
-# geographic adjustment (all-items RPP measures consumer prices, not child care
-# costs).
+# delta_0 * cpi_factor) = national residual x state BEA housing-services RPP /
+# 100 (US_BEA__regional_price_parities_housing_services__2019.csv, line
+# 'RPPs: Services: Housing'; NYC = New York MSA 35620). Applies to low-price
+# centre, high-price centre, paid home; unpaid centre residual untouched (0).
+# CHANGE vs main + earlier state files (one national residual per sector in
+# all 52 files: 0.510055 low, 4.6145667 high, 2.8273432 home). WHY: rent is the
+# main non-labour centre cost; national residual left every state w/ same
+# non-wage cost. Housing RPP corr 0.71 w/ posted-price-implied residual (NDCP
+# 2019 price/40 - labour cost, 46 states, unweighted); corr of model 40-hr
+# price w/ NDCP state price 0.78 -> 0.89. Factor 1 = national mean, k = 1 (not fitted).
+# --national-residual restores national delta_0.
 #
 # Usage: Rscript resources/supply/state_supply_params.R [--check]
-#          [--national-staffing] [--out <dir>]
+#          [--national-staffing] [--national-residual] [--out <dir>]
 #   --check: compute, print, write nothing
 #   --national-staffing: staffing test -- index 1 in every geo (national
 #     worker-hours per child-hour); wages unchanged. 3a still sets L_0 from
 #     these L_req x re-anchored hours, so supply stays consistent. Write to
 #     own dir w/ --out (e.g. config/state/supply_national) and swap it in for
 #     config/state/supply in a test run's copy.
+#   --national-residual: residual test -- national delta_0 in every geo (main)
 #   --out <dir>: output dir (default config/state/supply)
 #------------------------------------------------------------------------------
 
@@ -81,6 +90,8 @@ OUT_DIR  <- file.path('config', 'state', 'supply')
 ARGS     <- commandArgs(TRUE)
 if ('--out' %in% ARGS) OUT_DIR <- ARGS[which(ARGS == '--out') + 1]
 NATIONAL_STAFFING <- '--national-staffing' %in% ARGS
+NATIONAL_RESIDUAL <- '--national-residual' %in% ARGS
+HOUSING  <- file.path(DIR, 'US_BEA__regional_price_parities_housing_services__2019.csv')
 
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 
@@ -222,6 +233,28 @@ staffing_index <- function(L_req, geo) {
 
 
 
+residual_factor <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # Housing-services RPP / 100 for geo (HOUSING; NYC = New York MSA). Scales
+  # national per_unit_residual. 1 under --national-residual.
+  #
+  # Params:
+  #   - geo (chr): postal or sub-state code w/ HOUSING row
+  #
+  # Returns: (dbl) factor, > 0
+  #----------------------------------------------------------------------------
+
+  if (NATIONAL_RESIDUAL) return(1)
+  require_input(HOUSING)
+  h <- read_csv(HOUSING, show_col_types = FALSE)
+  v <- h$rpp_housing_services_2019[h$geo == geo]
+  if (length(v) != 1 || !is.finite(v) || v <= 0) stop(HOUSING, ': no usable row for ', geo)
+  v / 100
+}
+
+
+
 main <- function() {
 
   #----------------------------------------------------------------------------
@@ -263,6 +296,9 @@ main <- function() {
     w <- lapply(GROUPS, function(g) natl$wages[[g]] * r[[g]])
     # Computed in check mode too
     L_req <- staffing_index(natl$labor_requirements, st)
+    # Residual: unpaid centre (0) unchanged; paid sectors x housing factor
+    f_res <- residual_factor(st)
+    resid <- lapply(natl$per_unit_residual, function(x) x * f_res)
 
     if (!check_only) {
       dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
@@ -271,6 +307,7 @@ main <- function() {
       out$labor_supply <- NULL
       out$wages        <- w
       out$labor_requirements <- L_req
+      out$per_unit_residual  <- resid
       write_yaml(out, file.path(OUT_DIR, paste0(st, '.yaml')))
     }
 
@@ -279,7 +316,8 @@ main <- function() {
       wage_ratio_no_ba       = r$no_ba,
       wage_ratio_ba          = r$ba,
       w_no_ba                = w$no_ba,
-      w_ba                   = w$ba)
+      w_ba                   = w$ba,
+      residual_factor        = f_res)
   }
 
   d <- bind_rows(rows) %>% arrange(state)

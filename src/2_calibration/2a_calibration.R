@@ -1852,20 +1852,31 @@ run_calibration <- function() {
   other_paid_base_price <- price_qrf_models$summary_stats$other_paid_base_price
   cat('  Other Paid base price: $', round(other_paid_base_price, 2), '/hr\n', sep = '')
 
-  # Parent unit baseline AGI percentiles for price forests (as original
-  # simulator, RPP-adjusted per income-rank scheme), full calibration sample
-  price_income_pctiles <- price_wedge_income_pctiles(
-    parent_units = processed_acs_2019$parent_units,
-    households   = processed_acs_2019$households
-  )
+  if (urban_density_enabled()) {
+    # State machinery (ECEC_URBAN_DENSITY=1): parent unit baseline AGI
+    # percentiles for price forests, RPP-adjusted per income-rank scheme,
+    # full calibration sample
+    price_income_pctiles <- price_wedge_income_pctiles(
+      parent_units = processed_acs_2019$parent_units,
+      households   = processed_acs_2019$households
+    )
 
-  price_wedge_cache <- compute_price_wedge_cache(
-    parent_units     = processed_acs_2019$parent_units,
-    children         = processed_acs_2019$children,
-    households       = processed_acs_2019$households,
-    price_qrf_models = price_qrf_models,
-    income_pctiles   = price_income_pctiles
-  )
+    price_wedge_cache <- compute_price_wedge_cache(
+      parent_units     = processed_acs_2019$parent_units,
+      children         = processed_acs_2019$children,
+      households       = processed_acs_2019$households,
+      price_qrf_models = price_qrf_models,
+      income_pctiles   = price_income_pctiles
+    )
+  } else {
+    # National default = origin/main call
+    price_wedge_cache <- compute_price_wedge_cache(
+      parent_units = processed_acs_2019$parent_units,
+      children     = processed_acs_2019$children,
+      households   = processed_acs_2019$households,
+      qrf_models   = price_qrf_models
+    )
+  }
 
   cat('  Computed price_wedge for', nrow(price_wedge_cache), 'parent units\n')
 

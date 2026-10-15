@@ -80,7 +80,6 @@ src/
     ├── adjust_alpha_for_state.R       # State demand re-anchoring contraction (state-level runs)
     ├── select_geo_hh_ids.R            # Household ids for a run geography (state, or sub-state e.g. NYC)
     ├── income_rank.R                  # Income-rank scheme (ECEC_INCOME_RANK) + sub-state rank inputs
-    ├── nsece_mi_draws.R               # NSECE label draws averaged (NSECE_MI_DRAWS = 50, 1a + state_data 02)
     ├── compute_substate_alpha.R       # Sub-state (NYC) alpha on own income ranks: 2a writes, 3a loads
     ├── get_hourly_wage_growth_factor.R          # Hourly wage growth projection
     ├── get_employment_rate_growth_factor.R      # Employment rate growth projection (epop_path override for state runs)
