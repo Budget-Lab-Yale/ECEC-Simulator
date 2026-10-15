@@ -543,7 +543,7 @@ run_acs_processing <- function() {
         AGE, SEX, MARST, RACE, HISPAN, EDUC,
         RELATE,
         SPLOC, MOMLOC, POPLOC, MOMLOC2, POPLOC2,
-        UHRSWORK, WKSWORK1, INCWAGE, INCBUS00,
+        UHRSWORK, WKSWORK1, EMPSTATD, INCWAGE, INCBUS00,
         census_serialno,
         tax_unit_id = tax_unit_id_corrected,
         tax_unit_id_legacy = TAXID,
@@ -654,14 +654,22 @@ run_acs_processing <- function() {
         male        = as.integer(SEX == 1),
         married     = as.integer(MARST %in% 1:2),
         hispanic    = as.integer(HISPAN != 0),
-        hours       = UHRSWORK,
-        weeks       = WKSWORK1,
+        # Employment is point-in-time: a person works only if at work in
+        # the reference week (EMPSTATD 10), matching the NSECE "did any work
+        # for pay last week" item the care-choice forest is trained on.
+        # Hours and weeks still come from the past 12 months (the ACS has no
+        # hours-last-week item) and are zeroed for people not at work.
+        # Earnings stay annual, and the hourly wage uses the annual measures
+        # so people not at work now keep a wage for counterfactual work.
+        at_work     = as.integer(EMPSTATD == 10),
+        hours       = if_else(at_work == 1L, as.numeric(UHRSWORK), 0),
+        weeks       = if_else(at_work == 1L, as.numeric(WKSWORK1), 0),
         wages       = if_else(INCWAGE  != 999999, INCWAGE,  0),
         se_earnings = if_else(INCBUS00 != 999999, INCBUS00, 0),
         earnings    = wages + se_earnings,
         hourly_earnings = if_else(
-          weeks > 0 & hours > 0 & earnings > 0,
-          earnings / (weeks * hours),
+          WKSWORK1 > 0 & UHRSWORK > 0 & earnings > 0,
+          earnings / (WKSWORK1 * UHRSWORK),
           NA
         )
       ) %>%
@@ -1601,7 +1609,15 @@ run_acs_processing <- function() {
 
         hours_choice    = if_else(p_employment == 1, hours_pc, mean_hours),
         weeks_choice    = if_else(p_employment == 1, weeks_pc, mean_weeks),
-        earnings_choice = if_else(p_employment == 1, earnings_pc, hourly_earnings_pc * hours_choice * weeks_choice),
+        # Observed non-work has no caregiver earnings. Under the point-in-time
+        # rule this matters for caregivers not at work now who earned in the
+        # past 12 months; their annual earnings would otherwise be counted
+        # as income in the non-work choice.
+        earnings_choice = case_when(
+          p_employment == 1 & employment_choice == 'none' ~ 0,
+          p_employment == 1                               ~ earnings_pc,
+          TRUE                                            ~ hourly_earnings_pc * hours_choice * weeks_choice
+        ),
         earnings_delta = earnings_choice - earnings_pc,
 
         # Update hours/weeks/earnings for primary caregiver parent
