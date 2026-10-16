@@ -488,9 +488,9 @@ initialize_simulation <- function() {
         cached_price_wedge %>% filter(hh_id %in% state_hh_ids)
       }
 
-      # Experiment ECEC_STATE_ALPHA_PRICE=state (reprice_alpha_to_state_supply.R):
+      # ECEC_STATE_ALPHA_PRICE=state, default (reprice_alpha_to_state_supply.R):
       # alpha rebuilt at state's own 2019 supply prices, before re-anchoring.
-      # Off (default) -> national-price alpha as calibration wrote it
+      # 'national' (off) -> national-price alpha as calibration wrote it
       state_V_by_type <- NULL
       alpha_supply_override <- file.path('config', 'state', 'supply', paste0(st, '.yaml'))
       if (get_state_alpha_price_mode() == 'state' && file.exists(alpha_supply_override) &&
