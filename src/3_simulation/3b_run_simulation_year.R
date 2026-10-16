@@ -133,7 +133,7 @@ run_simulation_year <- function(sim_ctx, year) {
     # Note: RF probabilities (p_employment.pt, p_employment.ft) are from 2019
     # calibration and don't change by simulation year, so we can compute baseline
     # rates from any year's parent_units data.
-    demand_base_year <- as.integer(sim_ctx$base_demand_params$year %||% 2019)
+    demand_base_year <- as.integer(sim_ctx$base_demand_params$calibration_year %||% 2019)
 
     if (is.null(sim_ctx$baseline_emp_rates_2019)) {
       sim_ctx$baseline_emp_rates_2019 <- compute_baseline_employment_rates(parent_units_list)

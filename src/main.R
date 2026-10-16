@@ -50,7 +50,7 @@ if (interactive()) {
   use_cached_donors        <- F  # Set to TRUE to use cached donor pool
   calib_sample             <- 100
   sim_sample               <- 100
-  acs_base_year            <- 2019  # Fixed for alpha matrix matching
+  nsece_year               <- 2019  # NSECE survey year; the paired ACS year is set in config.R
   n_draws_per_record       <- 1
   seed_offset              <- 0
   setup_only               <- F
@@ -261,7 +261,7 @@ interfaces <- resolve_interface_hierarchy(nsece_interface, acs_interface, calibr
 
 if (is.null(interfaces$nsece)) {
   cat('No NSECE interface specified. Generating NSECE estimation data with interface', time_stamp, '\n')
-  run_nsece_processing()
+  run_nsece_processing(nsece_year)
 } else {
   cat('Copying NSECE data from interface', interfaces$nsece, '\n')
   copy_interface('nsece', interfaces$nsece, time_stamp)
@@ -273,7 +273,7 @@ if (is.null(interfaces$nsece)) {
 
 if (is.null(interfaces$acs)) {
   cat('No ACS interface specified. Generating ACS data with interface', time_stamp, '\n')
-  run_acs_processing()
+  run_acs_processing(nsece_year)
   gc()
 } else {
   cat('Copying ACS data from interface', interfaces$acs, '\n')
@@ -296,7 +296,7 @@ if (is.null(interfaces$acs)) {
 
 if (is.null(interfaces$calibration)) {
   cat('No calibration interface specified. Running calibration with interface', time_stamp, '\n')
-  run_calibration()
+  run_calibration(nsece_year)
   gc()
 } else {
   cat('Copying calibration data from interface', interfaces$calibration, '\n')
@@ -326,7 +326,7 @@ if (setup_only) {
 cat('\nECEC Simulator starting...\n')
 cat('Runscript ID:', runscript_id, '\n')
 cat('Interface:', time_stamp, '\n')
-cat('Base Year:', acs_base_year, '\n')
+cat('Base Year:', acs_base_year, '(NSECE', nsece_year, ')\n')
 cat('\n')
 
 # Run simulation or save SLURM setup context

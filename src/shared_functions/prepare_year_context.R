@@ -65,18 +65,21 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     }
   }
 
-  # Supply params with growth factors
+  # Supply params with growth factors. Factors run from the model base year
+  # (the ACS year, aging_base_year) to the simulation year; the '_2019' in
+  # variable and column names below means 'from the base year'.
   supply_params <- base_supply_params
-  supply_params$nominal_wage_factor <- get_hourly_wage_growth_factor(macro_projections, 2019, year)
-  supply_params$cpi_factor <- get_cpi_growth_factor(macro_projections, 2019, year)
-  cpi_chain_factor_2019 <- get_chained_cpi_growth_factor(macro_projections, 2019, year)
+  supply_params$nominal_wage_factor <- get_hourly_wage_growth_factor(macro_projections, aging_base_year, year)
+  supply_params$cpi_factor <- get_cpi_growth_factor(macro_projections, aging_base_year, year)
+  cpi_chain_factor_2019 <- get_chained_cpi_growth_factor(macro_projections, aging_base_year, year)
 
   # -- Assertions: growth factors are economically plausible ----
-  # CPI and wages grow over time. If these are <= 1.0 for years after 2019,
-  # either the wrong base year was passed, or macro_projections has bad data.
-  # (Deflation is theoretically possible but hasn't happened in the US since
-  # the Great Depression — if these fire, it's almost certainly a bug.)
-  if (year > 2019) {
+  # CPI and wages grow over time. If these are <= 1.0 for years after the
+  # base year, either the wrong base year was passed, or macro_projections
+  # has bad data. (Deflation is theoretically possible but hasn't happened
+  # in the US since the Great Depression — if these fire, it's almost
+  # certainly a bug.)
+  if (year > aging_base_year) {
     stopifnot(supply_params$cpi_factor > 1.0)
     stopifnot(supply_params$nominal_wage_factor > 1.0)
   }
@@ -85,12 +88,12 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     stopifnot(supply_params$cpi_factor < 3.0)
     stopifnot(supply_params$nominal_wage_factor < 3.0)
   }
-  cpi_chain_factor_2026 <- get_chained_cpi_growth_factor(macro_projections, 2019, 2026)
+  cpi_chain_factor_2026 <- get_chained_cpi_growth_factor(macro_projections, aging_base_year, 2026)
 
   # Nominal wage growth factors for wage-indexed transfer/UBI policies
   # (same gdp_wages / agg_hours_index series that updates care worker wages)
   wage_growth_factor_2019 <- supply_params$nominal_wage_factor
-  wage_growth_factor_2026 <- get_hourly_wage_growth_factor(macro_projections, 2019, 2026)
+  wage_growth_factor_2026 <- get_hourly_wage_growth_factor(macro_projections, aging_base_year, 2026)
 
   demand_params <- base_demand_params
 

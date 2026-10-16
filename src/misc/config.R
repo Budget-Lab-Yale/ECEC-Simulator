@@ -43,6 +43,7 @@ parse_args <- function() {
   calib_target1_value     <- NULL         # Value (NULL = use default from constants.R)
   calib_target2_name      <- 'hours_income'  # Second calibration target elasticity
   calib_target2_value     <- NULL         # Value (NULL = use default -0.05)
+  nsece_year              <- DEFAULT_NSECE_YEAR  # NSECE survey year; sets the paired ACS base year
 
   consume_arg <- function(flag_name) {
 
@@ -152,6 +153,11 @@ parse_args <- function() {
       if (is.na(calib_target2_value)) {
         stop('Error: --calib-target2-value must be a number')
       }
+    } else if (arg == '--nsece-year') {
+      nsece_year <- as.integer(consume_arg('--nsece-year'))
+      if (is.na(nsece_year) || !(as.character(nsece_year) %in% names(NSECE_ACS_YEAR_PAIRS))) {
+        stop(paste('Error: --nsece-year must be one of:', paste(names(NSECE_ACS_YEAR_PAIRS), collapse = ', ')))
+      }
     } else if (arg == '--reference' || arg == '-R') {
       reference_interface <- consume_arg('--reference')
     } else if (arg == '--no-price-wedge') {
@@ -203,7 +209,8 @@ parse_args <- function() {
     calib_target1_name      = calib_target1_name,
     calib_target1_value     = calib_target1_value,
     calib_target2_name      = calib_target2_name,
-    calib_target2_value     = calib_target2_value
+    calib_target2_value     = calib_target2_value,
+    nsece_year              = nsece_year
   ))
 }
 
@@ -268,6 +275,10 @@ print_usage <- function() {
   cat('  --calib-target2-name <name> Second calibration target elasticity (default: hours_income)\n')
   cat('                              Valid: part_wage, part_cost, paid_cost, hours_income\n')
   cat('  --calib-target2-value <val> Value for second target (default: -0.05 for hours_income)\n')
+  cat('  --nsece-year <year>         NSECE survey year to calibrate on (default: 2019)\n')
+  cat('                              2019 pairs with the 2019 ACS; 2024 pairs with the 2023 ACS.\n')
+  cat('                              The ACS year is the model base year (dollars, growth, taxes).\n')
+  cat('                              Pass the same value when reusing a run with -N, -A, or -C\n')
   cat('  --reference, -R             Timestamp of a prior run to compare against (regression deltas)\n')
   cat('                              Produces regression.csv per common scenario in totals/\n')
   cat('  --no-price-wedge            Disable price wedge heterogeneity (set all wedges to 1.0)\n')
@@ -550,7 +561,8 @@ save_run_metadata <- function() {
     sim_sample               = sim_sample,
     n_draws_per_record       = exist_or_default('n_draws_per_record', 10),
     seed_offset              = exist_or_default('seed_offset', 0),
-    acs_base_year            = '2019 (fixed for alpha matrix matching)',
+    nsece_year               = exist_or_default('nsece_year', DEFAULT_NSECE_YEAR),
+    acs_base_year            = paste(acs_base_year, '(ACS year paired with the NSECE year; model base year)'),
     slurm_phase              = null_or_val(slurm_phase),
     slurm_scratch_dir        = null_or_val(slurm_scratch_dir),
     slurm_year_index         = null_or_val(slurm_year_index),
@@ -620,7 +632,14 @@ source('./src/shared_functions/constants.R')
 if (!interactive()) {
   args <- parse_args()
   list2env(args, envir = environment())
-  acs_base_year <- 2019  # Fixed for alpha matrix matching
+}
+
+# ACS base year: the ACS year paired with the NSECE survey year (2019 -> 2019,
+# 2024 -> 2023; see NSECE_ACS_YEAR_PAIRS in constants.R)
+if (!exists('nsece_year') || is.null(nsece_year)) nsece_year <- DEFAULT_NSECE_YEAR
+acs_base_year <- unname(NSECE_ACS_YEAR_PAIRS[as.character(nsece_year)])
+if (is.na(acs_base_year)) {
+  stop('No ACS year is paired with NSECE year ', nsece_year, '. Add it to NSECE_ACS_YEAR_PAIRS in constants.R.')
 }
 
 # Read runscript

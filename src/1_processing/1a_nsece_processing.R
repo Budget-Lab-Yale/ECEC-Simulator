@@ -9,8 +9,11 @@ run_nsece_processing <- function(nsece_year = 2019) {
   #----------------------------------------------------------------------------
   # Processes NSECE data: household demand data, supply parameters,
   # and price heterogeneity QRF models. Writes to estimation output folder.
-  # The model is built on the 2019 survey; the 2024 survey can be processed
-  # the same way for comparison (see get_nsece_year_settings()).
+  # The 2019 survey is the default; the 2024 survey is processed the same way
+  # (see get_nsece_year_settings()). Household tables carry the survey year
+  # (nsece_*_<survey year>.csv). Supply parameters are written in dollars of
+  # the model base year, the ACS year paired with the survey
+  # (NSECE_ACS_YEAR_PAIRS), as supply_<base year>.yaml.
   #
   # Params:
   #   - nsece_year (int): Survey year to process, 2019 (default) or 2024
@@ -24,6 +27,18 @@ run_nsece_processing <- function(nsece_year = 2019) {
   # File names, the low/high center price cut, and code harmonization for
   # the chosen survey year
   nsece_settings <- get_nsece_year_settings(nsece_year)
+
+  # Model base year: the ACS year paired with this survey (2019 -> 2019,
+  # 2024 -> 2023). Supply-side dollar values are written in base-year dollars.
+  base_year <- unname(NSECE_ACS_YEAR_PAIRS[as.character(nsece_year)])
+  dollar_conversion <- get_nsece_dollar_conversion(
+    nsece_year, base_year, estimation_info$paths$`Macro-Projections`
+  )
+  if (nsece_year != base_year) {
+    cat('NSECE', nsece_year, 'dollars will be converted to', base_year, 'dollars:',
+        'wages divided by', round(dollar_conversion$wage_factor, 4), '(hourly wage index),',
+        'non-labor price residuals and the Other Paid price by', round(dollar_conversion$cpi_factor, 4), '(CPI-U)\n')
+  }
 
 
   # Helper functions
@@ -1264,10 +1279,27 @@ run_nsece_processing <- function(nsece_year = 2019) {
     )
   }
 
+  # Keep survey-year dollar values for the price wedges (household price over
+  # provider price, both in survey-year dollars), then convert the supply
+  # parameters to base-year dollars. No change when the two years are equal.
+  supply_params_nsece_dollars <- supply_params
+  if (nsece_year != base_year) {
+    supply_params$year    <- base_year
+    supply_params$w       <- supply_params$w / dollar_conversion$wage_factor
+    supply_params$delta_0 <- supply_params$delta_0 / dollar_conversion$cpi_factor
+    labor_cost_base       <- as.vector(supply_params$L_req %*% supply_params$w)
+    supply_params$prices  <- if_else(
+      is.na(supply_params$delta_0),
+      supply_params$prices / dollar_conversion$cpi_factor,
+      labor_cost_base + supply_params$delta_0
+    ) %>%
+      set_names(names(supply_params$prices))
+  }
+
   {
     # Convert data to YAML-friendly structure with named elements (flattened)
     yaml_data <- list(
-      year = nsece_year,
+      year = base_year,
 
       labor_requirements = setNames(lapply(1:4, function(i) {
         list(no_ba = supply_params$L_req[i, 1], ba = supply_params$L_req[i, 2])
@@ -1297,19 +1329,43 @@ run_nsece_processing <- function(nsece_year = 2019) {
       )
     )
 
+    # Record the survey year and the survey-year dollar values when they
+    # were converted to base-year dollars
+    if (nsece_year != base_year) {
+      yaml_data$nsece_year <- nsece_year
+      yaml_data$dollar_conversion <- list(
+        note        = paste0('Wages and per-unit residuals are in ', base_year, ' dollars. ',
+                             'Survey-year values divided by these factors.'),
+        wage_factor = dollar_conversion$wage_factor,
+        cpi_factor  = dollar_conversion$cpi_factor,
+        wages_survey_dollars = list(
+          no_ba = supply_params_nsece_dollars$w[1],
+          ba    = supply_params_nsece_dollars$w[2]
+        ),
+        per_unit_residual_survey_dollars = list(
+          unpaid_center_based     = supply_params_nsece_dollars$delta_0[1],
+          low_price_center_based  = supply_params_nsece_dollars$delta_0[2],
+          high_price_center_based = supply_params_nsece_dollars$delta_0[3],
+          paid_home_based         = supply_params_nsece_dollars$delta_0[4]
+        )
+      )
+    }
+
     # Write to estimation output folder (run-specific record)
     estimation_dir <- file.path(output_root, 'estimation', 'supply')
     dir.create(estimation_dir, recursive = TRUE, showWarnings = FALSE)
-    write_yaml(yaml_data, file.path(estimation_dir, paste0('supply_', nsece_year, '.yaml')))
+    write_yaml(yaml_data, file.path(estimation_dir, paste0('supply_', base_year, '.yaml')))
 
     cat('Supply parameters written to:\n')
-    cat('  - ', file.path(estimation_dir, paste0('supply_', nsece_year, '.yaml')), '\n')
+    cat('  - ', file.path(estimation_dir, paste0('supply_', base_year, '.yaml')), '\n')
   }
 
 
   # --- SECTION 3: Train price heterogeneity models ---
   {
-    supply_prices <- supply_params$prices
+    # Survey-year dollars: price wedges are ratios of household prices to
+    # provider prices from the same survey
+    supply_prices <- supply_params_nsece_dollars$prices
     tc_output_root <- estimation_info$paths$output
 
     qrf_data <- {
@@ -1429,6 +1485,18 @@ run_nsece_processing <- function(nsece_year = 2019) {
       summary_stats$supply_price_home        <- qrf_data$supply_price_home
       summary_stats$other_paid_base_price    <- qrf_data$other_paid_base_price
 
+      # Base prices in base-year dollars (calibration and simulation multiply
+      # the wedges by these)
+      if (nsece_year != base_year) {
+        summary_stats$supply_price_center_low  <- supply_params$prices['Low-Priced Center-Based']
+        summary_stats$supply_price_center_high <- supply_params$prices['High-Priced Center-Based']
+        summary_stats$supply_price_home        <- supply_params$prices['Paid Home-Based']
+        summary_stats$other_paid_base_price    <- qrf_data$other_paid_base_price / dollar_conversion$cpi_factor
+        summary_stats$other_paid_base_price_survey_dollars <- qrf_data$other_paid_base_price
+        summary_stats$nsece_year <- nsece_year
+        summary_stats$base_year  <- base_year
+      }
+
       list(
         center_low_price  = qrf_center_low_price,
         center_high_price = qrf_center_high_price,
@@ -1456,7 +1524,7 @@ run_nsece_processing <- function(nsece_year = 2019) {
           q25 = s$q25, q50 = s$q50, q75 = s$q75,
           base_price = price_qrf_models$summary_stats[[base_price_keys[i]]]
         ) %>%
-          rename_with(~ paste0('base_price_', nsece_year), .cols = base_price)
+          rename_with(~ paste0('base_price_', base_year), .cols = base_price)
       })
 
       write_csv(summary_df, file.path(models_dir, 'price_summary.csv'))
@@ -1521,7 +1589,7 @@ run_nsece_processing <- function(nsece_year = 2019) {
         'Other paid'         = ss$other_paid_price
       )
       price_info <- capture.output({
-        cat('=== BASE PRICES (', nsece_year, ' $/hour) ===\n', sep = '')
+        cat('=== BASE PRICES (', base_year, ' $/hour) ===\n', sep = '')
         for (nm in names(base_prices)) cat(nm, ':', round(base_prices[[nm]], 2), '\n')
         cat('\n=== PRICE HETEROGENEITY (price_wedge = household_OOP / base_price) ===\n')
         for (nm in names(wedge_stats)) {
@@ -1533,11 +1601,12 @@ run_nsece_processing <- function(nsece_year = 2019) {
       writeLines(price_info, file.path(models_dir, 'price_info.txt'))
     }
 
-    # Cache to disk
-    cache_dir <- './cache/price_models'
-    dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
+    # Cache to disk (file name depends on the survey year)
+    cache_path <- get_price_model_cache_path(nsece_year)
+    dir.create(dirname(cache_path), showWarnings = FALSE, recursive = TRUE)
 
-    saveRDS(price_qrf_models, file.path(cache_dir, 'price_qrf_models.rds'))
+    saveRDS(price_qrf_models, cache_path)
+    cat('Price models cached to', cache_path, '\n')
   }
 
   cat('NSECE estimation data preparation complete!\n')

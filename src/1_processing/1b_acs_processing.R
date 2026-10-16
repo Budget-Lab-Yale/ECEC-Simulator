@@ -10,22 +10,30 @@
 
 
 
-run_acs_processing <- function() {
+run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
 
   #----------------------------------------------------------------------------
-  # Process 2019 ACS data for demand-side calibration. Produces hierarchical
+  # Process ACS data for demand-side calibration. Produces hierarchical
   # household tables, earnings imputations (Heckman), ECEC enrollment
   # imputations (random forest), employment probability estimates, and SPM
   # unit processing. Requires NSECE data from run_nsece_processing() or
-  # copy_nsece_interface().
+  # copy_nsece_interface(). The ACS year is the one paired with the NSECE
+  # survey year (NSECE_ACS_YEAR_PAIRS: 2019 -> 2019, 2024 -> 2023), and output
+  # files carry it (acs_*_<ACS year>.csv). Variable names below still say
+  # 2019 (processed_acs_2019); they hold whichever ACS year is processed.
   #
-  # Params: none
+  # Params:
+  #   - nsece_year (int): NSECE survey year whose processed tables are read
+  #       (default: DEFAULT_NSECE_YEAR)
   #
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
 
   # Get estimation data info
   estimation_info <- get_estimation_info()
+
+  # ACS year paired with the NSECE survey year
+  acs_year <- unname(NSECE_ACS_YEAR_PAIRS[as.character(nsece_year)])
 
 
   #---------------------------------------------------------------------------
@@ -473,7 +481,7 @@ run_acs_processing <- function() {
   # Load NSECE household data (required for imputations)
   #-------------------------------------------
 
-  nsece_parent_units_path <- file.path(estimation_info$paths$data, 'nsece_parent_units_2019.csv')
+  nsece_parent_units_path <- file.path(estimation_info$paths$data, paste0('nsece_parent_units_', nsece_year, '.csv'))
   if (!file.exists(nsece_parent_units_path)) {
     stop('NSECE data not found. Run run_nsece_processing() first or specify --nsece-interface.')
   }
@@ -481,7 +489,7 @@ run_acs_processing <- function() {
   processed_nsece_hh <- list()
   nsece_tables <- c('households', 'household_members', 'children', 'parent_units', 'providers', 'enrollment')
   for (table_name in nsece_tables) {
-    table_path <- file.path(estimation_info$paths$data, paste0('nsece_', table_name, '_2019.csv'))
+    table_path <- file.path(estimation_info$paths$data, paste0('nsece_', table_name, '_', nsece_year, '.csv'))
     if (file.exists(table_path)) {
       processed_nsece_hh[[table_name]] <- fread(table_path)
     }
@@ -489,10 +497,10 @@ run_acs_processing <- function() {
 
 
   #------------------------------------------------
-  # Process 2019 ACS (for demand model estimation)
+  # Process the ACS year (for demand model estimation)
   #------------------------------------------------
 
-  cat('Processing 2019 ACS data...\n')
+  cat('Processing', acs_year, 'ACS data (paired with the', nsece_year, 'NSECE)...\n')
 
   acs_raw_path <- file.path(estimation_info$paths$ACS, 'ipums_usa.csv')
   if (!file.exists(acs_raw_path)) {
@@ -507,33 +515,53 @@ run_acs_processing <- function() {
   # Corrected Census tax-unit crosswalk (April 2024 Census correction).
   # The legacy IPUMS TAXID splits nearly all married couples into two
   # separate tax units; see docs/ecec_team_taxid_memo_2026-08-17.md.
-  crosswalk_path <- file.path(estimation_info$paths[['Census-ACS-SPM']],
-                              'tax_unit_crosswalk_2019.csv')
-  if (!file.exists(crosswalk_path)) {
-    stop('Corrected Census tax-unit crosswalk not found: ', crosswalk_path, '\n',
-         'Build it with make_crosswalk.R in that directory (see its README.md).')
+  # The corrected crosswalk exists for 2019 only. For later ACS years the
+  # IPUMS TAXID is used as is: in the 2023 ACS it already places 88.6% of
+  # married spouses in one tax unit (0.1% in the 2019 legacy file, about
+  # 99.4% in the corrected 2019 file).
+  use_taxid_crosswalk <- acs_year == 2019
+  if (use_taxid_crosswalk) {
+    crosswalk_path <- file.path(estimation_info$paths[['Census-ACS-SPM']],
+                                'tax_unit_crosswalk_2019.csv')
+    if (!file.exists(crosswalk_path)) {
+      stop('Corrected Census tax-unit crosswalk not found: ', crosswalk_path, '\n',
+           'Build it with make_crosswalk.R in that directory (see its README.md).')
+    }
+
+    taxid_crosswalk <- crosswalk_path %>%
+      fread(integer64 = 'double') %>%
+      tibble() %>%
+      transmute(
+        census_serialno       = as.numeric(serialno),
+        PERNUM                = as.integer(sporder),
+        tax_unit_id_corrected = tax_unit,
+        agi_corrected         = agi
+      )
+  } else {
+    cat('  No corrected tax-unit crosswalk for', acs_year, '- using the IPUMS TAXID as the tax unit\n')
+    taxid_crosswalk <- tibble(
+      census_serialno       = numeric(0),
+      PERNUM                = integer(0),
+      tax_unit_id_corrected = numeric(0),
+      agi_corrected         = numeric(0)
+    )
   }
 
-  taxid_crosswalk <- crosswalk_path %>%
-    fread(integer64 = 'double') %>%
-    tibble() %>%
-    transmute(
-      census_serialno       = as.numeric(serialno),
-      PERNUM                = as.integer(sporder),
-      tax_unit_id_corrected = tax_unit,
-      agi_corrected         = agi
-    )
-
-  # Filter to 2019 and build hierarchical tables
+  # Filter to the ACS year and build hierarchical tables
   processed_acs_2019 <- {
 
-    # Join keys: Census serialno = IPUMS CBSERIAL - 2019000000000,
+    # Join keys: Census serialno = IPUMS CBSERIAL - <year>000000000,
     #            Census sporder  = IPUMS PERNUM
     acs <- acs_raw %>%
-      filter(YEAR == 2019) %>%
+      filter(YEAR == acs_year) %>%
       filter(GQ == 1 | GQ == 2) %>%
-      mutate(census_serialno = as.numeric(CBSERIAL) - 2019000000000) %>%
+      mutate(census_serialno = as.numeric(CBSERIAL) - acs_year * 1e9) %>%
       left_join(taxid_crosswalk, by = c('census_serialno', 'PERNUM')) %>%
+      # Without a crosswalk the IPUMS TAXID is the tax unit
+      mutate(
+        tax_unit_id_corrected = if (use_taxid_crosswalk) tax_unit_id_corrected else as.numeric(TAXID),
+        agi_corrected         = if (use_taxid_crosswalk) agi_corrected else as.numeric(ADJGINC)
+      ) %>%
       select(
         hh_id = SERIAL,
         HHWT,
@@ -558,9 +586,11 @@ run_acs_processing <- function() {
 
     # Sanity on the reconstructed join key (catches integer64 mishandling)
     stopifnot('census_serialno' %in% names(acs))
-    stopifnot(is.finite(min(acs$census_serialno)))
-    stopifnot(min(acs$census_serialno) >= 1)
-    stopifnot(max(acs$census_serialno) <= 2e6)
+    if (use_taxid_crosswalk) {
+      stopifnot(is.finite(min(acs$census_serialno)))
+      stopifnot(min(acs$census_serialno) >= 1)
+      stopifnot(max(acs$census_serialno) <= 2e6)
+    }
 
     # Every person in the ECEC universe must match a corrected record
     n_unmatched <- sum(is.na(acs$tax_unit_id))
@@ -1834,7 +1864,7 @@ run_acs_processing <- function() {
   acs_raw_for_spm <- acs_raw
 
   sampled_hh_ids <- unique(processed_acs_2019$households$hh_id)
-  acs_sampled <- acs_raw_for_spm %>% filter(YEAR == 2019, SERIAL %in% sampled_hh_ids)
+  acs_sampled <- acs_raw_for_spm %>% filter(YEAR == acs_year, SERIAL %in% sampled_hh_ids)
 
   spm_result <- {
 
@@ -1996,7 +2026,7 @@ run_acs_processing <- function() {
   rm(acs_raw, acs_raw_for_spm, acs_sampled)
 
   #-------------------------------------------
-  # Write 2019 ACS data to disk
+  # Write ACS data to disk (file names carry the ACS year)
   #-------------------------------------------
 
   c('households', 'household_members', 'parent_units', 'children', 'tax_units',
@@ -2004,7 +2034,7 @@ run_acs_processing <- function() {
     walk(
       .f = function(table_name) {
         estimation_info$paths$data %>%
-          file.path(paste0('acs_', table_name, '_2019.csv')) %>%
+          file.path(paste0('acs_', table_name, '_', acs_year, '.csv')) %>%
           fwrite(processed_acs_2019[[table_name]], file = ., na = 'NA')
       }
     )
@@ -2012,17 +2042,17 @@ run_acs_processing <- function() {
   if (spm_result$has_spm_data && !is.null(processed_acs_2019$pu_spm_xwalk)) {
     fwrite(
       processed_acs_2019$spm_units,
-      file.path(estimation_info$paths$data, 'acs_spm_units_2019.csv'),
+      file.path(estimation_info$paths$data, paste0('acs_spm_units_', acs_year, '.csv')),
       na = 'NA'
     )
     fwrite(
       processed_acs_2019$pu_spm_xwalk,
-      file.path(estimation_info$paths$data, 'acs_pu_spm_xwalk_2019.csv'),
+      file.path(estimation_info$paths$data, paste0('acs_pu_spm_xwalk_', acs_year, '.csv')),
       na = 'NA'
     )
     fwrite(
       processed_acs_2019$spm_parent_earnings,
-      file.path(estimation_info$paths$data, 'acs_spm_parent_earnings_2019.csv'),
+      file.path(estimation_info$paths$data, paste0('acs_spm_parent_earnings_', acs_year, '.csv')),
       na = 'NA'
     )
   }

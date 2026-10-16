@@ -41,6 +41,11 @@ restore_globals_from_config <- function(run_config) {
                'default_paths', 'random_seed_base', 'seed_offset')) {
     assign(nm, run_config[[nm]], envir = .GlobalEnv)
   }
+
+  # Base year and NSECE year (configs saved before these were recorded
+  # default to the 2019 calibration)
+  assign('acs_base_year', run_config$acs_base_year %||% 2019, envir = .GlobalEnv)
+  assign('nsece_year', run_config$nsece_year %||% 2019, envir = .GlobalEnv)
 }
 
 
@@ -101,7 +106,8 @@ slurm_setup_simulation <- function(scratch_dir) {
     random_seed_base   = random_seed_base,
     seed_offset        = seed_offset,
     fiscal_npv         = if (exists('fiscal_npv')) fiscal_npv else FALSE,
-    acs_base_year      = acs_base_year
+    acs_base_year      = acs_base_year,
+    nsece_year         = nsece_year
   )
 
   # Create scratch directory structure
@@ -307,7 +313,7 @@ run_year_standalone <- function(year, ctx, scratch_dir = NULL) {
   target_emp_rates <- NULL
   if (employment_targeting_enabled) {
     baseline_emp_rates_2019 <- compute_baseline_employment_rates(parent_units_list)
-    demand_base_year <- as.integer(demand_params$year %||% 2019)
+    demand_base_year <- as.integer(demand_params$calibration_year %||% 2019)
 
     growth_factor <- get_employment_rate_growth_factor(
       macro_projections = ctx$macro_projections,

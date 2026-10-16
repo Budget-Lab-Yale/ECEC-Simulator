@@ -57,6 +57,30 @@ OASI_TAX_RATE     <- 0.062   # Old-Age and Survivors Insurance rate (6.2%)
 
 
 #------------------------------------------------------------------------------
+# Calibration year: NSECE survey year and the ACS year paired with it
+#
+# The model is calibrated on one NSECE survey and one ACS year. The ACS year
+# is the model's base year: incomes and utility are measured in its dollars,
+# growth factors and population aging start from it, tax donors come from
+# Tax-Simulator for it, and estimation files carry its suffix. NSECE dollar
+# values (care worker wages, provider prices) are converted from the survey
+# year to the base year in 1a when the two differ.
+#
+# 2019: the 2019 NSECE with the 2019 ACS (the default).
+# 2024: the 2024 NSECE with the 2023 ACS, the latest ACS year on disk
+#       (raw_data/ACS/v1/2023/ipums_usa.csv holds 2019 and 2023 only).
+#------------------------------------------------------------------------------
+
+DEFAULT_NSECE_YEAR <- 2019
+
+NSECE_ACS_YEAR_PAIRS <- c(
+  '2019' = 2019,
+  '2024' = 2023
+)
+
+
+
+#------------------------------------------------------------------------------
 # OASI Tax Maximum (Social Security Wage Base)
 #
 # Known actual values for anchoring projections.

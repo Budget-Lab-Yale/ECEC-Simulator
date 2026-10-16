@@ -218,11 +218,12 @@ initialize_simulation <- function() {
 
   # Load supply model parameters from estimation output
   {
-    supply_params_path <- file.path(output_root, 'estimation', 'supply', 'supply_2019.yaml')
+    supply_params_path <- file.path(output_root, 'estimation', 'supply', paste0('supply_', acs_base_year, '.yaml'))
 
     if (!file.exists(supply_params_path)) {
       stop(paste0('Supply params file not found: ', supply_params_path, '\n',
-                  'Run NSECE processing first, or use -C to specify a calibration interface.'))
+                  'Run NSECE processing first, or use -C to specify a calibration interface.\n',
+                  'When reusing a run calibrated on another NSECE year, pass the same --nsece-year.'))
     }
 
     supply_yaml_data <- read_yaml(supply_params_path)
@@ -252,7 +253,7 @@ initialize_simulation <- function() {
   # Load demand model parameters from estimation output
   {
     estimation_dir <- file.path(output_root, 'estimation')
-    demand_params_path <- file.path(estimation_dir, 'demand_params_2019.yaml')
+    demand_params_path <- file.path(estimation_dir, paste0('demand_params_', acs_base_year, '.yaml'))
 
     if (!file.exists(demand_params_path)) {
       stop(paste0('Demand params file not found: ', demand_params_path, '\n',
@@ -318,7 +319,7 @@ initialize_simulation <- function() {
       }
     }
 
-    calibration_year <- demand_yaml_data$year %||% 2019
+    calibration_year <- demand_yaml_data$year %||% acs_base_year
 
     # Load alpha matrices for each parent unit type
     for (pu_type in c('c1', 'c2plus')) {
@@ -331,7 +332,7 @@ initialize_simulation <- function() {
     }
 
     # Load other_paid_base_price from price models cache
-    price_models_path <- file.path('./cache/price_models', 'price_qrf_models.rds')
+    price_models_path <- get_price_model_cache_path(nsece_year)
     if (file.exists(price_models_path)) {
       price_qrf_models <- readRDS(price_models_path)
       base_demand_params$other_paid_base_price <- price_qrf_models$summary_stats$other_paid_base_price
@@ -376,7 +377,7 @@ initialize_simulation <- function() {
 
   # Load price models and compute price_wedge cache
   price_models <- {
-    price_qrf_models <- readRDS(file.path('./cache/price_models', 'price_qrf_models.rds'))
+    price_qrf_models <- readRDS(get_price_model_cache_path(nsece_year))
     list(price_qrf_models = price_qrf_models)
   }
 

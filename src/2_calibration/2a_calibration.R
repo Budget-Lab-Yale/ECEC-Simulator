@@ -9,16 +9,25 @@
 
 
 
-run_calibration <- function() {
+run_calibration <- function(nsece_year = DEFAULT_NSECE_YEAR) {
 
   #----------------------------------------------------------------------------
   # Prepares calibration data and runs demand estimation. Writes calibration
   # data and demand params (alpha, beta, rho) to the estimation folder.
+  # The calibration year is the ACS year paired with the NSECE survey year
+  # (NSECE_ACS_YEAR_PAIRS): it selects the processed ACS and supply files,
+  # the Tax-Simulator donor year, the OASI tax maximum, and the suffix of the
+  # files written here. Variable names below still say 2019; they hold
+  # whichever year is calibrated.
   #
-  # Params: none
+  # Params:
+  #   - nsece_year (int): NSECE survey year (default: DEFAULT_NSECE_YEAR)
   #
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
+
+  # Calibration year: the ACS year paired with the NSECE survey year
+  calib_year <- unname(NSECE_ACS_YEAR_PAIRS[as.character(nsece_year)])
 
   crra_utility <- function(c, rho) {
 
@@ -1695,7 +1704,7 @@ run_calibration <- function() {
   #-------------------------------------------
 
   # Check that ACS data exists
-  acs_parent_units_path <- file.path(estimation_info$paths$data, 'acs_parent_units_2019.csv')
+  acs_parent_units_path <- file.path(estimation_info$paths$data, paste0('acs_parent_units_', calib_year, '.csv'))
   if (!file.exists(acs_parent_units_path)) {
     stop('ACS data not found. Run run_acs_processing() first or specify --acs-interface.')
   }
@@ -1707,7 +1716,7 @@ run_calibration <- function() {
   acs_tables <- c('households', 'household_members', 'parent_units', 'children', 'tax_units',
                   'enrollment', 'enrollment_joint')
   for (table_name in acs_tables) {
-    table_path <- file.path(estimation_info$paths$data, paste0('acs_', table_name, '_2019.csv'))
+    table_path <- file.path(estimation_info$paths$data, paste0('acs_', table_name, '_', calib_year, '.csv'))
     if (file.exists(table_path)) {
       processed_acs_2019[[table_name]] <- fread(table_path)
     }
@@ -1724,14 +1733,14 @@ run_calibration <- function() {
   # Get Tax-Simulator path for donor pool and wage thresholds
   tax_sim_path <- estimation_info$paths$`Tax-Simulator`
 
-  # Load or build donor pool for 2019
+  # Load or build donor pool for the calibration year
   # Default behavior: always rebuild unless --use-cached-donors flag is set
   use_cached <- if (exists('use_cached_donors')) use_cached_donors else FALSE
 
   if (use_cached) {
     cat('  Loading donor pool from cache (--use-cached-donors flag set)...\n')
     donor_pool_result <- {
-      cache_file <- file.path('./cache/donor_pools', paste0('donor_pool_', 2019, '.rds'))
+      cache_file <- file.path('./cache/donor_pools', paste0('donor_pool_', calib_year, '.rds'))
       if (file.exists(cache_file)) {
         readRDS(cache_file)
       } else {
@@ -1742,7 +1751,7 @@ run_calibration <- function() {
     if (is.null(donor_pool_result)) {
       stop(paste0(
         'FATAL: --use-cached-donors flag set but cache does not exist.\n',
-        '       Expected cache file: ./cache/donor_pools/donor_pool_2019.rds\n',
+        '       Expected cache file: ./cache/donor_pools/donor_pool_', calib_year, '.rds\n',
         '       Either run without --use-cached-donors to rebuild, or check cache path.'
       ))
     }
@@ -1750,8 +1759,8 @@ run_calibration <- function() {
     cat('  Successfully loaded cached donor pool.\n')
   } else {
     cat('  Building donor pool from Tax-Simulator (default behavior)...\n')
-    tax_file_2019 <- file.path(tax_sim_path, 'static/detail', '2019.csv')
-    donor_pool_result <- prepare_donor_pool(tax_file_2019, 2019)
+    tax_file_2019 <- file.path(tax_sim_path, 'static/detail', paste0(calib_year, '.csv'))
+    donor_pool_result <- prepare_donor_pool(tax_file_2019, calib_year)
 
     # Save to cache for potential future use with --use-cached-donors
     {
@@ -1759,7 +1768,7 @@ run_calibration <- function() {
       if (!dir.exists(cache_dir)) {
         dir.create(cache_dir, recursive = TRUE)
       }
-      cache_file <- file.path(cache_dir, paste0('donor_pool_', 2019, '.rds'))
+      cache_file <- file.path(cache_dir, paste0('donor_pool_', calib_year, '.rds'))
       saveRDS(donor_pool_result, cache_file)
     }
     cat('  Donor pool built and cached.\n')
@@ -1771,14 +1780,17 @@ run_calibration <- function() {
   # Load wage thresholds for EMTR lookup
   wage_thresholds <- {
     threshold_file <- file.path(tax_sim_path, 'static', 'supplemental',
-                                 paste0('percentiles_', 2019, '.csv'))
+                                 paste0('percentiles_', calib_year, '.csv'))
     read_csv(threshold_file, show_col_types = FALSE) %>%
-      filter(year == 2019) %>%
+      filter(year == calib_year) %>%
       select(percentile, wages)
   }
 
-  # OASI tax max for 2019 (Social Security wage base)
-  tax_max_2019 <- 132900
+  # OASI tax max for the calibration year (Social Security wage base)
+  tax_max_2019 <- OASI_TAX_MAX_KNOWN[[as.character(calib_year)]]
+  if (is.null(tax_max_2019)) {
+    stop('No OASI tax maximum for ', calib_year, ' in OASI_TAX_MAX_KNOWN (constants.R).')
+  }
 
 
   #-------------------------------------------
@@ -1790,7 +1802,7 @@ run_calibration <- function() {
   cat('  Loading supply prices and computing price_wedge cache...\n')
 
   # Load supply params to get baseline prices
-  supply_params_path <- file.path(output_root, 'estimation', 'supply', 'supply_2019.yaml')
+  supply_params_path <- file.path(output_root, 'estimation', 'supply', paste0('supply_', calib_year, '.yaml'))
   if (!file.exists(supply_params_path)) {
     stop('Supply params not found. Run run_nsece_processing() first, or use -C to specify a calibration interface.')
   }
@@ -1827,8 +1839,7 @@ run_calibration <- function() {
 
   # Load price models and compute price_wedge cache for ACS parent units
   price_models <- {
-    cache_dir <- './cache/price_models'
-    price_qrf_models <- readRDS(file.path(cache_dir, 'price_qrf_models.rds'))
+    price_qrf_models <- readRDS(get_price_model_cache_path(nsece_year))
     list(
       price_qrf_models = price_qrf_models
     )
@@ -1994,7 +2005,7 @@ run_calibration <- function() {
     if (nrow(calibration_data[[pu_type]]) > 0) {
       output_file <- file.path(
         estimation_info$paths$data,
-        paste0('calibration_', pu_type, '_2019.csv')
+        paste0('calibration_', pu_type, '_', calib_year, '.csv')
       )
       fwrite(calibration_data[[pu_type]], output_file, na = 'NA')
     }
@@ -2077,8 +2088,8 @@ run_calibration <- function() {
 
   run_demand_estimation(
     calibration_data_dir        = estimation_info$paths$data,
-    output_path                 = file.path(estimation_info$paths$output, 'demand_params_2019.yaml'),
-    year                        = 2019,
+    output_path                 = file.path(estimation_info$paths$output, paste0('demand_params_', calib_year, '.yaml')),
+    year                        = calib_year,
     time_stamp                  = time_stamp,
     care_cost_elasticity_target = calib_targets$care_cost_elasticity_target,
     wage_elasticity_target      = calib_targets$wage_elasticity_target,
