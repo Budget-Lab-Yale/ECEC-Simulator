@@ -516,9 +516,11 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   # The legacy IPUMS TAXID splits nearly all married couples into two
   # separate tax units; see docs/ecec_team_taxid_memo_2026-08-17.md.
   # The corrected crosswalk exists for 2019 only. For later ACS years the
-  # IPUMS TAXID is used as is: in the 2023 ACS it already places 88.6% of
-  # married spouses in one tax unit (0.1% in the 2019 legacy file, about
-  # 99.4% in the corrected 2019 file).
+  # IPUMS TAXID is used as is: in the 2023 ACS it places 99.3% of married
+  # persons with a spouse present (MARST 1) in their spouse's tax unit,
+  # against 0.13% in the 2019 legacy TAXID and 99.4% in the corrected 2019
+  # crosswalk. Unmarried partners, whom IPUMS also links through SPLOC, are
+  # in separate tax units in every file.
   use_taxid_crosswalk <- acs_year == 2019
   if (use_taxid_crosswalk) {
     crosswalk_path <- file.path(estimation_info$paths[['Census-ACS-SPM']],
