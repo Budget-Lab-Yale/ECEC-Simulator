@@ -4,19 +4,26 @@
 # and price heterogeneity model training. Called from main.R.
 
 
-run_nsece_processing <- function() {
+run_nsece_processing <- function(nsece_year = 2019) {
 
   #----------------------------------------------------------------------------
-  # Processes 2019 NSECE data: household demand data, supply parameters,
+  # Processes NSECE data: household demand data, supply parameters,
   # and price heterogeneity QRF models. Writes to estimation output folder.
+  # The model is built on the 2019 survey; the 2024 survey can be processed
+  # the same way for comparison (see get_nsece_year_settings()).
   #
-  # Params: none
+  # Params:
+  #   - nsece_year (int): Survey year to process, 2019 (default) or 2024
   #
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
 
   # Get estimation data info
   estimation_info <- get_estimation_info()
+
+  # File names, the low/high center price cut, and code harmonization for
+  # the chosen survey year
+  nsece_settings <- get_nsece_year_settings(nsece_year)
 
 
   # Helper functions
@@ -126,12 +133,9 @@ run_nsece_processing <- function() {
 
 
   # --- SECTION 1: Process household (demand-side) NSECE data ---
-  cat('Processing 2019 NSECE household data...\n')
+  cat('Processing', nsece_year, 'NSECE household data...\n')
 
-  nsece_hh <- estimation_info$paths$NSECE %>%
-    file.path('2019/37941-0009-Data.tsv') %>%
-    fread() %>%
-    tibble()
+  nsece_hh <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'household')
 
   processed_nsece_hh <- {
 
@@ -226,7 +230,8 @@ run_nsece_processing <- function() {
     }
 
     household_members <- {
-      hhm_age_cols <- grep('^HH9_HHM_AGE_[1-9]$', names(nsece_hh), value = TRUE)
+      # Member numbers run 1-9 in 2019 and 1-13 in 2024
+      hhm_age_cols <- grep('^HH9_HHM_AGE_[0-9]+$', names(nsece_hh), value = TRUE)
 
       nsece_hh %>%
 
@@ -241,7 +246,7 @@ run_nsece_processing <- function() {
         # Filter to household member indexes
         filter(age > -9) %>%
         mutate(
-          hhm_id   = as.integer(str_sub(hhm_id, -1)),
+          hhm_id   = as.integer(str_extract(hhm_id, '[0-9]+$')),
           age      = if_else(!is.na(age) & age >= 0, age, NA),
           child_id = NA
         ) %>%
@@ -257,7 +262,7 @@ run_nsece_processing <- function() {
     }
 
     parent_units <- {
-      parch_cols <- grep('^HH9_PARCH_[1-9]_[1-9]$', names(nsece_hh), value = T)
+      parch_cols <- grep('^HH9_PARCH_[1-9]_[0-9]+$', names(nsece_hh), value = T)
 
       # Start by constructing household - parent - child links
       pu <- nsece_hh %>%
@@ -267,7 +272,7 @@ run_nsece_processing <- function() {
         pivot_longer(
           cols            = starts_with('HH9_PARCH_'),
           names_to        = c('child_id', 'hhm_id'),
-          names_pattern   = 'HH9_PARCH_([1-9])_([1-9])',
+          names_pattern   = 'HH9_PARCH_([1-9])_([0-9]+)',
           names_transform = as.integer,
           values_to       = 'is_parent'
         ) %>%
@@ -288,7 +293,8 @@ run_nsece_processing <- function() {
         ungroup() %>%
 
         # ASSUMPTION: Drop nonsense parent units with more than 2 people (0.3% of cases)
-        select(-hhm_id3, -hhm_id4) %>%
+        # (any_of: a survey year need not contain a child with 3 or 4 flagged parents)
+        select(-any_of(paste0('hhm_id', 3:13))) %>%
         mutate(
           parent_unit_id = if_else(
             is.na(hhm_id2),
@@ -373,7 +379,7 @@ run_nsece_processing <- function() {
         #     a child under 5): hours drawn from working parents with the
         #     same earner rank, so the part-time / full-time split is kept
         #   - D1a missing or DK/refused: calendar hours as before
-        work_cols <- grep('^HH9_D1A_WORK_[1-9]$', names(nsece_hh), value = T)
+        work_cols <- grep('^HH9_D1A_WORK_[0-9]+$', names(nsece_hh), value = T)
 
         worked_last_week <- nsece_hh %>%
           select(hh_id = HH9_METH_CASEID, all_of(work_cols)) %>%
@@ -437,8 +443,8 @@ run_nsece_processing <- function() {
           )
 
         # Add parent wages
-        wage_cols  <- grep('^HH9_D3D_WAGE_TC_[1-9]$', names(nsece_hh), value = T)
-        unit_cols  <- grep('^HH9_D3D_UNIT_[1-9]$',    names(nsece_hh), value = T)
+        wage_cols  <- grep('^HH9_D3D_WAGE_TC_[0-9]+$', names(nsece_hh), value = T)
+        unit_cols  <- grep('^HH9_D3D_UNIT_[0-9]+$',    names(nsece_hh), value = T)
 
         wages <- nsece_hh %>%
           select(
@@ -449,7 +455,7 @@ run_nsece_processing <- function() {
           pivot_longer(
             cols          = -hh_id,
             names_to      = c('name', 'hhm_id'),
-            names_pattern = 'HH9_D3D_(WAGE_TC|UNIT)_([1-9])$'
+            names_pattern = 'HH9_D3D_(WAGE_TC|UNIT)_([0-9]+)$'
           ) %>%
           mutate(hhm_id = as.integer(hhm_id)) %>%
           pivot_wider() %>%
@@ -519,18 +525,18 @@ run_nsece_processing <- function() {
     enrollment_data <- {
 
       # ---- Column groups (child X provider) ----------------------------------
-      children_xy_cols  <- grep('^HH9_CHILDREN_[1-9]_(?:[1-9]|1[0-4])$',          names(nsece_hh), value = T)
-      regular_xy_cols   <- grep('^HH9_REGCARE_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
-      typeof_xy_cols    <- grep('^HH9_TYPEOFCARE_AGG_[1-9]_(?:[1-9]|1[0-4])$',    names(nsece_hh), value = T)
-      headstart_xy_cols <- grep('^HH9_HEADSTART_[1-9]_(?:[1-9]|1[0-4])$',         names(nsece_hh), value = T)
-      pubprek_xy_cols   <- grep('^HH9_PUBPREK_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
-      hours_xy_cols     <- grep('^HH9_HRS_WEEK_PROV_[1-9]_(?:[1-9]|1[0-4])$',     names(nsece_hh), value = T)
-      payment_xy_cols   <- grep('^HH9_WEEKLY_PAYMENT_TC_[1-9]_(?:[1-9]|1[0-4])$', names(nsece_hh), value = T)
-      subsidy_xy_cols   <- grep('^HH9_SUBSIDY_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
-      careloc_xy_cols   <- grep('^HH9_CARELOC_[1-9]_(?:[1-9]|1[0-4])$',           names(nsece_hh), value = T)
+      children_xy_cols  <- grep('^HH9_CHILDREN_[1-9]_[0-9]+$',          names(nsece_hh), value = T)
+      regular_xy_cols   <- grep('^HH9_REGCARE_[1-9]_[0-9]+$',           names(nsece_hh), value = T)
+      typeof_xy_cols    <- grep('^HH9_TYPEOFCARE_AGG_[1-9]_[0-9]+$',    names(nsece_hh), value = T)
+      headstart_xy_cols <- grep('^HH9_HEADSTART_[1-9]_[0-9]+$',         names(nsece_hh), value = T)
+      pubprek_xy_cols   <- grep('^HH9_PUBPREK_[1-9]_[0-9]+$',           names(nsece_hh), value = T)
+      hours_xy_cols     <- grep('^HH9_HRS_WEEK_PROV_[1-9]_[0-9]+$',     names(nsece_hh), value = T)
+      payment_xy_cols   <- grep('^HH9_WEEKLY_PAYMENT_TC_[1-9]_[0-9]+$', names(nsece_hh), value = T)
+      subsidy_xy_cols   <- grep('^HH9_SUBSIDY_[1-9]_[0-9]+$',           names(nsece_hh), value = T)
+      careloc_xy_cols   <- grep('^HH9_CARELOC_[1-9]_[0-9]+$',           names(nsece_hh), value = T)
 
       # Provider-only prior relationship (Y loop) -> prep for join (hh_id, provider_id)
-      priorrel_y_cols <- grep('^HH9_PRIORREL_(?:[1-9]|1[0-4])$', names(nsece_hh), value = T)
+      priorrel_y_cols <- grep('^HH9_PRIORREL_[0-9]+$', names(nsece_hh), value = T)
       priorrel_long <- nsece_hh %>%
         select(hh_id = HH9_METH_CASEID, all_of(priorrel_y_cols)) %>%
         pivot_longer(
@@ -631,10 +637,13 @@ run_nsece_processing <- function() {
           is_center = type_raw == 4,
           is_home   = type_raw %in% c(1, 2, 3),
 
-          # is_other will be derived below using location/relationship
+          # is_other will be derived below using location/relationship.
+          # Low/high center split on the household's own out-of-pocket price
+          # per hour: $4.75 in 2019 dollars, grown to the survey year (see
+          # get_nsece_year_settings())
           is_paid      = !is.na(paid_calc)   & paid_calc == 1,
-          is_lowprice  = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost <  4.75,
-          is_highprice = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost >= 4.75,
+          is_lowprice  = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost <  nsece_settings$center_price_cut,
+          is_highprice = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost >= nsece_settings$center_price_cut,
 
           # - "Home-Based": individual care (TOC 1-3), outside child's home, no prior relationship
           # - "Other":     individual care with in-home/prior-rel, OR org/irregular/unknown (TOC 5,7,8)
@@ -810,7 +819,7 @@ run_nsece_processing <- function() {
     walk(
       .f = function(table_name) {
         estimation_info$paths$data %>%
-          file.path(paste0('nsece_', table_name, '_2019.csv')) %>%
+          file.path(paste0('nsece_', table_name, '_', nsece_year, '.csv')) %>%
           fwrite(processed_nsece_hh[[table_name]], file = ., na = 'NA')
       }
     )
@@ -818,25 +827,12 @@ run_nsece_processing <- function() {
 
   # --- SECTION 2: Process provider (supply-side) NSECE data ---
   # Must run BEFORE price model training to get supply-side prices
-  cat('Processing 2019 NSECE supply data...\n')
+  cat('Processing', nsece_year, 'NSECE supply data...\n')
 
-  # Read center-based provider survey
-  nsece_cb <- estimation_info$paths$NSECE %>%
-    file.path('2019/37941-0006-Data.tsv') %>%
-    fread() %>%
-    tibble()
-
-  # Read home-based provider survey
-  nsece_hb <- estimation_info$paths$NSECE %>%
-    file.path('2019/37941-0007-Data.tsv') %>%
-    fread() %>%
-    tibble()
-
-  # Read ECEC workforce survey
-  nsece_wf <- estimation_info$paths$NSECE %>%
-    file.path('2019/37941-0005-Data.tsv') %>%
-    fread() %>%
-    tibble()
+  # Read center-based provider, home-based provider, and ECEC workforce surveys
+  nsece_cb <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'center')
+  nsece_hb <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'home')
+  nsece_wf <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'workforce')
 
   supply_params <- {
 
@@ -1258,7 +1254,7 @@ run_nsece_processing <- function() {
 
     # Return as list
     list(
-      year    = 2019,
+      year    = nsece_year,
       L_req   = L_req,
       w       = wage_rates,
       L       = L_0,
@@ -1271,7 +1267,7 @@ run_nsece_processing <- function() {
   {
     # Convert data to YAML-friendly structure with named elements (flattened)
     yaml_data <- list(
-      year = 2019,
+      year = nsece_year,
 
       labor_requirements = setNames(lapply(1:4, function(i) {
         list(no_ba = supply_params$L_req[i, 1], ba = supply_params$L_req[i, 2])
@@ -1304,10 +1300,10 @@ run_nsece_processing <- function() {
     # Write to estimation output folder (run-specific record)
     estimation_dir <- file.path(output_root, 'estimation', 'supply')
     dir.create(estimation_dir, recursive = TRUE, showWarnings = FALSE)
-    write_yaml(yaml_data, file.path(estimation_dir, paste0('supply_', 2019, '.yaml')))
+    write_yaml(yaml_data, file.path(estimation_dir, paste0('supply_', nsece_year, '.yaml')))
 
     cat('Supply parameters written to:\n')
-    cat('  - ', file.path(estimation_dir, paste0('supply_', 2019, '.yaml')), '\n')
+    cat('  - ', file.path(estimation_dir, paste0('supply_', nsece_year, '.yaml')), '\n')
   }
 
 
@@ -1458,8 +1454,9 @@ run_nsece_processing <- function() {
         tibble(
           model = model_keys[i], n_obs = s$n, mean = s$mean, sd = s$sd,
           q25 = s$q25, q50 = s$q50, q75 = s$q75,
-          base_price_2019 = price_qrf_models$summary_stats[[base_price_keys[i]]]
-        )
+          base_price = price_qrf_models$summary_stats[[base_price_keys[i]]]
+        ) %>%
+          rename_with(~ paste0('base_price_', nsece_year), .cols = base_price)
       })
 
       write_csv(summary_df, file.path(models_dir, 'price_summary.csv'))
@@ -1524,7 +1521,7 @@ run_nsece_processing <- function() {
         'Other paid'         = ss$other_paid_price
       )
       price_info <- capture.output({
-        cat('=== BASE PRICES (2019 $/hour) ===\n')
+        cat('=== BASE PRICES (', nsece_year, ' $/hour) ===\n', sep = '')
         for (nm in names(base_prices)) cat(nm, ':', round(base_prices[[nm]], 2), '\n')
         cat('\n=== PRICE HETEROGENEITY (price_wedge = household_OOP / base_price) ===\n')
         for (nm in names(wedge_stats)) {
@@ -1544,4 +1541,275 @@ run_nsece_processing <- function() {
   }
 
   cat('NSECE estimation data preparation complete!\n')
+}
+
+
+
+get_nsece_year_settings <- function(nsece_year) {
+
+  #----------------------------------------------------------------------------
+  # Returns the file names, variable-name year digit, low/high center price
+  # cut, and code-harmonization functions for one NSECE survey year.
+  #
+  # The 2024 public-use files (ICPSR 39466) use the 2019 variable names with
+  # the year digit 4 in place of 9 (HH4_ for HH9_, CB4_ for CB9_, and so on).
+  # read_nsece_file() renames 2024 columns to the 2019 spelling, and the
+  # harmonize functions recode the few 2024 reserve codes that differ from
+  # 2019, so the processing code serves both years unchanged.
+  #
+  # The household-side cut between low- and high-priced center care is $4.75
+  # per hour in 2019 dollars. For 2024 it is grown by the CPI-U index for
+  # day care and preschool (CUUR0000SEEB03), which rose by a factor of 1.212
+  # between the 2019 and 2024 annual averages.
+  #
+  # Params:
+  #   - nsece_year (int): Survey year, 2019 or 2024
+  #
+  # Returns: (list) folder, prefix_digit, files, center_price_cut, harmonize
+  #----------------------------------------------------------------------------
+
+  settings <- list(
+    '2019' = list(
+      folder           = '2019',
+      prefix_digit     = '9',
+      files            = list(
+        household = '37941-0009-Data.tsv',
+        center    = '37941-0006-Data.tsv',
+        home      = '37941-0007-Data.tsv',
+        workforce = '37941-0005-Data.tsv'
+      ),
+      center_price_cut = 4.75,
+      harmonize        = list()
+    ),
+    '2024' = list(
+      folder           = '2024',
+      prefix_digit     = '4',
+      files            = list(
+        household = '39466-0005-Data.tsv',
+        center    = '39466-0002-Data.tsv',
+        home      = '39466-0003-Data.tsv',
+        workforce = '39466-0001-Data.tsv'
+      ),
+      center_price_cut = 4.75 * 1.212,
+      harmonize        = list(
+        household = harmonize_nsece_2024_household,
+        center    = harmonize_nsece_2024_centers,
+        home      = harmonize_nsece_2024_home
+      )
+    )
+  )
+
+  key <- as.character(nsece_year)
+  if (!key %in% names(settings)) {
+    stop('get_nsece_year_settings: no settings for NSECE year ', nsece_year,
+         '. Supported years: ', paste(names(settings), collapse = ', '), '.')
+  }
+  settings[[key]]
+}
+
+
+
+read_nsece_file <- function(nsece_root, nsece_settings, file_type) {
+
+  #----------------------------------------------------------------------------
+  # Reads one NSECE public-use data file, renames its variables to the 2019
+  # spelling (year digit 9), and applies the year's code harmonization.
+  #
+  # Params:
+  #   - nsece_root (chr): NSECE raw data folder (contains 2019/ and 2024/)
+  #   - nsece_settings (list): Output of get_nsece_year_settings()
+  #   - file_type (chr): 'household', 'center', 'home', or 'workforce'
+  #
+  # Returns: (tibble) The data file with 2019-style variable names and codes
+  #----------------------------------------------------------------------------
+
+  df <- nsece_root %>%
+    file.path(nsece_settings$folder, nsece_settings$files[[file_type]]) %>%
+    fread() %>%
+    tibble()
+
+  # HH4_, HHC4_, CB4_, HB4_, WF4_ -> HH9_, HHC9_, CB9_, HB9_, WF9_
+  if (nsece_settings$prefix_digit != '9') {
+    prefix_pattern <- paste0('^(HHC|HH|CB|HB|WF)', nsece_settings$prefix_digit, '_')
+    df <- df %>%
+      rename_with(~ str_replace(.x, prefix_pattern, '\\19_'))
+  }
+
+  harmonize <- nsece_settings$harmonize[[file_type]]
+  if (!is.null(harmonize)) {
+    df <- harmonize(df)
+  }
+
+  df
+}
+
+
+
+harmonize_nsece_2024_household <- function(nsece_hh) {
+
+  #----------------------------------------------------------------------------
+  # Recodes 2024 household-file items whose form changed from 2019.
+  #
+  # Respondent's sex: 2019 has one item (HH9_RGENDER: 1 = male, 2 = female,
+  # 3 = don't know/refused). 2024 asks "select all that apply" and the public
+  # file has two yes/no flags (HH4_RGENDER_1 male, HH4_RGENDER_2 female).
+  # Build the 2019 item from them: male only -> 1, female only -> 2,
+  # neither or both -> 3 (treated as unknown downstream).
+  #
+  # All other household variables the model uses keep their 2019 codes. The
+  # 2024 file has up to 13 household members and 15 providers (2019: 9 and
+  # 14); the processing code reads any number of each.
+  #
+  # Params:
+  #   - nsece_hh (df): 2024 household file with 2019-style names
+  #
+  # Returns: (df) Same data with HH9_RGENDER added
+  #----------------------------------------------------------------------------
+
+  nsece_hh %>%
+    mutate(
+      HH9_RGENDER = case_when(
+        HH9_RGENDER_1 == 1 & HH9_RGENDER_2 != 1 ~ 1L,
+        HH9_RGENDER_2 == 1 & HH9_RGENDER_1 != 1 ~ 2L,
+        TRUE                                    ~ 3L
+      )
+    )
+}
+
+
+
+harmonize_nsece_2024_centers <- function(nsece_cb) {
+
+  #----------------------------------------------------------------------------
+  # Recodes the 2024 center-based provider file to the 2019 conventions the
+  # supply-side code expects.
+  #
+  # 1. Free programs. In 2019 the rate flag CB9_B1_3A_AGERATE_*_R = -8 meant
+  #    "no families pay" (the same centers as CB9_B1_3_FAMPAY = 2 or 3). In
+  #    2024, -8 instead marks administrative-data cases, and programs where
+  #    no family pays carry -3 (valid skip). Free status is therefore taken
+  #    from CB4_B1_3_FAMPAY = 2 and written back as -8. Other non-answers
+  #    become 3 (don't know), which the code treats as a missing price.
+  # 2. Posted rates. 2024 uses -8 for administrative cases; recode to -1
+  #    (missing). The 2024 public file censors rates at the 5th and 95th
+  #    percentiles within each time unit instead of coding them -2 as in
+  #    2019; nothing can be done about that here.
+  # 3. Administrative-data cases (CB4_METH_DATA_SOURCE = 2: 1,141 public
+  #    school programs, 16% of the file; 482 cases, 7%, in 2019). In 2019
+  #    these carried enrollment by age. In 2024 only total enrollment under
+  #    age 6 (CB4_ENRL_0TO5) and whether the program runs full-time or
+  #    part-time (CB4_ADMIN_FULLTIME_CARE, CB4_ADMIN_PARTTIME_CARE) are
+  #    public. Total enrollment is split across ages using the weighted age
+  #    mix of interviewed public-school centers where no family pays; the
+  #    full-time share is 100% for full-time-only programs, 0% for
+  #    part-time-only programs, and 50% otherwise.
+  # 4. Enrollment by age unknown (-1, 1-2% of centers per age): set to 0, so
+  #    the center does not count at that age. Full-time share unknown (-4):
+  #    set to the enrollment-weighted mean share for that age.
+  #
+  # Params:
+  #   - nsece_cb (df): 2024 center file with 2019-style names
+  #
+  # Returns: (df) Same data with 2019-style codes
+  #----------------------------------------------------------------------------
+
+  ages      <- c('INF', '1YR', '2YR', '3YR', '4YR', '5YR')
+  rate_ages <- c('INF', '2YR', '3YR', '4YR')
+  is_admin  <- nsece_cb$CB9_METH_DATA_SOURCE == 2
+
+  # Age mix of enrollment in interviewed public-school centers where no family pays
+  donors <- nsece_cb %>%
+    filter(
+      CB9_METH_DATA_SOURCE == 1,
+      CB9_METH_PUBSCHFLAG  == 1,
+      CB9_B1_3_FAMPAY      == 2
+    ) %>%
+    filter(if_all(all_of(paste0('CB9_ENRL_', ages)), ~ .x >= 0))
+  age_totals <- map_dbl(ages, ~ sum(donors[[paste0('CB9_ENRL_', .x)]] * donors$CB9_METH_WEIGHT))
+  age_shares <- set_names(age_totals / sum(age_totals), ages)
+
+  cat('  2024 administrative-data centers:', sum(is_admin),
+      '| age mix used to split their enrollment (INF..5YR):',
+      paste(round(age_shares, 3), collapse = ' '), '\n')
+
+  admin_ft_share <- case_when(
+    nsece_cb$CB9_ADMIN_FULLTIME_CARE == 1 & nsece_cb$CB9_ADMIN_PARTTIME_CARE == 2 ~ 100,
+    nsece_cb$CB9_ADMIN_FULLTIME_CARE == 2 & nsece_cb$CB9_ADMIN_PARTTIME_CARE == 1 ~ 0,
+    TRUE                                                                          ~ 50
+  )
+  admin_total <- pmax(nsece_cb$CB9_ENRL_0TO5, 0)
+
+  # Enrollment and full-time share by age
+  for (age in ages) {
+    enrl_col <- paste0('CB9_ENRL_', age)
+    ft_col   <- paste0('CB9_ENRL_FT_', age)
+
+    enrl <- as.numeric(nsece_cb[[enrl_col]])
+    ft   <- as.numeric(nsece_cb[[ft_col]])
+
+    enrl <- if_else(is_admin, admin_total * age_shares[[age]], enrl)
+    ft   <- if_else(is_admin, if_else(enrl > 0, admin_ft_share, -2), ft)
+    enrl <- if_else(enrl < 0, 0, enrl)
+
+    reported <- !is_admin & enrl > 0 & ft >= 0
+    mean_ft  <- weighted.mean(ft[reported], (nsece_cb$CB9_METH_WEIGHT * enrl)[reported])
+    ft <- case_when(
+      ft == -4 & enrl > 0 ~ mean_ft,
+      ft == -4            ~ -2,
+      TRUE                ~ ft
+    )
+
+    nsece_cb[[enrl_col]] <- enrl
+    nsece_cb[[ft_col]]   <- ft
+  }
+
+  # Free status and posted rates
+  for (age in rate_ages) {
+    flag_col <- paste0('CB9_B1_3A_AGERATE_', age, '_R')
+    rate_col <- paste0('CB9_STDRATE_WKLY_', age)
+
+    nsece_cb[[flag_col]] <- case_when(
+      nsece_cb$CB9_B1_3_FAMPAY == 2      ~ -8,
+      nsece_cb[[flag_col]] %in% c(1, 2)  ~ as.numeric(nsece_cb[[flag_col]]),
+      TRUE                               ~ 3
+    )
+    nsece_cb[[rate_col]] <- if_else(nsece_cb[[rate_col]] == -8, -1, as.numeric(nsece_cb[[rate_col]]))
+  }
+
+  nsece_cb
+}
+
+
+
+harmonize_nsece_2024_home <- function(nsece_hb) {
+
+  #----------------------------------------------------------------------------
+  # Recodes 2024 home-based provider reserve codes to their 2019 values.
+  #
+  # Number of helpers (HB9_H2_NUMHELP): 2024 uses -3 for "no outside help"
+  # (2019: -2) and -1 for don't know/refused (2019: -4).
+  # Percent of helpers with a BA (HB9_STAFF_EDUC_PRCNT_4YR): 2024 uses -3 for
+  # "no other people help" (2019: -2), -1 for "number of helpers unknown"
+  # (2019: -1 don't know), and a new -5 for "not enough information", which
+  # is mapped to 2019's -3 so that, like -1, it is dropped.
+  #
+  # Params:
+  #   - nsece_hb (df): 2024 home-based file with 2019-style names
+  #
+  # Returns: (df) Same data with 2019-style codes
+  #----------------------------------------------------------------------------
+
+  nsece_hb %>%
+    mutate(
+      HB9_H2_NUMHELP = case_when(
+        HB9_H2_NUMHELP == -3 ~ -2,
+        HB9_H2_NUMHELP == -1 ~ -4,
+        TRUE                 ~ as.numeric(HB9_H2_NUMHELP)
+      ),
+      HB9_STAFF_EDUC_PRCNT_4YR = case_when(
+        HB9_STAFF_EDUC_PRCNT_4YR == -3 ~ -2,
+        HB9_STAFF_EDUC_PRCNT_4YR == -5 ~ -3,
+        TRUE                           ~ as.numeric(HB9_STAFF_EDUC_PRCNT_4YR)
+      )
+    )
 }
