@@ -4,7 +4,7 @@
 # and price heterogeneity model training. Called from main.R.
 
 
-run_nsece_processing <- function(nsece_year = 2019) {
+run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = character(0)) {
 
   #----------------------------------------------------------------------------
   # Processes NSECE data: household demand data, supply parameters,
@@ -17,9 +17,21 @@ run_nsece_processing <- function(nsece_year = 2019) {
   #
   # Params:
   #   - nsece_year (int): Survey year to process, 2019 (default) or 2024
+  #   - nsece_2024_options (chr): optional 2024 data treatments, any of
+  #       NSECE_2024_OPTIONS ('hours', 'weights', 'supply'; see constants.R).
+  #       Ignored for 2019. Default none.
   #
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
+
+  # Optional 2024 treatments (each applies to the 2024 survey only)
+  use_2024_hours   <- nsece_year == 2024 && 'hours'   %in% nsece_2024_options
+  use_2024_weights <- nsece_year == 2024 && 'weights' %in% nsece_2024_options
+  use_2024_supply  <- nsece_year == 2024 && 'supply'  %in% nsece_2024_options
+  if (nsece_year == 2024) {
+    cat('2024 NSECE options:',
+        if (length(nsece_2024_options) == 0) 'none' else paste(nsece_2024_options, collapse = ', '), '\n')
+  }
 
   # Get estimation data info
   estimation_info <- get_estimation_info()
@@ -244,6 +256,33 @@ run_nsece_processing <- function(nsece_year = 2019) {
         arrange(hh_id, child_id)
     }
 
+    # Optional 2024 treatment 'weights': the 2024 NSECE overstates mothers'
+    # employment (64.3% of children under 5 have a working mother or one
+    # parent, against 59.6% in the March 2024 CPS). Multiply the child
+    # weights of children under 5 by factors that rake them to the March 2024
+    # CPS shares of children under 5 in five groups: two parents with the
+    # mother at work / not at work, one parent at work / not at work, no
+    # parent. Children whose caregiver's work status is unknown keep their
+    # share; children 5 and older keep their weights. The factors were built
+    # by analysis/nsece2024_options/variants2024/scripts/build_v2_weights.R
+    # (option B of the employment benchmark report).
+    if (use_2024_weights) {
+      weight_factors <- read_csv(
+        './config/nsece_reweight/nsece2024_child_weight_factors_cps2024.csv',
+        show_col_types = FALSE
+      )
+      children <- children %>%
+        left_join(weight_factors, by = c('hh_id', 'child_id')) %>%
+        mutate(
+          weight_factor = if_else(age_months < 60 & !is.na(weight_factor), weight_factor, 1),
+          child_weight  = child_weight * weight_factor
+        )
+      cat('  Option weights: child weights of', sum(children$weight_factor != 1),
+          'children under 5 raked to the March 2024 CPS (factor range',
+          round(min(children$weight_factor), 3), 'to', round(max(children$weight_factor), 3), ')\n')
+      children <- children %>% select(-weight_factor)
+    }
+
     household_members <- {
       # Member numbers run 1-9 in 2019 and 1-13 in 2024
       hhm_age_cols <- grep('^HH9_HHM_AGE_[0-9]+$', names(nsece_hh), value = TRUE)
@@ -456,6 +495,63 @@ run_nsece_processing <- function(nsece_year = 2019) {
               select(hh_id, child_id, hhm_id2 = hhm_id, hours2 = hours),
             by = c('hh_id', 'child_id','hhm_id2')
           )
+
+        # Optional 2024 treatment 'hours': the donor rule above sees only
+        # parents with a valid hours record. In 2024 the survey blanks both
+        # parents' hours (code -10) when either has a missing block in the
+        # weekly calendar, and leaves some typical-week parents' hours blank,
+        # so about 4% of parents of young children who said they worked last
+        # week are left with no hours and count as not employed. Extend the
+        # rule to them: a parent with no hours record who said yes to D1a
+        # gets hours drawn from working parents of the same earner rank (the
+        # rank is unknown when the record is blank: mothers in two-parent
+        # units draw from second earners, everyone else from first earners);
+        # a parent who said no gets zero. One draw per parent, from its own
+        # random stream, so the draws above are unchanged.
+        if (use_2024_hours) {
+          missing_hours <- bind_rows(
+            pu %>%
+              filter(is.na(hours1), !is.na(hhm_id1)) %>%
+              transmute(hh_id, hhm_id = hhm_id1,
+                        earner = if_else(n_parents == 2 & male1 %in% 0, 'secondary', 'primary')),
+            pu %>%
+              filter(is.na(hours2), !is.na(hhm_id2)) %>%
+              transmute(hh_id, hhm_id = hhm_id2,
+                        earner = if_else(male2 %in% 0, 'secondary', 'primary'))
+          ) %>%
+            distinct(hh_id, hhm_id, .keep_all = TRUE) %>%
+            arrange(hh_id, hhm_id) %>%
+            inner_join(worked_last_week, by = c('hh_id', 'hhm_id'))
+
+          missing_hours <- withr::with_seed(random_seed_base + 8, {
+            missing_hours %>%
+              group_by(earner) %>%
+              mutate(
+                donor_hours = sample(donors$hours[donors$earner == first(earner)], n(), replace = TRUE),
+                hours_fill  = if_else(worked %in% 1L, donor_hours, 0)
+              ) %>%
+              ungroup()
+          })
+
+          cat('  Option hours: parents with no hours record given hours from D1a:',
+              nrow(missing_hours), '(worked last week, donor hours:', sum(missing_hours$worked %in% 1L),
+              '| did not work, zero hours:', sum(missing_hours$worked %in% 2L), ')\n')
+
+          pu <- pu %>%
+            left_join(
+              missing_hours %>% select(hh_id, hhm_id1 = hhm_id, fill1 = hours_fill),
+              by = c('hh_id', 'hhm_id1')
+            ) %>%
+            left_join(
+              missing_hours %>% select(hh_id, hhm_id2 = hhm_id, fill2 = hours_fill),
+              by = c('hh_id', 'hhm_id2')
+            ) %>%
+            mutate(
+              hours1 = coalesce(hours1, fill1),
+              hours2 = if_else(is.na(hhm_id2), hours2, coalesce(hours2, fill2))
+            ) %>%
+            select(-fill1, -fill2)
+        }
 
         # Add parent wages
         wage_cols  <- grep('^HH9_D3D_WAGE_TC_[0-9]+$', names(nsece_hh), value = T)
@@ -849,6 +945,26 @@ run_nsece_processing <- function(nsece_year = 2019) {
   nsece_hb <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'home')
   nsece_wf <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'workforce')
 
+  # Optional 2024 treatment 'supply', part 1: the 2019 public file deleted
+  # posted rates outside the 5th-95th percentile of each pay unit (code -2,
+  # treated as missing below), while the 2024 file sets them equal to the
+  # 5th or 95th percentile. Treat 2024 the 2019 way: positive weekly rates at
+  # or beyond the 5th or 95th percentile of each age's positive rates
+  # (unweighted; the pay unit is not in the public file) are set to -2.
+  if (use_2024_supply) {
+    for (rate_age in c('INF', '2YR', '3YR', '4YR')) {
+      rate_col <- paste0('CB9_STDRATE_WKLY_', rate_age)
+      rate     <- nsece_cb[[rate_col]]
+      positive <- !is.na(rate) & rate > 0
+      cutoffs  <- quantile(rate[positive], c(0.05, 0.95))
+      trimmed  <- positive & (rate <= cutoffs[1] | rate >= cutoffs[2])
+      cat('  Option supply: ', rate_age, ' posted weekly rates at or below $', round(cutoffs[1], 2),
+          ' or at or above $', round(cutoffs[2], 2), ' set to missing (', sum(trimmed), ' of ',
+          sum(positive), ')\n', sep = '')
+      nsece_cb[[rate_col]] <- if_else(trimmed, -2, rate)
+    }
+  }
+
   supply_params <- {
 
     processed_centers <- {
@@ -1143,6 +1259,67 @@ run_nsece_processing <- function(nsece_year = 2019) {
           labor_cost  = wage_rates['ba'] * ba_ratio + wage_rates['no_ba'] * no_ba_ratio,
           residual    = if_else(price > 0, price - labor_cost, NA)
         )
+    }
+
+    # Optional 2024 treatment 'supply', part 2: measure center staffing from
+    # the director's count of teachers and aides working with children 0-5
+    # (full-time counts 1, part-time 0.5), spread over the center's age
+    # groups in proportion to FTE enrollment, divided by FTE enrollment of
+    # the same center-age cells. Numerator and denominator then come from the
+    # same centers, unlike the workforce-file ratio above. The BA / no-BA
+    # split is the FTE-weighted BA share of the workforce records counted
+    # above in each sector. Prices and enrollment are unchanged.
+    if (use_2024_supply) {
+      to_count <- function(x) if_else(!is.na(x) & x >= 0, as.numeric(x), NA_real_)
+
+      director_staff <- nsece_cb %>%
+        transmute(
+          id        = CB9_METH_CASEID,
+          n_teach   = to_count(CB9_STAFF_TYPE_TCHR_NUM_0TO5),
+          n_aide    = to_count(CB9_STAFF_TYPE_AIDEASST_NUM0TO5),
+          pft_teach = to_count(CB9_STAFF_TYPE_TCHR_PRCNTFT_0TO5),
+          pft_aide  = to_count(CB9_STAFF_TYPE_AIDEASST_PFT0TO5),
+          staff_fte = n_teach * (pft_teach / 100 + 0.5 * (1 - pft_teach / 100)) +
+                      n_aide  * (pft_aide  / 100 + 0.5 * (1 - pft_aide  / 100))
+        ) %>%
+        select(id, staff_fte)
+
+      director_ratios <- processed_centers %>%
+        group_by(id) %>%
+        mutate(fte_center = sum(enrollment_fte)) %>%
+        ungroup() %>%
+        left_join(director_staff, by = 'id') %>%
+        filter(!is.na(ecec_choice), !is.na(staff_fte), fte_center > 0) %>%
+        group_by(ecec_choice) %>%
+        summarise(
+          staff_ratio = sum(staff_fte * enrollment_fte / fte_center * center_weight) /
+                        sum(enrollment_fte * center_weight),
+          .groups = 'drop'
+        )
+
+      ba_shares <- processed_wf %>%
+        left_join(processed_classrooms %>% select(id, age_bin), by = 'id') %>%
+        left_join(processed_centers %>% select(id, age_bin, ecec_choice), by = c('id', 'age_bin')) %>%
+        filter(role %in% 1:2, !is.na(age_bin), !is.na(ecec_choice), !is.na(college), !is.na(ft)) %>%
+        group_by(ecec_choice) %>%
+        summarise(ba_share = weighted.mean(college, ft * worker_weight), .groups = 'drop')
+
+      center_inputs <- center_inputs %>%
+        left_join(director_ratios, by = 'ecec_choice') %>%
+        left_join(ba_shares, by = 'ecec_choice') %>%
+        mutate(
+          ba_ratio    = staff_ratio * ba_share,
+          no_ba_ratio = staff_ratio * (1 - ba_share),
+          labor_cost  = wage_rates['ba'] * ba_ratio + wage_rates['no_ba'] * no_ba_ratio,
+          residual    = if_else(price > 0, price - labor_cost, NA)
+        ) %>%
+        select(-staff_ratio, -ba_share)
+
+      cat('  Option supply: director-reported staff per FTE child (no BA / BA):\n')
+      for (k in seq_len(nrow(center_inputs))) {
+        cat('    ', center_inputs$ecec_choice[k], ': ', round(center_inputs$no_ba_ratio[k], 4), ' / ',
+            round(center_inputs$ba_ratio[k], 4), ', residual ', round(center_inputs$residual[k], 2), '\n', sep = '')
+      }
     }
 
     home_inputs <- {

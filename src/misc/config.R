@@ -44,6 +44,7 @@ parse_args <- function() {
   calib_target2_name      <- 'hours_income'  # Second calibration target elasticity
   calib_target2_value     <- NULL         # Value (NULL = use default -0.05)
   nsece_year              <- DEFAULT_NSECE_YEAR  # NSECE survey year; sets the paired ACS base year
+  nsece_2024_options      <- character(0)  # Optional 2024 NSECE treatments (NSECE_2024_OPTIONS)
 
   consume_arg <- function(flag_name) {
 
@@ -158,6 +159,14 @@ parse_args <- function() {
       if (is.na(nsece_year) || !(as.character(nsece_year) %in% names(NSECE_ACS_YEAR_PAIRS))) {
         stop(paste('Error: --nsece-year must be one of:', paste(names(NSECE_ACS_YEAR_PAIRS), collapse = ', ')))
       }
+    } else if (arg == '--nsece-2024-options') {
+      nsece_2024_options <- trimws(strsplit(consume_arg('--nsece-2024-options'), ',')[[1]])
+      if (identical(nsece_2024_options, 'all')) nsece_2024_options <- NSECE_2024_OPTIONS
+      unknown_options <- setdiff(nsece_2024_options, NSECE_2024_OPTIONS)
+      if (length(unknown_options) > 0) {
+        stop(paste('Error: unknown --nsece-2024-options value(s):', paste(unknown_options, collapse = ', '),
+                   '. Valid: all, or a comma-separated list of', paste(NSECE_2024_OPTIONS, collapse = ', ')))
+      }
     } else if (arg == '--reference' || arg == '-R') {
       reference_interface <- consume_arg('--reference')
     } else if (arg == '--no-price-wedge') {
@@ -210,7 +219,8 @@ parse_args <- function() {
     calib_target1_value     = calib_target1_value,
     calib_target2_name      = calib_target2_name,
     calib_target2_value     = calib_target2_value,
-    nsece_year              = nsece_year
+    nsece_year              = nsece_year,
+    nsece_2024_options      = nsece_2024_options
   ))
 }
 
@@ -279,6 +289,14 @@ print_usage <- function() {
   cat('                              2019 pairs with the 2019 ACS; 2024 pairs with the 2023 ACS.\n')
   cat('                              The ACS year is the model base year (dollars, growth, taxes).\n')
   cat('                              Pass the same value when reusing a run with -N, -A, or -C\n')
+  cat('  --nsece-2024-options <list> Optional 2024 NSECE data treatments, comma-separated, or all\n')
+  cat('                              (default: none). No effect with --nsece-year 2019.\n')
+  cat('                              hours:   impute work hours for parents whose calendar hours are\n')
+  cat('                                       missing, using their answer to "worked last week"\n')
+  cat('                              weights: rake child weights (under 5) to the March 2024 CPS\n')
+  cat('                                       mothers\' employment by family type\n')
+  cat('                              supply:  drop 2024 posted rates at the 5th/95th percentile caps;\n')
+  cat('                                       center staffing from directors\' staff counts\n')
   cat('  --reference, -R             Timestamp of a prior run to compare against (regression deltas)\n')
   cat('                              Produces regression.csv per common scenario in totals/\n')
   cat('  --no-price-wedge            Disable price wedge heterogeneity (set all wedges to 1.0)\n')
@@ -562,6 +580,10 @@ save_run_metadata <- function() {
     n_draws_per_record       = exist_or_default('n_draws_per_record', 10),
     seed_offset              = exist_or_default('seed_offset', 0),
     nsece_year               = exist_or_default('nsece_year', DEFAULT_NSECE_YEAR),
+    nsece_2024_options       = {
+      o <- exist_or_default('nsece_2024_options', character(0))
+      if (length(o) == 0) 'none' else paste(o, collapse = ',')
+    },
     acs_base_year            = paste(acs_base_year, '(ACS year paired with the NSECE year; model base year)'),
     slurm_phase              = null_or_val(slurm_phase),
     slurm_scratch_dir        = null_or_val(slurm_scratch_dir),

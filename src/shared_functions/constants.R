@@ -78,6 +78,18 @@ NSECE_ACS_YEAR_PAIRS <- c(
   '2024' = 2023
 )
 
+# Optional data treatments for the 2024 NSECE (--nsece-2024-options). Each is
+# off by default and has no effect when the 2019 survey is used.
+#   hours:   parents whose work-hours record is missing (calendar code -10)
+#            and who said they worked last week (D1a) get hours drawn from
+#            working parents; those who said they did not work get zero
+#   weights: child weights of children under 5 raked to the March 2024 CPS
+#            share of children by mother's work status and family type
+#   supply:  2024 posted center rates at or beyond each age's 5th / 95th
+#            percentile set to missing, as the 2019 file did, and center
+#            staffing measured from directors' staff counts
+NSECE_2024_OPTIONS <- c('hours', 'weights', 'supply')
+
 
 
 #------------------------------------------------------------------------------

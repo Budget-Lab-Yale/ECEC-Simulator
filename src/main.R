@@ -51,6 +51,7 @@ if (interactive()) {
   calib_sample             <- 100
   sim_sample               <- 100
   nsece_year               <- 2019  # NSECE survey year; the paired ACS year is set in config.R
+  nsece_2024_options       <- character(0)  # Optional 2024 NSECE treatments (see constants.R)
   n_draws_per_record       <- 1
   seed_offset              <- 0
   setup_only               <- F
@@ -261,7 +262,7 @@ interfaces <- resolve_interface_hierarchy(nsece_interface, acs_interface, calibr
 
 if (is.null(interfaces$nsece)) {
   cat('No NSECE interface specified. Generating NSECE estimation data with interface', time_stamp, '\n')
-  run_nsece_processing(nsece_year)
+  run_nsece_processing(nsece_year, nsece_2024_options)
 } else {
   cat('Copying NSECE data from interface', interfaces$nsece, '\n')
   copy_interface('nsece', interfaces$nsece, time_stamp)
