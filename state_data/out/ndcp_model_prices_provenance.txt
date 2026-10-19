@@ -1,0 +1,73 @@
+script: state_data/code/16_ndcp_model_prices.R
+run at: 2026-10-19 15:36:39 EDT
+git commit: d3a0ad3520f18a24ce37f1bdb820f3ed7b898310
+git dirty files:  M config/state/demand/AK.csv |  M config/state/demand/AL.csv |  M config/state/demand/AR.csv |  M config/state/demand/AZ.csv |  M config/state/demand/CA.csv |  M config/state/demand/CO.csv |  M config/state/demand/CT.csv |  M config/state/demand/DC.csv |  M config/state/demand/DE.csv |  M config/state/demand/FL.csv |  M config/state/demand/GA.csv |  M config/state/demand/HI.csv |  M config/state/demand/IA.csv |  M config/state/demand/ID.csv |  M config/state/demand/IL.csv |  M config/state/demand/IN.csv |  M config/state/demand/KS.csv |  M config/state/demand/KY.csv |  M config/state/demand/LA.csv |  M config/state/demand/MA.csv |  M config/state/demand/MD.csv |  M config/state/demand/ME.csv |  M config/state/demand/MI.csv |  M config/state/demand/MN.csv |  M config/state/demand/MO.csv |  M config/state/demand/MS.csv |  M config/state/demand/MT.csv |  M config/state/demand/NC.csv |  M config/state/demand/ND.csv |  M config/state/demand/NE.csv |  M config/state/demand/NH.csv |  M config/state/demand/NJ.csv |  M config/state/demand/NM.csv |  M config/state/demand/NV.csv |  M config/state/demand/NY.csv |  M config/state/demand/NYC.csv |  M config/state/demand/OH.csv |  M config/state/demand/OK.csv |  M config/state/demand/OR.csv |  M config/state/demand/PA.csv |  M config/state/demand/RI.csv |  M config/state/demand/SC.csv |  M config/state/demand/SD.csv |  M config/state/demand/TN.csv |  M config/state/demand/TX.csv |  M config/state/demand/UT.csv |  M config/state/demand/VA.csv |  M config/state/demand/VT.csv |  M config/state/demand/WA.csv |  M config/state/demand/WI.csv |  M config/state/demand/WV.csv |  M config/state/demand/WY.csv |  M config/state/demand_counts/AK.csv |  M config/state/demand_counts/AL.csv |  M config/state/demand_counts/AR.csv |  M config/state/demand_counts/AZ.csv |  M config/state/demand_counts/CA.csv |  M config/state/demand_counts/CO.csv |  M config/state/demand_counts/CT.csv |  M config/state/demand_counts/DC.csv |  M config/state/demand_counts/DE.csv |  M config/state/demand_counts/FL.csv |  M config/state/demand_counts/GA.csv |  M config/state/demand_counts/HI.csv |  M config/state/demand_counts/IA.csv |  M config/state/demand_counts/ID.csv |  M config/state/demand_counts/IL.csv |  M config/state/demand_counts/IN.csv |  M config/state/demand_counts/KS.csv |  M config/state/demand_counts/KY.csv |  M config/state/demand_counts/LA.csv |  M config/state/demand_counts/MA.csv |  M config/state/demand_counts/MD.csv |  M config/state/demand_counts/ME.csv |  M config/state/demand_counts/MI.csv |  M config/state/demand_counts/MN.csv |  M config/state/demand_counts/MO.csv |  M config/state/demand_counts/MS.csv |  M config/state/demand_counts/MT.csv |  M config/state/demand_counts/NC.csv |  M config/state/demand_counts/ND.csv |  M config/state/demand_counts/NE.csv |  M config/state/demand_counts/NH.csv |  M config/state/demand_counts/NJ.csv |  M config/state/demand_counts/NM.csv |  M config/state/demand_counts/NV.csv |  M config/state/demand_counts/NY.csv |  M config/state/demand_counts/NYC.csv |  M config/state/demand_counts/OH.csv |  M config/state/demand_counts/OK.csv |  M config/state/demand_counts/OR.csv |  M config/state/demand_counts/PA.csv |  M config/state/demand_counts/RI.csv |  M config/state/demand_counts/SC.csv |  M config/state/demand_counts/SD.csv |  M config/state/demand_counts/TN.csv |  M config/state/demand_counts/TX.csv |  M config/state/demand_counts/UT.csv |  M config/state/demand_counts/VA.csv |  M config/state/demand_counts/VT.csv |  M config/state/demand_counts/WA.csv |  M config/state/demand_counts/WI.csv |  M config/state/demand_counts/WV.csv |  M config/state/demand_counts/WY.csv | M  docs/state_level_analysis.md | M  src/3_simulation/3a_initialize_simulation.R | M  src/shared_functions/adjust_alpha_for_state.R | D  state_data/docs/methodology-10-15.pdf | MM state_data/docs/methodology-10-19.pdf | A  state_data/out/baseline_care_shift_state.csv | A  state_data/out/baseline_children_state.csv | A  state_data/out/baseline_consistency_state_provenance.txt | A  state_data/out/baseline_employment_state.csv |  M state_data/out/ndcp_model_prices.csv |  M state_data/out/ndcp_model_prices_summary.csv |  M state_data/raw/US/US_ACS__p0_children_by_care_type_and_hours__2019.csv |  M state_data/raw/US/US_ACS__p0_children_by_care_type_hours_age__2019.csv | M  tests/test_state_analysis.R
+R: R version 4.6.1 (2026-06-24 ucrt)
+settings: model price = 2019 base supply price x 40; tier weights = p0 children;
+  NDCP = 2019 county medians, PEP 0-4 weights; ages infant 0-1, toddler 2, preschool 3-4;
+  geo = age groups weighted by model paid-centre children; NYC out of summary
+p0 input source: cluster/acs_p0_shares_by_age.R, calibration interface 202610151431, ECEC_URBAN_DENSITY=1, ECEC_INCOME_RANK=national
+git status of code files: 
+code (md5):
+  5f57c81f1c8613e7571348765872b048  state_data/code/16_ndcp_model_prices.R
+  a74aa956dc2c7787ee0a15095677a57f  state_data/code/11_ndcp_price_comparison.R
+  08cf82ad9da7b52a2ca70b8242fc4f76  state_data/code/shared_setup.R
+  7ec60209818a6158d931e5051d8780db  src/shared_functions/constants.R
+  db716e928284ffedda5fc92073167ea2  src/shared_functions/reprice_alpha_to_state_supply.R
+  62fa495a3ca1dcfb542a0d97c104a012  resources/supply/state_supply_params.R
+inputs (md5):
+  ef1b0b9731808915d550a16841bccc6a  state_data/raw/local/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx
+  99bef65b1b0ab00a5f3fdfe6a4c98d42  state_data/raw/US/US_PEP__population_children_age_0_4_by_county__2019.csv
+  839a5c7727be4669697b462664a3f4ff  state_data/raw/US/US_ACS__p0_children_by_care_type_hours_age__2019.csv
+  e48f971444427b586c70d97b37609c0f  config/state/supply/AK.yaml
+  5c7d731442bd9a88ac379fab051c728d  config/state/supply/AL.yaml
+  ed8997e42fc6d2f10cd120e970df2e5c  config/state/supply/AR.yaml
+  865f025b3df7dc89a53a6239d7193859  config/state/supply/AZ.yaml
+  080d20afcae3008c04359ef5418ff656  config/state/supply/CA.yaml
+  07a864cb3ad8bfc0da15304380f46e01  config/state/supply/CO.yaml
+  df46c33a77b883f6b28d0bbeadd3bae4  config/state/supply/CT.yaml
+  5e89c00e6a724c2ca0709405c2985f9e  config/state/supply/DC.yaml
+  4982e81fd756461b6bb911a2d4691d4c  config/state/supply/DE.yaml
+  ee21a3917a8e08f2a757ab2049cca0a8  config/state/supply/FL.yaml
+  a1d781686ada2eafc8e6992b621be275  config/state/supply/GA.yaml
+  efaa58903944589dd1d7df84033704d5  config/state/supply/HI.yaml
+  2eff3f40dcc63fe6d3ec0bf8291df442  config/state/supply/IA.yaml
+  d2f994029dc6e93d39c75f6812034aa9  config/state/supply/ID.yaml
+  5768cea61cd670c7c2fe2793126a634f  config/state/supply/IL.yaml
+  6204a683cfa20be966d88805130cc38f  config/state/supply/IN.yaml
+  6a01c7d39cb32ad1f9bbf6b4294fa4cd  config/state/supply/KS.yaml
+  3f5a0c569e54161ed210e442fdb7c469  config/state/supply/KY.yaml
+  7b6b47981ec804ab9ef4446db9481bf6  config/state/supply/LA.yaml
+  8ba77f7251c0e7d6f5068852bbb4f59f  config/state/supply/MA.yaml
+  8da624badfaca694da8a72932224c179  config/state/supply/MD.yaml
+  0b18de94c57969ddf4e0f319826dd8f2  config/state/supply/ME.yaml
+  335b73d4e18eaf9a4e70c1e5f50c727a  config/state/supply/MI.yaml
+  32461cc687eec72b0faf35bb114e4c13  config/state/supply/MN.yaml
+  28608f18c520d0c5f84b909a296e0450  config/state/supply/MO.yaml
+  47133155ce6da967c51509e66e154fef  config/state/supply/MS.yaml
+  e731e7e6760c0c155bf5c6f87bed396d  config/state/supply/MT.yaml
+  af78df3ba7412e18b5a80b130754d121  config/state/supply/NC.yaml
+  f21360a871a333bed2e9ef9acf82d07a  config/state/supply/ND.yaml
+  eef9aa2f1ec4e9479cb4e2f0ccfc30c8  config/state/supply/NE.yaml
+  70c0de1b005cdbecbbb652051526f7b3  config/state/supply/NH.yaml
+  ae201c9d29479a3eedeb5a4bd03555a9  config/state/supply/NJ.yaml
+  59485a8bbd8521e8265ea359bb962ff7  config/state/supply/NM.yaml
+  c5d7d34f61e527a45cded873fd55391b  config/state/supply/NV.yaml
+  2d7d4cd31e0c7bb84a5705fbe1717097  config/state/supply/NY.yaml
+  5dd226e3205143473f5f02f48cba0c78  config/state/supply/NYC.yaml
+  a28174408e2df0a602bb00e60f42fc09  config/state/supply/OH.yaml
+  2f5fd0d5222189a581c2cb71fa61e5b3  config/state/supply/OK.yaml
+  3750e38ccf1f78592023ca8b627315a3  config/state/supply/OR.yaml
+  5d2fed59765fd750705b08f19b778950  config/state/supply/PA.yaml
+  8c0451165a321fdd18cdd7b877cee43d  config/state/supply/RI.yaml
+  927eb64dd45a0a3eaeaf340d94bc6855  config/state/supply/SC.yaml
+  5fab23263d8aeaa05aa1f8d144347d23  config/state/supply/SD.yaml
+  7fe8175dd274847bb43a10433005bfb4  config/state/supply/TN.yaml
+  1feb64bf92be09347655a146c2c11b8d  config/state/supply/TX.yaml
+  37d720444d11d508e958425bcee239e7  config/state/supply/UT.yaml
+  621c54f46b9dfb0994625b71b725d942  config/state/supply/VA.yaml
+  f23976ae81b0e7f2362b8b7369e1adbf  config/state/supply/VT.yaml
+  b3090477e4b5114ad7bef873579d0b1b  config/state/supply/WA.yaml
+  9bf4e2ae9a2da99714ac326fe9a9f8d5  config/state/supply/WI.yaml
+  d7338ffdc83ff9c2e39355951f051134  config/state/supply/WV.yaml
+  c1b7dd33a2a868ee937a0756a548bdd5  config/state/supply/WY.yaml

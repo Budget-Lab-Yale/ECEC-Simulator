@@ -711,7 +711,7 @@ cat('Urban density:', if (urban_density_setting == '1') 'on' else 'off', '\n')
 # Income-rank scheme for care-choice forest + price forest (income_rank.R).
 # Env var ECEC_INCOME_RANK; unset -> from urban density switch: off ->
 # 'national' (nominal income, = main), on -> 'national_rpp' (real income ranked
-# nationally -- 10/13 ranking test). Explicit value overrides
+# nationally). Explicit value overrides
 income_rank_scheme <<- Sys.getenv('ECEC_INCOME_RANK', '')
 # (same rule as default_income_rank_scheme(), income_rank.R -- not sourced yet)
 if (income_rank_scheme == '') {
@@ -723,27 +723,6 @@ if (!income_rank_scheme %in% c('national_rpp', 'national')) {
 }
 cat('Income-rank scheme:', income_rank_scheme, '\n')
 
-# Experiment: unpaid-center children on low-price paid supply
-# (remap_unpaid_care.R). Env var ECEC_REMAP_UNPAID; unset/'0' -> off
-# (default, outputs unchanged), '1' -> on
-remap_unpaid_care <<- Sys.getenv('ECEC_REMAP_UNPAID', '0')
-if (remap_unpaid_care == '') remap_unpaid_care <<- '0'
-if (!remap_unpaid_care %in% c('0', '1')) {
-  stop('ECEC_REMAP_UNPAID = "', remap_unpaid_care, '" unknown. Use 0 (default) or 1.')
-}
-if (remap_unpaid_care == '1') cat('EXPERIMENT: unpaid-center care remapped to low-price supply\n')
-
-# Experiment: state demand re-anchoring targets (adjust_alpha_for_state.R).
-# Env var ECEC_STATE_CALIBRATION; unset -> 'hours' (6 annual-hours targets,
-# default); 'counts' -> children by group x pt/ft (config/state/demand_counts/)
-state_calibration_mode <<- Sys.getenv('ECEC_STATE_CALIBRATION', 'hours')
-if (state_calibration_mode == '') state_calibration_mode <<- 'hours'
-if (!state_calibration_mode %in% c('hours', 'counts')) {
-  stop('ECEC_STATE_CALIBRATION = "', state_calibration_mode, '" unknown. ',
-       'Use hours (default) or counts.')
-}
-if (state_calibration_mode == 'counts') cat('EXPERIMENT: state re-anchoring on two-count targets\n')
-
 # State runs: alpha built at the state's own 2019 supply prices
 # (reprice_alpha_to_state_supply.R), before demand re-anchoring. Env var
 # ECEC_STATE_ALPHA_PRICE; unset/'state' -> on (default); 'national' -> off
@@ -754,18 +733,6 @@ if (!state_alpha_price_mode %in% c('national', 'state')) {
   stop('ECEC_STATE_ALPHA_PRICE = "', state_alpha_price_mode, '" unknown. ',
        'Use state (default) or national.')
 }
-
-# Experiment: state runs age weights with national population growth x state/
-# national growth ratio by age (config/state/aging/state_age_ratios.csv, built by
-# state_data/code/15_state_age_ratios.R). Env var ECEC_STATE_AGING; unset/
-# 'national' -> off (default, outputs unchanged); 'state' -> on
-state_aging_mode <<- Sys.getenv('ECEC_STATE_AGING', 'national')
-if (state_aging_mode == '') state_aging_mode <<- 'national'
-if (!state_aging_mode %in% c('national', 'state')) {
-  stop('ECEC_STATE_AGING = "', state_aging_mode, '" unknown. ',
-       'Use state (default) or national.')
-}
-if (state_aging_mode == 'state') cat('EXPERIMENT: state runs age weights with state population growth by age\n')
 
 # Create output root (append seed suffix for non-default seeds to avoid collisions)
 time_stamp <- format(Sys.time(), '%Y%m%d%H%M')

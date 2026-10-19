@@ -13,27 +13,27 @@
 #     (da37700.0002; PS_RAT_* 'Ratio by Age', text 'N:1')
 #   state_data/raw/US/US_ICPSR37700__licensing_small_family_home_regulations__2017.rda
 #     (da37700.0003; F_D_CH_MAXCHLD 'Maximum Number of Children Allowed', text)
-# Former input (2014 study via CAP 2018 Table 1, PN3 2020 Table 6):
+# 2014 study via CAP 2018 Table 1, PN3 2020 Table 6 -- NYC centre rows, 2014
+# vs 2017 comparison file only:
 #   state_data/raw/US/US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv
 #
 # CENTRE AGE POINTS -- one representative point per year of age 0-4
 #   (NSECE_AGE_POINT, shared_nsece_ages.R): 11_months = PS_RAT_11MTHS,
 #   18_months = PS_RAT_18MTHS, 35_months = PS_RAT_35MTHS, 3_years =
 #   PS_RAT_3YRS, 4_years = PS_RAT_4YRS. One centre index, no extra sectors.
-#   First 2017 version used 3 of them (2014 input's points: infant = 11
-#   months, toddler = 35 months, preschool = 3 years).
+#   3-point set (comparison files only; 2014 bands' points): infant = 11
+#   months, toddler = 35 months, preschool = 3 years.
 #   11 months, not 6 weeks: only NV differs (6 wks 4:1, 11 mo 6:1); CAP's NV
 #   infant 6 matches 11 months.
-#   Missing 18_months / 4_years -> point used before (35_months / 3_years),
+#   Missing 18_months / 4_years -> fallback point (35_months / 3_years),
 #   logged, noted in source. 2017 study: none missing.
 #   ID: point system, table 0s -- 12 points per staff; child under 24 months
 #   2 points, 24-36 months 1.5, 3-5 years 1, 5-13 years 0.5 (Idaho Code
 #   39-1109 to 2024; IDAPA 16.06.03.300 from 7-1-24; 2025 law changed
 #   values -- not base year)
 #   -> each point from rule directly: 12 / points at point's age (ID_POINTS:
-#   11, 18 months 2 -> 6; 35 months 1.5 -> 8; 3, 4 years 1 -> 12)
-#   (2026-10-13; 2014 bands before -- 18 months took toddler 8, rule gives
-#   6). NYC 3 bands -> 5 points by NSECE_AGE_BAND: 11_months infant;
+#   11, 18 months 2 -> 6; 35 months 1.5 -> 8; 3, 4 years 1 -> 12).
+#   NYC 3 bands -> 5 points by NSECE_AGE_BAND: 11_months infant;
 #   18_months, 35_months toddler; 3_years, 4_years preschool.
 # HOME -- max children excl. school-age add-ons (PN3 convention): number
 #   before '(N plus M SAC)' when text has one (IL 'up to 12 (8 plus 4 SAC)'
@@ -69,7 +69,7 @@ POINT_VAR <- c('11_months' = 'PS_RAT_11MTHS', '18_months' = 'PS_RAT_18MTHS',
                '35_months' = 'PS_RAT_35MTHS', '3_years' = 'PS_RAT_3YRS',
                '4_years' = 'PS_RAT_4YRS')
 stopifnot(setequal(names(POINT_VAR), NSECE_AGE_POINT))
-# Point missing in a state -> point used before 5-point method
+# Point missing in a state -> fallback point (3-point set's)
 FALLBACK <- c('18_months' = '35_months', '4_years' = '3_years')
 # 2014 band -> its 2017 age point (3-point method)
 BAND_POINT <- c(infant = '11_months', toddler = '35_months', preschool = '3_years')
@@ -177,7 +177,7 @@ build_2017 <- function() {
   })) %>%
     filter(!state %in% POINT_RULE_CENTRE)
 
-  # Missing 18_months / 4_years -> state's value at point used before
+  # Missing 18_months / 4_years -> state's value at fallback point (FALLBACK)
   for (p in names(FALLBACK)) {
     miss <- centre$age_group == p & is.na(centre$children_per_staff)
     for (st in centre$state[miss]) {

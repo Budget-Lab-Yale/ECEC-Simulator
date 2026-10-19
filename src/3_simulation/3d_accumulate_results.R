@@ -86,8 +86,6 @@ get_employer_subsidy_rate <- function(result) {
       stop('employer_subsidy_sectors contains invalid sector ids.')
     }
     rate[!seq_along(rate) %in% covered] <- 0
-    # Remap experiment: unpaid-center children staffed as low-price sector
-    if (unpaid_remap_on()) rate[1] <- rate[2]
     rate
   } else {
     c(0, 0, 0, 0)
@@ -714,32 +712,7 @@ aggregate_year_fiscal_cost <- function(result, year) {
       .before = everything()
     ) %>%
     select(-total_demand_subsidy_raw, -total_supply_subsidy_raw, -total_employer_subsidy_raw,
-           -total_cdctc_cost_raw, -total_transfer_cost_raw, -total_tax_revenue_raw) %>%
-    add_unpaid_remap_fiscal(result)
-}
-
-
-
-add_unpaid_remap_fiscal <- function(fiscal, result) {
-
-  #----------------------------------------------------------------------------
-  # Remap experiment fiscal line: appends unpaid_remap_hours (weighted annual
-  # hours) and total_unpaid_remap_payment (billions, hours x low-price
-  # supplier price) beside other public spending. No-op when switch off --
-  # default columns unchanged.
-  #
-  # Params:
-  #   - fiscal (df): one-row year fiscal tibble
-  #   - result (list): simulation result ($parent_units, $unpaid_remap_price)
-  #
-  # Returns: (df) fiscal, two columns added when experiment on
-  #----------------------------------------------------------------------------
-
-  if (!unpaid_remap_on() || is.null(result$unpaid_remap_price)) return(fiscal)
-  remap <- unpaid_remap_fiscal(result$parent_units, result$unpaid_remap_price)
-  fiscal %>%
-    mutate(unpaid_remap_hours = remap$hours,
-           total_unpaid_remap_payment = remap$payment / 1e9)
+           -total_cdctc_cost_raw, -total_transfer_cost_raw, -total_tax_revenue_raw)
 }
 
 

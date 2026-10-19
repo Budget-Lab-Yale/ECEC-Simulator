@@ -1,10 +1,12 @@
 #------------------------------------------------------------------------------
 # assign_income_pctile.R
 #
-# Income percentile (1-100) of each record within its own group (Census
-# region, state), from per-group cutpoints.
+# Income percentile (1-100) of each record within its own group, from
+# per-group cutpoints. Current callers pass one national group (0, from
+# income_rank_inputs(), income_rank.R); function still takes several groups.
 #
-# Called from: 1b (care-choice forest -- NSECE by region, ACS by state)
+# Called from: 1b (care-choice forest, NSECE + ACS), compute_price_wedge_cache.R
+# (price_wedge_income_pctiles())
 #------------------------------------------------------------------------------
 
 
@@ -19,7 +21,8 @@ assign_income_pctile <- function(income, group, cutpoints) {
   #
   # Params:
   #   - income (num vec): income of each record
-  #   - group (vec): group of each record (region, statefip), same length
+  #   - group (vec): group of each record (current callers: 0, national), same
+  #     length
   #   - cutpoints (list): named by group, each a sorted num vec of 99
   #     cutpoints (weighted quantiles 0.01-0.99)
   #

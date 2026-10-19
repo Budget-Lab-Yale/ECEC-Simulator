@@ -13,8 +13,6 @@
 #     level (RPP / 100). ACS: state RPP (BEA all items 2019; NYC = NY state).
 #     NSECE: region RPP = ACS under-5 child-weighted mean of state RPPs in region
 #   - national (default w/ urban density off = main): nominal income
-# Within-state / within-region schemes ('state', 'region') removed 2026-10-12
-# -- ranking test found them indistinguishable from national_rpp.
 #
 # Sub-state geography (SUBSTATE_GEOGRAPHIES, constants.R) ranked twice:
 # national uses + parent-state run rank it at parent-state RPP (above); its
@@ -62,7 +60,7 @@ get_income_rank_scheme <- function() {
   #----------------------------------------------------------------------------
   # Active income-rank scheme -- global income_rank_scheme (config.R), else
   # env var ECEC_INCOME_RANK, else default derived from urban-density switch
-  # (RPP adjustment is state machinery, 2026-10-14): switch off (default) =
+  # (RPP adjustment is state machinery): switch off (default) =
   # main -> 'national' (nominal income); on -> 'national_rpp'. Explicit
   # ECEC_INCOME_RANK wins.
   #
@@ -93,8 +91,7 @@ get_state_rpp <- function() {
   #----------------------------------------------------------------------------
 
   if (!file.exists(INCOME_RANK_RPP_PATH)) {
-    stop('RPP file missing: ', INCOME_RANK_RPP_PATH, '. Restore with ',
-         '`git show f893f6f~1:', INCOME_RANK_RPP_PATH, '`.')
+    stop('RPP file missing: ', INCOME_RANK_RPP_PATH, '.')
   }
   rpp <- utils::read.csv(INCOME_RANK_RPP_PATH, stringsAsFactors = FALSE)
   rpp <- rpp[rpp$bea_geography == 'state', ]

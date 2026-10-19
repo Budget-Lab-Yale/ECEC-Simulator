@@ -64,9 +64,9 @@ for (g in GEOGRAPHIES) {
   }
 }
 
-# Two-count experiment targets (config/state/demand_counts/<GEO>.csv, read
-# only under ECEC_STATE_CALIBRATION=counts) -- children, part_time = rebuild,
-# simulator's count reader accepts file
+# Count files (config/state/demand_counts/<GEO>.csv, read by
+# cluster/baseline_consistency.R) -- children, part_time = rebuild, six rows,
+# finite, non-negative, part_time <= children
 cat('\ncomparing two-count targets in', SIMULATOR_COUNTS_DIR, '\n\n')
 for (g in GEOGRAPHIES) {
   fc <- file.path(SIMULATOR_COUNTS_DIR, paste0(g, '.csv'))
@@ -79,8 +79,9 @@ for (g in GEOGRAPHIES) {
   have  <- have[match(res$care$ecec_type, have$ecec_type), ]
   d <- max(abs(c(have$children - res$care$children, have$part_time - res$care$part_time)) /
              pmax(abs(c(res$care$children, res$care$part_time)), 1), na.rm = FALSE)
-  read_ok <- tryCatch({ read_state_count_targets(fc, g); TRUE },
-                      error = function(e) { cat('  ', conditionMessage(e), '\n'); FALSE })
+  read_ok <- nrow(have) == 6 && !anyNA(have$ecec_type) &&
+    all(is.finite(have$children) & have$children >= 0) &&
+    all(is.finite(have$part_time) & have$part_time >= 0 & have$part_time <= have$children)
   if (!is.finite(d) || d > TOL || !read_ok) {
     cat(sprintf('  [FAIL] %-4s count file differs from code or reader rejects it\n', g))
     fails <- fails + 1

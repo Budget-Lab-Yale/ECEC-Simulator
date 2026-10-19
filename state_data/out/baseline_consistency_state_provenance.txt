@@ -1,0 +1,7 @@
+baseline_consistency provenance -- mode state run 202610151655 calibration 202610151431
+date: Mon Oct 19 11:24:41 EDT 2026
+code: code_sim2.tar.gz md5 2492aadb9f69ea069dd004d49c8fde8c; commit.txt: main-national-revert-state-setup
+script md5: c8fd97575624f98bbc1dc4d6cc598c3c
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national ECEC_STATE_AGING=national ECEC_STATE_ALPHA_PRICE=state
+R: Rscript (R) version 4.4.2 (2024-10-31)
+run log (checks): /nfs/roberts/project/pi_nrs36/agr55/ecec-state/logs/nomsim52_state_29679882.out

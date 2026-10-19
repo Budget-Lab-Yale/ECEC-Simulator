@@ -27,7 +27,7 @@
 # Weekly care hours by type
 FT_CARE_HOURS  <- 40   # Full-time care hours per week
 PT_CARE_HOURS  <- 10   # Part-time care hours per week
-PT_FT_CUT_HOURS <- 20  # Observed weekly hours below this -> 'pt' band (NSECE labels, NHES check)
+PT_FT_CUT_HOURS <- 20  # Observed weekly hours below this -> 'pt' band (state_data 07 NHES check)
 
 # Annual schedule
 WEEKS_PER_YEAR <- 50   # Weeks of care per year (assumes 2 weeks off)
@@ -39,9 +39,9 @@ HOURS_ANNUAL <- c(
   'ft'   = FT_CARE_HOURS * WEEKS_PER_YEAR
 )
 
-# Primary-arrangement rank (Borowsky: paid before unpaid, centre first) --
-# assign_primary_care(), NSECE labels. _ONE_CENTRE: price tiers merged, for
-# state_data builds w/ one Center-Based row (02, 07 NHES check).
+# Primary-arrangement rank (Borowsky: paid before unpaid, centre first).
+# _ONE_CENTRE: price tiers merged, one Center-Based row -- used only by
+# state_data/code/07_compare_nhes.R (02 has own CATEGORY_PRIORITY).
 ECEC_PRIMARY_PRIORITY <- c('K-8', 'High-Priced Center-Based', 'Low-Priced Center-Based',
                            'Unpaid Center-Based', 'Paid Home-Based', 'Other Paid',
                            'Unpaid Home-Based', 'Other Unpaid')

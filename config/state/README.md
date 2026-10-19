@@ -14,13 +14,16 @@ state/
 
 ## demand/<ST>.csv
 
-Base-year statewide annual hours by care type. All 7 non-parental care types
-are required (`Parent Only` is the numeraire); hours must be positive.
+Base-year statewide annual hours by care type. Six rows are required: one
+Center-Based row covers both price tiers, so the model sets the high/low split
+(`Parent Only` is the numeraire; a row naming a price tier is rejected); hours
+must be positive. Built by `state_data/code/00_build_demand_targets.R`, which
+also writes `demand_counts/<ST>.csv` (children and part-time children behind
+each target).
 
 ```csv
 ecec_type,annual_hours
-High-Priced Center-Based,123456789
-Low-Priced Center-Based,...
+Center-Based,123456789
 Paid Home-Based,...
 Unpaid Center-Based,...
 Unpaid Home-Based,...

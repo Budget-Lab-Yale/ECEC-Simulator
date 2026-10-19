@@ -454,15 +454,6 @@ initialize_simulation <- function() {
             sim_sample, '% of ACS)\n', sep = '')
       }
 
-      # Experiment ECEC_STATE_AGING=state (state_age_ratios.R): state/national
-      # growth ratio by age rides along in the state's households; 3b
-      # age_demographics() reads it. Off (default) -> national aging
-      st_aging <- get_state_aging_mode() == 'state'
-      if (st_aging) {
-        st_base_hh$state_age_ratios <- load_state_age_ratios(st)
-        cat('  Aging: state population growth by age (ECEC_STATE_AGING=state)\n')
-      }
-
       # Sub-state geography (NYC) on own income ranks: own alpha rds
       # (compute_substate_alpha.R) + own price wedge rows below. NULL (logged)
       # -> national alphas, as every other geography
@@ -525,17 +516,15 @@ initialize_simulation <- function() {
       demand_targets_path <- file.path('config', 'state', 'demand', paste0(st, '.csv'))
       demand_adjustment <- NULL
       if (file.exists(demand_targets_path)) {
-        # ECEC_STATE_CALIBRATION=counts -> two-count experiment, else hours
-        adjust_fn <- if (get_state_calibration_mode() == 'counts') {
-          adjust_alpha_for_state_counts
-        } else {
-          adjust_alpha_for_state
-        }
-        demand_adjustment <- adjust_fn(
+        # Care hours + caregiver employment solved together (base-year
+        # employment = forest rate, which yearly targets grow from)
+        demand_adjustment <- adjust_alpha_for_state(
           alpha_data_by_type = st_alpha_data,
           state_hh_ids       = state_hh_ids,
           targets_csv_path   = demand_targets_path,
-          state_postal       = st
+          state_postal       = st,
+          caregivers         = caregiver_groups_for_state(
+            sim_base_hh$parent_units %>% filter(hh_id %in% state_hh_ids))
         )
         for (pu_type in names(demand_adjustment$alpha_by_type)) {
           st_demand_params[[pu_type]]$alpha <- demand_adjustment$alpha_by_type[[pu_type]]
@@ -623,9 +612,10 @@ initialize_simulation <- function() {
         n_households     = nrow(st_base_hh$households),
         demand_adjusted  = !is.null(demand_adjustment),
         demand_deltas    = if (!is.null(demand_adjustment)) as.list(demand_adjustment$deltas) else NULL,
+        base_employment_shifts = if (!is.null(demand_adjustment$employment_shifts))
+          as.list(demand_adjustment$employment_shifts) else NULL,
         supply_source    = supply_source,
         alpha_price      = if (!is.null(state_V_by_type)) 'state' else 'national',
-        aging            = if (st_aging) 'state' else 'national',
         base_year_labor  = as.list(setNames(st_supply_params$L, c('no_ba', 'ba'))),
         epop_source      = st_epop_path %||% 'national'
       )

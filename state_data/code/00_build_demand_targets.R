@@ -63,12 +63,11 @@ ECEC_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based',
 
 # Step 1. Weighted children in ANY regular non-parental care over weighted
 # children at 10+ hrs/week (what NSCH asks). One national ratio for every
-# geography (2026-10-12; scaled by geography's p0 part-time share 2026-10-07
-# to 10-12 -- moved ratio +-2.5%, made targets depend on forest, income-rank
-# scheme). NSECE label rules back to pre-2026-10-12 (2026-10-14): regular
-# care = REGCARE 1 w/ positive reference-week hours, TOC 8 counts Other,
-# one label draw. Value below from 02_derive_nsece_constants.R rerun on
-# cluster 2026-10-14 under these rules (2,814 children).
+# geography -- not scaled by geography's p0 part-time share, so targets don't
+# depend on forest or income-rank scheme. NSECE label rules: regular care =
+# REGCARE 1 w/ positive reference-week hours, TOC 8 counts Other, one label
+# draw. Value below from 02_derive_nsece_constants.R rerun on cluster
+# 2026-10-14 under these rules (2,814 children).
 NSECE_UNIVERSE_RATIO <- 1.0980541895845115
 
 # Short share: NSECE children under 10 total hrs/week over children part-time
@@ -365,7 +364,7 @@ HS_HOME_FCC_SHARE  <- (11043 + 1277 + (1493 + 16) * (1 - AIAN_EHS_FRAC)) /
 EHS_HOME_FCC_SHARE <- (57221 + 5722 + (1493 + 16) * AIAN_EHS_FRAC) /
                       (EHS_FUNDED - EHS_FUNDED_PREGNANT + AIAN_EHS_SLOTS)   # 0.380
 
-# FIVE-YEAR-OLDS (2026-10-07). Population = children 0-4; pre-K grade, Head
+# FIVE-YEAR-OLDS. Population = children 0-4; pre-K grade, Head
 # Start 3-4 slots hold children who turn 5 during program year (NIEER folds 5s
 # into 4s; CCD counts a grade, not an age). One national share 5+ per program
 # at 2018-12-31: NHES-ECPP 2019 (raw/US/), age AGE2018, not
@@ -381,10 +380,10 @@ EHS_HOME_FCC_SHARE <- (57221 + 5722 + (1493 + 16) * AIAN_EHS_FRAC) /
 AGE5_NHES_NATIONAL <- c(prek = 0.24395365244042602, head_start = 0.10740813090244962)
 AGE5_CALENDAR_YEAR <- 'NYC'
 
-# ALL-SETTINGS PRE-K (2026-10-06). CCD counts pre-K in public schools only,
+# ALL-SETTINGS PRE-K. CCD counts pre-K in public schools only,
 # missing community-based public pre-K. All-settings count: NIEER Table 2
 # state pre-K, ages 3-4, every setting -- NOT Table 4's pre-K + special
-# education (2026-10-06: many special-education children get services at
+# education (many special-education children get services at
 # home or in regular child care, not a center seat). Spec's
 # prek_all_settings overrides: NYC own DOE count (NIEER publishes states
 # only). program_children()
@@ -568,9 +567,6 @@ program_children <- function(spec) {
   #   d. each child once: deduct HS children pre-K count already holds. Share
   #      of HS slots = pooled_overlap_share(), one share every geography.
   #      Assumes overlap everywhere resembles NIEER-reporting states'.
-  #      2026-10-08: replaced site matching (03_head_start_school_overlap.R),
-  #      own NIEER shares, DC/MI direct counts -- each moved Unpaid
-  #      Center-Based hours <= 4.7%, total hours <= 0.05%.
   #
   # Params:
   #   - spec (list): from load_spec()
@@ -796,9 +792,8 @@ GEOGRAPHIES <- c(MEMO_GEOGRAPHIES,
 # STATEFIP + COUNTYFIP (SUBSTATE_GEOGRAPHIES).
 SIMULATOR_DEMAND_DIR <- file.path('config', 'state', 'demand')
 
-# Two-count experiment targets (ECEC_STATE_CALIBRATION=counts,
-# adjust_alpha_for_state_counts()): children, part_time by group. Own dir --
-# hours file, default reader untouched.
+# Count files: children, part_time behind each hours target (read by
+# cluster/baseline_consistency.R). Own dir -- hours file, its reader untouched.
 SIMULATOR_COUNTS_DIR <- file.path('config', 'state', 'demand_counts')
 
 
@@ -905,7 +900,7 @@ write_geo <- function(res, geo) {
 
   #----------------------------------------------------------------------------
   # Writes SIMULATOR_DEMAND_DIR/<GEO>.csv -- file simulator reads, only copy
-  # -- and SIMULATOR_COUNTS_DIR/<GEO>.csv (two-count experiment targets).
+  # -- and SIMULATOR_COUNTS_DIR/<GEO>.csv (children, part_time behind targets).
   #
   # Params:
   #   - res (list): build_geo() result; geo (chr)

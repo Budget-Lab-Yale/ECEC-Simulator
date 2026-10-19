@@ -37,16 +37,14 @@
 # extracts) -- centres at five representative age points, one per year of age
 # (NSECE_AGE_POINT): age 0 = 11 months, 1 = 18 months, 2 = 35 months, 3 = 3
 # years, 4 = 4 years; aggregated to one centre index, no extra sectors or
-# choices. First 2017 version three points (11 months, 35 months, 3 years;
-# ages 1-2 took 35 months, age 4 took 3 years) --
-# state_data/out/licensing_ratio_change_3pt_5pt.csv compares. Homes = max
-# children per small family child care home excl. school-age add-ons. ID
-# centres (point system, not tabulated) keep 2014 rows; NYC centres own
-# Article 47 rules (DOHMH, June 2019), NYC homes NYS 2017 rule -- both
-# centre sets 3 bands, mapped onto 5 points by NSECE_AGE_BAND. Index
-# relative to national mean -> national state = national NSECE staffing.
-# Before 2026-10-12: 2014 study via CAP 2018 Table 1, PN3 2020 Table 6
-# (US_ACF__..._2014.csv, kept for comparison).
+# choices. state_data/out/licensing_ratio_change_3pt_5pt.csv compares w/
+# 3-point set (11 months, 35 months, 3 years). Homes = max children per small
+# family child care home excl. school-age add-ons. ID centres (point system,
+# not tabulated) from Idaho point rule at each age point (ID_POINTS,
+# licensing_ratios_2017.R); NYC centres own Article 47 rules (DOHMH, June
+# 2019, 2014-file rows -- 3 bands mapped onto 5 points by NSECE_AGE_BAND),
+# NYC homes NYS 2017 rule. Index relative to national mean -> national state
+# = national NSECE staffing.
 #
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
@@ -55,22 +53,17 @@
 # 100 (US_BEA__regional_price_parities_housing_services__2019.csv, line
 # 'RPPs: Services: Housing'; NYC = New York MSA 35620). Applies to low-price
 # centre, high-price centre, paid home; unpaid centre residual untouched (0).
-# CHANGE vs main + earlier state files (one national residual per sector in
-# all 52 files: 0.510055 low, 4.6145667 high, 2.8273432 home). WHY: rent is the
-# main non-labour centre cost; national residual left every state w/ same
-# non-wage cost. Housing RPP corr 0.71 w/ posted-price-implied residual (NDCP
-# 2019 price/40 - labour cost, 46 states, unweighted); corr of model 40-hr
-# price w/ NDCP state price 0.78 -> 0.89. Factor 1 = national mean, k = 1 (not fitted).
+# CHANGE vs main (one national residual per sector: 0.510055 low, 4.6145667
+# high, 2.8273432 home). WHY: national
+# residual gives every state same non-wage cost; housing-services prices proxy
+# geographic variation in non-labour costs. NDCP check: state_data/code/
+# 16_ndcp_model_prices.R (corr 0.89 housing-scaled vs 0.83 national, 46 states,
+# out/ndcp_model_prices_summary.csv). Factor 1 = national mean, k = 1 (not fitted).
 # --national-residual restores national delta_0.
 #
 # Usage: Rscript resources/supply/state_supply_params.R [--check]
-#          [--national-staffing] [--national-residual] [--out <dir>]
+#          [--national-residual] [--out <dir>]
 #   --check: compute, print, write nothing
-#   --national-staffing: staffing test -- index 1 in every geo (national
-#     worker-hours per child-hour); wages unchanged. 3a still sets L_0 from
-#     these L_req x re-anchored hours, so supply stays consistent. Write to
-#     own dir w/ --out (e.g. config/state/supply_national) and swap it in for
-#     config/state/supply in a test run's copy.
 #   --national-residual: residual test -- national delta_0 in every geo (main)
 #   --out <dir>: output dir (default config/state/supply)
 #------------------------------------------------------------------------------
@@ -89,7 +82,6 @@ DEMAND   <- file.path('config', 'state', 'demand')
 OUT_DIR  <- file.path('config', 'state', 'supply')
 ARGS     <- commandArgs(TRUE)
 if ('--out' %in% ARGS) OUT_DIR <- ARGS[which(ARGS == '--out') + 1]
-NATIONAL_STAFFING <- '--national-staffing' %in% ARGS
 NATIONAL_RESIDUAL <- '--national-residual' %in% ARGS
 HOUSING  <- file.path(DIR, 'US_BEA__regional_price_parities_housing_services__2019.csv')
 
@@ -217,8 +209,6 @@ staffing_index <- function(L_req, geo) {
   if (!geo %in% ix$state) stop(RATIOS, ': no centre or home rows for ', geo)
   i_c <- ix$centre[ix$state == geo]
   i_h <- ix$home[ix$state == geo]
-  # Staffing test: national worker-hours per child-hour everywhere
-  if (NATIONAL_STAFFING) { i_c <- 1; i_h <- 1 }
 
   cat(sprintf('   staffing index %-4s centre %.3f  home %.3f\n', geo, i_c, i_h))
 

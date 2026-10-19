@@ -5,8 +5,7 @@
 # unit's wedge = price forest (quantile regression forest, QRF, 1a) quantile
 # at unit's random percentile draw (main: set.seed + sample, one draw per unit
 # shared by care types), forest features income percentile, region, n_parents,
-# mean child age. Same forest for every run (restored 2026-10-14; empirical
-# quantile grids replaced it 2026-10-12).
+# mean child age. Same forest for every run.
 # Also holds price_wedge_income_pctiles() (ACS parent unit baseline AGI ranks,
 # as original simulator; RPP-adjusted per income-rank scheme) and keyed-hash
 # helpers (keyed_unif_2_32(), parent_unit_key()) -- income-rank jitter.
@@ -458,24 +457,6 @@ parent_unit_key <- function(parent_unit_id) {
     if (length(v) < 1 || length(v) > 2 || anyNA(v) || any(v >= 1000)) return(NA_real_)
     v[1] * 1000 + if (length(v) == 2) v[2] else 0
   }, numeric(1))
-}
-
-
-
-make_parent_unit_id <- function(hhm_id1, hhm_id2) {
-
-  #----------------------------------------------------------------------------
-  # ACS parent unit id (1b): '<hhm_id1>' one parent, '<hhm_id1>_<hhm_id2>'
-  # two. Lives beside parent_unit_key() -- tests check one inverts other.
-  #
-  # Params:
-  #   - hhm_id1 (int): first parent's person number (PERNUM)
-  #   - hhm_id2 (int): second parent's person number, NA w/out one
-  #
-  # Returns: (chr vec) parent unit ids
-  #----------------------------------------------------------------------------
-
-  dplyr::if_else(is.na(hhm_id2), as.character(hhm_id1), paste0(hhm_id1, '_', hhm_id2))
 }
 
 

@@ -1,7 +1,7 @@
 # State-Level Analysis: Design
 
-*Status: agreed design, v1. Author: HE + Claude, July 2026. Updated September
-2026: 50 states and DC, built supply and employment files.*
+*Status: agreed design. Author: HE + Claude. Updated 19 October 2026: 50
+states, DC, and NYC, with built demand, supply, and employment files.*
 
 This document specifies the design for running the ECEC Simulator at the
 state level rather than (only) the national level. It records the decisions
@@ -176,13 +176,36 @@ iterated to convergence (`max |log(H_target/H_model)| < tol`, with
 delta per targeted type and one target per type, the system is exactly
 identified.
 
+**Caregiver employment is solved in the same contraction.** Care and work go
+together in `p0`, so raising care to the targets alone also raises base-year
+employment above the forest rate (1.0 to 2.5 points on average by caregiver
+group in run 202610151655, `state_data/out/baseline_employment_state.csv`).
+The yearly employment targets grow from the forest rate, so the yearly
+shifts would then pull employment down and cut care (8.6% of non-parental
+hours on average at fixed 2026 prices, `baseline_care_shift_state.csv`). So
+3a passes the state's caregivers (`caregiver_groups_for_state()`: sex x
+age band of the primary caregiver, caregiver weight, same rule as 3b) and
+the contraction adds one shift `s_g` per targeting group `g` on working
+choices:
+
+```
+p_ij ∝ p0_ij · exp( Σ_c δ_{t_c(j)} + s_{g(i)} · working_j )
+s_g ← s_g + logit(e_g^target) − logit(e_g)
+```
+
+`e_g^target` is the group's base-year forest rate: `p0`'s working-choice mass
+(the employment forest's `p_employment.pt + .ft`), weighted by caregiver
+weight split over the unit's pseudofamily rows. Both sets converge to `1e-8`.
+The yearly targeting shifts then carry only the change since 2019.
+`base_employment_shifts` in the run metadata records `s_g`.
+
 The stored (reference-normalized) alpha matrix is then updated as
 
 ```
-alpha_j += d_j − d_1     where d_j = Σ_c δ_{t_c(j)}
+alpha_j += d_j − d_1 + s_{g(i)} · (working_j − working_1)     where d_j = Σ_c δ_{t_c(j)}
 ```
 
-(the reference-choice shift `d_1` keeps the stored normalization; choice
+(the reference-choice shift keeps the stored normalization; choice
 probabilities are invariant to it).
 
 ### Failure modes — fail loudly
@@ -227,58 +250,17 @@ weekly hours with a 35-hour cutoff. State setup changes only the tier line
    uses its own `CB9_COMM_URBAN_DENSITY`; a family uses its
    `HH9_COMM_URBAN_DENSITY`. The price multipliers use observed hourly
    payments only.
-7. **Removed 2026-10-14: the forest no longer takes community urban
-   density, and 1b no longer averages over PUMA shares.** Importance checks
-   gave the feature near-zero importance, and dropping it changes nothing.
-   The table and builder stay in `resources/acs/` (no run reads them). The
-   text below records the measure as built 13 October 2026. NSECE
-   density is the 2010 Census urban share of the population in tracts
-   within 2 miles of the household (distance weighted), cut at 0.85 (high)
-   and 0.30 (rural) (NSECE 2019 household user guide, section 15). The
-   guide says that NSECE takes the tracts that overlap a 2-mile circle
-   around the population centroid of the household's tract, and weights
-   each tract inversely to its distance from that tract. ACS has no tract.
-   Its smallest geography is the 2010 PUMA, so I build the measure at tract
-   level and pool it to the PUMA:
-   - For each 2010 tract, I compute `sum(w U) / sum(w P)` over its
-     community, with `U` and `P` the 2010 SF1 urban and total population
-     and `w = 1 / distance` between population centroids. I cut the share
-     at the NSECE thresholds (`tract_urban_share()`, `urban_density.R`).
-   - The guide gives no tract shapes and no distance for the anchor tract
-     itself, so two steps are my own. I treat a tract as overlapping the
-     circle when its centroid distance minus its equal-area radius
-     (Gazetteer land area) is 2 miles or less. I set a distance floor of
-     2/3 of the anchor tract's equal-area radius, which is the mean
-     distance from the center of a disk to its points.
-   - For each 2010 PUMA, I take the share of its 2010 children 0-4 (SF1
-     P12) at each level (`aggregate_puma_density()`). 2010 PUMAs are built
-     from whole 2010 tracts.
-   - For each ACS household, I predict the care probabilities at all three
-     levels and average them with the PUMA's shares
-     (`mix_density_predictions()`, `urban_density.R`). No random draw
-     enters. This assumes that the PUMA's mix holds for every household in
-     the PUMA: it does not recover how urbanicity relates to income or
-     family type inside a PUMA. The 2010 tract counts stand in for where
-     2019 ACS children live. Until 13 October 2026, each household got one
-     level by a keyed draw from the shares.
-   This replaces the county proxy of 24e67c0, which coded 0% of ACS
-   children 0-4 as rural, while NSECE codes 12.1% as rural. With the tract
-   measure, 73.0% of weighted ACS children 0-4 are high, 16.3% moderate,
-   and 10.7% rural (NSECE: 70.9%, 17.1%, and 12.1%). The rural share goes
-   from 0% (DC) to 44.5% (Vermont) by state.
-   `resources/acs/puma_urban_density_2010.R` builds the table.
 
 ### Sub-state income ranks (NYC ranked twice)
 
 Income enters two models through the income percentile. The first is the
 care-choice forest that gives `p0` (`1b_acs_processing.R`). It ranks
 household income (HHINCOME) against cutpoints weighted by children under 5.
-The second is the price wedge (`compute_price_wedge_cache.R`). On 14
-October 2026 I restored the price forest for every run: one quantile
+The second is the price wedge (`compute_price_wedge_cache.R`). Every run
+uses the price forest: one quantile
 regression forest per care type on income percentile, region, number of
 parents, and the mean age of the children under 5 (500 trees, `mtry` 4,
-minimum node size 10, 50,000-row weighted sample). It replaces the
-empirical quantile grids of 12 to 13 October. As in main, one random
+minimum node size 10, 50,000-row weighted sample). As in main, one random
 percentile per unit (`set.seed(random_seed_base + 2)`, then
 `sample(1:99, n, replace = TRUE)`, shared by the care types) picks the
 quantile level; there is no keyed price draw, so the global RNG moves and
@@ -296,10 +278,8 @@ comes from
 switch. Both schemes rank nationally:
 `national_rpp` (default with `ECEC_URBAN_DENSITY=1`) divides income by the
 state RPP (NSECE: the Census region RPP), and `national` (default with the
-switch off, as main) uses nominal income. The
-`state` and `region` schemes (ranks within state or Census region) were
-removed on 2026-10-12, because a test showed no difference from
-`national_rpp`. NYC households get two versions of their ranks:
+switch off, as main) uses nominal income. NYC households get two versions
+of their ranks:
 
 1. **The NY run and every national use** divide NYC income by the NY state
    RPP. These are the national `alpha_<type>_2019.rds`, unchanged.
@@ -432,10 +412,7 @@ This is the only state definition of `L_0`, so a state supply file needs a
 demand file. A state run with `config/state/supply/<ST>.yaml` but no
 `config/state/demand/<ST>.csv` stops with an error that names the missing file
 and `state_data/code/00_build_demand_targets.R`. A state with neither file runs
-on the national parameters. Until 5 October 2026 the supply file also held an
-ACS-based `labor_supply` (national L_0 × the state's share of national ACS
-childcare workers) as a fallback. No run used it, because every geography has
-a demand file, and the build no longer computes it.
+on the national parameters.
 
 **`wages` come from BLS OES May 2019 childcare occupations.**
 `resources/supply/oes_childcare_wage_ratios_2019.R` reads the OES state,
@@ -502,24 +479,22 @@ does not tabulate: 12 points per staff member, and 2 points for a child
 under 24 months, 1.5 points from 24 to 36 months, and 1 point from 3 to 5
 years (Idaho Code 39-1109 before 2024, IDAPA 16.06.03.300 from July 2024). I
 read it at each of the five points (12 / points): 6, 6, 8, 12, and 12
-children per staff member (`ID_POINTS`). Until 13 October 2026 Idaho took
-the 2014 three bands, so 18 months took the toddler value 8. NYC centres
+children per staff member (`ID_POINTS`). NYC centres
 use the city Health Code (Article 47, June 2019), which has three bands; they
 map onto the five points as infant to 11 months, toddler to 18 and 35 months,
-and preschool to 3 and 4 years. Centre index runs 0.719 (GA) to 1.453 (VT); home index 0.421 (AR) to 1.682 (DE). The first 2017 version
-used three points (11 months, 35 months, and 3 years; ages 1 and 2 took 35
-months, age 4 took 3 years). Against it, the five-point index moves by more
+and preschool to 3 and 4 years. Centre index runs 0.719 (GA) to 1.453 (VT); home index 0.421 (AR) to 1.682 (DE).
+`state_data/out/licensing_ratio_change_3pt_5pt.csv` compares the five-point
+index with a three-point index (11 months, 35 months, and 3 years; ages 1 and
+2 at 35 months, age 4 at 3 years). The five-point index differs by more
 than 1% in 40 of 52 geographies and by more than 5% in 14 (unweighted
-counts), from -18.0% (AL, 4-year ratio 18) to +13.1% (MA, 18-month ratio 4);
-`state_data/out/licensing_ratio_change_3pt_5pt.csv` lists every geography.
-Until 12 October 2026 the rules came from the 2014 study (CAP 2018 Table 1; PN3 2020 Table 6). CAP read
-different age points in different states, so the 2017 extraction is the more
-consistent input. Ten centre rows and one home row (MA, 10 to 6) change;
+counts), from -18.0% (AL, 4-year ratio 18) to +13.1% (MA, 18-month ratio 4).
+I use the 2017 study, not the 2014 study (CAP 2018 Table 1; PN3 2020 Table
+6), because CAP read different age points in different states. Against the
+2014 rules, ten centre rows and one home row (MA, 10 to 6) differ;
 `state_data/out/licensing_ratio_change_2014_2017.csv` lists them, with both
 years at the three points.
 
-`per_unit_residual` is state-specific (changed 15 October 2026; before, one
-national value per sector in all 52 files). The equilibrium solves
+`per_unit_residual` is state-specific. The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
 residual in **dollars** covering everything that is not labour — rent, food,
 insurance, administration, margin. Each national residual (0.510055 low-price
@@ -527,11 +502,13 @@ centre, 4.6145667 high-price centre, 2.8273432 paid home; unpaid centre stays
 unset) is multiplied by the state's BEA 2019 housing-services RPP / 100
 (`resources/supply/US_BEA__regional_price_parities_housing_services__2019.csv`,
 line "RPPs: Services: Housing"; NYC = New York MSA 35620). Factor range 0.55
-to 1.70. Rent is the main non-labour centre cost. Across the 46 states with an NDCP price (unweighted) the
-housing parity correlates 0.71 with the residual implied by NDCP 2019 prices,
-and the correlation of the model's 40-hour centre price with the NDCP state
-price rises from 0.78 to 0.89 (mean $217.0 vs $196.6). No power is fitted
-(k = 1). `state_supply_params.R --national-residual`
+to 1.70. Housing-services prices are a proxy for geographic variation in
+non-labour costs. Price check against NDCP 2019
+(`state_data/code/16_ndcp_model_prices.R`; definitions in its header, results in
+`state_data/out/ndcp_model_prices_summary.csv`): 2019 base posted centre price x 40
+vs child-weighted county medians, 46 states, same states + weights for both
+residuals. Pearson correlation 0.89 housing-scaled vs 0.83 national; model mean
+$213.2 vs NDCP $190.6 a week (ratio 1.12; national residual 1.15). No power is fitted (k = 1). `state_supply_params.R --national-residual`
 restores the national value.
 
 `elasticities` stay national (no-BA 4, BA 2). The national values are
@@ -590,7 +567,9 @@ Run metadata records, per state: the state list, whether the demand
 adjustment was applied (and the solved deltas), the supply-parameter source
 (`nsece` vs `state yaml`), and the epop source (`national` vs `state csv`).
 A sub-state geography that runs on its own alphas also records
-`income_ranks: own (<scheme>)`.
+`income_ranks: own (<scheme>)`. `state_analysis.yaml` also records
+`alpha_price` (`state` or `national`, §13) and `base_year_labor`, the
+base-year labour `L_0` by education group (`no_ba`, `ba`).
 
 ## 11. v1 limitations (accepted, documented)
 
@@ -599,7 +578,8 @@ A sub-state geography that runs on its own alphas also records
    revisited.
 2. **Partial supply anchoring.** Each state supply yaml re-bases labour
    supply to the state's base-year hours and takes state wages and staffing
-   (§7); the non-labour residual and elasticities stay national. Base-year
+   (§7). The non-labour residual is scaled by the state's housing-services
+   price parity (§7); the elasticities stay national. Base-year
    *quantities* match; price *responses* use national elasticities. The demand and
    supply files are not forced to jointly reproduce an observed state
    equilibrium.
@@ -612,7 +592,7 @@ A sub-state geography that runs on its own alphas also records
 ```
 config/state/
 ├── demand/<ST>.csv       # 2019 annual hours by target group (6 rows); state_data/code/00_build_demand_targets.R
-├── demand_counts/<ST>.csv # children, part_time by target group (6 rows); same script; read only under ECEC_STATE_CALIBRATION=counts (§13)
+├── demand_counts/<ST>.csv # children, part_time by target group (6 rows); same script; read by state_data/cluster/baseline_consistency.R
 ├── supply/<ST>.yaml      # supply params, schema = supply_2019.yaml; resources/supply/state_supply_params.R
 └── employment/<ST>.csv   # epop projections, year + 16-59 cells of epop_projections.csv; resources/epop/state_epop_projections.R
 ```
@@ -627,77 +607,14 @@ employment file takes New York's age-sex composition,
 which has no city figure. How the demand targets are built is
 in `state_data/README.md`.
 
-## 13. Experiment switches
-
-Two opt-in experiments from the memo's next steps. Each is an env var that
-`src/misc/config.R` reads next to `ECEC_INCOME_RANK`. I use env vars, not a
-runscript column, because each experiment changes the baseline as well as
-every scenario. A run is either all on or all off. With a switch off, the
-code paths and the outputs are the same as before. Neither switch changes
-processing or calibration, so a run can reuse an interface with `-C`.
-
-### Remap unpaid care: `ECEC_REMAP_UNPAID=1`
-
-I test the Unpaid Center-Based children on low-price paid supply, with the
-same participants. I count the provider receipts against existing public
-spending. Unlimited free paid care is a policy scenario, not this test.
-
-1. **Choice side: no change.** The choice set, the family price (0, from
-   `P[1] = 0`), and the alphas stay the same. I keep the same participants
-   this way: the unpaid choice has the same utility as before, so the choice
-   share of unpaid center care changes only through the indirect effect of
-   the new low-price price on the other choices. I do not fix the choices at
-   the baseline draws, because the equilibrium needs a demand response to
-   find the new low-price price.
-2. **Supply side: remap.** `compute_supply_residuals()` (3c) moves the
-   sector-1 hours into sector 2 (`remap_unpaid_demand()`,
-   `src/shared_functions/remap_unpaid_care.R`) before it computes labor,
-   wages, and unit costs. The children then use low-price staffing, and their
-   hours move the low-price equilibrium price. Base-year labor `L_0` does not
-   change, so the wage curve measures the staffing change from the base-year
-   workforce. The rationing slot accounting keeps the original sectors.
-3. **Fiscal line.** 3c stores the equilibrium low-price supplier price
-   (`policy_supply(P)[2]`) as `result$unpaid_remap_price`. The year fiscal
-   table (`aggregate_year_fiscal_cost()`, 3d) then gets two columns:
-   `unpaid_remap_hours` (weighted annual hours of the discrete Unpaid
-   Center-Based choices) and `total_unpaid_remap_payment` (billions, hours x
-   price). The weight is `parent_unit_weight`, the same weight as the
-   `supply_subsidy` line. The employer-subsidy rate for sector 1 takes the
-   sector-2 rate, because the children use low-price staffing.
-
-### Two-count calibration: `ECEC_STATE_CALIBRATION=counts`
-
-I test two-count calibration as a separate experiment against the six hours
-targets that I keep for this revision. The default (`hours`) is the §5
-contraction, unchanged.
-
-1. **Targets.** `config/state/demand_counts/<ST>.csv` holds `ecec_type`,
-   `children`, and `part_time` for the 6 target groups.
-   `00_build_demand_targets.R` writes it beside the hours file, from the same
-   `build_geo()` result. `check_outputs_are_current.R` compares it to the
-   rebuild. The hours files do not change.
-2. **Contraction.** `adjust_alpha_for_state_counts()` solves one delta for
-   each target group x hours band (part-time, full-time): 12 deltas, with
-   `Parent Only` as the numeraire. The update is
-   `δ_k ← δ_k + log(N_k^target / N_k(δ))`, where `N_k` is the weighted number
-   of children in cell `k`. The two centre tiers share one delta in each band.
-   The counts are on the simulator's hours grid, so a match of the counts is
-   also a match of the annual hours in the hours file.
-3. **Empty band.** If a group has no children in one band (DE Unpaid
-   Home-Based has no part-time children), a zero target needs an infinite
-   delta. That group then gets one delta on its children alone.
-4. **Output.** The return has the same shape as the hours path, so base-year
-   labor, metadata, and the simulation use it with no other change.
-   `demand_deltas` in the metadata then has the cell names.
-
-### State-price alpha: `ECEC_STATE_ALPHA_PRICE=state`
+## 13. State-price alpha: `ECEC_STATE_ALPHA_PRICE=state`
 
 Calibration builds `alpha = log p0 - V` at the national supply prices. A
 state run prices care at the state's own wages and staffing. The §5
 contraction shifts the stored alpha with `p0` only, so a state's base year sits
 at national prices while its supply sits at state prices. The first simulated
 year then jumps by the gap. The default (`state`) rebuilds alpha at state prices first. `ECEC_STATE_ALPHA_PRICE=national` is the §5 contraction
-on the stored alpha, unchanged. Adopted 15 October 2026: across 52 geographies the 2026 paid-center shift fell from -9.4 to +7.0 points (mean absolute 3.4) to -0.8 to +2.2 (0.9).
+on the stored alpha, unchanged. Adopted 15 October 2026. Evidence runs: 52 geographies, interface 202610151431, run 202610151654 (`national`) and 202610151655 (`state`). 2019-to-2026 change in the paid-center share of children 0-4 (expected probabilities; same numerator, denominator, and child weights both years; 50 states + DC, equal weight), `state_data/cluster/alpha_drift.R`, outputs and provenance in `state_data/out/alpha_drift_*`: `national` mean absolute change 3.13 points, range -9.79 (DC) to +5.42 (NC); `state` 0.34 points, range -0.86 (DC) to +0.89 (WV). Population-weighted mean absolute change 3.45 vs 0.31 points. Rebuilt 2026 sector hours match the solver within 3.4e-7 relative in every geography. Drift only, not accuracy against observed 2026 care.
 
 1. **Rebuild.** `reprice_alpha_to_supply()` (`reprice_alpha_to_state_supply.R`)
    sets `alpha_state = log p0 - V_state`, where `V_state` uses the state's base-year
@@ -724,33 +641,15 @@ on the stored alpha, unchanged. Adopted 15 October 2026: across 52 geographies t
    the price wedge (not `--no-price-wedge`), and the calibration data of the
    interface.
 
-### State aging: `ECEC_STATE_AGING=state`
+### How to compare the two settings on Bouchet
 
-The simulator ages 2019 ACS weights with national population growth by age and
-marital status (`age_demographics()`, 3b). With the switch on, each state run
-multiplies the factor of each (age, married) cell by the state's growth
-relative to the nation at that age:
-`ratio(state, age, t) = [P_t / P_2019]_state / [P_t / P_2019]_US`, from Census
-civilian estimates by single year of age (0--85+). `15_state_age_ratios.R`
-chains vintage 2020 (2019 to 2020) with vintage 2024 (2020 to 2024) so each
-step uses one vintage. Years after 2024 reuse the 2024 ratio. NYC uses NY.
-3a loads the geography's ratios into its base households, and `age_demographics()`
-reads them there. Ages above 85 take the 85 ratio. National runs and the default
-are unchanged. `aging` in `state_analysis.yaml` records `state` or `national`.
+Use a runscript with the `state` column (`config/runscripts/state_targets_smoke.csv`
+or `state_targets_all.csv`). Set the switch in the launch shell; the SLURM jobs
+inherit it:
 
-### How to run each test on Bouchet
+```bash
+ECEC_STATE_ALPHA_PRICE=national ./slurm/launch_array.sh -r state_targets_smoke -C <interface>
+```
 
-1. Use a runscript with the `state` column, for example
-   `config/runscripts/state_targets_smoke.csv` (`KY;NJ;NY;VA`) or
-   `state_targets_all.csv`.
-2. Set the switch in the launch shell. The SLURM jobs inherit it:
-
-   ```bash
-   ECEC_REMAP_UNPAID=1 ./slurm/launch_array.sh -r state_targets_smoke -C <interface>
-   ECEC_STATE_CALIBRATION=counts ./slurm/launch_array.sh -r state_targets_smoke -C <interface>
-   ```
-
-3. Run the same runscript with no switch as the reference, and compare the
-   two output folders. Start the runs at least one minute apart, because the
-   output folder name is the minute timestamp.
-4. The log shows `EXPERIMENT:` at the start of a run with a switch on.
+Run the same runscript with the default as the reference. Start the runs at
+least one minute apart, because the output folder name is the minute timestamp.

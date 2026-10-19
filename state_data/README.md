@@ -27,7 +27,7 @@ the interface's alpha files record `0`. Alpha files with no record were built
 before the switch (2026-10-14) and count as `1`. Example:
 `ECEC_URBAN_DENSITY=1 Rscript state_data/cluster/acs_p0_shares.R <interface> <out.csv>`.
 
-**The method memos, `docs/<date>_summary.pdf`, are the documents to read.** They
+**The method memos, `docs/methodology-MM-DD.pdf` (finished ones in `docs/archive/`), are the documents to read.** They
 say what every number means, where it comes from, and how solid it is. Finished
 memos (PDF) are in `docs/archive/`; the memo in progress and the .tex sources
 are kept outside git. This file is the map, and the record of every
@@ -148,6 +148,10 @@ code/11_ndcp_price_comparison.R         diagnostic: NDCP 2019 centre prices by a
                                         child-weighted mean of county medians, against the
                                         model high-priced centre share (writes nothing the
                                         simulator reads)
+code/16_ndcp_model_prices.R             diagnostic: model 2019 base posted centre price
+                                        (x 40) against NDCP 2019 county medians, housing-
+                                        scaled vs national residual on the same 46 states
+                                        and weights (writes nothing the simulator reads)
 code/12_participation_bias.R            diagnostic: national non-parental share in NSECE,
                                         p0, NSCH, targets, and NHES; aligned NHES
                                         five-to-ten-hour ratio (prints only)
@@ -165,6 +169,17 @@ cluster/acs_p0_shares_by_age.R          the same p0 summary split by child age a
 cluster/nsece_shares_by_age.R           NSECE care-type shares of children 0-4 by age,
                                         simulator's classification -- puts the model's
                                         training survey beside NHES (runs on the cluster)
+cluster/alpha_drift.R                   paid-centre share of children, re-anchored 2019
+                                        vs 2026 baseline (smooth and drawn), per geography,
+                                        for one alpha-price setting; rebuilds alpha as the
+                                        run did (runs on the cluster)
+cluster/baseline_consistency.R          re-anchored 2019 children vs target counts; 2019
+                                        employment vs forest base rate; 2026 care hours
+                                        with vs without employment shifts (runs on the
+                                        cluster; alpha_drift.sbatch <mode> <run>
+                                        baseline_consistency)
+cluster/state_check_summary.sh          start-of-run state checks per geography from a
+                                        state run's log (out/state_checks_<run>.csv)
 cluster/acs_kindergarten_flags_2019.py  ACS 2019 children 0-4 already in kindergarten
                                         (IPUMS usa:34 GRADEATT), dropped from the NHES
                                         check because NHES leaves them out
@@ -211,7 +226,13 @@ out/licensing_ratio_change_2014_2017.csv licensing ratios and staffing indices, 
 out/licensing_ratio_change_3pt_5pt.csv  2017 centre ratios at 5 age points, centre index
                                         at 3 vs 5 points (same script)
 ../config/state/demand/<GEO>.csv        the output: the demand targets the simulator
-                                        reads (the build writes only this copy)
+                                        reads
+../config/state/demand_counts/<GEO>.csv children and part-time children behind each
+                                        target (00 writes;
+                                        cluster/baseline_consistency.R reads)
+out/alpha_drift_<mode>*.csv             cluster/alpha_drift.R: 2019-to-2026 paid-centre
+                                        share per geography, summary, provenance
+out/state_checks_<run>.csv              cluster/state_check_summary.sh on a run log
 ```
 
 ## Adding a geography
@@ -302,7 +323,6 @@ so.
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
 | Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-point map) | 2019 | supply centre staffing index weights |
 | Licensing ratios | 2017 Child Care Licensing Study, ICPSR 37700: centre child-staff ratios at 11 months, 18 months, 35 months, 3 years, and 4 years (one point per year of age 0–4); small family home maximum children; ID centres and NYC centres from the 2014 file (3 bands mapped onto the 5 points) | `raw/US/US_ICPSR37700__licensing_*__2017.rda` → `resources/supply/US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv` (`resources/supply/licensing_ratios_2017.R`) | 2017 | supply staffing index |
-| PUMA urban density | 2010 Census SF1 Urban/Rural Update, tract level (`www2.census.gov/census_2010/04-Summary_File_1/Urban_Rural_Update/`): P2 total, urban, and rural population, P12 children under 5; 2010 tract population centroids (`www2.census.gov/geo/docs/reference/cenpop2010/tract/CenPop2010_Mean_TR.txt`); 2010 Gazetteer tract land area (`www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_tracts_national.zip`); 2010 tract-to-PUMA relationship file (`www2.census.gov/geo/docs/maps-data/data/rel/2010_Census_Tract_to_2010_PUMA.txt`). NSECE community urban share per tract (2-mile community, inverse-distance weights), cut at 0.85 / 0.30, then the share of each PUMA's children 0–4 at each level | `raw/US/US_Census__tract_urban_rural_population_children_0_4__2010.csv` (SF1 extract; the state zips are about 11 GB and are not kept), `raw/US/US_Census__tract_population_centroids__2010.txt`, `raw/US/US_Census__gazetteer_tracts__2010.zip`, `raw/US/US_Census__tract_to_puma_relationship__2010.txt` → `resources/acs/puma_urban_density_2010.csv` (`resources/acs/puma_urban_density_2010.R`) | 2010 | none -- no run reads it since 2026-10-14 (the care-choice forest dropped `density`) |
 | CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `raw/US/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
 | Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `raw/US/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
 | Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `raw/local/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `raw/US/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |
@@ -351,9 +371,9 @@ sub-state identifier, so NYC takes the New York State rate as is
 
 The build uses only `NSECE_UNIVERSE_RATIO` (step 1), in
 `00_build_demand_targets.R`: one national five-hour ratio for every geography.
-Until 2026-10-12 the build scaled it by each geography's predicted part-time
-share; that moved the ratio by at most 2.5% and made the targets depend on the
-forest and the income-rank scheme. `NSECE_SHORT_SHARE_OF_PT` (NSECE children
+The build does not scale it by a geography's predicted part-time share, so the
+targets do not depend on the forest or the income-rank scheme.
+`NSECE_SHORT_SHARE_OF_PT` (NSECE children
 under 10 total hours a week over children part-time in the simulator's sense,
 primary hours under 20) stays for `05_compare_nsece_shares.R`. The regional
 shares live in `05_compare_nsece_shares.R`, which uses them for comparison only.
@@ -385,18 +405,11 @@ It writes each constant with its unweighted record count to
   `NSECE_UNIVERSE_RATIO` carries the NSCH rate from B up to A; B is otherwise
   used only for sensitivity.
 
-**Which arrangements count (2026-10-14).** 02 and the simulator (1a) use the
-same rule, back to the one before 2026-10-12. A provider with `HH9_REGCARE` = 1
+**Which arrangements count.** 02 and the simulator (1a) use the
+same rule. A provider with `HH9_REGCARE` = 1
 and positive reference-week hours counts. A type 8 (type unknown) row counts as
 Other. A payment amount the file does not hold takes an unpaid label. 02 and 1a
-make one label draw. The 2026-10-12 rules (zero-hour regular providers with
-imputed hours, `REGCARE` -1 / -2 by type of care, type 7 / 8 never regular,
-`HH9_PAID` for unknown amounts, and 50 averaged draws) are removed.
-
-**The constants are stale until 02 is rerun.** `NSECE_UNIVERSE_RATIO`,
-`NSECE_SHORT_SHARE_OF_PT`, the constants in `05_compare_nsece_shares.R`, and
-`out/nsece_constants.csv` still hold the values of the 2026-10-12 50-draw run.
-Rerun 02 on the cluster, copy the values in, and rebuild the demand targets.
+make one label draw.
 
 A regional cell under 30 records takes the national value; only Unpaid
 Home-Based falls below it, in all four regions (Northeast 6, Midwest 6, South
@@ -457,8 +470,7 @@ district-funded places and preschool special education.
   education (52,307), which CCD counts elsewhere. I leave out transitional
   kindergarten (104,694): TK is for children born 2 September to 2 December,
   so nearly every TK child is 5 by the middle of the year (NIEER CA page,
-  printed p.58). The build used 245,614 (State Preschool + TK) before
-  5 October 2026.
+  printed p.58).
 - **Michigan reports no CCD pre-K count** for 2018–19: 1,064 of its 1,219 pre-K
   school rows are flagged "Not reported", and the rest add up to 0. Its pre-K
   count is NIEER's: Great Start Readiness Program, 37,140 children (MI
@@ -570,10 +582,7 @@ NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
   count.
 - **Fallback** (the other 40 geographies): 0.263, the Head Start-slot-weighted
   mean NIEER overlap share of those nine states (`pooled_overlap_share()`).
-  It assumes overlap there is like overlap in the nine states. It replaced a
-  school-site match (`03_head_start_school_overlap.R`, removed 2026-10-08)
-  for consistency: one fallback rule in place of 2026 site data, district
-  matching, and a 150 m threshold.
+  It assumes overlap there is like overlap in the nine states.
 
 **Overlaps not removed.** Each needs a count that no held file gives:
 
@@ -779,7 +788,7 @@ them).
 
 ## Checks
 
-Five scripts, all read-only, all exit 1 on failure.
+Six scripts, all read-only, all exit 1 on failure.
 `load_spec()` (`00_build_demand_targets.R`) reads the NSCH rate live from
 `out/`, so there is no hand copy left to go stale -- see "How `load_spec()`
 reads the derived rate" above.

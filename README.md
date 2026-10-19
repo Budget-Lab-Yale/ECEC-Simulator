@@ -220,7 +220,6 @@ The national run (no `state` column, default settings) is main's. State machiner
 | Demand | `config/state/demand/<GEO>.csv` | Base-year 2019 annual hours by care type. Re-anchors the calibrated alpha matrices with a per-care-type contraction (`adjust_alpha_for_state.R`). |
 | Supply | `config/state/supply/<GEO>.yaml` | Same schema as `supply_2019.yaml`. State wages, staffing scaled by licensing ratios, and the non-labor residual scaled by the BEA housing-services price parity. Elasticities stay national. |
 | Employment | `config/state/employment/<GEO>.csv` | State employment growth in place of the national CBO path. |
-| Aging | `config/state/aging/state_age_ratios.csv` | State population growth relative to the nation by age. Read only with `ECEC_STATE_AGING=state`. |
 
 `state_data/code/00_build_demand_targets.R` writes the demand files, and `resources/supply/state_supply_params.R` writes the supply files. NYC households are selected by STATEFIP 36 and the five borough county FIPS (`config/substate_geographies.csv`), which needs an ACS pull with `COUNTYFIP`. A state run needs an interface that stores `STATEFIP`, `p0`, and child weights with the alpha matrices.
 
@@ -229,20 +228,10 @@ The national run (no `state` column, default settings) is main's. State machiner
 | Variable | Values | Description |
 |----------|--------|-------------|
 | `ECEC_URBAN_DENSITY` | `0` (default), `1` | `1` sets the center tier line by region, urban density, and age band. `0` uses the national median by age band, as main. State setup uses `1`. |
-| `ECEC_INCOME_RANK` | `national`, `national_rpp` | `national` ranks nominal income, as main. `national_rpp` divides income by the state price level (BEA RPP). Unset, it follows `ECEC_URBAN_DENSITY`. State setup uses `national`. |
+| `ECEC_INCOME_RANK` | `national`, `national_rpp` | `national` ranks nominal income, as main. `national_rpp` divides income by the state price level (BEA RPP). Unset, it follows `ECEC_URBAN_DENSITY` (`1` -> `national_rpp`, the state baseline; `0` -> `national`, as main). |
 | `ECEC_STATE_ALPHA_PRICE` | `state` (default), `national` | `state` rebuilds each state's alpha at the state's own 2019 supply prices before re-anchoring, and checks the base-year identity and sector hours. `national` keeps the alpha at national prices. National runs do not read it. |
 
 Each calibration stage records both settings, and a later stage stops if its setting differs from the interface's.
-
-### Experiment Switches
-
-Environment variables, off by default. With a switch off, outputs do not change. (The state-price alpha is a setting above, on by default.)
-
-| Variable | Description |
-|----------|-------------|
-| `ECEC_REMAP_UNPAID=1` | The low-price paid-center sector supplies the Unpaid Center-Based children. |
-| `ECEC_STATE_CALIBRATION=counts` | State re-anchoring matches children by target group and hours band (`config/state/demand_counts/`). |
-| `ECEC_STATE_AGING=state` | Population growth by age is scaled by the state's growth relative to the nation. |
 
 ### Price Wedge
 

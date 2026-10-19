@@ -19,6 +19,7 @@ suppressPackageStartupMessages({
 source('src/shared_functions/constants.R')
 source('src/shared_functions/get_choice_catalog.R')
 source('src/shared_functions/adjust_alpha_for_state.R')
+source('src/shared_functions/get_working_choice_mask.R')
 
 set.seed(42)
 
@@ -355,151 +356,63 @@ expect_error(
 )
 
 #------------------------------
-# Test 4b: two-count experiment (ECEC_STATE_CALIBRATION=counts) -- children
-# by group x pt/ft, separate code path
+# Test 4b: joint re-anchoring -- care hours + caregiver employment together
 #------------------------------
 
-stopifnot(get_state_calibration_mode() == 'hours')
-cat('PASS: re-anchoring mode defaults to hours\n')
+# Synthetic caregivers: one row per parent unit, random group and weight
+all_ids <- c(alpha_data_by_type$c1$row_ids$hh_id, alpha_data_by_type$c2plus$row_ids$hh_id)
+cg_toy <- tibble(hh_id = all_ids, parent_unit_id = 1,
+                 pc_group = sample(EMPLOYMENT_TARGETING_GROUPS, length(all_ids), replace = TRUE),
+                 per_weight_pc = runif(length(all_ids), 50, 150))
+res_j <- adjust_alpha_for_state(alpha_data_by_type, state_hh_ids, targets_csv, 'ZZ', caregivers = cg_toy)
 
-# Children by cell from probabilities -- independent reimplementation
-counts_by_cell <- function(p, n_children, w1, w2) {
-  catalog <- get_choice_catalog(n_children)
-  N <- c()
-  for (g in names(STATE_TARGET_GROUPS)) for (b in c('pt', 'ft')) {
-    cell <- paste(g, b, sep = ' | ')
-    in1 <- catalog$child1_ecec_type %in% STATE_TARGET_GROUPS[[g]] & catalog$child1_hours_choice == b
-    N[cell] <- sum((p %*% in1) * w1)
-    if (n_children == 2) {
-      in2 <- catalog$child2_ecec_type %in% STATE_TARGET_GROUPS[[g]] & catalog$child2_hours_choice == b
-      N[cell] <- N[cell] + sum((p %*% in2) * w2)
+# Independent check from returned alpha (V = 0): hours hit targets, each
+# group's employment = its p0 working mass (forest rate), weighted by caregiver
+emp_by_group <- function(p_list, cg) {
+  num <- 0 * setNames(seq_along(EMPLOYMENT_TARGETING_GROUPS), EMPLOYMENT_TARGETING_GROUPS); den <- num
+  for (nm in names(p_list)) {
+    n_ch <- if (nm == 'c1') 1 else 2
+    ids <- alpha_data_by_type[[nm]]$row_ids$hh_id
+    ids <- ids[ids %in% state_hh_ids]
+    m <- match(ids, cg$hh_id)
+    e <- rowSums(p_list[[nm]][, get_working_choice_mask(n_ch), drop = FALSE])
+    for (g in EMPLOYMENT_TARGETING_GROUPS) {
+      k <- cg$pc_group[m] == g
+      num[g] <- num[g] + sum(e[k] * cg$per_weight_pc[m][k])
+      den[g] <- den[g] + sum(cg$per_weight_pc[m][k])
     }
   }
-  N
+  (num / den)[den > 0]
 }
-state_counts <- function(p_c1, p_c2) {
-  cw1 <- alpha_data_by_type$c1$child_weights
-  cw2 <- alpha_data_by_type$c2plus$child_weights
-  counts_by_cell(p_c1, 1, cw1$child_weight.1[in_state_c1], NULL) +
-    counts_by_cell(p_c2, 2, cw2$child_weight.1[in_state_c2], cw2$child_weight.2[in_state_c2])
-}
+p_from_alpha_j <- function(a) { u <- exp(cbind(0, a)); u / rowSums(u) }
+pj <- list(c1 = p_from_alpha_j(res_j$alpha_by_type$c1), c2plus = p_from_alpha_j(res_j$alpha_by_type$c2plus))
+p0s <- list(c1 = alpha_data_by_type$c1$p0[in_state_c1, ], c2plus = alpha_data_by_type$c2plus$p0[in_state_c2, ])
+Hj <- hours_by_type(pj$c1, 1, alpha_data_by_type$c1$child_weights$child_weight.1[in_state_c1], NULL, target_types) +
+      hours_by_type(pj$c2plus, 2, alpha_data_by_type$c2plus$child_weights$child_weight.1[in_state_c2],
+                    alpha_data_by_type$c2plus$child_weights$child_weight.2[in_state_c2], target_types)
+e_forest <- emp_by_group(p0s, cg_toy)
+e_joint  <- emp_by_group(pj, cg_toy)
+stopifnot(max(abs(Hj / targets - 1)) < 1e-6,
+          max(abs(e_joint - e_forest)) < 1e-6,
+          setequal(names(res_j$employment_shifts), names(e_forest)),
+          max(abs(res_j$employment_shifts)) > 1e-3)
+cat('PASS: joint re-anchoring -- independent alphas hit care-hour targets and forest employment rates by group\n')
 
-N0 <- state_counts(alpha_data_by_type$c1$p0[in_state_c1, ],
-                   alpha_data_by_type$c2plus$p0[in_state_c2, ])
-# Cells ordered group x (pt, ft); factors move counts AND part-time shares
-count_targets <- N0 * c(1.25, 1.10, 0.80, 0.95, 1.10, 1.05,
-                        0.90, 0.85, 1.15, 1.20, 0.85, 0.90)
-groups <- names(STATE_TARGET_GROUPS)
-pt_t <- count_targets[paste(groups, 'pt', sep = ' | ')]
-ft_t <- count_targets[paste(groups, 'ft', sep = ' | ')]
+# Care-only solve moves employment off forest rate (the problem joint fixes)
+p_care <- list(c1 = p_from_alpha_j(result$alpha_by_type$c1), c2plus = p_from_alpha_j(result$alpha_by_type$c2plus))
+stopifnot(max(abs(emp_by_group(p_care, cg_toy) - e_forest)) > 1e-4, is.null(result$employment_shifts))
+cat('PASS: care-only re-anchoring moves employment off the forest rate; joint solve does not\n')
 
-# Hours file + count file in sibling dirs, as config/state/{demand,demand_counts}
-counts_root <- file.path(tempdir(), 'state_counts_test')
-dir.create(file.path(counts_root, 'demand'), recursive = TRUE, showWarnings = FALSE)
-dir.create(file.path(counts_root, 'demand_counts'), recursive = TRUE, showWarnings = FALSE)
-hours_csv <- file.path(counts_root, 'demand', 'ZZ.csv')
-file.copy(targets_csv, hours_csv, overwrite = TRUE)
-write_csv(tibble(ecec_type = groups, children = unname(pt_t + ft_t), part_time = unname(pt_t)),
-          file.path(counts_root, 'demand_counts', 'ZZ.csv'))
-
-res_counts <- adjust_alpha_for_state_counts(alpha_data_by_type, state_hh_ids, hours_csv, 'ZZ')
-stopifnot(max(abs(log(res_counts$achieved / count_targets[names(res_counts$achieved)]))) < 1e-6)
-cat('PASS: two-count contraction converged to children by group x pt/ft (',
-    res_counts$n_iter, ' iterations)\n', sep = '')
-
-# Returned alphas reproduce the counts independently (V = 0)
-p_from_alpha <- function(a) { e <- exp(cbind(0, a)); e / rowSums(e) }
-N_alpha <- state_counts(p_from_alpha(res_counts$alpha_by_type$c1),
-                        p_from_alpha(res_counts$alpha_by_type$c2plus))
-stopifnot(max(abs(N_alpha / count_targets - 1)) < 1e-6)
-cat('PASS: two-count alphas independently reproduce the counts and part-time shares\n')
-
-# Counts on hours grid imply hours: sector hours sum to implied formal hours
-implied_hours <- setNames(unname(pt_t) * HOURS_ANNUAL[['pt']] +
-                            unname(ft_t) * HOURS_ANNUAL[['ft']], groups)
-stopifnot(abs(sum(res_counts$sector_hours) /
-                sum(implied_hours[c('Center-Based', 'Unpaid Center-Based',
-                                    'Paid Home-Based')]) - 1) < 1e-6)
-cat('PASS: two-count sector hours equal hours the counts imply\n')
-
-# Empty band (DE Unpaid Home-Based: no part-time child) -> one group cell on
-# children alone
-write_csv(tibble(ecec_type = groups, children = unname(pt_t + ft_t),
-                 part_time = replace(unname(pt_t), 6, 0)),
-          file.path(counts_root, 'demand_counts', 'ZZ.csv'))
-res_all <- adjust_alpha_for_state_counts(alpha_data_by_type, state_hh_ids, hours_csv, 'ZZ')
-k_all <- paste(groups[6], 'all', sep = ' | ')
-stopifnot(length(res_all$targets) == 11, k_all %in% names(res_all$targets),
-          max(abs(log(res_all$achieved / res_all$targets))) < 1e-6,
-          abs(res_all$achieved[[k_all]] / (pt_t[[6]] + ft_t[[6]]) - 1) < 1e-6)
-cat('PASS: two-count, empty band -> group matched on children alone\n')
-
-# Missing count file fails loudly
-expect_error(
-  adjust_alpha_for_state_counts(alpha_data_by_type, state_hh_ids, targets_csv, 'ZZ'),
-  'needs',
-  'two-count run without count file fails loudly'
-)
-
-#------------------------------
-# Test 4c: unpaid-care remap experiment (ECEC_REMAP_UNPAID=1)
-#------------------------------
-
-source('src/shared_functions/remap_unpaid_care.R')
-
-# Take function definitions only from files that run code / need full model
-take_defs <- function(path, names) {
-  for (e in parse(path)) {
-    if (is.call(e) && identical(e[[1]], as.name('<-')) && is.name(e[[2]]) &&
-        as.character(e[[2]]) %in% names) eval(e, envir = globalenv())
-  }
-}
-take_defs('src/3_simulation/3c_run_scenario.R', 'compute_supply_residuals')
-take_defs('src/3_simulation/3d_accumulate_results.R',
-          c('add_unpaid_remap_fiscal', 'get_employer_subsidy_rate'))
-
-sp_toy <- list(L_req = matrix(c(0.20, 0.15, 0.12, 0.10, 0.05, 0.08, 0.10, 0.02), 4, 2),
-               w = c(12, 18), L = c(4e5, 2e5), e = c(1.5, 2), delta_0 = c(0, 1, 2, 1),
-               cpi_factor = 1, nominal_wage_factor = 1)
-P_toy  <- c(0, 6, 9, 5)
-Qd_toy <- c(2e6, 1.5e6, 1e6, 8e5)
-
-stopifnot(!unpaid_remap_on())
-off <- compute_supply_residuals(P_toy, Qd_toy, sp_toy)
-stopifnot(identical(off$Qd, Qd_toy),
-          identical(off$L, colSums(sp_toy$L_req * Qd_toy)),
-          identical(remap_unpaid_demand(Qd_toy), Qd_toy))
-fis_toy <- tibble(year = 2025, total_demand_subsidy = 1)
-stopifnot(identical(add_unpaid_remap_fiscal(fis_toy, list(unpaid_remap_price = 7)), fis_toy))
-emp_res <- list(employer_subsidy = c(1, 2), L_req = sp_toy$L_req, employer_subsidy_sectors = 1:4)
-stopifnot(identical(get_employer_subsidy_rate(emp_res),
-                    as.vector(sp_toy$L_req %*% c(1, 2))))
-cat('PASS: remap off -- supply residuals, fiscal table, employer rates unchanged\n')
-
-remap_unpaid_care <- '1'
-on <- compute_supply_residuals(P_toy, Qd_toy, sp_toy)
-Qd_remap <- c(0, Qd_toy[1] + Qd_toy[2], Qd_toy[3:4])
-stopifnot(identical(on$Qd, Qd_remap),
-          isTRUE(all.equal(on$L, colSums(sp_toy$L_req * Qd_remap))))
-cat('PASS: remap on -- unpaid-center hours land in the low-price sector (labor, wages)\n')
-
-# Discrete choices: c1 unit pt unpaid; c2 unit ft unpaid + pt low-price
-pu_toy <- list(
-  c1 = tibble(ecec_type.1 = c('Unpaid Center-Based', 'Parent Only'),
-              ecec_hours.1 = c('pt', 'none'), per_weight1 = c(100, 50), per_weight2 = NA_real_),
-  c2plus = tibble(ecec_type.1 = 'Unpaid Center-Based', ecec_hours.1 = 'ft',
-                  ecec_type.2 = 'Low-Priced Center-Based', ecec_hours.2 = 'pt',
-                  per_weight1 = 80, per_weight2 = 120))
-price_toy <- 7.5
-hours_toy <- 100 * HOURS_ANNUAL[['pt']] + 100 * HOURS_ANNUAL[['ft']]
-fis_on <- add_unpaid_remap_fiscal(fis_toy, list(parent_units = pu_toy,
-                                                unpaid_remap_price = price_toy))
-stopifnot(isTRUE(all.equal(fis_on$unpaid_remap_hours, hours_toy)),
-          isTRUE(all.equal(fis_on$total_unpaid_remap_payment, price_toy * hours_toy / 1e9)))
-stopifnot(all(get_employer_subsidy_rate(emp_res)[1:2] ==
-                as.vector(sp_toy$L_req %*% c(1, 2))[2]))
-cat('PASS: remap on -- public payment = low-price supplier price x remapped hours\n')
-rm(remap_unpaid_care)
+# Missing caregiver row fails loudly; group helper rule
+expect_error(adjust_alpha_for_state(alpha_data_by_type, state_hh_ids, targets_csv, 'ZZ',
+                                    caregivers = cg_toy[-1, ]),
+             'w/out caregiver group', 'missing caregiver row fails loudly')
+cgh <- caregiver_groups_for_state(tibble(
+  hh_id = c(1, 1, 2), parent_unit_id = 1, primary_caregiver = c(1, 1, 2),
+  male1 = c(0, 0, 0), male2 = c(NA, NA, 1), age1 = c(30, 30, 50), age2 = c(NA, NA, 24),
+  per_weight1 = c(10, 10, 5), per_weight2 = c(NA, NA, 7)))
+stopifnot(identical(cgh$pc_group, c('F_25_35', 'M_u25')), identical(cgh$per_weight_pc, c(10, 7)))
+cat('PASS: caregiver_groups_for_state -- sex x age bin of primary caregiver, caregiver weight, one row per unit\n')
 
 #------------------------------
 # Test 5: sub-state geography (NYC) -- parser and household selection
@@ -726,8 +639,8 @@ cat('PASS: national -- NYC ranks same in both versions, own version skipped\n')
 expect_error(substate_rank_inputs(1:3, 1:3, 1:3, c(TRUE, NA, FALSE), 'NYC'),
              'one non-NA flag', 'NA geo flag stops')
 
-# -- Keyed hash helpers (income-rank jitter, NSECE label draws; no longer the
-# price wedge draw, which is main's set.seed + sample)
+# -- Keyed hash helpers (income-rank jitter; price wedge draw uses main's
+# set.seed + sample)
 # Reference values from Python big-int fmix32 (exact 32-bit arithmetic)
 stopifnot(fmix_2_32(0xdeadbeef) == 233162409, fmix_2_32(4294967295) == 2180083513)
 cat('PASS: fmix_2_32 matches exact 32-bit reference hash\n')
@@ -742,17 +655,17 @@ stopifnot(identical(parent_unit_key(c('1', '1_2', '12_3')), c(1000, 1002, 12003)
 stopifnot(inherits(tryCatch(keyed_unif_2_32(1, parent_unit_key('x'), 79), error = function(e) e), 'error'))
 cat('PASS: parent_unit_key -- ACS text parent unit ids hash as numeric keys\n')
 
-# Round trip on 1b's own id builder: every one-parent id + every sorted pair
-# (1b sorts hhm_id1 < hhm_id2), person numbers 1-120 -> keys non-NA, one per
-# unit, jitter runs. Catches 1b id format change before cluster calibration.
+# Round trip on 1b's id format ('<hhm_id1>' one parent, '<hhm_id1>_<hhm_id2>'
+# two; 1b sorts hhm_id1 < hhm_id2), person numbers 1-120 -> keys non-NA, one
+# per unit, jitter runs
 rt <- rbind(data.frame(h1 = 1:120, h2 = NA_integer_),
             subset(expand.grid(h1 = 1:120, h2 = 1:120), h1 < h2))
-rt_ids  <- make_parent_unit_id(rt$h1, rt$h2)
+rt_ids  <- ifelse(is.na(rt$h2), as.character(rt$h1), paste0(rt$h1, '_', rt$h2))
 rt_keys <- parent_unit_key(rt_ids)
 stopifnot(is.character(rt_ids), !anyNA(rt_keys), !anyDuplicated(rt_keys),
           identical(rt_keys, rt$h1 * 1000 + ifelse(is.na(rt$h2), 0, rt$h2)),
           all(keyed_unif_2_32(rep(1, nrow(rt)), rt_keys, 79) >= 0))
-cat('PASS: make_parent_unit_id -- 1b ids round-trip through parent_unit_key, ',
+cat('PASS: 1b parent unit ids round-trip through parent_unit_key, ',
     nrow(rt), ' units\n', sep = '')
 
 k_hh <- rep(1:60000, each = 2); k_pu <- rep(1:2, 60000)
@@ -1254,57 +1167,6 @@ cat('PASS: urban-density switch -- setting from global / env var, default off, m
 
 
 #------------------------------
-# Tract -> PUMA urban density, ACS draw (urban_density.R)
-#------------------------------
-
-stopifnot(identical(density_from_urban_share(c(1, 0.85, 0.8499, 0.3, 0.2999, 0, NA)),
-                    c(1L, 1L, 2L, 2L, 3L, 3L, NA)))
-# 1 degree latitude = 69.09 miles
-stopifnot(abs(haversine_mi(40, -75, 41, -75) - EARTH_RADIUS_MI * pi / 180) < 1e-9)
-
-# Distance weighting. Tracts on parallel 40N, east of anchor A by 1, 1.5, 5
-# miles. A, B, C radius 0.3 (floor 0.2 for anchor A). D 5 miles off, radius
-# 0.3 -> outside 2-mile circle; radius 3.5 -> overlaps (5 - 3.5 <= 2).
-mi_lon <- 1 / (EARTH_RADIUS_MI * pi / 180 * cos(40 * pi / 180))
-tt <- tibble(geoid = c('A', 'B', 'C', 'D'), lat = 40, lon = -75 + c(0, 1, 1.5, 5) * mi_lon,
-             r_mi = 0.3, pop = c(100, 100, 200, 1000), urban = c(100, 0, 200, 0))
-dAB <- haversine_mi(40, tt$lon[1], 40, tt$lon[2]); dAC <- haversine_mi(40, tt$lon[1], 40, tt$lon[3])
-dAD <- haversine_mi(40, tt$lon[1], 40, tt$lon[4])
-sA <- tract_urban_share(tt)
-exp_A <- (100 / 0.2 + 0 / dAB + 200 / dAC) / (100 / 0.2 + 100 / dAB + 200 / dAC)
-stopifnot(isTRUE(all.equal(sA$urban_share[sA$geoid == 'A'], exp_A)),
-          sA$n_scatter[sA$geoid == 'A'] == 3, sA$n_scatter[sA$geoid == 'D'] == 1,
-          sA$urban_share[sA$geoid == 'D'] == 0)
-sA2 <- tract_urban_share(tt %>% mutate(r_mi = c(0.3, 0.3, 0.3, 3.5)))
-exp_A2 <- (100 / 0.2 + 200 / dAC) / (100 / 0.2 + 100 / dAB + 200 / dAC + 1000 / dAD)
-stopifnot(isTRUE(all.equal(sA2$urban_share[sA2$geoid == 'A'], exp_A2)),
-          sA2$n_scatter[sA2$geoid == 'A'] == 4)
-# Row order irrelevant; community w/out population -> NA; bad input -> stop
-stopifnot(isTRUE(all.equal(tract_urban_share(tt[4:1, ]) %>% arrange(geoid), sA %>% arrange(geoid))))
-stopifnot(is.na(tract_urban_share(tibble(geoid = 'Z', lat = 40, lon = -75, r_mi = 1, pop = 0, urban = 0))$urban_share))
-stopifnot(inherits(tryCatch(tract_urban_share(tt %>% mutate(urban = pop + 1)), error = function(e) e), 'error'))
-
-# PUMA aggregation, children-weighted. PUMA 1: children 10 (1), 30 (3), 0
-# (NA, no population) -> 0.25 / 0 / 0.75. PUMA 2: one tract level 2
-td_t <- tibble(statefip = 1, puma = c(1, 1, 1, 2), density = c(1L, 3L, NA, 2L), children = c(10, 30, 0, 5))
-pd <- aggregate_puma_density(td_t)
-stopifnot(nrow(pd) == 2, pd$n_tracts[1] == 3, pd$children[1] == 40,
-          isTRUE(all.equal(c(pd$share_1[1], pd$share_2[1], pd$share_3[1]), c(0.25, 0, 0.75))),
-          pd$share_2[2] == 1)
-stopifnot(inherits(tryCatch(aggregate_puma_density(td_t %>% mutate(children = 1)), error = function(e) e), 'error'))
-# Committed table: one row per PUMA, shares sum to 1, covers every ACS
-# household's (statefip, puma) in crosswalk
-pdt <- read_csv('resources/acs/puma_urban_density_2010.csv', show_col_types = FALSE)
-xw_t <- utils::read.csv(gzfile('resources/acs/US_ACS__household_county_puma_crosswalk__2019.csv.gz'),
-                        colClasses = 'numeric') %>% distinct(statefip = STATEFIP, puma = PUMA)
-stopifnot(!any(duplicated(pdt[c('statefip', 'puma')])),
-          all(abs(pdt$share_1 + pdt$share_2 + pdt$share_3 - 1) < 1e-5),
-          all(pdt$children > 0),
-          nrow(anti_join(xw_t, pdt, by = c('statefip', 'puma'))) == 0)
-cat('PASS: tract_urban_share / aggregate_puma_density -- distance weighting, overlap, child-weighted PUMA shares (resource builder helpers)\n')
-
-
-#------------------------------
 # State-price alpha experiment (reprice_alpha_to_state_supply.R)
 #------------------------------
 
@@ -1418,62 +1280,6 @@ capture.output(bad <- tryCatch(check_state_base_year(alpha_only, r$V_by_type, r$
                                error = function(e) e))
 stopifnot(inherits(bad, 'error'))
 cat('PASS: state-price alpha -- supply prices, switch, unchanged at equal prices, p0 identity at state V, net income check, frozen base year\n')
-
-
-#------------------------------------------------------------------------------
-# State aging ratios (ECEC_STATE_AGING)
-#------------------------------------------------------------------------------
-
-source('src/shared_functions/state_age_ratios.R')
-stopifnot(get_state_aging_mode() == 'national')   # off by default
-ar <- read.csv('config/state/aging/state_age_ratios.csv', stringsAsFactors = FALSE)
-stopifnot(length(unique(ar$state)) == 52, all(is.finite(ar$ratio)), all(ar$ratio > 0),
-          setequal(unique(ar$age), 0:85), setequal(unique(ar$year), 2020:2024))
-# NYC carries NY's ratios
-stopifnot(isTRUE(all.equal(ar$ratio[ar$state == 'NYC'], ar$ratio[ar$state == 'NY'])))
-# Years past 2024 use 2024; 2022 differs from 2024
-ky <- load_state_age_ratios('KY')
-stopifnot(identical(state_age_ratio_for_year(ky, 2031), state_age_ratio_for_year(ky, 2024)),
-          !isTRUE(all.equal(state_age_ratio_for_year(ky, 2022)$ratio, state_age_ratio_for_year(ky, 2024)$ratio)))
-stopifnot(inherits(tryCatch(load_state_age_ratios('ZZ'), error = function(e) e), 'error'))
-# Identity (2020, single vintage): 2019-population-weighted mean of ratio over the 51 states = 1 at every age
-# (state growth sums to national growth; later years chain two vintages)
-p19 <- read.csv('state_data/raw/US/US_Census__state_population_by_age_sex__vintage2020.csv', stringsAsFactors = FALSE)
-p19 <- p19[p19$SEX == 0 & p19$AGE <= 85 & p19$STATE > 0, c('STATE', 'AGE', 'POPEST2019_CIV')]
-p19$state <- names(STATE_POSTAL_TO_FIPS)[match(p19$STATE, STATE_POSTAL_TO_FIPS)]
-chk <- merge(p19, ar[ar$year == 2020 & ar$state != 'NYC', ], by.x = c('state', 'AGE'), by.y = c('state', 'age'))
-wm <- tapply(chk$POPEST2019_CIV * chk$ratio, chk$AGE, sum) / tapply(chk$POPEST2019_CIV, chk$AGE, sum)
-stopifnot(max(abs(wm - 1)) < 1e-9)
-cat('PASS: state aging ratios -- 52 geographies, NYC = NY, years past 2024 frozen, population-weighted ratio 1 at every age\n')
-
-
-# age_demographics() (3b) with state ratios: function extracted by parse, no 3b side effects
-suppressPackageStartupMessages(library(tidyr))
-for (e in parse('src/3_simulation/3b_run_simulation_year.R')) {
-  if (is.call(e) && identical(e[[1]], as.name('<-')) && as.character(e[[2]]) == 'age_demographics') eval(e)
-}
-ag_ages <- 0:100
-ag_macro <- function(y, f) {
-  v <- 100 * sapply(ag_ages, f)
-  r <- tibble::as_tibble(as.list(c(setNames(v, paste0('married_', ag_ages)),
-                                   setNames(v, paste0('unmarried_', ag_ages)))))
-  r$year <- y
-  r
-}
-ag_mp <- dplyr::bind_rows(ag_macro(2019, function(a) 1), ag_macro(2026, function(a) 1 + 0.01 * (a < 5)))
-ag_acs <- list(
-  parent_units      = tibble::tibble(hh_id = 1, hhm_id1 = 1, hhm_id2 = NA, per_weight1 = 1, per_weight2 = 1),
-  households        = tibble::tibble(hh_id = 1:3, hh_weight = 1),
-  household_members = tibble::tibble(hh_id = 1:3, hhm_id = 1:3, child_id = c(NA, NA, 1), tax_unit_id = 1:3,
-                                     age = c(30, 3, 90), married = 0, per_weight = 1),
-  children          = tibble::tibble(hh_id = 3, child_id = 1, child_weight = 1),
-  tax_units         = tibble::tibble(tax_unit_id = 1:3, tax_unit_weight = 1))
-ag_nat <- age_demographics(ag_acs, ag_mp, 2026, 2019)
-ag_acs$state_age_ratios <- tibble::tibble(age = 0:85, year = 2024L, ratio = ifelse(0:85 < 5, 0.9, 1.1))
-ag_st <- age_demographics(ag_acs, ag_mp, 2026, 2019)
-stopifnot(isTRUE(all.equal(ag_nat$household_members$per_weight, c(1, 1.01, 1))),
-          isTRUE(all.equal(ag_st$household_members$per_weight, c(1.1, 1.01 * 0.9, 1.1))))
-cat('PASS: age_demographics -- state ratio multiplies national growth by age, ages above 85 take the 85 ratio, no ratio = national\n')
 
 
 cat('\nAll state-analysis tests passed.\n')

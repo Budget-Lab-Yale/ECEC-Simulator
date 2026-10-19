@@ -425,17 +425,6 @@ age_demographics <- function(processed_acs, macro_projections, target_year, acs_
     ) %>%
     select(age, married, growth_factor)
 
-  # Experiment ECEC_STATE_AGING=state: x state/national growth ratio by age
-  # (state_age_ratios.R); ages above 85 take the 85 ratio. Absent -> national
-  if (!is.null(processed_acs$state_age_ratios)) {
-    rt <- state_age_ratio_for_year(processed_acs$state_age_ratios, target_year)
-    growth_factors <- growth_factors %>%
-      mutate(age_key = pmin(age, 85L)) %>%
-      left_join(rt %>% rename(age_key = age), by = 'age_key') %>%
-      mutate(growth_factor = growth_factor * coalesce(ratio, 1)) %>%
-      select(age, married, growth_factor)
-  }
-
   # Attach factors to all household members
   person_growth_factors = processed_acs$household_members %>%
     left_join(growth_factors, by = c('age', 'married')) %>%
