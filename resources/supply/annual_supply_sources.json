@@ -1,0 +1,47 @@
+{
+  "SARPP.zip": {
+    "url": "https://apps.bea.gov/regional/zip/SARPP.zip",
+    "sha256": "38713c6224c4c26ae020ffecd4549b82dca84f43d34f93dfdb43f4070cf011da",
+    "checked_at": "2026-10-21T19:54:56.761399+00:00"
+  },
+  "MARPP.zip": {
+    "url": "https://apps.bea.gov/regional/zip/MARPP.zip",
+    "sha256": "5dbf2e6ac2af222cc9abc205586c9b480344d89392752eb689c3ec823a34c83e",
+    "checked_at": "2026-10-21T19:54:56.769066+00:00"
+  },
+  "oesm19all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm19all.zip",
+    "sha256": "9ee0f3cc65142d02514cbe3b2982eb93b65dd04f6449f426c2a4b78f349c693b",
+    "checked_at": "2026-10-21T19:17:28.120321+00:00"
+  },
+  "oesm20all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm20all.zip",
+    "sha256": "bd88019e91caeb70b6f7476f479568c0ebbc275a2537c1311da452a194d90dba",
+    "checked_at": "2026-10-21T19:19:23.740847+00:00"
+  },
+  "oesm21all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm21all.zip",
+    "sha256": "4dc5c9db9e111a06e612e848e107488a7beec0743853f02b1a3a069bb48207ce",
+    "checked_at": "2026-10-21T19:21:22.696651+00:00"
+  },
+  "oesm22all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm22all.zip",
+    "sha256": "a3cf8a5c61d3c3910ad89ea7050ae033f592e370cb5b265d868e42f8e5888969",
+    "checked_at": "2026-10-21T19:23:27.047606+00:00"
+  },
+  "oesm23all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm23all.zip",
+    "sha256": "9e0d5a320c7189b449708d4223c89bf7e8be1a6dd28613e1f1972d3b5dd60f2b",
+    "checked_at": "2026-10-21T19:25:33.204189+00:00"
+  },
+  "oesm24all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm24all.zip",
+    "sha256": "7fe6409f04b73003404de933ecbcc2e4ce6e8440919634beedb237353cfc1d04",
+    "checked_at": "2026-10-21T19:27:37.170553+00:00"
+  },
+  "oesm25all.zip": {
+    "url": "https://www.bls.gov/oes/special-requests/oesm25all.zip",
+    "sha256": "86ffcbbeb27a96b7aa84d01801de71ee94ee9027452152caabebfdec9d764fde",
+    "checked_at": "2026-10-21T19:29:52.506033+00:00"
+  }
+}

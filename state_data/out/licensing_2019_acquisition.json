@@ -1,0 +1,279 @@
+[
+  {
+    "state": "AZ",
+    "source_id": "AZ_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.azed.gov/sites/default/files/2019/10/CCDF-State-Plan-FY-2019-FY-2021.pdf?id=5d9f61bf03e2b31b5cda6d13",
+    "retrieved_on": "2026-10-20",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "state": "CO",
+    "source_id": "CO_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://spl.cde.state.co.us/artemis/huserials/hu62510internet/hu62510201921internet.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/CO_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://spl.cde.state.co.us/artemis/huserials/hu62510internet/hu62510201921internet.pdf",
+    "sha256": "f7fc33f5d4ea1d778a5f46669290c415160027424d74c62c263869e28912e6d3",
+    "pages": 314,
+    "characters": 626963,
+    "staffing_pages": 15
+  },
+  {
+    "state": "HI",
+    "source_id": "HI_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://humanservices.hawaii.gov/wp-content/uploads/2020/09/Amended-Hawaii-CCDF-State-Plan-FFY-2019-2021-approved-9-11-2020.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/HI_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://humanservices.hawaii.gov/wp-content/uploads/2020/09/Amended-Hawaii-CCDF-State-Plan-FFY-2019-2021-approved-9-11-2020.pdf",
+    "sha256": "158929c6c2c59552790caaabe00e1ce9fa8e961d5e9866b50c43c5ef51dfacf5",
+    "pages": 554,
+    "characters": 1084252,
+    "staffing_pages": 21
+  },
+  {
+    "state": "IL",
+    "source_id": "IL_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.dhs.state.il.us/OneNetLibrary/27897/documents/Child%20Care/stplan_pdf_2019111920.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/IL_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.dhs.state.il.us/OneNetLibrary/27897/documents/Child%20Care/stplan_pdf_2019111920.pdf",
+    "sha256": "4a5f311added4d5b675d3400b47f81770ee414bd362d8f53a89fb68789d330dc",
+    "pages": 303,
+    "characters": 573454,
+    "staffing_pages": 13
+  },
+  {
+    "state": "KS",
+    "source_id": "KS_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.dcf.ks.gov/services/ees/documents/child_care/stplan_pdf_2019final.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/KS_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.dcf.ks.gov/services/ees/documents/child_care/stplan_pdf_2019final.pdf",
+    "sha256": "d33b0777376ad122d2f5b4a39e8b210bc0dca94348f1e940555dd430d6e6228e",
+    "pages": 328,
+    "characters": 661545,
+    "staffing_pages": 12
+  },
+  {
+    "state": "IN",
+    "source_id": "IN_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.in.gov/fssa/carefinder/files/stplan_pdf_2016.pdf",
+    "retrieved_on": "2026-10-20",
+    "error": "HTTP Error 404: "
+  },
+  {
+    "state": "MA",
+    "source_id": "MA_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.mass.gov/doc/department-of-early-education-and-care-child-care-and-development-fund-state-plan-2019-2021-updated-10118/download",
+    "retrieved_on": "2026-10-20",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "state": "MS",
+    "source_id": "MS_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.mdhs.ms.gov/wp-content/uploads/2021/05/DECCD-State-Plan_Amended-March-1-2021.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/MS_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.mdhs.ms.gov/wp-content/uploads/2021/05/DECCD-State-Plan_Amended-March-1-2021.pdf",
+    "sha256": "66b9f6af8cf1aade50d1b34ac3be500bbe675f3974fd5e23bdb895b654d64699",
+    "pages": 329,
+    "characters": 665411,
+    "staffing_pages": 8
+  },
+  {
+    "state": "MO",
+    "source_id": "MO_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://dss.mo.gov/cd/child-care/files/2019-2021-missouri-child-care-development-fund.pdf",
+    "retrieved_on": "2026-10-20",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "state": "NV",
+    "source_id": "NV_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.dss.nv.gov/siteassets/dwss.nv.gov/content/care/CC_StatePlan-2019.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/NV_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.dss.nv.gov/siteassets/dwss.nv.gov/content/care/CC_StatePlan-2019.pdf",
+    "sha256": "006b6a59115e6a5426bda77c7c9c4d262de93a7886eccb4ab83c092676561c4a",
+    "pages": 331,
+    "characters": 652650,
+    "staffing_pages": 22
+  },
+  {
+    "state": "NM",
+    "source_id": "NM_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.newmexicokids.org/wp-content/uploads/2021/06/Child_Care_Development_Fund_CCDF_Plan_for_New_Mexico_FY19-FY21.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/NM_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.newmexicokids.org/wp-content/uploads/2021/06/Child_Care_Development_Fund_CCDF_Plan_for_New_Mexico_FY19-FY21.pdf",
+    "sha256": "a18467278ba7de0245deffc2546a3b2a74af87e86c67a78757f00c4a8910400c",
+    "pages": 310,
+    "characters": 599598,
+    "staffing_pages": 8
+  },
+  {
+    "state": "OH",
+    "source_id": "OH_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://dam.assets.ohio.gov/image/upload/jfs.ohio.gov/cdc/docs/State-Plan-2019-2021.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/OH_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://dam.assets.ohio.gov/image/upload/jfs.ohio.gov/cdc/docs/State-Plan-2019-2021.pdf",
+    "sha256": "5aad3ce154851560f3d259796b20f546bec32f08cac06d86a523a980e2fc572e",
+    "pages": 305,
+    "characters": 572612,
+    "staffing_pages": 15
+  },
+  {
+    "state": "PA",
+    "source_id": "PA_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.pa.gov/content/dam/copapwp-pagov/en/dhs/documents/docs/documents/ocdel/c_273302.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/PA_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.pa.gov/content/dam/copapwp-pagov/en/dhs/documents/docs/documents/ocdel/c_273302.pdf",
+    "sha256": "6f62cf6bea1acdf1d07723eaaee496c4f4f5dd2cd48165e819a099cf4deb72f9",
+    "pages": 288,
+    "characters": 572162,
+    "staffing_pages": 6
+  },
+  {
+    "state": "SC",
+    "source_id": "SC_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.scchildcare.org/media/63790/stplan_pdf_2019.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/SC_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://scchildcare.org/media/63790/stplan_pdf_2019.pdf",
+    "sha256": "d17f7b7d04b48defadd4f42e293b80b18a6a76985c1db3f4721fa889514ea016",
+    "pages": 354,
+    "characters": 741624,
+    "staffing_pages": 17
+  },
+  {
+    "state": "TN",
+    "source_id": "TN_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.tn.gov/content/dam/tn/human-services/documents/CCDF_Plan_2019-2021_1-8-21.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/TN_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.tn.gov/content/dam/tn/human-services/documents/CCDF_Plan_2019-2021_1-8-21.pdf",
+    "sha256": "1b719b27ae47f994bc5affab86719c1daaeb9aeca989f0932037eea125053b28",
+    "pages": 376,
+    "characters": 717426,
+    "staffing_pages": 21
+  },
+  {
+    "state": "VT",
+    "source_id": "VT_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://outside.vermont.gov/dept/DCF/Shared%20Documents/CDD/Reports/CCDF-Plans/CCDF-Plan-2019-2022-Amendment3.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/VT_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://outside.vermont.gov/dept/DCF/Shared%20Documents/CDD/Reports/CCDF-Plans/CCDF-Plan-2019-2022-Amendment3.pdf",
+    "sha256": "4e42d84dd84a89ce1d758beb5108c53bc3309f3263f8f38308a802ff1a8ca313",
+    "pages": 312,
+    "characters": 624824,
+    "staffing_pages": 9
+  },
+  {
+    "state": "VA",
+    "source_id": "VA_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.dss.virginia.gov/files/division/cc/state_plans/State_Child_Care_Plan.pdf",
+    "retrieved_on": "2026-10-20",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "state": "WV",
+    "source_id": "WV_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://dhhr.wv.gov/bcf/Childcare/Documents/stplan_pdf_2019%20final%209%2019%2018.pdf",
+    "retrieved_on": "2026-10-20",
+    "error": "HTTP Error 404: NOT FOUND"
+  },
+  {
+    "state": "GA",
+    "source_id": "GA_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.decal.ga.gov/documents/attachments/CCDFProposedStatePlan.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/GA_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.decal.ga.gov/documents/attachments/CCDFProposedStatePlan.pdf",
+    "sha256": "4a03a0b4684bb9ae8c21c0d305e9d754387b657736753873f62706822537cbe0",
+    "pages": 192,
+    "characters": 620991,
+    "staffing_pages": 23
+  },
+  {
+    "state": "OK",
+    "source_id": "OK_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://oklahoma.gov/content/dam/ok/en/okdhs/documents/newsmedia/oklahomas-draft-state-plan-for-2019.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/OK_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://oklahoma.gov/content/dam/ok/en/okdhs/documents/newsmedia/oklahomas-draft-state-plan-for-2019.pdf",
+    "sha256": "0a7d6c2a96a21f5f6c81499f28f417b994299e118e22028b21ed4ad0a2dd1085",
+    "pages": 140,
+    "characters": 427535,
+    "staffing_pages": 12
+  },
+  {
+    "state": "AR",
+    "source_id": "AR_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://dese.ade.arkansas.gov/Files/stplan_pdf_2019_final_approved_20230506155500.pdf",
+    "retrieved_on": "2026-10-20",
+    "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>"
+  },
+  {
+    "state": "LA",
+    "source_id": "LA_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://doe.louisiana.gov/docs/default-source/early-childhood/2019-2021-ccdf-approved-state-plan-amendment-4.pdf?sfvrsn=adc86718_0",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/LA_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://doe.louisiana.gov/docs/default-source/early-childhood/2019-2021-ccdf-approved-state-plan-amendment-4.pdf?sfvrsn=adc86718_0",
+    "sha256": "7fb229736a1f46358bc4ea1fff84f11d2c6b180bdaef9731f9aa354fcb0283dd",
+    "pages": 294,
+    "characters": 570849,
+    "staffing_pages": 6
+  },
+  {
+    "state": "MI",
+    "source_id": "MI_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://www.michigan.gov/-/media/Project/Websites/mileap/Documents/Early-Childhood-Education/Child-Development-and-Care/partner_docs/stplan_pdf_2019.pdf?rev=29dd8ba569a24d519de374cb51cdfd00",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/MI_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://www.michigan.gov/-/media/Project/Websites/mileap/Documents/Early-Childhood-Education/Child-Development-and-Care/partner_docs/stplan_pdf_2019.pdf?rev=29dd8ba569a24d519de374cb51cdfd00",
+    "sha256": "539c5c82e2630b512ff9696a69cc311fd6721e5c6a46ef08d9c8bc661b7279cb",
+    "pages": 316,
+    "characters": 651655,
+    "staffing_pages": 8
+  },
+  {
+    "state": "NC",
+    "source_id": "NC_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://ncchildcare.ncdhhs.gov/Portals/0/documents/pdf/2/2019-2021_Child_Care_and_Development_Fund_Plan_Approved.pdf?ver=2019-02-04-090519-383",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/NC_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://ncchildcare.ncdhhs.gov/Portals/0/documents/pdf/2/2019-2021_Child_Care_and_Development_Fund_Plan_Approved.pdf?ver=2019-02-04-090519-383",
+    "sha256": "7dd1ef285186b0be51b515fd7c7ee1ebb0a1a0b96878b6ab620803d05c7c9bf8",
+    "pages": 368,
+    "characters": 780955,
+    "staffing_pages": 9
+  },
+  {
+    "state": "MT",
+    "source_id": "MT_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://dphhs.mt.gov/assets/ecfsd/childcare/20192021ccdfstateplan.pdf",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/MT_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://dphhs.mt.gov/assets/ecfsd/childcare/20192021ccdfstateplan.pdf",
+    "sha256": "86e394e02b91889472f46022f257727410ff9185052b4468a4e1388e1438d7cc",
+    "pages": 324,
+    "characters": 655999,
+    "staffing_pages": 6
+  },
+  {
+    "state": "RI",
+    "source_id": "RI_CCDF__state_plan_candidate__2019-2021",
+    "url": "https://dhs.ri.gov/media/1631/download?language=en",
+    "retrieved_on": "2026-10-20",
+    "local_file": "state_data/raw/US/RI_CCDF__state_plan_candidate__2019-2021.pdf",
+    "final_url": "https://dhs.ri.gov/media/1631/download?language=en",
+    "sha256": "6512714ba88792db1bc60e5ddf166139b512762b21ec8800770e59ae4e6dbe0b",
+    "pages": 331,
+    "characters": 633702,
+    "staffing_pages": 12
+  }
+]

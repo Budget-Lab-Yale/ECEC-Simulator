@@ -1,21 +1,21 @@
 #------------------------------------------------------------------------------
 # licensing_ratios_2017.R -- writes
 # US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv, licensed
-# children per staff by state, setting, age point, read by state_supply_params.R
-# (staffing index). Also writes state_data/out/licensing_ratio_change_2014_2017.csv
+# children per staff by state, setting, age point; historical comparison only.
+# Production uses licensing_ratios_2019.R. Also writes state_data/out/licensing_ratio_change_2014_2017.csv
 # (2014 vs 2017 ratios, indices, both at 3 points) and
 # state_data/out/licensing_ratio_change_3pt_5pt.csv (2017 centre index, 3 vs 5
 # age points).
 #
 # SOURCE. 2017 Child Care Licensing Study (ACF/OPRE, ICPSR 37700), state
 # regulations in effect 2017:
-#   state_data/raw/US/US_ICPSR37700__licensing_center_regulations__2017.rda
+#   resources/licensing/US_ICPSR37700__licensing_center_regulations__2017.rda
 #     (da37700.0002; PS_RAT_* 'Ratio by Age', text 'N:1')
-#   state_data/raw/US/US_ICPSR37700__licensing_small_family_home_regulations__2017.rda
+#   resources/licensing/US_ICPSR37700__licensing_small_family_home_regulations__2017.rda
 #     (da37700.0003; F_D_CH_MAXCHLD 'Maximum Number of Children Allowed', text)
 # 2014 study via CAP 2018 Table 1, PN3 2020 Table 6 -- NYC centre rows, 2014
 # vs 2017 comparison file only:
-#   state_data/raw/US/US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv
+#   resources/licensing/US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv
 #
 # CENTRE AGE POINTS -- one representative point per year of age 0-4
 #   (NSECE_AGE_POINT, shared_nsece_ages.R): 11_months = PS_RAT_11MTHS,
@@ -56,11 +56,11 @@ source('src/shared_functions/constants.R')
 # NSECE_AGE_POINT, NSECE_AGE_BAND, NSECE_AGES_0_4
 source('state_data/code/shared_nsece_ages.R')
 
-RAW      <- file.path('state_data', 'raw', 'US')
+RAW      <- file.path('resources', 'licensing')
 CENTRE17 <- file.path(RAW, 'US_ICPSR37700__licensing_center_regulations__2017.rda')
 HOME17   <- file.path(RAW, 'US_ICPSR37700__licensing_small_family_home_regulations__2017.rda')
 OLD14    <- file.path(RAW, 'US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv')
-OUT      <- file.path('resources', 'supply',
+OUT      <- file.path('resources', 'licensing',
                       'US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv')
 CHANGE   <- file.path('state_data', 'out', 'licensing_ratio_change_2014_2017.csv')
 CHANGE_PTS <- file.path('state_data', 'out', 'licensing_ratio_change_3pt_5pt.csv')

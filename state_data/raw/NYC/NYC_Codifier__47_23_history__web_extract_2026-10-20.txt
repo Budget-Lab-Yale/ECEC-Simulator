@@ -1,0 +1,153 @@
+Web tool text snapshot; original URL returned HTTP403 to direct downloader. Used for amendment history, not current ratio values.
+§ 47.23 Supervision; Staff / Child Ratios and Group Size. (https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCrules/0-0-0-103021)
+citeturn104view0 [wordlim: 200] Crawled: today; Content type: text/html; Source: open({"ref_id":"https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCrules/0-0-0-103021","lineno":null}); Total lines: 254
+L0: cite0†Skip to code content (skip section selection) L1: 
+L2: October 2026 (current)
+L3: 
+L4: Compare to:
+L5: 
+L6: [Button: - No Earlier Versions -]
+L7: 
+L8: cite1†New York City Overview L9: 
+L10: cite2†The New York City Charter L11: 
+L12: cite2†NEW YORK CITY CHARTER L13: 
+L14: cite3†The New York City Administrative Code L15: 
+L16: cite3†NEW YORK CITY ADMINISTRATIVE CODE L17: 
+L18: cite4†Title 1: General Provisions L19: 
+L20: cite5†Title 2: City of New York L21: 
+L22: cite6†Title 3: Elected officials L23: 
+L24: cite7†Title 4: Property of the City L25: 
+L26: cite8†Title 5: Budget; Capital Projects L27: 
+L28: cite9†Title 6: Contracts, Purchases and Franchises L29: cite10†Title 7: Legal Affairs L30: 
+L31: cite11†Title 8: Civil Rights L32: 
+L33: cite12†Title 9: Criminal Justice L34: 
+L35: cite13†Title 10: Public Safety L36: 
+L37: cite14†Title 11: Taxation and Finance L38: 
+L39: cite15†Title 12: Personnel and Labor L40: 
+L41: cite16†Title 13: Retirement and Pensions L42: 
+L43: cite17†Title 14: Police L44: 
+L45: cite18†Title 15: Fire Prevention and Control L46: 
+L47: cite19†Title 16: Sanitation L48: 
+L49: cite20†Title 16-A: [Commercial Waste Removal] L50: 
+L51: cite21†Title 16-B: Commercial Waste Zones L52: 
+L53: cite22†Title 17: Health L54: 
+L55: cite23†Title 18: Parks L56: 
+L57: cite24†Title 19: Transportation L58: cite25†Title 20: Consumer and Worker Protection L59: 
+L60: cite26†Title 20-A: [Shipboard Gambling] L61: 
+L62: cite27†Title 21: Social Services L63: 
+L64: cite28†Title 21-A: Education L65: 
+L66: cite29†Title 22: Economic Affairs L67: 
+L68: cite30†Title 23: Communications L69: 
+L70: cite31†Title 24: Environmental Protection and Utilities L71: 
+L72: cite32†Title 25: Land Use L73: 
+L74: cite33†Title 26: Housing and Buildings L75: 
+L76: cite34†Title 27: Construction and Maintenance L77: 
+L78: cite35†Title 28: New York City Construction Codes L79: 
+L80: cite36†Title 29: New York City Fire Code L81: 
+L82: cite37†Title 30: Emergency Management L83: cite38†Title 31: Department of Veterans' Services L84: 
+L85: cite39†Title 32: Labor and Employment L86: 
+L87: cite40†Title 33: Investigations L88: 
+L89: cite41†Title 34: Racial Equity L90: 
+L91: cite42†Appendix A: Unconsolidated Local Laws L92: 
+L93: cite43†The Rules of the City of New York L94: 
+L95: cite43†THE RULES OF THE CITY OF NEW YORK L96: 
+L97: cite44†Title 1: Department of Buildings L98: 
+L99: cite45†Title 2: Board of Standards and Appeals L100: 
+L101: cite46†Title 3: Fire Department L102: 
+L103: cite47†Title 6: Department of Consumer and Worker Protection L104: 
+L105: cite48†Title 9: Procurement Policy Board Rules L106: cite49†Title 12: Franchise and Concession Review Committee L107: 
+L108: cite50†Title 15: Department of Environmental Protection L109: 
+L110: cite51†Title 16: Department of Sanitation L111: 
+L112: cite52†Title 17: Business Integrity Commission L113: 
+L114: cite53†Title 19: Department of Finance L115: 
+L116: cite54†Title 20: Tax Appeals Tribunal L117: 
+L118: cite55†Title 21: Tax Commission L119: 
+L120: cite56†Title 22: Banking Commission L121: 
+L122: cite57†Title 24: Department of Health and Mental Hygiene L123: 
+L124: cite58†Title 25: Department of Mental Health and Retardation [Repealed] L125: cite59†Title 28: Housing Preservation and Development L126: 
+L127: cite60†Title 29: Loft Board L128: 
+L129: cite61†Title 30: Rent Guidelines Board L130: 
+L131: cite62†Title 31: Mayor's Office of Homelessness and Single Room Occupancy L132: 
+L133: cite63†Title 34: Department of Transportation L134: 
+L135: cite64†Title 35: Taxi and Limousine Commission L136: 
+L137: cite65†Title 38: Police Department L138: 
+L139: cite66†Title 38-A: Civilian Complaint Review Board L140: 
+L141: cite67†Title 39: Department of Correction L142: 
+L143: cite68†Title 40: Board of Correction L144: 
+L145: cite69†Title 41: Department of Juvenile Justice L146: cite70†Title 42: Department of Probation L147: 
+L148: cite71†Title 43: Mayor L149: 
+L150: cite72†Title 44: Comptroller L151: 
+L152: cite73†Title 45: Borough Presidents L153: 
+L154: cite74†Title 46: Law Department L155: 
+L156: cite75†Title 47: Commission on Human Rights L157: 
+L158: cite76†Title 48: Office of Administrative Trials and Hearings (OATH) L159: 
+L160: cite77†Title 49: Department of Records and Information Services L161: 
+L162: cite78†Title 50: Community Assistance Unit L163: 
+L164: cite79†Title 51: City Clerk L165: 
+L166: cite80†Title 52: Campaign Finance Board* L167: 
+L168: cite81†Title 53: Conflicts of Interest Board L169: cite82†Title 55: Department of Citywide Administrative Services L170: 
+L171: cite83†Title 56: Department of Parks and Recreation L172: 
+L173: cite84†Title 57: Art Commission L174: 
+L175: cite85†Title 58: Department of Cultural Affairs L176: 
+L177: cite86†Title 60: Civil Service Commission L178: 
+L179: cite87†Title 61: Office of Collective Bargaining L180: 
+L181: cite88†Title 62: City Planning L182: 
+L183: cite89†Title 63: Landmarks Preservation Commission L184: 
+L185: cite90†Title 66: Department of Small Business Services L186: 
+L187: cite91†Title 67: Department of Information Technology and Telecommunications L188: cite92†Title 68: Human Resources Administration L189: 
+L190: cite93†Title 69: Department of Aging L191: 
+L192: cite94†Title 70: In Rem Foreclosure Release Board L193: 
+L194: cite95†Title 71: Voter Assistance Commission L195: 
+L196: cite96†Title 72: Office of Emergency Management L197: 
+L198: cite97†Title 73: Civic Engagement Commission L199: 
+L200: cite98†Title 74: Community Hiring L201: # New York City Health Code
+L202: ###### § 47.23 Supervision; Staff / Child Ratios and Group Size.
+L203:    (a)   Constant competent supervision required. Staff included in the staff / child ratios set forth below shall maintain direct line of sight, constant competent supervision of all of the children in the program at all times.
+L204: Children in a child care classroom shall be competently supervised by a qualified group teacher or education director at all times in each type of child care program for which a permit is issued, with the sole exception that in the event of breaks or lunch periods, absence of no more than five days, the required staff / child ratio in a child care classroom may be maintained with assistant teachers and teacher aides, so long as at least one assistant teacher is included for each group of children in attendance.
+L205: Children in a family shelter-based drop-off child supervision program shall be competently supervised by shelter child supervision staff at all times.
+L206:       (1)   When any program is in operation, the number of qualified staff required by this Code shall be assigned and on duty to protect the health and safety of the children on the program's premises, and in the case of trips off-site the required number of staff shall accompany the children at all times wherever the children travel.
+L207:       (2)   Each program shall maintain a daily log, to be kept on site and provided to the Department upon request, reflecting the arrival and departure time of each member of the teaching staff or shelter child supervision staff.
+L208: 
+L209:    (b)   Group teacher. Except in a night child care program, a group teacher in a child care program shall be in charge of each group of children ages two to five years.
+L210:    (c)   Infant/toddler child care program supervision. An education director or a group teacher with equivalent qualifications shall be present at all times of a child care program's operation to supervise an infant/toddler child care program.
+L211: 
+L212:    (d)   Infant/Toddler teacher. An infant/toddler teacher in a child care program, under the supervision of the education director, may be in charge of individual groups of infants and toddlers, or children in a night child care program.
+L213:    (e)   CPR and first aid certifications. The permittee shall ensure that at least one staff member certified in CPR and first aid is on the premises of the program during all hours when children are present. Upon application for a new permit or for renewal of an existing permit, such certifications must be in pediatric CPR and pediatric first aid, and must be based on successful completion of appropriate training that includes hands-on skill tests.
+L214: 
+L215:    (f)   Minimum staff / child ratios.
+L216:       (1)   The staff of a child care program for purposes of staff / child ratios must include only the teaching staff. The minimum ratios of staff to children in a child care program must be as follows:
+L217: AGE OF CHILDREN  | MINIMUM STAFF / CHILD RATIO  | MAXIMUM GROUP SIZE
+L218: per room / area separated from other rooms/areas by a physical barrier
+L219: under 12 months  | 1:4 or 1:3  | 8
+L220: 12 to 24 months  | 1:5  | 10
+L221: 2 years to under 3  | 1:6  | 12
+L222: 3 years to under 4  | 1:10  | 15
+L223: 4 years to under 5  | 1:12  | 20
+L224: 5 years to under 6  | 1:15  | 25
+L225:       (2)   The staff of a family shelter based child supervision program for purposes of staff / child ratios shall include only shelter child supervision staff. Volunteers may count as staff for these purposes only if they meet all of the requirements to qualify as shelter child supervisors. The minimum ratios of staff to children in a family shelter-based drop-off child supervision program shall be as follows:
+L226: AGE OF CHILDREN  | MINIMUM STAFF / CHILD RATIO  | MAXIMUM GROUP SIZE
+L227: under 3 years  | 1:4 or 1:3  | 10 per room/area separated from other rooms / areas by a physical barrier
+L228: 3 years to under 6  | 1:8  | 16
+L229: 
+L230: 
+L231: 
+L232:       (3)   When children 12 months of age and older are in a group of mixed but contiguous ages, the minimum staff / child ratio and group size shall be based on the predominant age of the children in the group.
+L233:       (4)   Programs that maintain a staff / child ratio of 1:4 for children under 12 months of age shall demonstrate through their Written Safety Plan that they have sufficient staff in the program at all times to provide a staff / child ratio of 1:3 for the safe evacuation of children younger than 12 months of age during emergency situations.
+L234: 
+L235:    (g)   Mixed groups. Infants shall not be placed in older age groups.
+L236: 
+L237:    (h)   Night child care program supervision.
+L238:       (1)   Staff included in the staff / child ratios set forth above shall be awake at all times, and shall maintain direct line of sight, visual supervision of children.
+L239: 
+L240:       (2)   An education director or a group teacher with equivalent qualifications, or a member of the child supervision staff, shall be present at all times to supervise the night child care program and may not have a specific classroom assignment if more than 40 children are receiving night care or nighttime supervision.
+L241:       (3)   If a family shelter-based child drop-off child supervision program requires more than one shelter child supervisor to be present at any time to attain the required child/staff ratio, the permittee must designate one shelter child supervisor to be the lead shelter child supervisor, responsible for directing the supervision of children during that time period.
+L242: (Amended City Record 9/20/2017, eff. 10/10/2017; amended City Record 6/12/2018, eff. 7/12/2018; amended City Record 12/26/2019, eff. 1/25/2020; amended City Record 8/19/2025, eff. 8/19/2025; amended City Record 11/20/2025, eff. 11/20/2025)
+L243: Disclaimer: The Codes and other documents that appear on this site may not yet reflect the most current legislation or rules adopted by the City. In addition, certain textual errors and omissions may temporarily exist, resulting from problems in the source database provided to American Legal and from which this website was created.
+L244: Although these errors and omissions are being corrected, any user discovering any such error is invited to please contact the publisher at cite99†[email protected] or at 800-445-5588 and/or the New York City Law Department at cite99†[email protected] .
+L245: Hosted by: American Legal Publishing
+L246: 
+L247: cite100†Back to Code Library L248: 
+L249: cite101†Previous Doc L250: 
+L251: cite58†Next Doc L252: 
+L253: 0 items available
+

@@ -6,6 +6,7 @@
 #------------------------------------------------------------------------------
 
 STATE_DATA_ROOT <- 'state_data'
+source('src/shared_functions/get_raw_data_path.R')
 
 # NSECE HH9_REGION codes -> Census region keys, spelled as
 # 00_build_demand_targets.R's NSECE_* tables and out/nsece_constants.csv spell
@@ -19,17 +20,6 @@ UNIVERSE_B <- 'B: NSCH-matched, 10+ hrs/week'
 
 # Formal care types, one Center-Based row (00 build, 02 constants)
 FORMAL_TYPES <- c('Center-Based', 'Unpaid Center-Based', 'Paid Home-Based')
-
-
-
-# raw/ subfolder of a raw or documentation file: scope prefix of its name
-# (US_, NYC_, <ST>_), NYS_ filed under NY.
-#   - f (chr): file name, e.g. 'US_PEP__population_children_age_0_4_by_county__2019.csv'
-# Returns: (chr) folder name, e.g. 'US'
-raw_scope <- function(f) {
-  s <- sub('_.*$', '', basename(f))
-  if (s == 'NYS') 'NY' else s
-}
 
 
 

@@ -16,6 +16,7 @@ slurm/logs/
 state_data/config_local.yaml
 # Files too large for git; cluster only.
 state_data/raw/local/
+state_data/work/
 
 # LaTeX build artefacts. latexmk and the LaTeX Workshop extension write these
 # beside the .tex on every save. Patterns are global: nothing tracked matches
@@ -44,3 +45,8 @@ state_data/docs/*
 
 # Editor settings (memo LaTeX) -- local only
 .vscode/
+
+# Large national source archives
+resources/bls_oews/*.zip
+resources/bea/*.zip
+resources/ndcp/*.xlsx

@@ -1,0 +1,4 @@
+calibration_interface: 202610191203
+income_rank: national_rpp
+urban_density: 1
+a90886dd4638f789facb2451e3fcf9ab  /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1021-data-updates/p0_by_age.csv

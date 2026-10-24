@@ -208,6 +208,7 @@ initialize_simulation <- function() {
     }))
 
     list(
+      wage_path = supply_yaml_data$wage_path,
       L_req   = L_req,
       w       = c(supply_yaml_data$wages$no_ba, supply_yaml_data$wages$ba),
       L       = c(supply_yaml_data$labor_supply$no_ba, supply_yaml_data$labor_supply$ba),

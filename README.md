@@ -123,6 +123,8 @@ Families are classified into 2 types by number of children:
 
 Each choice combines: primary caregiver employment (FT/PT/NW) x child care arrangements (type x hours per child).
 
+Family preparation retains pseudo-family IDs in samples with no families of three or more children and adds missing second-child slots in samples containing only one-child families. `Rscript tests/test_pseudofamily_split.R` checks these cases and verifies that splitting larger families preserves family and child weights.
+
 ### Two-Stage Choice Simulation
 
 1. **Equilibrium**: Uses softmax probabilities (smooth, differentiable)
@@ -223,6 +225,47 @@ The national run (no `state` column, default settings) is main's. State machiner
 
 `state_data/code/00_build_demand_targets.R` writes the demand files, and `resources/supply/state_supply_params.R` writes the supply files. NYC households are selected by STATEFIP 36 and the five borough county FIPS (`config/substate_geographies.csv`), which needs an ACS pull with `COUNTYFIP`. A state run needs an interface that stores `STATEFIP`, `p0`, and child weights with the alpha matrices.
 
+The October 1, 2019 staffing-rule audit is documented in
+[state_data/README.md](state_data/README.md#staffing-rule-audit-october-1-2019).
+All 312 geography/setting/age records have historical-source review; 28 change
+a numerical input and none remain unresolved. `state_data/code/analyze_licensing_2019.py
+--require-verified` checks sources and writes detail and coverage tables without
+changing production inputs.
+
+Rebuild supply inputs with `Rscript resources/supply/00_update_state_supply.R`.
+It refreshes the source/hash audit before writing staffing inputs, then builds
+annual wages and all supply YAMLs. Set `PYTHON` to a working Python executable
+if it is absent from PATH. `--skip-annual-wages` reuses an existing annual panel.
+`state_supply_params.R --check` validates annual wage paths as well as staffing.
+`Rscript tests/test_state_staffing_inputs.R` independently checks the 312 reviewed
+records, population normalization, and all 52 saved YAML staffing payloads.
+`Rscript tests/test_state_orchestration.R` checks national delegation and state
+isolation across sequential, parallel, and finalization paths using small fixtures.
+Configured raw-data roots take precedence over repository resources, including
+nested source folders; check with `Rscript tests/test_raw_data_paths.R`.
+
+NY and NYC retain their own production calibration. The NY/NYC diagnostic now
+uses a separate common-rank partition sidecar from `acs_p0_shares.R`; its default
+checks structural identities and reports cross-calibration gaps. Add
+`--strict-additivity` to retain the historical 1% / 0.1%-of-total gap test.
+See `Rscript tests/test_nyc_partition.R`. Home-staffing scenarios are diagnostic
+only: `Rscript state_data/code/analyze_home_staffing.R` writes staffing and
+2019 anchor-price sensitivities. The national anchor already includes NSECE
+helpers; state capacity proxies don't encode required adult-count differences.
+`Rscript state_data/code/review_home_staffing_inputs.R` audits all 52 home inputs
+against documented configurations, retaining unresolved mappings explicitly.
+`Rscript state_data/code/analyze_home_prices.R` compares anchors with NDCP family-home
+prices using fixed county/age weights. The national home anchor uses household net
+payments; NDCP market-rate prices measure a different concept. These diagnostics
+do not select a staffing baseline or refit residuals. Regression checks:
+`Rscript tests/test_home_staffing_review.R`.
+Acquisition scratch text and download logs belong in git-ignored
+`state_data/work/licensing/`; source documents and evidence remain in their
+registered locations.
+Git preserves registered source snapshots byte-for-byte. Check their line-ending
+attributes with `python tests/test_source_snapshot_attributes.py` before committing
+new sources; publisher whitespace stays intact for source-hash verification.
+
 ### Settings
 
 | Variable | Values | Description |
@@ -237,6 +280,8 @@ Each calibration stage records both settings, and a later stage stops if its set
 
 Each parent unit with a child under 5 gets one price multiplier for each paid care type. The multiplier is a quantile of a quantile regression forest (`ranger`, 500 trees) trained on NSECE provider rows. The forest target is the household payment divided by the base price. Its features are income percentile, Census region, number of parents, and mean age of the children under 5. ACS parent units rank baseline AGI, and NSECE ranks household income, both under `ECEC_INCOME_RANK`. One percentile from 1 to 99 is drawn for each parent unit and shared across care types. The multiplier is clipped to [0.1, 5]. 1a writes the diagnostics to `estimation/models/`.
 
+Year preparation checks finite positive wedges against the cache by household and parent-unit keys. Constant wedges are valid in small samples. Missing or duplicate cache keys and changed joined values stop the run. Check this guard with `Rscript tests/test_price_wedge_integrity.R`.
+
 ### Center Price Tiers
 
 A paid center is high-priced at or above a tier line. Centers use their posted price and families use their hourly payment. With `ECEC_URBAN_DENSITY=0` the line is the national median posted price for the age band, weighted by survey weight times FTE enrollment. With `ECEC_URBAN_DENSITY=1` it is the line for the region, community urban density, and age band (`src/shared_functions/urban_density.R`). 1a writes the line to `estimation/data/nsece_tier_thresholds_2019.csv`.
@@ -246,16 +291,17 @@ A paid center is high-priced at or above a tier line. Centers use their posted p
 State demand targets, supply files, employment paths, simulation code, policies, and runscripts take effect at simulation start. Reuse an interface with `-C`. A new ACS pull, a new `--calib-sample`, processing or calibration code, or new national supply parameters need a new interface (`--setup-only`). After one, update the state inputs in order:
 
 ```bash
-# 1. p0 summaries on the new interface (cluster); replace their outputs in state_data/raw/US and state_data/out
+# 1. p0 summaries on the new interface (cluster); replace outputs in resources/acs and state_data/out
 Rscript state_data/cluster/acs_p0_shares.R <interface> <out.csv>
 # 2. NSECE constants, if NSECE processing changed; copy them into 00_ and 05_
 Rscript state_data/code/02_derive_nsece_constants.R
 # 3. Demand targets
 Rscript state_data/code/00_build_demand_targets.R --all --check
 # 4. Copy estimation/supply/supply_2019.yaml over resources/supply/US_NSECE__national_supply_parameters__2019.yaml, then
-Rscript resources/supply/state_supply_params.R
+Rscript resources/supply/00_update_state_supply.R
 # 5. Tests
 Rscript tests/test_state_analysis.R
+Rscript tests/test_state_staffing_inputs.R
 ```
 
 A fresh clone also needs `cache/price_models/price_qrf_models.rds`, which is not in git. Copy it from an existing checkout or run 1a.
@@ -308,7 +354,32 @@ dependencies:
   Tax-Data: '/model_data/Tax-Data/v1/.../baseline'
 ```
 
+## State supply input updates
+
+`resources/supply/00_update_state_supply.R` rebuilds state supply files using reviewed October 2019 staffing rules and annual wage ratios. National runs retain their existing supply inputs.
+
+1. Validate staffing source hashes: `python state_data/code/analyze_licensing_2019.py`.
+2. Acquire annual BEA/BLS data: `python resources/supply/acquire_annual_supply_data.py` (requires `lxml`). Store OEWS all-data ZIPs in `resources/bls_oews/` and BEA archives in `resources/bea/`. Download URLs and hashes are recorded in `resources/supply/annual_supply_sources.json`.
+3. Rebuild supply: `Rscript resources/supply/00_update_state_supply.R`. While annual BLS files are pending, explicitly pass `--skip-annual-wages` to retain 2019 wage anchors.
+4. Regenerate care-mix weights from the calibration interface, with `ECEC_URBAN_DENSITY=1`, `ECEC_INCOME_RANK=national_rpp`. The price comparison requires a `.provenance.txt` sidecar beside its p0-by-age input.
+5. Run `Rscript state_data/code/16_ndcp_model_prices.R`; run `Rscript state_data/code/17_historical_price_validation.R <macro_dir>` on a compute node for historical price validation. Historical comparisons hold 2019 county population and care-mix weights fixed.
+
+Annual wage paths multiply each education group's 2019 wage by its local-to-national ratio change, in addition to national wage growth. The last observed ratio is carried forward; missing interior years stop the run. Annual all-items RPPs are available through `get_regional_price_parity()` for survey-year matching; the 2019 training ranks remain fixed. Non-labor costs retain fixed 2019 geographic housing factors and CPI growth over time. Staffing evidence and source status are recorded in `state_data/docs/SOURCES.csv` and the detailed licensing audit registry.
+
 ## Requirements
 
 - R 4.0+
 - Key packages: data.table, tidyverse, yaml, ranger, openxlsx, sampleSelection, Hmisc
+
+State input diagnostics: `Rscript state_data/code/analyze_annual_wages.R` checks saved annual wage paths; `Rscript state_data/code/analyze_national_care_totals.R` writes six care-type gaps against the price-adjusted national calibration, excluding NYC. Historical price validation uses fixed 2019 geographic housing factors with CPI growth.
+
+State-input validation (22 October 2026): the updated build contains all 28
+numerical staffing corrections; all 312 geography/setting/age records are reviewed.
+The 52-geography, 1% ACS sample for 2026--2027 completed successfully (job
+`30293994`, output `202610221441`). All 104 price solves and employment targets
+pass: maximum paid-sector gap $0.000319/child-hour and maximum employment miss
+0.0002545 percentage points. Local source, supply, and annual wage checks pass.
+The refreshed 2019 NDCP comparison covers 46 states (weekly RMSE $34.73,
+correlation 0.892). The strict NY/NYC hours-additivity diagnostic still fails;
+the methodology appendix explains the care-mix difference. Adaptive employment-shift
+bounds are covered by `Rscript tests/test_employment_shift_bounds.R`.

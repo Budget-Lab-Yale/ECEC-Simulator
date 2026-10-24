@@ -1,0 +1,351 @@
+Actual primary-source web-reader output; not original PDF bytes.2026-10-22.
+DES Five-Year Review Report - Child Care Assistance (https://des.az.gov/sites/default/files/dl/6AAC5-5YRR-2019.pdf)
+citeturn259view0 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 18; Source: open({"ref_id":"turn256view0","lineno":92}); Total lines: 506
+L62@P2: child care provider may use when providing guidance or disciplining children in care,
+L63@P2: including the requirement to set clear time limits and providing positive guidance,
+L64@P2: redirection, and time-out.
+L65@P2: R6-5-5213 This rule establishes supplemental guidelines for a DES-certified child care provider
+L68@P2: R6-5-5214 This rule establishes supplemental guidelines for a DES-certified child care provider
+L69@P2: who cares for children under the age of two years, including requirements for feeding
+L70@P2-3: and physical contact.4
+L71@P3: Rule Objective
+L72@P3: R6-5-5215 This rule establishes supplemental guidelines for a DES-certified child care provider
+L73@P3: who cares for children with special needs, including the responsibility to ensure
+L74@P3: reasonable accommodations, communication with parents, inclusion practice, and the
+L75@P3: accommodation for a private diaper changing area for children older than the age of
+L76@P3: three years.
+L77@P3: R6-5-5216 This rule establishes supplemental safety guidelines and requirements for a DEScertified child care provider who uses a motorized vehicle to transport a child in care.
+L78@P3: R6-5-5217 This rule provides guidelines for a DES-certified child care provider to offer healthy
+L79@P3: meals and snacks and procedures to meet special dietary needs to children in care.
+L80@P3: R6-5-5218 This rule establishes guidelines for a DES-certified child care provider to control
+L81@P3: infectious disease, store and administer medications, and keep a written log of
+L82@P3: medication administered to children in care. This rule also provides procedures to take
+L83@P3: when a child becomes ill and describes the DES-certified child care provider's
+L84@P3: responsibility to obtain only emergency medical treatment for a child in care, when
+L85@P3: needed.
+L86@P3: R6-5-5219 This rule establishes a system a DES-certified child care provider shall use to maintain
+L87@P3: and retain a child’s medical records to ensure compliance with the immunization
+L88@P3: requirements set by Department of Health Services, including unusual incidents and
+L89@P3: immunization records or exemption affidavits. This rule also requires a DES-certified
+L90@P3: child care provider to collect and keep certain documents according to the
+L91@P3: requirements of this Article and the child care registration agreement.
+L92@P3: R6-5-5220 This rule establishes the standards for the maximum ratio of adults to children for all
+L93@P3: DES-certified child care providers, as well as procedures the Department follows to
+L94@P3: further limit the ratio under certain circumstances, such as provision of care to children
+L95@P3: with special needs or a home facility with inadequate space.
+L96@P3: R6-5-5221 This rule describes the requirement of a DES-certified child care provider to notify the
+L97@P3: Department of significant changes that may affect the safety and stability of child care
+L98@P3: services and the timeframe in which changes shall be reported.
+L99@P3: R6-5-5222 This rule describes a DES-certified child care provider's responsibility to maintain a
+L100@P3: DES-approved backup provider to ensure care is provided even when the DEScertified child care provider is unable to care for the children. This rule also addresses
+L101@P3: the proper use of the DES-approved backup provider and clarifies the procedures for
+L102@P3-4: mandatory reporting to the Department and to the parents when backup care is used.5
+L103@P4: Rule Objective
+L104@P4: R6-5-5223 This rule describes the basis for payment to a DES-certified child care provider for the
+L105@P4: provision of child care, as well as the responsibility of a DES-certified child care
+L106@P4: provider to make financial arrangements with a DES-approved backup provider when
+L107@P4: a backup provider is used to provide child care.
+L108@P4: R6-5-5224 This rule describes the procedures the Department uses to document and investigate
+L109@P4: a complaint received against a DES-certified child care provider.
+L110@P4: R6-5-5225 This rule describes the procedures the Department uses when placing a DES-certified
+L111@P4: child care provider on probation, including timeframes and progressive adverse action
+L112@P4: that may result from continued noncompliance.
+L113@P4: R6-5-5226 This rule establishes the criteria the Department uses to deny, suspend, revoke, or
+L114@P4: refuse to renew a child care certification.
+L115@P4: R6-5-5227 This rule describes the actions the Department takes to notify a DES-certified child
+L116@P4: care provider when an adverse action is taken against the DES-certified child care
+L117@P4: provider.
+L118@P4: R6-5-5228 This rule establishes a DES-certified provider's right to appeal an adverse action taken
+L119@P4: by the Department, clarifies appealable and non-appealable actions, and references
+L120@P4-5: the rules and regulations that describe hearing procedures.6
+L121@P5: 3. Are the rules effective in achieving their objectives? Yes No
+L122@P5: If not, please identify the rule(s) that is not effective and provide an explanation for why the
+L123@P5: rule(s) is not effective.
+L124@P5: Rule Explanation
+L125@P5: R6-5-5201 This rule is not effective because the definition for Child Protective Services (CPS) is
+L126@P5: outdated and does not reflect the shift in statutory and regulatory authority of CPS to
+L127@P5: the Department of Child Safety (DCS).
+L128@P5: R6-5-5202 This rule is not effective because it contains outdated, vague, and incorrect
+L129@P5: information.
+L130@P5: R6-5-5202(D)(4): A DES-certified provider cannot be a choice for backup child care
+L131@P5: services because a DES-certified provider is only certified to care for up to four children
+L132@P5: and there is no room to legally care for additional children who are cared for by another
+L133@P5: DES-certified child care provider.
+L134@P5: R6-5-5202(L): The language regarding immunization requirements is vague and
+L135@P5: outdated.
+L136@P5: R6-5-5202(M)(1): Language regarding medical recommendations are outdated and
+L137@P5: creates barriers for the applicant because the rule requires that the applicant and all
+L138@P5: household members of the applicant submit evidence of freedom from pulmonary
+L139@P5: tuberculosis (TB) within three months of the date of initial certification and annually
+L140@P5: thereafter. However, if the application approval timeframe is suspended and the
+L141@P5: applicant is not certified within three months of application, this creates a barrier for
+L142@P5: the applicant. Additionally, the rule states that evidence submitted under this section
+L143@P5: can only be provided by a physician and does not allow for evidence to be provided by
+L144@P5: other health care providers, such as a physician's assistant, registered nurse, or
+L145@P5: registered nurse practitioner.
+L146@P5: R6-5-5203 This rule is not effective because it does not address health and safety standards
+L147@P5: regarding animals kept within the home facility that may present a danger to children
+L148@P5: in care or the protection of children from vehicular traffic surrounding the home facility
+L149@P5: Additionally, the rule does not require the DES-certified child care provider to have an
+L150@P5: outdoor activity area even though R6-5-5209 requires outdoor activities be
+L151@P5-6: incorporated and balanced in the program.7
+L152@P6: Rule Explanation
+L153@P6: R6-5-5207 This rule is not effective because the language allows child care personnel and all
+L154@P6: individual backup providers who may be ineligible to receive a valid fingerprint card to
+--------------------------------------------------------------------------------
+DES Five-Year Review Report - Child Care Assistance (https://des.az.gov/sites/default/files/dl/6AAC5-5YRR-2019.pdf)
+citeturn259view1 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 18; Source: open({"ref_id":"turn256view0","lineno":125}); Total lines: 506
+L92@P3: R6-5-5220 This rule establishes the standards for the maximum ratio of adults to children for all
+L93@P3: DES-certified child care providers, as well as procedures the Department follows to
+L94@P3: further limit the ratio under certain circumstances, such as provision of care to children
+L95@P3: with special needs or a home facility with inadequate space.
+L96@P3: R6-5-5221 This rule describes the requirement of a DES-certified child care provider to notify the
+L97@P3: Department of significant changes that may affect the safety and stability of child care
+L98@P3: services and the timeframe in which changes shall be reported.
+L99@P3: R6-5-5222 This rule describes a DES-certified child care provider's responsibility to maintain a
+L100@P3: DES-approved backup provider to ensure care is provided even when the DEScertified child care provider is unable to care for the children. This rule also addresses
+L101@P3: the proper use of the DES-approved backup provider and clarifies the procedures for
+L102@P3-4: mandatory reporting to the Department and to the parents when backup care is used.5
+L103@P4: Rule Objective
+L104@P4: R6-5-5223 This rule describes the basis for payment to a DES-certified child care provider for the
+L105@P4: provision of child care, as well as the responsibility of a DES-certified child care
+L106@P4: provider to make financial arrangements with a DES-approved backup provider when
+L107@P4: a backup provider is used to provide child care.
+L108@P4: R6-5-5224 This rule describes the procedures the Department uses to document and investigate
+L109@P4: a complaint received against a DES-certified child care provider.
+L110@P4: R6-5-5225 This rule describes the procedures the Department uses when placing a DES-certified
+L111@P4: child care provider on probation, including timeframes and progressive adverse action
+L112@P4: that may result from continued noncompliance.
+L113@P4: R6-5-5226 This rule establishes the criteria the Department uses to deny, suspend, revoke, or
+L114@P4: refuse to renew a child care certification.
+L115@P4: R6-5-5227 This rule describes the actions the Department takes to notify a DES-certified child
+L116@P4: care provider when an adverse action is taken against the DES-certified child care
+L117@P4: provider.
+L118@P4: R6-5-5228 This rule establishes a DES-certified provider's right to appeal an adverse action taken
+L119@P4: by the Department, clarifies appealable and non-appealable actions, and references
+L120@P4-5: the rules and regulations that describe hearing procedures.6
+L121@P5: 3. Are the rules effective in achieving their objectives? Yes No
+L122@P5: If not, please identify the rule(s) that is not effective and provide an explanation for why the
+L123@P5: rule(s) is not effective.
+L124@P5: Rule Explanation
+L125@P5: R6-5-5201 This rule is not effective because the definition for Child Protective Services (CPS) is
+L126@P5: outdated and does not reflect the shift in statutory and regulatory authority of CPS to
+L127@P5: the Department of Child Safety (DCS).
+L128@P5: R6-5-5202 This rule is not effective because it contains outdated, vague, and incorrect
+L129@P5: information.
+L130@P5: R6-5-5202(D)(4): A DES-certified provider cannot be a choice for backup child care
+L131@P5: services because a DES-certified provider is only certified to care for up to four children
+L132@P5: and there is no room to legally care for additional children who are cared for by another
+L133@P5: DES-certified child care provider.
+L134@P5: R6-5-5202(L): The language regarding immunization requirements is vague and
+L135@P5: outdated.
+L136@P5: R6-5-5202(M)(1): Language regarding medical recommendations are outdated and
+L137@P5: creates barriers for the applicant because the rule requires that the applicant and all
+L138@P5: household members of the applicant submit evidence of freedom from pulmonary
+L139@P5: tuberculosis (TB) within three months of the date of initial certification and annually
+L140@P5: thereafter. However, if the application approval timeframe is suspended and the
+L141@P5: applicant is not certified within three months of application, this creates a barrier for
+L142@P5: the applicant. Additionally, the rule states that evidence submitted under this section
+L143@P5: can only be provided by a physician and does not allow for evidence to be provided by
+L144@P5: other health care providers, such as a physician's assistant, registered nurse, or
+L145@P5: registered nurse practitioner.
+L146@P5: R6-5-5203 This rule is not effective because it does not address health and safety standards
+L147@P5: regarding animals kept within the home facility that may present a danger to children
+L148@P5: in care or the protection of children from vehicular traffic surrounding the home facility
+L149@P5: Additionally, the rule does not require the DES-certified child care provider to have an
+L150@P5: outdoor activity area even though R6-5-5209 requires outdoor activities be
+L151@P5-6: incorporated and balanced in the program.7
+L152@P6: Rule Explanation
+L153@P6: R6-5-5207 This rule is not effective because the language allows child care personnel and all
+L154@P6: individual backup providers who may be ineligible to receive a valid fingerprint card to
+L155@P6: be in contact with children in care until the individual's application for a fingerprint card
+L156@P6: is denied. Additionally, language regarding "tobacco products or smoke" is no longer
+L157@P6: effective as the tobacco products are not clearly defined. The training hour requirement
+L158@P6: for a DES-certified in-home provider is not an adequate amount of time to cover all the
+L159@P6: federally required topics listed in 45 CFR 98.41(a)(1).
+L160@P6: R6-5-5208 This rule is not effective because it does not align with current Department practice.
+L161@P6: R6-5-5208(A): The option to conduct an interview with a DES-certified in-home
+L162@P6: provider at the in-home provider’s residence is impractical and has never been
+L163@P6: performed.
+L164@P6: R6-5-5208(E): The requirement of the Department to deny recertification or take other
+L165@P6: enforcement action when the provider does not accept Department-referred children
+L166@P6: on three separate occasions is incorrect because the Department does not refer
+L167@P6: children to any provider.
+L168@P6: R6-5-5209 This rule is not effective because the list of developmentally appropriate play
+L169@P6: equipment and supplies in the rule are meant to be examples and are not a
+L170@P6: requirement for a DES-certified care provider to make available to children in care.
+L171@P6: R6-5-5210 This rule is not effective because Child Protective Services (CPS) no longer exists and
+L172@P6: the rule lacks safety and supervisory requirements in the event of an emergency,
+L173@P6: including a natural or man-caused disaster, pursuant to 45 CFR 98.41(a)(1)(vii).
+L174@P6: R6-5-5211 This rule is not effective because language in R6-5-5211(C) that requires a DEScertified child care provider to have “a garbage can with a close-fitting lid" does not
+L175@P6: clearly state that all garbage cans within the home facility must have close-fitting lids.
+L176@P6: R6-5-5212 This rule is not effective because some of the discipline methods addressed are
+L177@P6: outdated and need to be evaluated to align with current acceptable practices that focus
+L178@P6: on preventing behavior issues by supporting children in learning appropriate social
+L179@P6: skills and emotional responses. Additionally, the use of time-out must be accompanied
+L180@P6: with specific guidelines to avoid inappropriate use.
+L181@P6: R6-5-5213 This rule is not effective because language regarding the minimum standards for cribs
+
+HPY-330 - Article 52-Certification and Supervision of Family Child Care Home Providers (https://des.az.gov/sites/default/files/dl/HPY-330.pdf?time=1742342400100)
+citeturn255view0 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 56; Source: open({"ref_id":"https://des.az.gov/sites/default/files/dl/HPY-330.pdf?time=1742342400100","lineno":1565}); Total lines: 1977
+L1530@P42: 5. Archivos médicos del personal de cuidado de niños;
+L1531@P42: 6. Los archivos de entrenamiento del proveedor;
+L1532@P42: 7. Informes de incidentes extraordinarios; y
+L1533@P42: 8. Registros de asistencia diaria, accidentes, lesiones, medicamentos administrados, problemas de conducta u
+L1534@P42: otros incidentes extraordinarios.
+L1535@P42: E. El proveedor mantendrá por lo menos la siguiente información de cada niño bajo cuidado:
+L1536@P42: 1. El nombre, domicilio residencial, numero de teléfono, sexo y fecha de nacimiento del niño;
+L1537@P42: 2. El nombre, los domicilios residencial y del trabajo y números de teléfono del padre/madre del niño;
+L1538@P42: 3. El nombre, domicilio y número de teléfono del médico o proveedor de servicios de salud y de hospital del
+L1539@P42: niño;
+L1540@P42: 4. Autorización e instrucciones de cuidado médico de urgencia cuando sea imposible localizar al padre/madre;
+L1541@P42: y
+L1542@P42: 5. Autorización escrita para entregar al niño a cualquier otro individuo que no sea el padre/madre y el nombre,
+L1543@P42: los domicilios residencial y de trabajo y el número de teléfono de ese individuo.
+L1544@P42: F. El proveedor mantendrá un archivo de inmunización o un afidávit de exención de inmunización por cada niño
+L1545@P42: bajo cuidado:
+L1546@P42: 1. La documentación requerida bajo esta subsección se limita a:
+L1547@P42: a. Un archivo de inmunización preparado por el proveedor de servicios médicos del niño donde declara
+L1548@P42: que el niño ha recibido las inmunizaciones apropiadas a su edad especificadas en R9-6-702, incluso
+L1549@P42: inmunizaciones contra difteria, Haemophilus influenza tipo b, hepatitis B, sarampión, paperas, tos
+L1550@P42: ferina, poliomielitis, rubeola y tétano;
+L1551@P42: b. Un afidávit firmado por el proveedor médico del niño donde declara que el niño tiene alguna condición
+L1552@P42: medica debido a la cual las inmunizaciones requeridas pondrían en peligro la salud del niño; o
+L1553@P42: c. Un afidávit firmado por el padre/madre del niño donde declara que la religión del hogar del niño se
+L1554@P42: opone a las inmunizaciones.
+L1555@P42-43: 21 - Reverseb. Maintain the records as required by subsection (F)(1).
+L1556@P43: 3. The provider shall not permit a child in care to remain enrolled for more than 15 days if the parent does
+L1557@P43: not provide proof of current, age-appropriate immunizations, a statement of timely completion of further
+L1558@P43: inoculations, or exemption from immunization.
+L1559@P43: G. Children exempted from immunizations for religious or medical reasons shall be excluded from the home
+L1560@P43: facility if there is an outbreak of an immunizable disease at the home facility.
+L1561@P43: Historical Note
+L1562@P43: Adopted effective May 11, 1994 (Supp. 94-2). Former Section R6-5-5219 renumbered to R6-5-52020; new Section
+L1563@P43: R6-5-5219 renumbered from R6-5-5218 and amended by final rulemaking at 5 A.A.R. 1983, effective May 20, 1999
+L1564@P43: (Supp. 99-2). Amended by final rulemaking at 22 A.A.R. 3185, effective October 28, 2016 (Supp. 16-4).
+L1565@P43: R6-5-5220. Provider/Child Ratios
+L1566@P43: A. The Department may certify a provider in a home facility to care for a maximum of four children at a time, from
+L1567@P43: birth through age 12, for compensation. A provider in a home facility may care for a maximum of six children
+L1568@P43: at a time, from birth through age 12, or a child age 13 or older who is a child with special needs, when all of the
+L1569@P43: following conditions are met:
+L1570@P43: 1. No more than four children in care are for compensation; and
+L1571@P43: 2. No more than two of the children in care are younger than age 1, unless a sibling group.
+L1572@P43: B. The Department may certify an in-home provider to provide the following care:
+L1573@P43: 1. An in-home provider may care for a sibling group of no more than six children.
+L1574@P43: 2. An in-home provider shall care only for the children who live in that home.
+L1575@P43: 3. An in-home provider may bring the in-home provider’s own children to the in-home location with the
+L1576@P43: written permission of the client, and so long as the total number of children at the in-home location does not
+L1577@P43: exceed six children.
+L1578@P43: C. The Department may further limit the ratios allowed in subsections (A) and (B) to protect the well-being of
+L1579@P43: children in care. The Department may impose additional restrictions when:
+L1580@P43: 1. There are more than two children residing in the home facility who are counted in the ratio;
+L1581@P43: 2. The Department determines that the home facility and the furnishings are inadequate to accommodate four
+L1582@P43: children at a time for compensation, as provided in Section R6-5-5203(6);
+L1583@P43: 3. The Department has determined that a provider is physically unable to care for four children at a time; for
+L1584@P43: compensation or
+L1585@P43: 4. A provider requests certification for fewer than four children at a time for compensation.
+L1586@P43: D. For the sole purpose of establishing and monitoring ratios, the Department shall not count any child who is age
+L1587@P43: 13 or older, except as provided in subsection (A) for a child with special needs.
+L1588@P43: Historical Note
+L1589@P43: Adopted effective May 11, 1994 (Supp. 94-2). Former Section R6-5-5220 renumbered to R6-5-5221; new Section
+L1590@P43: R6-5-5220 renumbered from R6-5-5219 and amended by final rulemaking at 5 A.A.R. 1983, effective May 20, 1999
+L1591@P43: (Supp. 99-2).
+L1592@P43-44: 22 2. Si el niño tiene todas las inmunizaciones al día pero necesita vacunas adicionales para adquirir inmunidad
+L1593@P44: completa, el proveedor pedirá prueba al padre/madre de que todas las vacunas del niño serán administradas
+L1594@P44: dentro del plazo recomendado por el DHS y descrito en R9-6-702. El proveedor:
+L1595@P44: a. Requerirá que el padre/madre presente archivos documentados por el proveedor médico del niño según
+L1596@P44: sean administradas las inmunizaciones; y
+L1597@P44: b. Mantendrá los archivos requeridos en la subsección (F)(l).
+L1598@P44: 3. El proveedor no permitirá que un niño bajo cuidado permanezca matriculado por más de 15 días si el padre/
+L1599@P44: madre no presenta prueba de las inmunizaciones actualizadas apropiadas a la edad del niño, una declaración
+L1600@P44: de administración de vacunas adicionales o exención de inmunizaciones.
+L1601@P44: G. Los niños exentos de inmunizaciones por razones religiosas o médicas serán excluidos del local de cuidado si
+L1602@P44: surge un brote de alguna enfermedad inmunizable en el local de cuidado.
+L1603@P44: Reseña historica
+L1604@P44: Adoptada a partir del 11 de mayo de 1994 (Anexo 94-2). Antigua Sección R6-5-5219 renumerada a R6-5-52020;
+L1605@P44: nueva Sección R6-5-5219 renumerada a R6-5-5218 y modificada por la reglamentación final en 5 A.A.R. 1983, a
+L1606@P44: partir del 20 de mayo de 1999 (Anexo 99-2). Modificada por la reglamentación final en 22 A.A.R. 3185, a partir del
+L1607@P44: 28 de octubre de 2016 (Anexo 16-4).
+L1608@P44: R6-5-5220. Proporciones entre proveedores/niños
+L1609@P44: A. El Departamento puede certificar a un proveedor de cuidado en el hogar para cuidar a la vez a cambio de
+L1610@P44: compensación de un máximo de cuatro niños entre las edades de recién nacidos hasta 12 años. Un proveedor
+L1611@P44: en un hogar de cuidado puede cuidar de un máximo de seis niños entre las edades de recién nacidos hasta 12
+L1612@P44: años a la vez, o a un niño de 13 años o más con necesidades especiales cuando se cumplan todas las condiciones
+L1613@P44: siguientes:
+L1614@P44: 1. El proveedor es compensado por el cuidado de no más de cuatro de los niños bajo cuidado; y
+L1615@P44: 2. No más de dos de los niños bajo cuidado son menores de un año de edad, a menos que se trate de un grupo
+L1616@P44: de hermanos(as).
+L1617@P44: B. El Departamento puede certificar a un proveedor de cuidado en el hogar para proporcionar lo siguiente:
+L1618@P44: 1. Un proveedor de cuidado en el hogar puede cuidar de un grupo de hermanos(as) de no más de seis niños.
+--------------------------------------------------------------------------------
+DES Five-Year Review Report - Child Care Assistance (https://des.az.gov/sites/default/files/dl/6AAC5-5YRR-2019.pdf)
+citeturn255view1 [wordlim: 200] Crawled: 4 weeks ago; Content type: application/pdf; Number of pages: 18; Source: open({"ref_id":"https://des.az.gov/sites/default/files/dl/6AAC5-5YRR-2019.pdf","lineno":null}); Total lines: 506
+L0@P0: 1
+L1@P0: -PrefaceDepartment of Economic Security
+L2@P0: Five – Year Review Reports
+L3@P0: A.R.S. § 41-1056 requires that at least once every five years, each agency shall review its
+L4@P0: administrative rules and produce reports that assess the rules with respect to considerations including
+L5@P0: the rule’s effectiveness, clarity, conciseness and understandability. The reports also describe the
+L6@P0: agency’s proposed action to respond to any concerns identified during the review. The reports are
+L7@P0: submitted in compliance with the schedule provided by the Governor’s Regulatory Review Council.
+L8@P0: A.R.S. § 18-305, enacted in 2016, requires that statutorily required reports be posted on agency’s
+L9@P0-1: website.Department of Economic Security
+L10@P1: Title 6, Chapter 5, Article 52
+L11@P1: Five-Year Review Report
+L12@P1: 2
+L13@P1: 1. Authorization of the rule by existing statutes:
+L14@P1: General Statutory Authority: A.R.S. §§ 41-1003, 41-1954(A)(3), and 46-134(10)
+L15@P1: Specific Statutory Authority: A.R.S. §§ 46-802, 46-807, 46-809, and 41-1072 through 41-1077
+L16@P1: 2. The objective of each rule:
+L17@P1: Rule Objective
+L18@P1: R6-5-5201 This rule defines terms used in this Article so that any person reading the rules will
+L19@P1: understand the meaning of special terms and any terms that are not used according
+L20@P1: to their ordinary meaning.
+L21@P1: R6-5-5202 This rule describes the initial application requirements for an individual who applies to
+L22@P1: become a DES-certified child care provider, including basic eligibility for applicants,
+L23@P1: required information to be submitted with an application, health and safety
+L24@P1: requirements, and the requirement to comply with all other regulations specified in this
+L25@P1: Article and federal, state or local laws that are applicable to providing child care
+L26@P1: services.
+L27@P1: R6-5-5203 This rule establishes health and safety standards for a home facility in which child care
+L28@P1: services are provided. The standards include safeguarding potentially dangerous
+L29@P1: objects throughout the home and outdoor play area, having adequate space to provide
+L30@P1: child care services, having emergency exits with an evacuation plan, and specific
+L31@P1: requirements surrounding a body of water.
+L32@P1: R6-5-5204 This rule describes the responsibilities of the Department and guidelines the
+L33@P1: Department shall use to determine the suitability of a DES-certified child care provider.
+L34@P1: R6-5-5205 This rule establishes overall timeframes of the application process prescribed by
+L35@P1: A.R.S. § 41-1073 and includes separate time frames for determining administrative
+L36@P1: completeness and completing substantive-review of applications.
+L37@P1: R6-5-5206 This rule establishes the requirements regarding a DES-certificate issued to a DEScertified child care provider and describes the non-transferability of the certificate from
+L38@P1-2: the DES-certified child care provider and location identified on the certificate.3
+L39@P2: Rule Objective
+L40@P2: R6-5-5207 This rule establishes general requirements for a DES-certified child care provider to
+L41@P2: maintain a DES certificate, including ongoing training in child care related topics,
+L42@P2: pediatric cardiopulmonary resuscitation (CPR), and first aid. This rule also describes
+L43@P2: the requirement to maintain a valid fingerprint clearance card for child care personnel,
+L44@P2: as well as the Department’s requirement to conduct announced and unannounced
+L45@P2: onsite monitoring visits to a DES-certified child care provider.
+L46@P2: R6-5-5208 This rule establishes the conditions under which the Department may renew a DES
+L47@P2: certificate issued to a DES-certified child care provider every three years.
+L48@P2: R6-5-5209 This rule describes the program and equipment requirements regarding children in
+L49@P2: care, including infant/toddler, preschool, and school-age children, to ensure that care
+L50@P2: is provided in a developmentally appropriate manner that enables all children to
+L51@P2: develop the emotional, social, cognitive, and physical capacities and skills they need
+L52@P2: to achieve a safe and healthy well-being.
+L53@P2: R6-5-5210 This rule clarifies general safety and supervisory requirements for a DES-certified child
+L54@P2: care provider and addresses initiating backup care arrangements, supervision of
+L55@P2: children in care, and mandatory reporting requirements for suspected child abuse and
+L56@P2: neglect. This rule also identifies the individuals who are authorized to pick up children
+L57@P2: and the individuals who are prohibited in a DES-certified child care home.
+L58@P2: R6-5-5211 This rule establishes adequate sanitation requirements a DES-certified child care
+L59@P2: provider shall meet to ensure the health and safety of children in care and to prevent
+L60@P2: the spread of communicable disease in a DES-certified home.
+L61@P2: R6-5-5212 This rule describes guidelines and limitations regarding the methods a DES-certified
+L62@P2: child care provider may use when providing guidance or disciplining children in care,
+L63@P2: including the requirement to set clear time limits and providing positive guidance,
+L64@P2: redirection, and time-out.
+L65@P2: R6-5-5213 This rule establishes supplemental guidelines for a DES-certified child care provider
+L66@P2: who chooses to provide evening and nighttime child care, including the requirement
+L67@P2: for safe equipment and bedding.
+

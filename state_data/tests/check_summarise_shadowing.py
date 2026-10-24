@@ -29,6 +29,30 @@ files = sorted([f for d in ('', 'code', 'cluster', 'states', 'tests')
 
 print('scanning %d R files for summarise()/mutate() name shadowing\n' % len(files))
 
+
+def arguments(block):
+    """Split top-level R arguments; nested keywords aren't output columns."""
+    depth, start, quote, escaped = 0, 0, None, False
+    for i, char in enumerate(block):
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == '\\':
+                escaped = True
+            elif char == quote:
+                quote = None
+        elif char in ('\'', '"', '`'):
+            quote = char
+        elif char in '([{':
+            depth += 1
+        elif char in ')]}':
+            depth -= 1
+        elif char == ',' and depth == 0:
+            yield block[start:i]
+            start = i + 1
+    yield block[start:]
+
+
 bad = 0
 for f in files:
     s = io.open(f, encoding='utf-8').read()
@@ -54,15 +78,15 @@ for f in files:
             i += 1
         block = s[start:i - 1]
 
-        for name in re.findall(r'(?:^|,)\s*([A-Za-z_][A-Za-z0-9_.]*)\s*=(?!=)', block):
-            pos = re.search(r'\b%s\s*=(?!=)' % re.escape(name), block)
+        parts = list(arguments(block))
+        for index, part in enumerate(parts):
+            pos = re.match(r'\s*([A-Za-z_][A-Za-z0-9_.]*)\s*=(?!=)', part)
             if not pos:
                 continue
-            # rest = everything after this argument's own expression
-            nxt = re.search(r',\s*[A-Za-z_][A-Za-z0-9_.]*\s*=(?!=)', block[pos.end():])
-            rest = block[pos.end() + nxt.start():] if nxt else ''
+            name = pos.group(1)
+            rest = ','.join(parts[index + 1:])
             ln = s[:start].count('\n') + 1
-            if re.search(r'\b%s\s*\[' % re.escape(name), block[pos.end():]):
+            if re.search(r'\b%s\s*\[' % re.escape(name), rest):
                 print('  %s:%d  %s() reassigns %r then indexes it'
                       % (os.path.basename(f), ln, m.group(1), name))
                 bad += 1

@@ -29,7 +29,7 @@
 
 INCOME_RANK_SCHEMES <- c('national_rpp', 'national')
 
-INCOME_RANK_RPP_PATH <- file.path('resources', 'supply',
+INCOME_RANK_RPP_PATH <- file.path('resources', 'bea',
                                   'US_BEA__regional_price_parities_all_items__2019.csv')
 
 

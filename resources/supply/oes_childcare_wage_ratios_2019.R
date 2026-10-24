@@ -43,9 +43,9 @@ suppressPackageStartupMessages({
 # STATE_POSTAL_TO_FIPS
 source('src/shared_functions/constants.R')
 
-EXTRACT <- file.path('state_data', 'raw', 'US',
-                     'US_OES__childcare_occupation_wages__2019.csv')
-WEIGHTS <- file.path('resources', 'supply',
+EXTRACT <- file.path('resources', 'bls_oews',
+                     'US_BLS_OEWS__childcare_occupation_wages__2019.csv')
+WEIGHTS <- file.path('resources', 'acs',
                      'childcare_occupation_weights_by_education_acs_2019.csv')
 OUT     <- file.path('resources', 'supply', 'state_childcare_wage_ratios_oes.csv')
 

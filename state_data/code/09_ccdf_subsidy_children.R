@@ -41,7 +41,7 @@ suppressPackageStartupMessages(library(dplyr))
 source('state_data/code/shared_setup.R')
 source('src/shared_functions/constants.R')   # STATE_POSTAL_TO_FIPS
 
-RAW_US   <- file.path(STATE_DATA_ROOT, 'raw', 'US')
+RAW_US   <- file.path('resources', 'ccdf')
 CCDF_FMT <- 'US_ICPSR38677__ccdf_acf801_%s__FY2019.rda'
 SHARES   <- file.path(STATE_DATA_ROOT, 'out', 'state_share_comparison.csv')
 OUT      <- file.path(STATE_DATA_ROOT, 'out', 'ccdf_subsidy_children.csv')

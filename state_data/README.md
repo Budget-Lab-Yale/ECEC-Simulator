@@ -34,6 +34,104 @@ are kept outside git. This file is the map, and the record of every
 source. A machine-readable source register (one row per source and geography,
 with its URL, vintage, and retrieval date) is kept outside git.
 
+## 22 October supply update
+
+Annual wage inputs contain 1,473 occupation records and 728 geography/year/education
+ratios. All 52 saved wage paths match the source panel. The staffing review covers
+312 of 312 unweighted geography/setting/age records. Only 28 change a number;
+the other 284 confirm the old input. Supply files have been rebuilt with all reviewed
+values and no unresolved staffing records. Local source, supply, and annual wage checks pass.
+
+The updated 1% ACS sample completed 2026--2027 for all 52 geographies on
+22 October with all 28 numerical staffing corrections (job `30293994`, exit 0,
+38 minutes). All 104 price solves and employment targets passed. The largest
+paid-sector price gap was $0.000319 per child-hour; the largest employment miss
+was 0.0002545 percentage points. Extracted diagnostics are in
+`out/integrated_validation_current.{csv,json}` and `out/integrated_employment_current.csv`.
+
+The refreshed 2019 NDCP comparison covers 46 states: weekly RMSE is $34.73,
+correlation is 0.892, and the child-weighted model mean is 11.8% above NDCP.
+2020--2022 weekly RMSE is $39.20, $41.71, and $47.35 across 46, 41, and 45 states.
+Program-count and other source checks pass. The corrected 23 October NY/NYC
+diagnostic validates common-rank partition identities and reports differences
+between independently calibrated geographies. `--strict-additivity` retains
+the historical 1% / 0.1%-of-total limits; see the partition discussion below.
+
+## Staffing-rule audit: October 1, 2019
+
+The audit has 312 unweighted records: five center age points and one home input
+for each of 52 geographies. These are records, not counts of children or providers.
+I check the rule that applied on **October 1, 2019**, including its age bands,
+program type, and need for an assistant. A source's publication year alone is not
+enough. A reviewed record can confirm an existing value without changing it.
+
+Current coverage is 312 reviewed records and zero unresolved records. The strict
+`--require-verified` source/hash check passes. The last 13 reviews confirmed
+existing numbers; job `30293994` contains all 28 numerical corrections.
+
+Run `python state_data/code/analyze_licensing_2019.py` from the repository root.
+It checks source hashes and writes `out/licensing_2019_audit.csv` and
+`out/licensing_2019_coverage.csv`. Add `--require-verified` to fail while any
+fallback remains. Downloading a candidate does not mark it verified.
+
+The registry is under `resources/licensing/` in the repository root:
+
+- `licensing_2019_sources.csv`: source URLs, saved files, hashes, review status.
+- `licensing_2019_evidence.csv`: chosen values, dates, rule sections, caveats.
+- `licensing_2019_search_log.csv`: unresolved questions and next source to check.
+- `licensing_2019_home_configurations.csv`: total and preschool capacity,
+  required adults, infant limits, and school-age additions.
+
+For a conditional record, `permitted_values` lists legal alternatives and
+`selection_basis` explains the chosen model input. This does not imply one ratio
+applies to every provider or every child of that age.
+
+For centers, the input is children per adult at the model's five ages. For homes,
+it is regulated capacity excluding school-age-only additions. Home capacity is a
+rough staffing measure: Arkansas's 16, Rhode Island's 8, and Washington's 12
+require additional staff under the chosen arrangements. The model uses inverse
+capacity. The national NSECE anchor already includes respondent plus helpers;
+the capacity index does not represent state differences in required adult counts.
+The selected two-adult sensitivity for AR/RI/WA, renormalized over 50 states and
+DC, raises their 2019 home-care anchor prices by 35.4%, 39.3%, and 30.0%.
+Three adults at AR's selected capacity raises its anchor by 71.0%.
+These are illustrative base-price sensitivities, not fitted staffing estimates
+or equilibrium results. `Rscript state_data/code/analyze_home_staffing.R` from repository root writes `out/home_staffing_sensitivity.csv`.
+RI's source also permits limited provider absence when an assistant is present;
+licensed headcounts do not establish an exact adult-hour requirement. Age limits and
+own-child counting remain in the evidence and configuration records.
+
+`Rscript state_data/code/review_home_staffing_inputs.R` writes
+`out/home_staffing_input_review.csv`: one record for each of 52 geographies,
+selected capacity/source/conditions, adult-count configurations at that capacity,
+and explicit unresolved age mix, worker hours, occupancy, and category weights.
+The adult-count range covers documented configurations, not every legally possible
+composition. No unresolved adult count is filled with one.
+
+`Rscript state_data/code/analyze_home_prices.R` writes `out/home_price_benchmark*.csv`
+and provenance. It uses NDCP family-home columns and their own imputation flags,
+2019 county child-population weights, and a fixed national paid-home child age mix
+from ACS p0. All three age-group prices must be present; NYC is reported separately
+and excluded from national fit statistics. Household net payments anchor the national
+home price; NDCP reports market rates. The comparison is external evidence, not a
+calibration target. `Rscript tests/test_home_staffing_review.R` checks home/center
+column isolation, unknown flags, audit coverage, and unchanged production YAMLs.
+
+Source documents stay under `raw/<STATE>/`; national source files are under
+`resources/<SOURCE>/` in the repository root. `docs/SOURCES.csv` gives the full
+source list. Acquisition logs record successful and failed downloads separately.
+
+The 13 final capacity-source reviews, supply rebuild, center NDCP refresh, and
+52-geography baseline validation are complete. A home capacity is not a complete
+adult- and age-adjusted labor measure; the separate home review above retains that
+limitation. Future evidence changes require the same rebuild
+and validation sequence. `Rscript resources/supply/00_update_state_supply.R`
+refreshes the source/hash audit before adopting reviewed values; set `PYTHON`
+to a working executable if needed. `Rscript tests/test_state_staffing_inputs.R`
+checks all 312 records and independently reconciles all 52 YAML staffing payloads.
+Acquisition text and intermediate download logs live in git-ignored
+`work/licensing/`; registered source documents stay at their recorded paths.
+
 ## What is built
 
 Fifty-two geographies: the 50 states, DC, and New York City. The memo
@@ -42,13 +140,24 @@ covers only the 50 states and DC, NSECE places Puerto Rico in no Census region,
 and the simulator's ACS households do not include it. Building it needs a participation rate, a region or a stand-in
 for one, a wage, and households. New York is all 62 counties, city
 included. New York City is the five boroughs, built on its own. NY includes
-NYC. NY minus NYC is close to a rest-of-state build made the same way, within
-0.8% of the hours in each care type. The exception is Unpaid Home-Based, at
-2.6%. That cell has only 2,864 NY children, and its gap is 0.01% of all
-rest-of-state hours. The rate and the p0 mix of each are ratios over its own
-households, so the difference is not exact. The check fails a care type only
-when its gap is 1% or more of its own hours and 0.1% or more of all hours
-(`tests/check_nyc_rest_of_state.R`).
+NYC. Each production run retains its own calibration. The NY/NYC diagnostic
+uses separate common-rank controls to obtain a true rest-of-state household
+partition; subtracting own-rank NYC p0 from national-rank NY p0 is invalid.
+The corrected Unpaid Center-Based annual-hour gap is 1.98%, or 0.265% of
+all rest-of-state annual hours: 1.00 million annual hours from NYC's own
+income-rank calibration and 0.69 million from different geographic weights
+for program children and p0 part-time shares. Estimated program-child counts
+still add exactly. These differences don't require either production run
+to use the other's calibration.
+
+`tests/check_nyc_rest_of_state.R` checks the common-rank p0 partition,
+agreement with production controls, and exact hours decompositions. It always
+reports material cross-calibration gaps in `out/nyc_rest_of_state_validation.csv`.
+`--strict-additivity` retains the historical 1% per-type and 0.1%-of-total
+thresholds and currently exits 1. Default structural checks pass.
+The partition file in `resources/acs/` was regenerated from interface
+`202610191203` on 23 October (Bouchet job `30447222`, exit 0).
+
 
 This directory writes demand only. The simulator's per-state supply and
 employment files, and how the simulator reads all three, are in
@@ -90,7 +199,7 @@ child weight: children 0–4 by care type and by 10 or 40 hours a week. So each
 state's mix follows its own income, parent employment, family type, and child
 ages, under the national preferences the simulator calibrates. NYC uses the
 households in its five counties. The summary is
-`raw/US/US_ACS__p0_children_by_care_type_and_hours__2019.csv`, built on the cluster
+`resources/acs/US_ACS__p0_children_by_care_type_and_hours__2019.csv`, built on the cluster
 from a full-sample interface. The simulator then re-anchors to this file: `adjust_alpha_for_state()` solves one
 utility constant per care type until the state's base-year hours match it.
 With p0 shares, the file already carries the simulator's own mix, so the
@@ -196,7 +305,7 @@ tests/                                  the check suite
 docs/archive/                           finished method memos (.pdf)
 docs/                                   memo in progress, .tex sources, source register (local only, git-ignored)
 raw/                                    the input files, one folder per scope
-raw/US/                                 national files and reports
+../resources/<source>/                  national files and reports, grouped by source
 raw/NYC/                                New York City report (Health Code staffing rules)
 raw/local/                              files too large for git (git-ignored); the price database is on Bouchet
                                         (shared/raw_data/DOL-NDCP/v1/2008-2022/)
@@ -306,26 +415,26 @@ so.
 
 | Input | Source | Held | Vintage | Feeds |
 |---|---|---|---|---|
-| Population 0–4 | Census Population Estimates, county by age | `raw/US/US_PEP__…` | 2019 | step 1 |
-| Participation rate | NSCH topical file, question `k6q20` | `raw/US/US_NSCH__…` (2018, 2019, 2020) | 2019 | step 1 |
+| Population 0–4 | Census Population Estimates, county by age | `resources/census_population/US_PEP__…` | 2019 | step 1 |
+| Participation rate | NSCH topical file, question `k6q20` | `resources/nsch/US_NSCH__…` (2018, 2019, 2020) | 2019 | step 1 |
 | NSECE constants | NSECE household file, ICPSR 37941 dataset 0009 | cluster only (licensed) | 2019 | steps 2, 4, 5, 6 |
-| Public pre-K | NCES Common Core of Data, pre-K membership by county | `raw/US/US_CCD__…by_county…` | 2018–19 | step 4 |
+| Public pre-K | NCES Common Core of Data, pre-K membership by county | `resources/ccd/US_CCD__…by_county…` | 2018–19 | step 4 |
 | California and Michigan public pre-K | NIEER, *State of Preschool 2019*, state pages (CA: State Preschool Program only) | constant | 2018–19 | step 4, CA and MI |
 | Head Start | NIEER, *State of Preschool 2019*, Appendix B | constant | 2018–19 | step 4 |
 | Early Head Start | NIEER, *The State(s) of Head Start and Early Head Start* (2023) | constant | 2018–19 | step 4 |
 | Slots to enrolled children | OHS PIR 2018–19: Services Snapshots, Report to Congress Appendix C | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
-| Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | `raw/US/US_HSSL__…2026-09-23`, `raw/US/US_CCD__…`, `raw/US/US_EDGE__…` | 2026, 2018–19 | step 4 deduction; NYC shares |
-| NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 less Appendix B | `raw/US/US_NIEER__state_of_preschool_yearbook__2019.pdf`, constant | 2018–19 | step 4 deduction: NIEER overlap share |
+| Head Start in district schools | ACF Head Start service locations × CCD pre-K by school × CCD directory × NCES EDGE geocodes | constants in `states.R`; historical matching inputs are not shipped with the build | 2026, 2018–19 | step 4 deduction; NYC shares |
+| NIEER Head Start / state pre-K overlap | NIEER, *State of Preschool 2019*, Table 4 less Appendix B | `resources/nieer/US_NIEER__state_of_preschool_yearbook__2019.pdf`, constant | 2018–19 | step 4 deduction: NIEER overlap share |
 | Head Start program options | OHS PIR 2018–19 Services Snapshots (HS, EHS, AIAN): home-based and family child care funded slots | constant, `00_build_demand_targets.R` | 2018–19 | step 4 |
-| Five-year-olds in programs | NHES-ECPP 2019 public-use file, national share per program; NYC 0 (DOE calendar-year enrolment, 45 CFR 1302.12(b)) | `raw/US/US_NHES__…` → constant; `raw/NYC/NYC_DOE__…` | 2019 | step 4 |
-| Base-year wage ratio | BLS OES May 2019, state / national: hourly medians of childcare workers (39-9011), preschool teachers (25-2011), and preschool and childcare administrators (11-9031), mixed at national ACS shares of each education group's workers in each occupation; NYC = New York MSA 35620 | `raw/US/US_OES__childcare_occupation_wages__2019.csv` → `resources/supply/state_childcare_wage_ratios_oes.csv` (`resources/supply/oes_childcare_wage_ratios_2019.R`) | May 2019 | step 7 |
+| Five-year-olds in programs | NHES-ECPP 2019 public-use file, national share per program; NYC 0 (DOE calendar-year enrolment, 45 CFR 1302.12(b)) | `resources/nhes/US_NHES__…` → constant; `raw/NYC/NYC_DOE__…` | 2019 | step 4 |
+| Base-year wage ratio | BLS OES May 2019, state / national: hourly medians of childcare workers (39-9011), preschool teachers (25-2011), and preschool and childcare administrators (11-9031), mixed at national ACS shares of each education group's workers in each occupation; NYC = New York MSA 35620 | `resources/bls_oews/US_BLS_OEWS__childcare_occupation_wages__2019.csv` → `resources/supply/state_childcare_wage_ratios_oes.csv` (`resources/supply/oes_childcare_wage_ratios_2019.R`) | May 2019 | step 7 |
 | National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
 | Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-point map) | 2019 | supply centre staffing index weights |
-| Licensing ratios | 2017 Child Care Licensing Study, ICPSR 37700: centre child-staff ratios at 11 months, 18 months, 35 months, 3 years, and 4 years (one point per year of age 0–4); small family home maximum children; ID centres and NYC centres from the 2014 file (3 bands mapped onto the 5 points) | `raw/US/US_ICPSR37700__licensing_*__2017.rda` → `resources/supply/US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv` (`resources/supply/licensing_ratios_2017.R`) | 2017 | supply staffing index |
-| CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `raw/US/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
-| Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `raw/US/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
-| Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `raw/local/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `raw/US/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |
+| Licensing ratios | Reviewed October 1, 2019 center ratios at five representative ages and home capacity excluding school-age additions; 2017 study retained as comparison baseline | `resources/licensing/licensing_2019_evidence.csv` → `resources/supply/licensing_ratios_reviewed_2019.csv` (`resources/supply/00_update_state_supply.R`) | October 1, 2019 | supply staffing index; home capacity is a proxy, assistant conditions retained separately |
+| CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `resources/ccdf/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
+| Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `resources/idea/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
+| Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `resources/ndcp/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `resources/ndcp/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |
 
 A **file** is read by the code. A **constant** is read by hand once and written
 into `states.R` next to its provenance comment.
@@ -548,7 +657,7 @@ Start services carry no fee.
 **Ages 0–4.** The population is children 0–4. The pre-K grade and the Head
 Start 3–4 slots also hold children who turn 5 during the program year. I
 remove one national share per program: the NHES-ECPP 2019 share aged 5 or
-older on 31 December 2018 (`raw/US/`; children not yet in
+older on 31 December 2018 (`resources/nhes/`; children not yet in
 kindergarten, in a center program now, age 3 or older, weighted by `FEWT`).
 It is 24.4% for pre-K (483 records) and 10.7% for Head Start (247). NYC is 0
 for both programs: the DOE enrolls by calendar year (2019 kindergarten guide,
@@ -666,7 +775,7 @@ NYC's Head Start and Early Head Start counts are the city's shares of New York
 State slots at open sites in that file, applied to the 2018–19 NIEER state
 figures: 7,064 of 20,518 Head Start slots (program types 1, 3, 5) and 4,426 of
 8,590 Early Head Start slots (types 2, 4, 6). The file is the same 2026-09-23
-export (`raw/US/US_HSSL__...`), so this assumes the city's
+export (`resources/head_start/US_HSSL__...`), so this assumes the city's
 shares were the same in 2019. `tests/check_program_counts_match_sources.R`
 recomputes both.
 
@@ -769,7 +878,8 @@ The evidence for this reading:
 
 ### Reference documents
 
-Each report sits beside the data of its scope, in `raw/<SCOPE>/`. Only the
+National reports sit with their data in `resources/<source>/` at repository
+root. State and city reports remain in `raw/<SCOPE>/`. Only the
 documents behind numbers the build uses are held. Removed material stays in
 git history: documents read only for context, method, or a rejected source
 (removed 2 October 2026), and the licensing-register and industry-count
@@ -778,17 +888,19 @@ them).
 
 | Folder | File | What it is |
 |---|---|---|
-| `raw/US/` | `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap (NIEER share), state pre-K totals, CA and MI pre-K, CA TK birth dates |
-| `raw/US/` | `US_NIEER__states_of_head_start_and_early_head_start__2023.pdf` | NIEER State(s) of Head Start: Early Head Start 2018–19 by state |
-| `raw/US/` | `US_OHS__services_snapshot_ehs__2018-19.pdf` | OHS EHS Services Snapshot, national, 2018–19: EHS funded slots, pregnant-women slots, home-based and family child care slots, cumulative enrollment |
-| `raw/US/` | `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots, home-based and family child care slots |
-| `raw/US/` | `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots, home-based and family child care slots, and age mix, for the HS/EHS split |
-| `raw/US/` | `US_OHS__biennial_report_to_congress__FY2019.pdf` | Appendix C (national PIR) feeds the enrolled-per-slot factors. Its state HS + EHS funded enrollment was evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
-| `raw/US/` | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019: Exhibit 1 enrollment by age 0–4, the supply staffing index weights |
+| `resources/nieer/` | `US_NIEER__state_of_preschool_yearbook__2019.pdf` | NIEER yearbook 2019: Head Start ages 3–4, Table 4 overlap (NIEER share), state pre-K totals, CA and MI pre-K, CA TK birth dates |
+| `resources/nieer/` | `US_NIEER__states_of_head_start_and_early_head_start__2023.pdf` | NIEER State(s) of Head Start: Early Head Start 2018–19 by state |
+| `resources/head_start/` | `US_OHS__services_snapshot_ehs__2018-19.pdf` | OHS EHS Services Snapshot, national, 2018–19: EHS funded slots, pregnant-women slots, home-based and family child care slots, cumulative enrollment |
+| `resources/head_start/` | `US_OHS__services_snapshot_hs__2018-19.pdf` | OHS Head Start Services Snapshot, national, 2018–19: Head Start funded slots, home-based and family child care slots |
+| `resources/head_start/` | `US_OHS__services_snapshot_aian__2018-19.pdf` | OHS AIAN Services Snapshot, 2018–19: AIAN funded slots, home-based and family child care slots, and age mix, for the HS/EHS split |
+| `resources/head_start/` | `US_OHS__biennial_report_to_congress__FY2019.pdf` | Appendix C (national PIR) feeds the enrolled-per-slot factors. Its state HS + EHS funded enrollment was evaluated as an Early Head Start cross-check and rejected: it matches only where every Head Start slot is ages 3–4 |
+| `resources/nsece/` | `US_NSECE__measuring_supply_capacity_centers__2023-12.pdf` | ACF report on center enrollment and capacity, NSECE 2019: Exhibit 1 enrollment by age 0–4, the supply staffing index weights |
 
 ## Checks
 
-Six scripts, all read-only, all exit 1 on failure.
+Six scripts, all exit 1 on structural failure. Cross-calibration NY/NYC gaps
+are sensitivities; add `--strict-additivity` to enforce the historical gap limits. The NYC/rest-of-state check also writes
+`out/nyc_rest_of_state_validation.csv`; the other five checks are read-only.
 `load_spec()` (`00_build_demand_targets.R`) reads the NSCH rate live from
 `out/`, so there is no hand copy left to go stale -- see "How `load_spec()`
 reads the derived rate" above.
@@ -798,7 +910,7 @@ Rscript state_data/tests/check_outputs_are_current.R       # demand targets are 
 Rscript state_data/tests/check_sources_are_ascii.R         # no literal depends on locale
 Rscript state_data/tests/check_constants_match_derivation.R # constants match out/nsece_constants.csv
 Rscript state_data/tests/check_program_counts_match_sources.R # program counts match their sources
-Rscript state_data/tests/check_nyc_rest_of_state.R          # NY minus NYC near a rest-of-state build
+Rscript state_data/tests/check_nyc_rest_of_state.R          # common-rank partition and cross-calibration sensitivity
 python  state_data/tests/check_summarise_shadowing.py      # scans for the shadowing trap
 ```
 
@@ -853,3 +965,9 @@ simulator file equals the rebuild and that the simulator's reader accepts it.
 Rscript src/main.R -r state_targets_smoke    # baseline for KY, NJ, NY, VA
 Rscript src/main.R -r state_targets_all      # baseline for all 50 states, DC, NYC
 ```
+
+`cluster/acs_p0_shares.R` also writes `<out.csv>.nyc_partition.csv`, containing
+NY, NYC under parent ranks, true rest-of-state (NYR), and production NYC.
+Copy it to `resources/acs/US_ACS__p0_children_nyc_partition__2019.csv` with
+its provenance when refreshing the production p0 summaries. The sidecar is
+diagnostic only; it never replaces either geography's own production calibration.

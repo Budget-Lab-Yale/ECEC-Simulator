@@ -1,0 +1,162 @@
+Primary-source web-reader output, retrieved 2026-10-22. Agency delivery copy of final rules; used to establish filing2019-12-06, effective seven days later, not to backdate December standards.
+ (https://content.govdelivery.com/attachments/MILARA/2019/12/09/file_attachments/1339437/Child%20Care%20Homes%20Final%20Rule.pdf)
+citeturn200view0 [wordlim: 200] Crawled: 3 months ago; Content type: application/pdf; Number of pages: 28; Source: open({"ref_id":"https://content.govdelivery.com/attachments/MILARA/2019/12/09/file_attachments/1339437/Child%20Care%20Homes%20Final%20Rule.pdf","lineno":null}); Total lines: 1177
+L0@P0: July 25, 2019
+L1@P0: LICENSING AND REGULATORY AFFAIRS
+L2@P0: BUREAU OF COMMUNITY AND HEALTH SYSTEMS
+L3@P0: LICENSING FAMILY AND GROUP CHILD CARE HOMES
+L4@P0: Filed with the secretary of state on December 6, 2019
+L5@P0: These rules take effect 7 days after filing with the secretary of state.
+L6@P0: (By authority conferred on the director of the department of licensing and regulatory affairs
+L7@P0: by section 2 of the child care organizations act, 1973 PA 116, as amended, MCL 722.112,
+L8@P0: and Executive Reorganization Order Nos. 1996-1, 1996-2, 2003-1, 2004-4, and 2015-1,
+L9@P0: MCL 330.3101, 445.2001, 445.2011, 400.226, and 400.227)
+L10@P0: R 400.1901, R 400.1902, R 400.1903, R 400.1905, R 400.1906, R 400.1907, R 400.1908,
+L11@P0: R 400.1909, R 400.1910, R 400.1911, R 400.1912, R 400.1913, R 400.1914, R 400.1915,
+L12@P0: R 400.1916, R 400.1917, R 400.1918, R 400.1919, R 400.1920, R 400.1921, R 400.1922,
+L13@P0: R 400.1923, R 400.1924, R 400.1931, R 400.1932, R 400.1933, R 400.1934, R 400.1935,
+L14@P0: R 400.1936, R 400.1941, R 400.1942, R 400.1943, R 400.1944, R 400.1945, R 400.1951,
+L15@P0: R 400.1952, R 400.1961, R 400.1962, and R 400.1963 of the Michigan Administrative Code
+L16@P0: are amended, R 400.1904 is rescinded, and R 400.1904a, R 400.1904b, R 400.1925, and
+L17@P0: R 400.1926 are added, as follows:
+L18@P0: R 400.1901 Definitions.
+L19@P0:  Rule 1. (1) As used in these rules:
+L20@P0:  (a) "Act" means 1973 PA 116, MCL 722.111 to 722.128.
+L21@P0:  (b) "Adult" means a person 18 years of age and older.
+L22@P0:  (c) “Applicant” means an individual who applies for a license to operate a family or group
+L23@P0: child care home.
+L24@P0:  (d) "Basement" means a story of a building or structure having ½ or more of its clear
+L25@P0: height below average grade for at least 50% of the perimeter.
+L26@P0:  (e) “Child care assistant” means an individual who is 14 to 17 years of age, who
+L27@P0: participates in child care activities in a family or group child care home, and who shall not
+L28@P0: have unsupervised access to or provide unsupervised care or supervision of children.
+L29@P0:  (f) “Child care background check system” means the database maintained by the
+L30@P0: department to document comprehensive background checks and eligibility determinations,
+L31@P0: pursuant to section 5n of the act, MCL 722.115n.
+L32@P0:  (g) “Child care home” means a family child care home and a group child care home.
+L33@P0: (h) “Child care staff member” means that term as defined in section 1(a) of the act, MCL
+L34@P0: 722.111(a).
+L35@P0:  (i) "Child passenger restraint device" means a device that is used to restrain, seat, or
+L36@P0: position a child weighing 65 pounds or less that meets the requirements of federal motor
+L37@P0: vehicle safety standard No. 213, child restraint systems, 49 CFR 571.213 (2019), which is
+L38@P0-1: hereby adopted by reference.2
+L39@P1:  (j) "Child-use space" means the rooms and floor levels of the home approved by the
+L40@P1: department for child care.
+L41@P1:  (k) “Cleaned” means washed vigorously with soap and water and rinsed with clean water.
+L42@P1:  (l) "Combustible" means materials that will ignite and burn when subjected to a fire or
+L43@P1: excessive heat.
+L44@P1:  (m) “Comprehensive background check” means a department review of an individual as
+L45@P1: required in section 5n of the act, MCL 722.115n.
+L46@P1:  (n) “Conducive to the welfare of children” means that term as defined in section 5m(13)(b)
+L47@P1: of the act, MCL 722.115m(13)(b).
+L48@P1:  (o) “Continuously employed child care staff member” and “continuously connected adult
+L49@P1: household member” means an individual who has not been disconnected for more than 180
+L50@P1: days from the child care background check system and has continuously resided in Michigan
+L51@P1: for the immediately preceding 5-year period, as required in sections 5n(15) and 5n(16) of the
+L52@P1: act, MCL 722.115n(15) and 722.115n(16).
+L53@P1:  (p) “Conviction” means that term as defined in section 1(i) of the act, MCL 722.111(i).
+L54@P1:  (q) “Criminal history check” means that term as defined in section 1(j) of the act, MCL
+L55@P1: 722.111(j).
+L56@P1:  (r) "Department" means the department of licensing and regulatory affairs.
+L57@P1:  (s) “Eligible” means that term as defined in section 1(m) of the act, MCL 722.111(m).
+L58@P1:  (t) “Family child care home” means that term as defined in section 1(o)(iii) of the act,
+L59@P1: MCL 722.111(o)(iii).
+L60@P1:  (u) "Field trip" means children and personnel leaving the child care home premises for an
+L61@P1: excursion, trip, or program activity.
+L62@P1:  (v) "Fire alarm" means a device that is used to alert all persons in the home of fire
+L63@P1: conditions. The device must be heard in all parts of the home that are approved for use by
+L64@P1: children.
+L65@P1:  (w) "Foster child" means a person who resides in a foster home, who was placed in the
+L66@P1: foster home by a placing agent, who is not living with a parent or legal guardian, who is less
+L67@P1: than 18 years of age or becomes 18 years of age while residing in the foster home and
+L68@P1: continues to reside in the foster home as a dependent adult, and who is not related to an adult
+L69@P1: member of the foster family by blood, adoption, or marriage.
+L70@P1:  (x) “Group child care home” means that term as defined in section 1(o)(iv) of the act,
+L71@P1: MCL 722.111(o)(iv).
+L72@P1:  (y ) "Heat detector" means a single or multiple station alarm responsive to heat.
+L73@P1:  (z) “Ineligible” means that term as defined in section 1(n) of the act, MCL 722.111(n).
+L74@P1:  (aa) "Licensee" means that term as defined in section 1(q) of the act, MCL 722.111(q).
+L75@P1:  (bb) "Means of egress" means the exit route from any point in the home to the outside at
+L76@P1: ground level.
+L77@P1:  (cc) “Member of the household” means that term as defined in section 1(s) of the act,
+L78@P1: MCL 722.111(s).
+L79@P1:  (dd) "Minor" means a person less than 18 years of age.
+L80@P1:  (ee) “MiRegistry” is the electronic data system for child care providers to verify and track
+L81@P1: employment, training, and educational accomplishments, which is maintained by the
+L82@P1: department of education. MiRegistry offers a statewide calendar of online and classroom
+L83@P1-2: training opportunities. MiRegistry can be accessed online at http://www.miregistry.org.3
+L84@P2:  (ff) "Nonprescription medication" means any over-the-counter medication that may be
+L85@P2: orally ingested or applied to the skin, including but not limited to: aspirin, acetaminophen,
+L86@P2: cold and flu medicines, mosquito repellants, antiseptics, ointments, powders, and diaper rash
+L87@P2: products.
+L88@P2:  (gg) “Nighttime care” means child care provided between midnight to 5:00 a.m.
+L89@P2:  (hh) "Parent" means a child's natural or adoptive parent who is legally responsible for the
+L90@P2: child or the child's legal guardian.
+L91@P2:  (ii) “Permanently resides” means the address is the individual’s primary residence and his
+L92@P2: or her presence in the home is not contingent upon caring for children.
+L93@P2:  (jj) “Personnel” means a licensee, child care staff member, and child care assistant.
+L94@P2:  (kk) "Premises" means the location of the child care home where the licensee and family
+L95@P2: reside and includes the attached yard, garage, basement, non-child use space, and any other
+L96@P2: outbuildings.
+L97@P2:  (ll) "Related" means that term as defined in section 1(y) of the act, MCL 722.111(y).
+L98@P2:  (mm) “Routine transportation” means regularly scheduled travel on the same day of the
+L99@P2: week, at the same time, to the same destination. Any deviation is non-routine transportation.
+L100@P2:  (nn) "Safety belt" means an automobile lap belt or lap-shoulder belt combination designed
+L101@P2: to restrain and protect a passenger or driver of a vehicle from injury.
+L102@P2:  (oo) “Sanitized” means to wipe or spray the surface with a sanitizing solution, let the
+L103@P2: surface air dry or wipe dry after two minutes, or according to the manufacturer’s directions,
+L104@P2: with a single service towel.
+L105@P2:  (pp) “Serious injury” means that term as defined in section 2b of 1973 PA 116, MCL
+L106@P2: 722.112b.
+L107@P2:  (qq) "Smoke detector" means a device that detects visible or invisible particles of
+L108@P2: combustion.
+L109@P2:  (rr) “Supervised volunteer” means an individual who is 16 years of age or older, provides
+L110@P2: services for a child care home that are not compensated, and who is supervised at all times
+L111@P2: when children are in care.
+L112@P2:  (ss) "Transportation" means the taking of children by means of a vehicle to or from a
+L113@P2: family or group child care home and to and from all other activities planned by or through
+L114@P2: the family or group child care home.
+L115@P2:  (tt) “Unsupervised volunteer” means an individual who is 18 years of age or older,
+L116@P2: provides services for a child care home that are not compensated, and who has been
+L117@P2: determined eligible by the department to be unsupervised with children.
+L118@P2:  (uu) "Vehicle" means an automobile, truck, or van that transports persons upon a
+L119@P2: highway.
+L120@P2:  (vv) “Water activities” mean activities in residential pools, lakes, ponds, or other bodies
+L121@P2: of water. Water activities do not include water play activities such as water table play, slip
+L122@P2: and slide activities, wading pools, or playing in sprinklers.
+L123@P2:  (2) A term defined in the act has the same meaning when used in these rules.
+L124@P2: R 400.1902 Applicant; licensee; requirements.
+L125@P2:  Rule 2. (1) An applicant and a licensee shall meet all of the following requirements:
+L126@P2-3:  (a) Be 18 years of age or older.4
+L127@P3:  (b) Have a high school diploma, general educational development (GED) certificate, or
+L128@P3: approved training track and hours for child care home providers through MiRegistry.
+L129@P3:  (c) Permanently reside in the child care home as a member of the household.
+L130@P3:  (d) Have proof of certification in both of the following:
+L131@P3:  (i) Infant, child, and adult cardiopulmonary resuscitation (CPR).
+L132@P3:  (ii) First aid.
+L133@P3:  (e) Have documentation of completed training in both of the following:
+L134@P3:  (i) Recognition and reporting of child abuse and neglect.
+L135@P3:  (ii) Prevention and control of infectious disease, including immunizations.
+L136@P3:  (f) Attend an orientation provided by the department.
+L137@P3:  (2) An applicant or licensee shall be of responsible character and shall be suitable and able
+L138@P3: to meet the needs of children and provide for their care, supervision, and protection.
+L139@P3:  (3) All persons, including minors, residing in the child care home shall meet all of the
+L140@P3: following requirements:
+L141@P3:  (a) Be suitable to meet the needs of children.
+L142@P3:  (b) Be able to ensure that services and facilities are conducive to the welfare of children.
+L143@P3:  (c) Act in a manner that is conducive to the welfare of children.
+L144@P3:  (d) Demonstrate a willingness and ability to comply with the act and these rules.
+L145@P3:  (4) The applicant and licensee shall submit all required information and reports using the
+L146@P3: specified forms, which are available on the child care licensing division’s website:
+L147@P3: www.michigan.gov/michildcare. These forms are also available at the Michigan Department
+L148@P3: of Licensing and Regulatory Affairs, Bureau of Community and Health Systems, Child Care
+L149@P3: Licensing Division, 611 W Ottawa, Lansing, MI 48933-1070.
+L150@P3: R 400.1903 Licensee responsibilities.
+L151@P3:  Rule 3. (1) A licensee shall be responsible for all of the following:
+L152@P3:  (a) When the child care home is in operation, the licensee shall be present in the home on
+L153@P3: a daily basis and provide direct care and supervision for the majority of time children are in
+L154@P3: care, except for any of the following circumstances:
+L155@P3:  (i) Vacation or personal leave, which must not exceed 20 days within a calendar year.
+L156@P3: The 20 days of vacation or personal leave means the licensee is absent the entire day or at
+L157@P3: least 51% of the day when the child care home is operating. A licensee may have a short
+

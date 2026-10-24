@@ -1,0 +1,7 @@
+ecec_type,state_sum_hours,national_calibration_hours,gap_hours,gap_pct,reference
+Center-Based,5267063791.7088585,4811656871.261309,455406920.4475498,9.464659110826647,National price-adjusted calibration 202610191203; before local re-anchoring
+Other Paid,3787952497.5431747,3474571299.750859,313381197.79231596,9.019276646151619,National price-adjusted calibration 202610191203; before local re-anchoring
+Other Unpaid,4877139352.770207,4470362031.150024,406777321.620183,9.099426820148105,National price-adjusted calibration 202610191203; before local re-anchoring
+Paid Home-Based,1704450653.190212,1558182163.80177,146268489.38844204,9.38712384125648,National price-adjusted calibration 202610191203; before local re-anchoring
+Unpaid Center-Based,2882499291.57641,2348440541.738591,534058749.8378186,22.74099515597894,National price-adjusted calibration 202610191203; before local re-anchoring
+Unpaid Home-Based,327888657.4162706,300821661.04428244,27066996.371988177,8.997688623228425,National price-adjusted calibration 202610191203; before local re-anchoring

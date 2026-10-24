@@ -218,9 +218,9 @@ PATHS <- local({
 
 
 
-# Path of a raw file: <raw root>/<scope>/<file> (raw_scope(), shared_setup.R).
+# Resolve configured raw root, canonical resources, compatible legacy folders.
 # Returns: (chr)
-raw_path <- function(f) file.path(PATHS$raw, raw_scope(f), f)
+raw_path <- function(f) get_raw_data_path(f, PATHS$raw, must_exist = FALSE)
 
 
 

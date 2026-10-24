@@ -1,0 +1,61 @@
+Actual primary-source web-reader output, retrieved2026-10-22. Direct PDF request returned403. Reader text preserved; not original PDF bytes.
+ (https://doe.louisiana.gov/docs/default-source/early-childhood/provider-types.pdf?sfvrsn=8a72881f_4)
+citeturn208view0 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 2; Source: open({"ref_id":"https://doe.louisiana.gov/docs/default-source/early-childhood/provider-types.pdf?sfvrsn=8a72881f_4","lineno":null}); Total lines: 57
+L0@P0: CCAP Provider Types (Rev. 08/2018) 1
+L1@P0: CCAP PROVIDER TYPES
+L2@P0: • Type III
+L3@P0: • To be eligible for participation in CCAP, a center must obtain Academic Approval, possess a Type III Early
+L4@P0: Childhood Center License, and complete a Type III Early Learning Center CCAP application. The
+L5@P0: application packet includes instructions and forms for obtaining Academic Approval and applying for
+L6@P0: CCAP.
+L7@P0: • Academic Approval:
+L8@P0:  Academic approval is required for centers that receive or are authorized to receive public funds
+L9@P0: in accordance with licensing regulations (Bulletin 137).
+L10@P0:  Centers that do not receive public funds can apply as a Type I or Type II centers through the LDE
+L11@P0: Licensing Section process and are not subject to academic approval.
+L12@P0:  Louisiana law establishes that publicly-funded centers must meet the performance and
+L13@P0: academic standards of the Early Childhood Care and Education Network regarding kindergarten
+L14@P0: readiness as determined by BESE (R.S. 17:407.36(C))
+L15@P0:  BESE defines specific performance and academic expectations in Bulletin 140.
+L16@P0:  Academic approval shall be granted for each fiscal year to Type III early learning
+L17@P0: centers that have submitted a signed copy of Program Partner Profile and Assurances
+L18@P0: (Assurances) which require the following:
+L19@P0: • Membership in the community network;
+L20@P0: • Participation in the early childhood care and education accountability system
+L21@P0: • Participation in the coordinated enrollment process
+L22@P0:  Academic approvals will be valid from July 1 – June 30 of each academic fiscal year, as long as
+L23@P0: centers continue to comply with all Community Network requirements
+L24@P0: • Family Child Care Provider
+L25@P0: • A Family Child Care Provider is one or more individuals who provide child care services for fewer than 24
+L26@P0: hours per day per child, unless care in excess of 24 hours is due to the nature of the parent’s work, for
+L27@P0: six or fewer children in a private residence other than the residence of the child(ren) for whom care is
+L28@P0: given. The provider must care for no more than six children including the provider’s own children and
+L29@P0: any other children living at the residence who are under age 13, or age 13 through 17, if special needs.
+L30@P0: The provider must be 18 years of age or older, not live at the same residence as the child(ren) for whom
+L31@P0: care is being provided or share the case head of household’s mailing address (with the exception of a
+L32@P0: P.O. Box), and meet all registration requirements of the Louisiana Department of Education.
+L33@P0: • The provider must ensure that a working telephone that can receive incoming calls and can send
+L34@P0: outgoing calls is accessible at all times in the home in which care is being provided The provider must
+L35@P0: also provide a current email address.
+L36@P0: • In-Home Providers (Providing Care in Child(ren)’s Home
+L37@P0: • An In-Home provider cares for children in the children’s home. The provider must be 18 years of age or
+L38@P0: older, not live at the same residence as the child(ren) for who care is being provided or share the case
+L39@P0: head of household's mailing address (with the exception of a P.O. Box). The provider must only care for
+L40@P0: the children who live at the residence in which care is being provided, and meet all registration
+L41@P0-1: requirements of the Louisiana Department of Education.CCAP Provider Types (Rev. 08/2018) 2
+L42@P1: • An In-Home provider must be the sole caregiver for the child(ren) during the hours the provider is
+L43@P1: certified to provide care. An In-Home provider may not employ anyone to care for the child(ren).
+L44@P1: The provider must ensure that a working telephone that can receive incoming calls and can send
+L45@P1: outgoing calls is accessible at all times in the home in which care is being provided. The provider
+L46@P1: must also provide a current email address.
+L47@P1: • School Child Care Center
+L48@P1: School Child Care Centers must be regulated by the Board of Elementary and Secondary
+L49@P1: Education (BESE) and the school must be Brumfield vs. Dodd approved if a non-public
+L50@P1: school. They may operate kindergarten, before-and-after school, or summer care
+L51@P1: programs and charge for these services.
+L52@P1: • Military Child Care Center
+L53@P1: Military Child Care Centers are child care facilities that are licensed by the Department of
+L54@P1: Defense. They are not licensed or regulated by the LDE Licensing Section. To be eligible for
+L55@P1: participation in CCAP, a facility licensed by the Department of Defense must complete a
+L56@P1: Military Child Care Center Application packet.
+

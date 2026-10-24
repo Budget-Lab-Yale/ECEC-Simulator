@@ -43,8 +43,9 @@
 #   preschool 0.4 (years of age covered) on both price, high_share.
 #
 # Geographies: 50 states + DC + NYC (five boroughs, SUBSTATE_GEOGRAPHIES); NY =
-# whole state; NY_rest = NY minus NYC (NDCP counties, p0 children) -- NYC vs
-# NY overlap, NYC vs NY_rest doesn't. Correlations over 50 states + DC,
+# whole state; NY_rest price uses counties outside NYC. Model share unavailable
+# for NY_rest -- NY/NYC predictions use different income ranks.
+# Correlations over 50 states + DC,
 # unweighted, three price variants: nominal; real (/ state RPP / 100, BEA all
 # items 2019 -- broad basket, not childcare); observed (child-weighted mean
 # over observed counties only, states w/ any observed county).
@@ -71,13 +72,10 @@ weighted_median <- function(x, w) {
   x[which(cw >= 0.5 - 1e-12)[1]]
 }
 
-NDCP_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'local',
-                       'US_DOL__national_database_childcare_prices_county__2008-2022.xlsx')
-PEP_FILE  <- file.path(STATE_DATA_ROOT, 'raw', 'US',
-                       'US_PEP__population_children_age_0_4_by_county__2019.csv')
-P0_FILE   <- file.path(STATE_DATA_ROOT, 'raw', 'US',
-                       'US_ACS__p0_children_by_care_type_hours_age__2019.csv')
-RPP_FILE  <- file.path('resources', 'supply',
+NDCP_FILE <- file.path('resources', 'ndcp', 'US_DOL__national_database_childcare_prices_county__2008-2022.xlsx')
+PEP_FILE <- file.path('resources', 'census_population', 'US_PEP__population_children_age_0_4_by_county__2019.csv')
+P0_FILE <- file.path('resources', 'acs', 'US_ACS__p0_children_by_care_type_hours_age__2019.csv')
+RPP_FILE  <- file.path('resources', 'bea',
                        'US_BEA__regional_price_parities_all_items__2019.csv')
 OUT_CMP   <- file.path(STATE_DATA_ROOT, 'out', 'ndcp_price_comparison.csv')
 OUT_COR   <- file.path(STATE_DATA_ROOT, 'out', 'ndcp_price_correlation.csv')
@@ -94,10 +92,27 @@ STD_WEIGHTS <- c(infant = 0.4, toddler = 0.2, preschool = 0.4)
 
 
 
-read_ndcp <- function() {
+ndcp_age_columns <- function(setting = c('center', 'home')) {
+
+  # NDCP center/home columns; identical age mapping, separate imputation flags.
+  setting <- match.arg(setting)
+  groups <- AGE_GROUPS
+  if (setting == 'home') {
+    groups <- lapply(groups, function(g) {
+      g$price <- sub('^MC', 'MFCC', g$price)
+      g$six <- sub('^MC', 'MFCC', g$six)
+      g
+    })
+  }
+  groups
+}
+
+
+
+read_ndcp <- function(year = 2019L, setting = c('center', 'home')) {
 
   #----------------------------------------------------------------------------
-  # NDCP 2019 county rows, long by age group.
+  # NDCP county rows, long by age group; center default preserves callers.
   #
   # Returns: (tibble) fips, st, age_group, price ($/wk), totalpop, digit
   #   indicators d3, d4, d5 (any six-month group in range), imputed (any)
@@ -107,17 +122,26 @@ read_ndcp <- function() {
                                     ' -- copy from Bouchet shared/raw_data/DOL-NDCP/')
   # All text: five-digit flags keep leading zeros
   d <- readxl::read_excel(NDCP_FILE, sheet = 1, col_types = 'text')
-  d <- d[d$STUDYYEAR == '2019', ]
+  if (!is.null(year)) d <- d[d$STUDYYEAR %in% as.character(year), ]
+  ndcp_county_rows(d, setting)
+}
+
+
+
+ndcp_county_rows <- function(d, setting = c('center', 'home')) {
+
+  # Returns: (df) long county prices, setting-specific imputation indicators.
   sf <- sprintf('%02d', as.integer(d$STATE_FIPS))
   cf <- as.integer(d$COUNTY_FIPS_CODE)
   # COUNTY_FIPS_CODE full 5-digit in file; guard against 3-digit form
   fips <- if (max(cf, na.rm = TRUE) < 1000) paste0(sf, sprintf('%03d', cf)) else sprintf('%05d', cf)
 
-  dplyr::bind_rows(lapply(names(AGE_GROUPS), function(a) {
-    g <- AGE_GROUPS[[a]]
+  groups <- ndcp_age_columns(setting)
+  dplyr::bind_rows(lapply(names(groups), function(a) {
+    g <- groups[[a]]
     codes <- as.matrix(d[, paste0('i', g$six)])
     dig <- function(k) apply(substr(codes, k, k) == '1', 1, any)
-    tibble::tibble(fips = fips, st = d$STATE_ABBREVIATION, age_group = a,
+    tibble::tibble(year = as.integer(d$STUDYYEAR), fips = fips, st = d$STATE_ABBREVIATION, age_group = a,
                    price = as.numeric(d[[g$price]]),
                    totalpop = as.numeric(d$TOTALPOP),
                    d3 = dig(3), d4 = dig(4), d5 = dig(5))
@@ -194,14 +218,8 @@ main <- function() {
     dplyr::filter(kindergarten == 0,
                   ecec_type %in% c('High-Priced Center-Based', 'Low-Priced Center-Based')) %>%
     dplyr::inner_join(ag, by = 'age')
-  # NY_rest = NY minus NYC children, by care type, hours, age
-  p0_rest <- p0 %>% dplyr::filter(geo == 'NY') %>%
-    dplyr::left_join(p0 %>% dplyr::filter(geo == 'NYC') %>%
-                       dplyr::select(ecec_type, hours_choice, age, kindergarten, nyc = children),
-                     by = c('ecec_type', 'hours_choice', 'age', 'kindergarten')) %>%
-    dplyr::mutate(children = children - dplyr::coalesce(nyc, 0), geo = 'NY_rest') %>%
-    dplyr::select(-nyc)
-  p0 <- dplyr::bind_rows(p0, p0_rest,
+  # Own-rank NYC p0 cannot be subtracted from national-rank NY p0.
+  p0 <- dplyr::bind_rows(p0,
                          p0 %>% dplyr::filter(geo %in% names(STATE_POSTAL_TO_FIPS)) %>%
                            dplyr::mutate(geo = 'US'))
   model <- p0 %>%
@@ -211,7 +229,7 @@ main <- function() {
       high_share = sum(children[ecec_type == 'High-Priced Center-Based']) / sum(children),
       .groups = 'drop')
 
-  cmp <- dplyr::inner_join(prices, model, by = c('geo', 'age_group'))
+  cmp <- dplyr::left_join(prices, model, by = c('geo', 'age_group'))
   std <- cmp %>%
     dplyr::group_by(geo) %>%
     dplyr::summarise(

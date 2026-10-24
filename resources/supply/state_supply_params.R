@@ -33,18 +33,15 @@
 # children per family child care home, / 0-4-weighted mean over states that
 # license homes; state w/out home licence -> 1. Centre index scales all three
 # centre sectors, home index paid_home_based, both education groups alike.
-# Ratios: 2017 Child Care Licensing Study (ICPSR 37700; licensing_ratios_2017.R
-# extracts) -- centres at five representative age points, one per year of age
-# (NSECE_AGE_POINT): age 0 = 11 months, 1 = 18 months, 2 = 35 months, 3 = 3
-# years, 4 = 4 years; aggregated to one centre index, no extra sectors or
-# choices. state_data/out/licensing_ratio_change_3pt_5pt.csv compares w/
-# 3-point set (11 months, 35 months, 3 years). Homes = max children per small
-# family child care home excl. school-age add-ons. ID centres (point system,
-# not tabulated) from Idaho point rule at each age point (ID_POINTS,
-# licensing_ratios_2017.R); NYC centres own Article 47 rules (DOHMH, June
-# 2019, 2014-file rows -- 3 bands mapped onto 5 points by NSECE_AGE_BAND),
-# NYC homes NYS 2017 rule. Index relative to national mean -> national state
-# = national NSECE staffing.
+# Ratios: reviewed October 1, 2019 rules, licensing_ratios_reviewed_2019.csv.
+# 2017 study retained as baseline/fallback; source audit refreshed by 00_.
+# Five representative ages (NSECE_AGE_POINT): 11 months, 18 months, 35 months,
+# 3 years, 4 years for ages 0-4; one aggregate center index, no new choices.
+# Home capacity excludes school-age-only additions; inverse capacity proxy
+# doesn't adjust for assistants. Conditions retained in licensing registry.
+# NYC own center rules, NYS home rules; excluded from national mean (inside NY).
+# Historical 2014/2017, three/five-point comparisons remain diagnostics only.
+
 #
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
@@ -74,6 +71,7 @@ suppressPackageStartupMessages({
 
 # parent_geo(), SUBSTATE_GEOGRAPHIES
 source('src/shared_functions/constants.R')
+source('src/shared_functions/get_state_supply_year_factors.R')
 
 DIR      <- file.path('resources', 'supply')
 NATIONAL <- file.path(DIR, 'US_NSECE__national_supply_parameters__2019.yaml')
@@ -83,14 +81,14 @@ OUT_DIR  <- file.path('config', 'state', 'supply')
 ARGS     <- commandArgs(TRUE)
 if ('--out' %in% ARGS) OUT_DIR <- ARGS[which(ARGS == '--out') + 1]
 NATIONAL_RESIDUAL <- '--national-residual' %in% ARGS
-HOUSING  <- file.path(DIR, 'US_BEA__regional_price_parities_housing_services__2019.csv')
+HOUSING  <- file.path('resources', 'bea', 'US_BEA__regional_price_parities_housing_services__2019.csv')
 
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 
 # staffing_index() inputs -- licensed children per staff by state, setting, age
-# point (licensing_ratios_2017.R); county children 0-4
-RATIOS  <- file.path(DIR, 'US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv')
-POP_0_4 <- file.path('state_data', 'raw', 'US',
+# point (licensing_ratios_2019.R); county children 0-4
+RATIOS  <- file.path(DIR, 'licensing_ratios_reviewed_2019.csv')
+POP_0_4 <- file.path('resources', 'census_population',
                      'US_PEP__population_children_age_0_4_by_county__2019.csv')
 
 # NSECE_CENTRE_ENROLLED (NSECE 2019 centre enrolment by age 0-4),
@@ -147,6 +145,14 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
   require_input(POP_0_4)
   rt <- read_csv(ratios, col_types = cols(.default = col_character())) %>%
     mutate(children_per_staff = suppressWarnings(as.numeric(children_per_staff)))
+  if (anyNA(rt[c('state', 'setting', 'age_group')]) ||
+      anyDuplicated(rt[c('state', 'setting', 'age_group')]) ||
+      !setequal(rt$state, c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))) ||
+      any(!rt$setting %in% c('center', 'home')) ||
+      any(!is.finite(rt$children_per_staff[rt$setting == 'center'])) ||
+      any(rt$children_per_staff <= 0, na.rm = TRUE)) {
+    stop(ratios, ': invalid staffing keys, coverage, or ratios')
+  }
 
   pop <- read_csv(POP_0_4, col_types = cols(.default = col_character())) %>%
     mutate(state = names(STATE_POSTAL_TO_FIPS)[match(as.integer(STATE),
@@ -154,7 +160,8 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
            pop   = as.numeric(TOT_POP)) %>%
     group_by(state) %>%
     dplyr::summarise(pop = sum(pop), .groups = 'drop')
-  if (anyNA(pop$state) || nrow(pop) != length(STATE_POSTAL_TO_FIPS)) {
+  if (anyNA(pop$state) || nrow(pop) != length(STATE_POSTAL_TO_FIPS) ||
+      any(!is.finite(pop$pop) | pop$pop <= 0)) {
     stop(POP_0_4, ': expected 50 states + DC')
   }
 
@@ -191,7 +198,7 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
 
 
 
-staffing_index <- function(L_req, geo) {
+staffing_index <- function(L_req, geo, indices = licensing_indices()) {
 
   #----------------------------------------------------------------------------
   # Scales national labor_requirements by geo's licensing staffing index
@@ -205,7 +212,7 @@ staffing_index <- function(L_req, geo) {
   #   index
   #----------------------------------------------------------------------------
 
-  ix <- licensing_indices()
+  ix <- indices
   if (!geo %in% ix$state) stop(RATIOS, ': no centre or home rows for ', geo)
   i_c <- ix$centre[ix$state == geo]
   i_h <- ix$home[ix$state == geo]
@@ -278,28 +285,49 @@ main <- function() {
     quit(status = 1)
   }
 
+  indices <- licensing_indices()
+  annual_wages <- file.path(DIR, 'state_childcare_wage_ratios_annual.csv')
+  aw <- if (file.exists(annual_wages)) read_csv(annual_wages, show_col_types = FALSE) else NULL
   rows <- list()
+  outputs <- list()
   for (f in files) {
     st <- sub('[.]csv$', '', basename(f))
 
     r <- lapply(GROUPS, function(g) wage_ratio(st, g))
     w <- lapply(GROUPS, function(g) natl$wages[[g]] * r[[g]])
     # Computed in check mode too
-    L_req <- staffing_index(natl$labor_requirements, st)
+    L_req <- staffing_index(natl$labor_requirements, st, indices)
     # Residual: unpaid centre (0) unchanged; paid sectors x housing factor
     f_res <- residual_factor(st)
     resid <- lapply(natl$per_unit_residual, function(x) x * f_res)
 
-    if (!check_only) {
-      dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-      # No labor_supply -- 3a sets state L_0 from base-year sector hours
-      out <- natl
-      out$labor_supply <- NULL
-      out$wages        <- w
-      out$labor_requirements <- L_req
-      out$per_unit_residual  <- resid
-      write_yaml(out, file.path(OUT_DIR, paste0(st, '.yaml')))
+    # Validate complete payload in check mode too; write after all geographies pass.
+    # No labor_supply -- 3a sets state L_0 from base-year sector hours
+    out <- natl
+    out$labor_supply <- NULL
+    out$wages        <- w
+    if (!is.null(aw)) {
+      st_wages <- aw %>% filter(geo == st)
+      if (!nrow(st_wages)) stop('Annual wage panel lacks ', st)
+      years <- sort(unique(st_wages$year))
+      if (anyNA(st_wages$year) || !identical(as.integer(years), seq.int(2019L, max(years))) ||
+          any(!is.finite(st_wages$relative_to_2019) | st_wages$relative_to_2019 <= 0)) {
+        stop('Invalid or incomplete annual wage panel for ', st)
+      }
+      out$wage_path <- lapply(years, function(y) {
+        x <- st_wages %>% filter(year == y)
+        if (nrow(x) != 2 || !setequal(x$educ_group, names(GROUPS))) {
+          stop('Incomplete annual wage panel for ', st, '/', y)
+        }
+        list(year = as.integer(y), no_ba = x$relative_to_2019[x$educ_group == 'no_ba'],
+             ba = x$relative_to_2019[x$educ_group == 'ba'])
+      })
+      get_state_supply_year_factors(out$wage_path, max(years))
     }
+    out$labor_requirements <- L_req
+    out$per_unit_residual  <- resid
+    outputs[[st]] <- out
+
 
     rows[[st]] <- tibble::tibble(
       state                  = st,
@@ -326,6 +354,10 @@ main <- function() {
       '   (occupation hourly medians at national ACS education weights).\n',
       sep = '')
   if (!check_only) {
+    dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+    for (st in names(outputs)) {
+      write_yaml(outputs[[st]], file.path(OUT_DIR, paste0(st, '.yaml')), precision = 16)
+    }
     cat('wrote ', OUT_DIR, '/<ST>.yaml\n', sep = '')
   }
   invisible(d)

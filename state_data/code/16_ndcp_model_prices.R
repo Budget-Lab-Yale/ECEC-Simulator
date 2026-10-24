@@ -19,7 +19,7 @@
 #   delta does not preserve aggregate tier mix (households differ in tier
 #   probabilities, change total centre use by different amounts).
 #   p0 file: cluster/acs_p0_shares_by_age.R on calibration interface
-#   202610151431, ECEC_URBAN_DENSITY=1, ECEC_INCOME_RANK=national (Bouchet
+#   recorded beside P0_FILE (Bouchet
 #   runs/1015-main/p0_by_age.csv, logs/1015-main/post.sbatch; same md5).
 # NDCP side: MCINFANT / MCTODDLER / MCPRESCHOOL, STUDYYEAR 2019, weekly
 #   full-time median centre price by county (definitions: 11_ndcp_price_
@@ -53,12 +53,7 @@ suppressPackageStartupMessages({library(dplyr); library(readr); library(tidyr); 
 source('state_data/code/11_ndcp_price_comparison.R')
 source('src/shared_functions/reprice_alpha_to_state_supply.R')
 
-# NDCP file: documented home raw/local/, local copy may sit in raw/US/
-NDCP_FILE <- Filter(file.exists, c(
-  file.path(STATE_DATA_ROOT, 'raw', 'local', basename(NDCP_FILE)),
-  file.path(STATE_DATA_ROOT, 'raw', 'US', basename(NDCP_FILE))))[1]
-if (is.na(NDCP_FILE)) stop('MISSING INPUT: NDCP county xlsx -- copy from Bouchet ',
-                           'shared/raw_data/DOL-NDCP/v1/2008-2022/ into state_data/raw/local/')
+if (!file.exists(NDCP_FILE)) stop('MISSING INPUT: ', NDCP_FILE)
 
 SUPPLY_DIR <- file.path('config', 'state', 'supply')
 OUT_DET  <- file.path(STATE_DATA_ROOT, 'out', 'ndcp_model_prices.csv')
@@ -87,7 +82,7 @@ read_supply_yaml <- function(path) {
     v <- y$per_unit_residual[[s]]
     if (is.null(v)) NA_real_ else as.numeric(v)
   })
-  list(L_req = L, w = c(y$wages$no_ba, y$wages$ba), delta_0 = d0)
+  list(L_req = L, w = c(y$wages$no_ba, y$wages$ba), delta_0 = d0, wage_path = y$wage_path)
 }
 
 
@@ -123,17 +118,21 @@ main <- function() {
   # Returns: (list) detail, summary tibbles, invisibly
   #----------------------------------------------------------------------------
 
+  if (!file.exists(paste0(P0_FILE, '.provenance.txt'))) {
+    stop('p0 provenance missing. Regenerate weights from calibration interface before price comparison.')
+  }
+
   # National-residual yamls, same code as build files, temp dir
   tmp <- file.path(tempdir(), 'supply_national_residual')
   dir.create(tmp, showWarnings = FALSE)
   rc <- system2('Rscript', c('resources/supply/state_supply_params.R',
-                             '--national-residual', '--out', tmp), stdout = FALSE)
+                             '--national-residual', '--out', shQuote(tmp)), stdout = FALSE)
   if (rc != 0) stop('state_supply_params.R --national-residual failed (exit ', rc, ')')
   # Generator must reproduce build yamls exactly when run w/o flag -- else
   # the two variants differ by more than the residual
   tmp_b <- file.path(tempdir(), 'supply_build')
   dir.create(tmp_b, showWarnings = FALSE)
-  rc <- system2('Rscript', c('resources/supply/state_supply_params.R', '--out', tmp_b),
+  rc <- system2('Rscript', c('resources/supply/state_supply_params.R', '--out', shQuote(tmp_b)),
                 stdout = FALSE)
   if (rc != 0) stop('state_supply_params.R failed (exit ', rc, ')')
   build_files <- list.files(SUPPLY_DIR, pattern = '\\.yaml$')
@@ -227,13 +226,23 @@ main <- function() {
   write.csv(detail, OUT_DET, row.names = FALSE)
   write.csv(summ, OUT_SUM, row.names = FALSE)
 
-  git <- function(...) tryCatch(system2('git', c(...), stdout = TRUE), error = function(e) NA)
+  git <- function(...) {
+    result <- tryCatch(system2('git', shQuote(c(...)), stdout = TRUE, stderr = TRUE),
+                        error = function(e) structure(character(0), status = 1L))
+    if (!is.null(attr(result, 'status'))) {
+      warning('Git provenance unavailable; input and code hashes remain recorded.')
+      return('unavailable')
+    }
+    if (length(result)) result else '(none)'
+  }
   # Code hashed too -- commit id alone misses uncommitted scripts
   code <- c('state_data/code/16_ndcp_model_prices.R',
             'state_data/code/11_ndcp_price_comparison.R',
             'state_data/code/shared_setup.R',
+            'src/shared_functions/get_raw_data_path.R',
             'src/shared_functions/constants.R',
             'src/shared_functions/reprice_alpha_to_state_supply.R',
+            'src/shared_functions/get_state_supply_year_factors.R',
             'resources/supply/state_supply_params.R')
   inputs <- c(NDCP_FILE, PEP_FILE, P0_FILE, file.path(SUPPLY_DIR, build_files))
   writeLines(c(
@@ -245,8 +254,7 @@ main <- function() {
     'settings: model price = 2019 base supply price x 40; tier weights = p0 children;',
     '  NDCP = 2019 county medians, PEP 0-4 weights; ages infant 0-1, toddler 2, preschool 3-4;',
     '  geo = age groups weighted by model paid-centre children; NYC out of summary',
-    paste('p0 input source: cluster/acs_p0_shares_by_age.R, calibration interface 202610151431,',
-          'ECEC_URBAN_DENSITY=1, ECEC_INCOME_RANK=national'),
+    paste('p0 input metadata:', paste(readLines(paste0(P0_FILE, '.provenance.txt')), collapse = ' | ')),
     paste('git status of code files:',
           paste(git('status', '--porcelain', '--', code), collapse = ' | ')),
     'code (md5):',
