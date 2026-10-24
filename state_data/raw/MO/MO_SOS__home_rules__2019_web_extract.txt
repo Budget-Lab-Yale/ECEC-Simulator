@@ -1,0 +1,438 @@
+Primary PDF reader extract retrieved2026-10-21; not original PDF bytes. Archive URL labeled0121; individual pages identify July2019 publication and section history effective2019-08-30.
+
+Missouri Secretary of State: Code of State Regulations (https://www.sos.mo.gov/CMSImages/AdRules/csr/previous/19csr/19csr0121/19c30-61.pdf)
+citeturn121view0 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 34; Source: open({"ref_id":"turn119view0","lineno":1880}); Total lines: 3320
+L1738@P13: (A) All outdoor equipment shall be constructed safely, in good condition and free of
+L1739@P13: sharp, loose or pointed parts. Only lead-free
+L1740@P13: paint shall be used.
+L1741@P13: (B) Outdoor equipment shall be provided
+L1742@P13: for the ages and number of children in care to
+L1743@P13: meet their physical and developmental needs.
+L1744@P13: (C) Children shall be instructed in the safe
+L1745@P13: use of outdoor equipment.
+L1746@P13: (D) Stationary equipment such as swings,
+L1747@P13: slides and climbers shall be securely
+L1748@P13: anchored, have no exposed footings and be
+L1749@P13: placed to avoid accidents or collisions.
+L1750@P13: (E) For family day care homes initially
+L1751@P13: licensed after the effective date of these rules
+L1752@P13: or for homes installing new equipment, any
+L1753@P13: part of the equipment from which children
+L1754@P13: might fall shall not be more than six feet (6')
+L1755@P13: in height.
+L1756@P13: (F) Equipment with moving parts which
+L1757@P13: might pinch or crush children’s hands or fingers shall not be used unless the moving parts
+L1758@P13: which pose a threat to children have guards
+L1759@P13: or covers. “S” hooks shall be pinched together to avoid catching children's skin or clothing.
+L1760@P13: (G) Swings shall have lightweight seats of
+L1761@P13: rubber, plastic, canvas or nylon.
+L1762@P13: (H) Exposed bolts and screws shall be
+L1763@P13: recessed into the frame, covered or filed to
+L1764@P13: avoid sharp edges.
+L1765@P13: (I) Ropes, loops or any hanging apparatus
+L1766@P13: that might entrap, close or tighten upon a
+L1767@P13: child shall not be permitted.
+L1768@P13: (J) Trampolines shall not be used. Minitrampolines, aerobic bouncers or other similar small jumping equipment may be used
+L1769@P13: with close supervision.
+L1770@P13: AUTHORITY: sections 210.221 and 210.223,
+L1771@P13: RSMo Supp. 2015.* This rule previously filed
+L1772@P13: as 13 CSR 40-61.080, 13 CSR 40-61.095,
+L1773@P13: and 19 CSR 40-61.095. Original rule filed
+L1774@P13: March 29, 1991, effective Oct. 31, 1991.
+L1775@P13: Changed to 19 CSR 40-61.095, effective Dec.
+L1776@P13: 9, 1993. Changed to 19 CSR 30-61.095 July
+L1777@P13: 30, 1998. Emergency amendment filed Nov.
+L1778@P13: 10, 2015, effective Nov. 20, 2015, expired
+L1779@P13: May 17, 2016. Amended: Filed Nov. 10,
+L1780@P13: 2015, effective April 30, 2016.
+L1781@P13: *Original authority: 210.221.1(3), RSMo 1949, amended
+L1782@P13: 1955, 1987, 1993, 1995, 1999, 2015 and 210.223, RSMo
+L1783@P13: 2015.
+L1784@P13: 19 CSR 30-61.105 The Day Care Provider
+L1785@P13: and Other Day Care Personnel
+L1786@P13: PURPOSE: This rule sets forth the requirements for the day care provider and assistants, and number and age limitations of children in care and staff training.
+L1787@P13: PUBLISHER’S NOTE: The secretary of state
+L1788@P13: has determined that the publication of the
+L1789@P13: entire text of the material which is incorporated by reference as a portion of this rule
+L1790@P13: would be unduly cumbersome or expensive. This material as incorporated by reference in this rule shall be maintained by the
+L1791@P13: agency at its headquarters and shall be made
+L1792@P13: available to the public for inspection and
+L1793@P13: copying at no more than the actual cost of
+L1794@P13: reproduction. This note applies only to the
+L1795@P13: reference material. The entire text of the rule
+L1796@P13: is printed here.
+L1797@P13: (1) General Requirements.
+L1798@P13: (A) The provider routinely shall be present
+L1799@P13: during the hours of highest attendance a minimum of forty (40) hours per week.
+L1800@P13: (B) The provider shall name an assistant
+L1801@P13: caregiver who shall be available to substitute
+L1802@P13: during his/her absence or to meet staff/child
+L1803@P13: ratios.
+L1804@P13: (C) Caregivers shall be eighteen (18) years
+L1805@P13: JOHN R. ASHCROFT (7/31/19) CODE OF STATE REGULATIONS 15
+L1806@P13: Secretary of State
+L1807@P13-14: Chapter 61—Licensing Rules for Family Day Care Homes 19 CSR 30-61of age or older, have knowledge of the needs
+L1808@P14: of children, and be sensitive to the capabilities, interests, and problems of children in
+L1809@P14: care.
+L1810@P14: (D) Caregivers shall be of good character
+L1811@P14: and intent and shall be qualified to provide
+L1812@P14: care conducive to the welfare of children.
+L1813@P14: (E) Caregivers shall be capable of handling
+L1814@P14: emergencies promptly and intelligently.
+L1815@P14: (F) All caregivers shall cooperate with the
+L1816@P14: department.
+L1817@P14: (G) The provider shall not be engaged in
+L1818@P14: any other employment while on duty at the
+L1819@P14: family day care home.
+L1820@P14: (H) The provider shall have available a
+L1821@P14: copy of the Licensing Rules for Family Day
+L1822@P14: Care Homes in Missouri. Providers and assistants shall review and be knowledgeable of
+L1823@P14: the rules at the time they begin work, and
+L1824@P14: shall be able to understand and apply the
+L1825@P14: rules which relate to their respective responsibilities.
+L1826@P14: (I) The child care provider shall ensure
+L1827@P14: that within seven (7) days of employment or
+L1828@P14: volunteering and before being left alone with
+L1829@P14: children that caregivers receive a facility orientation. The child care provider shall ensure
+L1830@P14: that documentation verifying completion of
+L1831@P14: the facility orientation is maintained and on
+L1832@P14: file for review by the department for each
+L1833@P14: caregiver. The facility orientation shall
+L1834@P14: include:
+L1835@P14: 1. A tour of the facility, indoors and outdoors; and
+L1836@P14: 2. A review of the following:
+L1837@P14: A. Licensing rules;
+L1838@P14: B. The facility’s license and its limitations, if any;
+L1839@P14: C. The facility’s written child care
+L1840@P14: practices, including procedures for medication administration, child illness, discipline,
+L1841@P14: and guidance policies;
+L1842@P14: D. The daily schedule;
+L1843@P14: E. The assigned duties and responsibilities of staff;
+L1844@P14: F. The names and ages of the children
+L1845@P14: for whom the staff member will be responsible, including any special health, nutritional
+L1846@P14: or developmental needs;
+L1847@P14: G. The location of children’s records;
+L1848@P14: H. The facility’s safe sleep policy, if
+L1849@P14: applicable;
+L1850@P14: I. The facility’s disaster emergency
+L1851@P14: plan and the location of emergency information; and
+L1852@P14: J. The mandated responsibility to
+L1853@P14: report any suspected child abuse or neglect to
+L1854@P14: the Children’s Division at the toll-free number 1-800-392-3738 or online at
+L1855@P14: https://apps.dss.mo.gov/OnlineCanReporting
+L1856@P14: /default.aspx.
+L1857@P14: (J) The provider, assistant(s), volunteers,
+L1858@P14: or others in the home shall not be under the
+L1859@P14: influence of alcohol or illegal drugs while
+L1860@P14: child care is being provided or in any vehicles
+L1861@P14: used by the program. The child care provider
+L1862@P14: or other child care personnel shall not be in a
+L1863@P14: state of impaired ability due to use of medication while providing child care.
+L1864@P14: (K) The department shall evaluate any
+L1865@P14: information received that indicates that the
+L1866@P14: subject of the criminal record review poses a
+L1867@P14: threat to the safety or welfare of children. In
+L1868@P14: addition to those individuals automatically
+L1869@P14: disqualified from presence at a child care
+L1870@P14: facility by 19 CSR 30-63.020 General
+L1871@P14: Provisions, the department may also prohibit
+L1872@P14: the presence of any person on the premises of
+L1873@P14: the family day care home during child care
+L1874@P14: hours that has a criminal history that the
+L1875@P14: department determines to be evidence that
+L1876@P14: said person poses a threat to the safety and
+L1877@P14: welfare of children.
+L1878@P14: (L) The provider shall request the results
+L1879@P14: of a criminal background check for child care
+L1880@P14: staff members as required by 19 CSR 30-
+L1881@P14: 63.020 General Requirements.
+L1882@P14: (M) Child care staff members shall have
+L1883@P14: qualifying background screening results on
+L1884@P14: file as required by 19 CSR 30-63.020
+L1885@P14: General Requirements.
+L1886@P14: (N) Child care staff members with disqualifying background screenings results as
+L1887@P14: defined in 19 CSR 30-63.020 General
+L1888@P14: Requirements, shall be prohibited from being
+L1889@P14: present on the premises of the facility during
+L1890@P14: child care hours.
+L1891@P14: (O) A prospective child care staff member
+L1892@P14: may begin work for a child care provider
+L1893@P14: after the criminal background check has been
+L1894@P14: requested from the department; however,
+L1895@P14: pending completion of the criminal background check, the prospective child care staff
+L1896@P14: member shall be supervised at all times by
+L1897@P14: another child care staff member who received
+L1898@P14: a qualifying result on the criminal background check within the past five (5) years.
+L1899@P14: (P) Background screening information
+L1900@P14: received by the provider shall be retained in
+L1901@P14: the individual’s file in a confidential manner
+L1902@P14: and available for review.
+L1903@P14: (Q) If an employee reports licensing deficiencies in the home, the child care provider
+L1904@P14: shall not take any action against the employee because of the report that would adversely
+L1905@P14: affect his/her employment or terms or conditions of employment.
+L1906@P14: (R) The provider shall have documentation
+L1907@P14: on file at the home of current certification in
+L1908@P14: age-appropriate first aid and cardiopulmonary resuscitation (CPR) training. The
+L1909@P14: training shall be certified by a nationally-recognized organization, such as the American
+L1910@P14: Red Cross, American Heart Association, or
+L1911@P14: an equivalent certification, include an in-person skills assessment, and be approved by the
+L1912@P14: department. At least one (1) caregiver with
+L1913@P14: current certification in age-appropriate first
+L1914@P14: aid and CPR must be on site at all times when
+L1915@P14: children are present. First aid/CPR training
+L1916@P14: may count toward the annual clock hour training requirement.
+L1917@P14: (2) Licensing Capacities.
+L1918@P14: (A) If there is one (1) adult provider, the
+L1919@P14: home may be licensed for up to six (6) children including a maximum of three (3) children under age two (2), or for up to ten (10)
+L1920@P14: children including a maximum of two (2)
+L1921@P14: children under age two (2), or both. If only
+L1922@P14: four (4) children are present, all the children
+L1923@P14: may be under the age of two (2).
+L1924@P14: (B) If the provider has an assistant present,
+L1925@P14: the home may be licensed for up to ten (10)
+L1926@P14: children including a maximum of four (4)
+L1927@P14: children under age two (2) or for up to eight
+L1928@P14: (8) children who may all be under age two
+L1929@P14: (2).
+L1930@P14: (C) A family day care home may be
+L1931@P14: licensed at maximum capacity for a period of
+L1932@P14: eighteen (18) consecutive hours of the twenty-four- (24-) hour day. For the remaining six
+L1933@P14: (6) hours of the twenty-four- (24-) hour day,
+L1934@P14: care may be provided for one-third (1/3) the
+L1935@P14: licensed capacity of the home.
+L1936@P14: (3) Assistants.
+L1937@P14: (A) An approved assistant shall be available. If there is a change of assistants, the
+L1938@P14: provider shall notify the department immediately.
+L1939@P14: (B) All assistants shall submit to the
+L1940@P14: department the names and addresses of two
+L1941@P14: (2) references not related to them who have
+L1942@P14: knowledge of their character, experience, and
+L1943@P14: ability.
+L1944@P14: (C) All assistants shall be screened for
+L1945@P14: child abuse/neglect.
+L1946@P14: (D) An assistant who is employed or volunteers more than five (5) hours per week
+L1947@P14: shall provide a medical examination report
+L1948@P14: according to 19 CSR 30-61.125 Medical
+L1949@P14: Examination Reports.
+L1950@P14: (E) The names, addresses, and telephone
+L1951@P14: numbers of all assistants shall be posted with
+L1952@P14: other emergency numbers in the home.
+L1953@P14: (F) Parents shall be notified of any absence
+L1954@P14: of the provider and informed of the name of
+L1955@P14: the assistant on duty.
+L1956@P14: (4) Child Care Training.
+L1957@P14: (A) The provider shall obtain at least twelve
+L1958@P14: (12) clock hours of child care-related training
+L1959@P14: during each calendar year. Any assistant working more than five (5) hours per week shall
+L1960@P14: meet the same training requirements. Clock
+L1961@P14: 16 CODE OF STATE REGULATIONS (7/31/19) JOHN R. ASHCROFT
+L1962@P14: Secretary of State
+L1963@P14: 19 CSR 30-61—DEPARTMENT OF HEALTH AND
+L1964@P14-15:       SENIOR SERVICES Division 30—Division of Regulation and LicensureJOHN R. ASHCROFT (7/31/19) CODE OF STATE REGULATIONS 17
+L1965@P15: Secretary of State
+L1966@P15: Chapter 61—Licensing Rules for Family Day Care Homes 19 CSR 30-61
+L1967@P15: hour training shall be approved by the department.
+L1968@P15: (B) A clock hour shall be a minimum of
+L1969@P15: one (1) hour.
+L1970@P15: (C) Caregivers who were employed less
+L1971@P15: than the full year shall obtain one (1) clock of
+L1972@P15: hour training for each one (1) month of
+L1973@P15: employment, regardless of the date employment began.
+L1974@P15: (D) The clock hour training shall meet a
+L1975@P15: least one (1) of the eight (8) Content Areas of
+L1976@P15: the Core Competencies for Early Childhood
+L1977@P15: and Youth Development Professionals (Kansas
+L1978@P15: and Missouri) (2011) published by Child Care
+L1979@P15: Aware® Of Kansas/OPEN Initiative/Missouri
+L1980@P15: AfterSchool Network/Kansas Enrichment
+L1981@P15: Network. Copies may be obtained by contacting: OPEN Initiative at 573-884-3373 or
+L1982@P15: OPENInitiative@missouri.edu or
+L1983@P15: www.OPENInitiative.org. This rule does not
+L1984@P15: incorporate any later amendments or additions. The eight (8) Content Areas are as follows: I. Child and Youth Growth and
+L1985@P15: Development; II. Learning Environment and
+L1986@P15: Curriculum; III. Observation and
+L1987@P15: Assessment; IV. Families and Communities;
+L1988@P15: V. Health and Safety; VI. Interactions with
+L1989@P15: Children and Youth; VII. Program Planning
+L1990@P15: and Development; and VIII. Professional
+L1991@P15: Development and Leadership.
+L1992@P15: (E) Training shall be documented with the
+L1993@P15: dates, the individual participant’s name, the
+L1994@P15: number of hours of training completed, the
+L1995@P15: title of the training, training approval identification code, and the name of the trainer(s).
+L1996@P15: 1. Caregivers shall obtain a Missouri
+L1997@P15: Professional Development Identification
+L1998@P15: (MOPD ID) number at
+L1999@P15: www.OPENInitiative.org.
+L2000@P15: 2. All clock hour training records shall
+L2001@P15: be recorded in the Missouri Professional
+L2002@P15: Development Registry (MOPD Registry) at
+L2003@P15: www.OPENInitiative.org. A summary of
+L2004@P15: training from the MOPD System will serve as
+L2005@P15: documentation of training hours completed.
+L2006@P15: 3. Child-related college courses from an
+L2007@P15: accredited college or university as identified
+L2008@P15: by the U.S. Department of Education’s
+L2009@P15: Office of Post-Secondary Education
+L2010@P15: (http://ope.ed.gov/accreditation/) may be
+L2011@P15: counted as clock hour training. Child-related
+L2012@P15: college courses shall meet the following
+L2013@P15: guidelines:
+L2014@P15: A. College coursework accepted for
+L2015@P15: clock hours must be child related;
+L2016@P15: B. One (1) college credit is equal to
+L2017@P15: fifteen (15) clock hours;
+L2018@P15: C. College credit is only applicable to
+L2019@P15: the calendar year in which the course is successfully completed;
+L2020@P15: D. College coursework does not
+L2021@P15: include clock hour training or Continuing
+L2022@P15: Education Units (CEUs) taken from a college. Clock hour training provided through
+L2023@P15: colleges, such as a continuing education program or an extension office, must follow the
+L2024@P15: procedures for clock hour training approval;
+L2025@P15: and
+L2026@P15: E. College coursework shall be documented by a transcript from an accredited
+L2027@P15: college.
+L2028@P15: (F) Completing a Child Development
+L2029@P15: Associate (CDA) or Youth Development
+L2030@P15: Credential (YDC) shall count for twelve (12)
+L2031@P15: clock hours for the year the credential was
+L2032@P15: awarded.
+L2033@P15: (G) Caregivers shall not receive clock
+L2034@P15: hours for duplicate training taken within the
+L2035@P15: same calendar year.
+L2036@P15: (H) Clock hours obtained in excess of the
+L2037@P15: twelve (12) training clock hours for the current year shall not be carried over into the
+L2038@P15: next calendar year.
+L2039@P15: (I) Clock hours earned to complete the
+L2040@P15: previous year’s requirements shall not be
+L2041@P15: applied to the current year’s clock hour
+L2042@P15: requirements. Caregivers shall submit the
+L2043@P15: Clock Hour Training Credit Reassignment
+L2044@P15: form, promulgated as of July 2018 and
+L2045@P15: incorporated by reference in this rule, as
+L2046@P15: published by the Missouri Department of
+L2047@P15: Health and Senior Services, PO Box 570,
+L2048@P15: Jefferson City, MO 65102-0570 and available by the department at
+L2049@P15: https://health.mo.gov/safety/childcare/forms
+L2050@P15: .php, to the OPEN Initiative to assign clock
+L2051@P15: hours to the appropriate year.
+L2052@P15: (J) Clock hour training taken prior to
+L2053@P15: beginning employment or becoming licensed
+L2054@P15: at the family child care home may be counted as long as it occurred within that calendar
+L2055@P15: year.
+L2056@P15: (K) High school coursework shall not be
+L2057@P15: approved for clock hours.
+L2058@P15: (L) Trainers shall not be awarded clock
+L2059@P15: hours for training sessions which they conducted.
+L2060@P15: (M) Caregivers shall not be counted in
+L2061@P15: ratio when obtaining clock hour training.
+L2062@P15: (5) Safe Sleep Training. Every three (3)
+L2063@P15: years the provider and assistant(s) in a family child care home licensed to provide care
+L2064@P15: for infants less than one (1) year of age shall
+L2065@P15: successfully complete department-approved
+L2066@P15: training regarding the American Academy of
+L2067@P15: Pediatrics (AAP) safe sleep recommendations contained in the American Academy of
+L2068@P15: Pediatrics Task Force on Sudden Infant Death
+L2069@P15: Syndrome. Technical report – SIDS and other
+L2070@P15: sleep-related infant deaths: Updated 2016
+L2071@P15: Recommendations for a Safe Infant Sleeping
+L2072@P15: Environment, by Moon RY, which is incorporated by reference in this rule as published in
+L2073@P15: PEDIATRICS Volume 138, No. 5, November
+L2074@P15: 1, 2016 and available at http://pediatrics.aappublications.org/content/pediatrics/early/201
+L2075@P15: 6/10/20/peds.2016- 2938.full.pdf. This rule
+L2076@P15: does not incorporate any subsequent amendments or additions.
+L2077@P15: (A) The training shall be documented and
+L2078@P15: maintained as described in paragraph
+L2079@P15: (4)(E)2. of this rule.
+L2080@P15: (B) The provider and assistant(s) in a family child care home licensed after the effective date of this rule shall complete the safe
+L2081@P15: sleep training described in section (5) of this
+L2082@P15: rule prior to licensure.
+L2083@P15: (C) The provider and any assistant hired or
+L2084@P15: volunteering at the facility after initial licensure shall complete the safe sleep training
+L2085@P15: described in section (5) of this rule within
+L2086@P15: thirty (30) days of employment or volunteering at the facility.
+L2087@P15: AUTHORITY: sections 210.221 and 210.223,
+L2088@P15: RSMo 2016, and section 210.1080, RSMo
+L2089@P15: Supp. 2018.* This rule previously filed as 13
+L2090@P15: CSR 40-61.090, 13 CSR 40-61.105, and 19
+L2091@P15: CSR 40-61.105. Original rule filed March 29,
+L2092@P15: 1991, effective Oct. 31, 1991. Changed to 19
+L2093@P15: CSR 40-61.105, effective Dec. 9, 1993.
+L2094@P15: Emergency amendment filed Aug. 18, 1993,
+L2095@P15: effective Aug. 28, 1993, expired Dec. 25,
+L2096@P15: 1993. Emergency amendment filed Jan. 4,
+L2097@P15: 1994, effective Jan. 14, 1994, expired May
+L2098@P15: 13, 1994. Amended: Filed Aug. 18, 1993,
+L2099@P15: effective April 9, 1994. Changed to 19 CSR
+L2100@P15: 30-61.105 July 30, 1998. Amended: Filed
+L2101@P15: Feb. 18, 1999, effective Sept. 30, 1999.
+L2102@P15: Amended: Filed Jan. 28, 2011, effective July
+L2103@P15: 30, 2011. Emergency amendment filed Nov.
+L2104@P15: 10, 2015, effective Nov. 20, 2015, expired
+L2105@P15: May 17, 2016. Amended: Filed Nov. 10,
+L2106@P15: 2015, effective April 30, 2016. Emergency
+L2107@P15: amendment filed Feb. 15, 2019, effective Feb.
+L2108@P15: 25, 2019, expired Aug. 23, 2019. Amended:
+L2109@P15: Filed Feb. 15, 2019, effective Aug. 30, 2019.
+L2110@P15: *Original authority: 210.221, RSMo 1949, amended 1955,
+L2111@P15: 1987, 1993, 1995, 1999, 2015; 210.223, RSMo 2015; and
+L2112@P15: 210.1080, RSMo 2018.
+L2113@P15: 19 CSR 30-61.115 Day Care Family and
+L2114@P15: Household
+L2115@P15: PURPOSE: This rule contains the requirements for family members and others sharing
+L2116@P15: the home with day care children.
+L2117@P15: (1) Relationships between members of the
+L2118@P15: day care household shall provide a positive
+L2119@P15: environment for children. There shall be
+L2120@P15: agreement among the adult members of the
+L2121@P15: household for sharing their home with the
+L2122@P15-16: day care children. 18 CODE OF STATE REGULATIONS (7/31/19) JOHN R. ASHCROFT
+L2123@P16: Secretary of State
+L2124@P16: 19 CSR 30-61—DEPARTMENT OF HEALTH AND
+L2125@P16:       SENIOR SERVICES Division 30—Division of Regulation and Licensure
+L2126@P16: (2) The financial resources of the family shall
+L2127@P16: be sufficient to maintain minimum standards
+L2128@P16: of care as set forth by the department.
+L2129@P16: (3) If an individual(s) requiring extensive
+L2130@P16: care due to illness or handicapping conditions
+L2131@P16: is present in the home during the hours of
+L2132@P16: child care, another adult shall be available in
+L2133@P16: the home on a full-time basis who shall be
+L2134@P16: responsible for caring for the individual(s)
+L2135@P16: requiring extensive care.
+L2136@P16: (4) The provider shall notify the department
+L2137@P16: of any new household members.
+L2138@P16: (5) Any household member or any person
+L2139@P16: present at the home during hours in which
+L2140@P16: child care is provided shall not present a
+L2141@P16: threat to the health, safety or welfare of the
+L2142@P16: children.
+L2143@P16: AUTHORITY: section 210.221.1(3), RSMo
+L2144@P16: Supp. 1993.* This rule previously filed as 13
+L2145@P16: CSR 40-61.100, 13 CSR 40-61.115 and 19
+L2146@P16: CSR 40-61.115. Original rule filed March 29,
+L2147@P16: 1991, effective Oct. 31, 1991. Changed to 19
+L2148@P16: CSR 40-61.115, effective Dec. 9, 1993.
+L2149@P16: Emergency amendment filed Aug. 18, 1993,
+L2150@P16: effective Aug. 28, 1993, expired Dec. 25,
+L2151@P16: 1993. Emergency amendment filed Jan. 4,
+L2152@P16: 1994, effective Jan. 14, 1994, expired May
+L2153@P16: 13, 1994. Amended: Filed Aug. 18, 1993,
+L2154@P16: effective April 9, 1994. Changed to 19 CSR
+L2155@P16: 30-61.115 July 30, 1998.
+L2156@P16: *Original authority: 210.221.1(3), RSMo 1949, amended
+L2157@P16: 1955, 1987, 1993.
+L2158@P16: 19 CSR 30-61.125 Medical Examination
+L2159@P16: Reports
+L2160@P16: PURPOSE: This rule sets forth the requirements for medical examinations for caregivers and children in care.
+L2161@P16: (1) Day Care Provider and Assistants.
+L2162@P16: (A) The child care provider shall be in
+L2163@P16: good physical and emotional health with no
+L2164@P16: physical or mental conditions which would
+L2165@P16: interfere with child care responsibilities.
+L2166@P16: (B) The provider shall have a medical
+L2167@P16: examination report on file at the time of initial licensure.
+L2168@P16: (C) All assistants shall be in good physical
+L2169@P16: and emotional health with no physical or
+L2170@P16: mental conditions which would interfere with
+

@@ -24,7 +24,10 @@
 # both types exist; else national p0 (NYC ranked inside NY), logged. NY rows
 # always national p0.
 #
-# Runs on the cluster (interfaces live there). Writes the summary only.
+# Common-rank NY/NYC controls written to <out.csv>.nyc_partition.csv:
+# NY, NYC_parent, NYR from national p0; NYC from production p0. Diagnostic
+# only -- NYC_parent never substitutes for own-rank production NYC.
+# Runs on cluster (interfaces live there); aggregate summaries only.
 # Needs ECEC_URBAN_DENSITY=1 (state setup) and an interface built under it --
 # stops otherwise.
 #
@@ -182,6 +185,21 @@ read_alpha_data <- function(iface, pu_type) {
 
 
 
+nyc_partition_hh_ids <- function(geo_hh) {
+
+  # Common-rank controls only; production NYC keeps own p0.
+  # Returns: (list or NULL) NY, NYC_parent, NYR disjoint partition.
+  if (!all(c('NY', 'NYC') %in% names(geo_hh))) return(NULL)
+  if (anyDuplicated(geo_hh$NY) || anyDuplicated(geo_hh$NYC) ||
+      !all(geo_hh$NYC %in% geo_hh$NY)) {
+    stop('NYC household ids must be a unique subset of NY for partition controls.')
+  }
+  list(NY = geo_hh$NY, NYC_parent = geo_hh$NYC,
+       NYR = setdiff(geo_hh$NY, geo_hh$NYC))
+}
+
+
+
 main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   #----------------------------------------------------------------------------
@@ -207,13 +225,18 @@ main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   sub_ad <- substate_alpha_data(iface, geo_hh)
   nat_geo_hh <- geo_hh[setdiff(names(geo_hh), names(sub_ad))]
+  partition_hh <- nyc_partition_hh_ids(geo_hh)
+  export_hh <- c(nat_geo_hh, partition_hh[setdiff(names(partition_hh), names(nat_geo_hh))])
 
   res <- list()
+  partition_res <- list()
   for (pu_type in c('c1', 'c2plus')) {
     ad <- read_alpha_data(iface, pu_type)
     n_children <- if (pu_type == 'c1') 1 else 2
     cat(pu_type, ': ', nrow(ad$p0), ' units x ', ncol(ad$p0), ' choices\n', sep = '')
-    res[[pu_type]] <- geo_children(ad, n_children, nat_geo_hh) %>% mutate(pu_type = pu_type)
+    national <- geo_children(ad, n_children, export_hh)
+    res[[pu_type]] <- national %>% filter(geo %in% names(nat_geo_hh)) %>% mutate(pu_type = pu_type)
+    partition_res[[pu_type]] <- national %>% filter(geo %in% names(partition_hh))
     for (g in names(sub_ad)) {
       res[[paste(pu_type, g)]] <- geo_children(sub_ad[[g]][[pu_type]], n_children, geo_hh[g]) %>%
         mutate(pu_type = pu_type)
@@ -232,6 +255,21 @@ main_p0_shares <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   write_csv(out, out_f)
   cat('wrote', out_f, '\n')
+  if (!is.null(partition_hh)) {
+    partition <- bind_rows(partition_res) %>%
+      separate(key, c('ecec_type', 'hours_choice'), sep = '[|]') %>%
+      group_by(geo, ecec_type, hours_choice) %>%
+      summarise(children = sum(children), .groups = 'drop') %>%
+      bind_rows(out %>% filter(geo == 'NYC')) %>%
+      arrange(geo, ecec_type, hours_choice)
+    path <- paste0(out_f, '.nyc_partition.csv')
+    write_csv(partition, path)
+    writeLines(c(paste('interface:', iface),
+      'NY, NYC_parent, NYR: national alpha p0; NYC: production p0 (own when available)',
+      'NY = NYC_parent + NYR; partition controls never replace production NYC p0'),
+      paste0(path, '.provenance.txt'))
+    cat('wrote', path, '\n')
+  }
   invisible(out)
 }
 

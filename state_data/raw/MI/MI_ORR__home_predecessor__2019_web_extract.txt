@@ -1,0 +1,167 @@
+Primary-source web-reader output, retrieved 2026-10-22. Direct PDF request returned403. These are reader text bytes, not original PDF bytes. July2019 strike-bold proposal used ONLY to recover predecessor language; final December filing separately bounds applicability.
+Microsoft Word - 2018-029 LR - Strike-Bold (7-24-19) - Licensing Family and Group Child Care Homes - Submitted to MOAHR with JCAR Report 7-31-19 (https://dtmb.state.mi.us/orrdocs/orr/1810_2018-029LR_orr-draft.pdf)
+citeturn197view0 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 33; Source: open({"ref_id":"https://dtmb.state.mi.us/orrdocs/orr/1810_2018-029LR_orr-draft.pdf","lineno":null}); Total lines: 1397
+L0@P0: DEPARTMENT OF HUMAN SERVICES LICENSING AND REGULATORY
+L1@P0: AFFAIRS
+L2@P0: DIRECTOR'S OFFICE BUREAU OF COMMUNITY AND HEALTH SYSTEMS
+L3@P0: LICENSING RULES FOR FAMILY AND GROUP CHILD CARE HOMES
+L4@P0: Filed with the secretary of state on
+L5@P0: These rules take effect 7 days after filing with the secretary of state.
+L6@P0: (By authority conferred on the director of the Department of Human Services by Section
+L7@P0: 2 of 1973 PA 116, Executive Reorganization Order Nos. 1996-1, 1996-2, 2003-1, and
+--------------------------------------------------------------------------------
+Microsoft Word - 2018-029 LR - Strike-Bold (7-24-19) - Licensing Family and Group Child Care Homes - Submitted to MOAHR with JCAR Report 7-31-19 (https://dtmb.state.mi.us/orrdocs/orr/1810_2018-029LR_orr-draft.pdf)
+citeturn197view1 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 33; Source: find({"ref_id":"https://dtmb.state.mi.us/orrdocs/orr/1810_2018-029LR_orr-draft.pdf","pattern":"R 400.1910"}); Total lines: 1397
+L14@P0: R 400.1909, R 400.1910, R 400.1911, R 400.1912, R 400.1913, R 400.1914, R 400.1915,
+L15@P0: R 400.1916, R 400.1917, R 400.1918, R 400.1919, R 400.1920, R 400.1921, R 400.1922,
+L16@P0: R 400.1923, R 400.1924, R 400.1931, R 400.1932, R 400.1933, R 400.1934, R 400.1935,
+L17@P0: R 400.1936, R 400.1941, R 400.1942, R 400.1943, R 400.1944, R 400.1945, R 400.1951,
+L18@P0: R 400.1952, R 400.1961, R 400.1962, and R 400.1963 of the Michigan Administrative Code
+L19@P0: are amended, R 400.1904 is rescinded, and R 400.1904a, R 400.1904b, R 400.1925, and
+L20@P0: R 400.1926 are added, as follows:
+L21@P0: R 400.1901 Definitions.
+L22@P0:  Rule 1. (1) As used in these rules:
+L23@P0: (a) "Act" means 1973 PA 116, MCL 722.111 to 722.128.
+L24@P0: (b) "Adult" means a person 18 years of age and older.
+L25@P0:  (c) “Approved means having been reviewed and accepted by a designated inspecting
+L26@P0: authority or an agency that has jurisdiction.
+L321@P7:  (2) An adult assistant caregiver, 18 years of age or older, may substitute for the caregiver in
+L322@P7: accordance with R 400.1903(1)(c).
+L323@P7: R 400.1904a Child care staff member; employment requirements.
+L324@P7:  Rule 4a. (1) An individual who is employed as a child care staff member in a child
+L325@P7: care home shall be 18 years of age or older, pursuant to section 1 of the act, MCL
+L326@P7: 722.111.
+L327@P7:  (2) Before caring for children at a child care home, an individual shall provide the
+L328@P7: licensee with all of the following:
+L335@P7: department to be eligible to serve as a child care staff member, pursuant to section 5n
+L336@P7: of the act, MCL 722.115n, and as required by R 400.1925.
+L337@P7:  (4) A child care staff member shall conduct himself or herself in a manner that is
+L338@P7: conducive to the welfare of children and be able to meet the needs of children and
+L339@P7: provide for their care, supervision, and protection.
+L340@P7:  (5) A child care staff member may substitute for the licensee pursuant to R
+L341@P7: 400.1903(1)(c).
+L342@P7: R 400.1904b Child care assistant; requirements.
+L343@P7:  Rule 4b. (1) A child care assistant shall be 14 to 17 years of age.
+L344@P7:  (2) Prior to contact with children, the individual shall be determined by the
+L345@P7: department to be eligible to serve as a child care assistant, as required by R 400.1925.
+L346@P7:  (3) Within 90 days of hire, a child care assistant shall provide the licensee all of the
+L347@P7-8: following: 9
+L348@P8:  (a) A valid certification in infant, child, and adult CPR.
+L349@P8:  (b) A valid certification in first aid.
+L503@P11: R 400.1908 Capacity.
+L504@P11:  Rule 8. (1) The family child care registrant licensee shall assure ensure that the actual
+L505@P11: number of unrelated children in care at any 1 time does not exceed the number of children for
+L506@P11: which the child care home is registered licensed, not more than 6 children for a family
+L507@P11: child care home and not more than 12 children for a group child care home, not to
+L508@P11: exceed a total of 6.
+L509@P11:  (2) The group child care licensee shall assure that the actual number of unrelated children
+L510@P11: in care at any 1 time does not exceed the number of children for which the home is licensed,
+L511@P11: not to exceed a total of 12.
+L512@P11:  (32) This rule is not subject to the variance specified in R 400.1963.
+L513@P11: R 400.1909 Concurrent licensing.
+L514@P11:  Rule 9. (1) The caregiver A licensee who is concurrently licensed as a children's foster
+L515@P11: home provider shall so inform the parents of the children in care.
+L516@P11:  (2) The caregiver A licensee who provides care for both child care and foster care children
+L524@P12:  (4) The department has the right to refuse concurrent licensing for child care if the
+L525@P12: health and safety of child care children could be at risk.
+L526@P12: R 400.1910 Ratio of caregiving staff personnel to children.
+L527@P12:  Rule 10. (1) The ratio of caregiving staff personnel to children present in the home at any
+L528@P12: 1 time shall must be not less than 1 caregiving staff person member of the personnel to 6
+L529@P12: children. The ratio shall must include all unrelated children in care who are not related to
+L530@P12: any personnel and any of the following children who are less than 7 6 years of age:
+L531@P12: (a) Children of the caregiver licensee.
+L532@P12: (b) Children of the assistant caregiver a child care staff member or child care assistant.
+L533@P12: (c) Children related to any member of the child care home family household by blood,
+L534@P12: marriage, or adoption.
+L535@P12:  (2) For each caregiving staff person member of the personnel, not more than 4 children
+L536@P12: shall be under the age of 30 months, with not more than 2 of the 4 children under the age of
+L537@P12: 18 months.
+L538@P12: R 400.1911 Supervision Care; supervision; children.
+L539@P12:  Rule 11. (1) The caregiver A licensee shall assure ensure appropriate care and supervision
+L540@P12: of children at all times.
+L541@P12:  (2) A caregiver or adult assistant caregiver A licensee or a child care staff member shall
+L542@P12: be present in the home at all times when children are in care.
+L543@P12:  (3) Caregiving staff A licensee and child care staff members shall be up and awake at all
+L544@P12: times when children are in care, except as provided in R 400.1922(2) of these rules.
+L545@P12:  (4) Caregiving staff A licensee and child care staff members shall know the location of
+L546@P12: each child at all times.
+L547@P12:  (5) Caregiving staff A licensee and child care staff members shall never leave a child
+L548@P12: unattended or with a minor in a vehicle.
+L549@P12:  (6) A caregiver licensee or adult assistant caregiver child care staff member shall at all
+L550@P12: times directly supervise children who are engaged in water activities or are near collections
+L551@P12: or bodies of water.
+L552@P12: R 400.1912 Infant; child; resting; supervision and sleeping; supervision.
+L553@P12:  Rule 12. (1) Infants, birth to 12 months of age, shall be placed on their backs for resting
+L554@P12: and sleeping.
+L555@P12:  (2) Infants unable to roll from their stomachs to their backs, and from their backs to their
+L556@P12: stomachs, when found facedown, shall be placed on their backs when found in any other
+L557@P12: position.
+L558@P12:  (3) If When infants can easily turn over from their stomachs to their backs and from
+L559@P12: their backs to their stomachs, then they shall be initially placed on their backs, but allowed to
+L560@P12-13: adopt whatever position they prefer for sleeping. 14
+L561@P13:  (4) For an infant who cannot rest or sleep on her/his back due to disability or illness, the
+L567@P13: infants and toddlers, or cot or mat for toddlers, documentation from the child’s health
+L568@P13: care provider is required. The documentation must include specific sleeping
+L569@P13: instructions and time frames for how long the child needs to sleep in this manner and
+L570@P13: include an anticipated end date.
+L571@P13:  (5) Caregiving staff Personnel shall maintain supervision and monitor infants' breathing,
+L572@P13: sleep position, bedding, and possible signs of distress, except as provided in R 400.1922.
+L573@P13:  (6) Video surveillance equipment and baby monitors shall must not be used in place of
+L574@P13: subrule (5) of this rule.
+L575@P13: R 400.1913 Discipline; and child handling.
+L576@P13:  Rule 13. (1) The caregiver A licensee shall develop and have on file a written policy
+L577@P13: regarding the discipline of children.
+L578@P13:  (2) Developmentally appropriate positive methods of discipline which that encourage selfcontrol, self-direction, self-esteem, and cooperation shall must be used.
+L592@P13: prevent a child from harming other persons or property, or to allow a child to gain control of
+L593@P13: himself or herself excluding those forms of punishment prohibited by subrule (3) of this rule.
+L594@P13:  (5) This rule is not subject to the variance specified in R 400.1963.
+L595@P13: R 400.1914 Daily activity program.
+L596@P13:  Rule 14. (1) Caregiving staff Personnel shall engage in positive interactions with
+L597@P13: children. For infants and toddlers, interactions may include, but are not be limited to, all of
+L598@P13: the following:
+L859@P19-20:  (6) Public swimming areas may be used only if a lifeguard is present. 21
+L860@P20:  (7) If there are 2 groups of children, 1 group in the water and 1 group out of the water, then
+L861@P20: the caregiving staff personnel to child ratios, as required in R 400.1910, shall must be
+L862@P20: maintained for each group, with the exception that the in-the-water caregiving staff
+L863@P20: personnel to child ratio for children under 3 years of age who are in the water shall must
+L864@P20: be 1-to-1 at all times.
+L871@P20: (b) Seasonally Once per season for water activities occurring on the child care home
+L872@P20: premises.
+L873@P20:  (11) The emergency plan in R 400.1945 shall must include procedures for water
+L874@P20: emergencies.
+L875@P20: R 400.1922 Nighttime care.
+L876@P20:  Rule 22. (1) In a home where children are in care between the hours of midnight and 6 5
+L877@P20: a.m., not more than 2 adjoining floor levels shall may be used at any 1 time to sleep children.
+L878@P20:  (2) If the caregiving staff child care staff members and children in care are sleeping, then
+L879@P20: at least 1 caregiving staff child care staff member shall be on the same floor level as the
+L880@P20: sleeping children.
+L881@P20:  (3) Homes shall not use a third or higher floor as a resting or sleeping area for children in
+L882@P20: care unless there are 2 stairways to ground level.
+L883@P20:  (4) If nighttime care is provided, then children shall sleep in age appropriate cribs and
+L884@P20: beds. Port-a-cribs and play yards are not allowed for nighttime care.
+L885@P20: R 400.1923 Diapering and toilet learning.
+L1161@P27: care staff person member who is physically close enough to remove a child immediately if
+L1162@P27: the animal shows signs of distress or the child shows signs of treating the animal
+L1163@P27: inappropriately.
+L1344@P31: permission from a child’s parent for the at the time of initial enrollment of a child to go on
+L1345@P31: field trips not involving that do not involve a vehicle that includes, including, but is not
+L1346@P31: limited to, walking to a park or in the neighborhood.
+L1347@P31:  (53) The caregiver A licensee shall have a copy of each child's information card and a first
+L1348@P31: aid kit, containing the items listed in R 400.1951(89), accessible at all times when children
+L1349@P31: leave the premises.
+L1350@P31: R 400.1961 Parent notification required; of incidents,; accidents,; illness,; or disease;
+L1351@P31: required; isolation; sanitation.
+L1352@P31:  Rule 61. (1) Caregiving staff A licensee shall promptly report to a child’s parent any of
+L1353@P31: the following:
+L1354@P31:  (a) Any incidents, accidents, suspected illness, or other changes observed in the health of
+L1355@P31: a child.
+L1356@P31: (2b) Caregiving staff shall notify a parent of a A child who is exposed to a communicable
+L1357@P31: disease so that the child may be observed for symptoms of the disease.
+L1358@P31:  (32) Caregiving staff A licensee shall isolate a child who is too ill to remain in the group in
+L1359@P31: an area where the child can be supervised and made as comfortable as possible.
+L1360@P31:  (43) Bedding, toys, utensils, toilets, and lavatories, used by an ill individual an individual
+L1361@P31: who is ill, shall must be appropriately cleaned and sanitized before being used by another
+L1362@P31: person individual.
+L1363@P31: R 400.1962 Department notification required; of incidents; injury,; accident, illness, death,
+L1364@P31: or fire.
+

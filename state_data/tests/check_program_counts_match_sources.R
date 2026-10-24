@@ -29,7 +29,7 @@ suppressPackageStartupMessages({library(readr); library(dplyr)})
 # main() is guarded; this only loads
 source('state_data/code/00_build_demand_targets.R')
 
-DOC      <- file.path(STATE_DATA_ROOT, 'raw', 'US')
+DOC      <- file.path('resources', 'nieer')
 NIEER    <- file.path(DOC, 'US_NIEER__state_of_preschool_yearbook__2019.pdf')
 NIEER_HS <- file.path(DOC, 'US_NIEER__states_of_head_start_and_early_head_start__2023.pdf')
 CCD      <- raw_path('US_CCD__public_school_prekindergarten_children_by_county__2018-19.csv')

@@ -69,6 +69,10 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
   supply_params <- base_supply_params
   supply_params$nominal_wage_factor <- get_hourly_wage_growth_factor(macro_projections, 2019, year)
   supply_params$cpi_factor <- get_cpi_growth_factor(macro_projections, 2019, year)
+  if (!is.null(base_supply_params$wage_path)) {
+    supply_params$w <- base_supply_params$w *
+      get_state_supply_year_factors(base_supply_params$wage_path, year)
+  }
   cpi_chain_factor_2019 <- get_chained_cpi_growth_factor(macro_projections, 2019, year)
 
   # -- Assertions: growth factors are economically plausible ----
@@ -162,19 +166,8 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
 
   parent_units_list <- prepared[PARENT_UNIT_NAMES]
 
-  # -- Assertions: parent unit data integrity after preparation ----
-  # Price wedge columns must exist and vary across households. If the
-  # cached_price_wedge join failed silently (e.g., wrong key types),
-  # these columns would be missing or constant.
-  for (pu_name in PARENT_UNIT_NAMES) {
-    pu_df <- parent_units_list[[pu_name]]
-    if (!is.null(pu_df) && nrow(pu_df) > 1) {
-      stopifnot('price_wedge.center_low' %in% names(pu_df))
-      stopifnot('price_wedge.center_high' %in% names(pu_df))
-      stopifnot('price_wedge.home' %in% names(pu_df))
-      stopifnot(sd(pu_df$price_wedge.center_high, na.rm = FALSE) > 0)
-    }
-  }
+  # Constant wedges valid in small groups; check keyed cache agreement.
+  validate_prepared_price_wedges(parent_units_list, cached_price_wedge)
 
   # Parent units must be covered by the calibrated alpha row_ids. When the
   # simulation sample is smaller than the calibration sample (sim_sample <
@@ -248,4 +241,61 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
     wage_growth_factor_2019  = wage_growth_factor_2019,
     wage_growth_factor_2026  = wage_growth_factor_2026
   )
+}
+
+
+
+validate_prepared_price_wedges <- function(parent_units_list, cached_price_wedge) {
+
+  # Check prepared wedges against cache; permit identical household values.
+  # Params:
+  #   - parent_units_list (list): Prepared parent-unit groups
+  #   - cached_price_wedge (df or NULL): Keyed cache, NULL when disabled
+  # Returns: (logical) TRUE invisibly; stops on invalid values or join
+  keys <- c('hh_id', 'parent_unit_id')
+  cols <- paste0('price_wedge.', c('center_low', 'center_high', 'home'))
+  if (!is.null(cached_price_wedge)) {
+    if (!all(c(keys, cols) %in% names(cached_price_wedge))) {
+      stop('Price wedge cache lacks keys or required columns. Rebuild the cache.')
+    }
+    if (anyDuplicated(cached_price_wedge[keys])) {
+      stop('Price wedge cache has duplicate parent-unit keys. Rebuild the cache.')
+    }
+    if ('price_wedge.other_paid' %in% names(cached_price_wedge)) {
+      cols <- c(cols, 'price_wedge.other_paid')
+    }
+  }
+  for (pu_name in names(parent_units_list)) {
+    x <- parent_units_list[[pu_name]]
+    if (is.null(x) || !nrow(x)) next
+    if (!all(c(keys, cols) %in% names(x))) {
+      stop('Prepared price wedges lack keys or required columns: ', pu_name,
+           '. Check parent-unit preparation.')
+    }
+    for (nm in cols) {
+      if (!is.numeric(x[[nm]]) || any(!is.finite(x[[nm]]) | x[[nm]] <= 0)) {
+        stop('Prepared price wedge must be finite and positive: ', pu_name, '/', nm,
+             '. Check cache coverage and the parent-unit join.')
+      }
+    }
+    if (is.null(cached_price_wedge)) {
+      if (any(as.matrix(x[cols]) != 1)) {
+        stop('Disabled price wedges must equal one: ', pu_name, '.')
+      }
+      next
+    }
+    if (nrow(dplyr::anti_join(x[keys], cached_price_wedge[keys], by = keys))) {
+      stop('Prepared parent units missing from price wedge cache: ', pu_name,
+           '. Rebuild the cache with matching household keys.')
+    }
+    expected <- x[keys] %>%
+      dplyr::left_join(cached_price_wedge[c(keys, cols)], by = keys)
+    for (nm in cols) {
+      if (!isTRUE(all.equal(x[[nm]], expected[[nm]], check.attributes = FALSE))) {
+        stop('Prepared price wedge differs from keyed cache: ', pu_name, '/', nm,
+             '. Check the parent-unit join.')
+      }
+    }
+  }
+  invisible(TRUE)
 }

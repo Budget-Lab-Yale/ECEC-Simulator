@@ -38,7 +38,7 @@ nsch_pool <- function() {
   #----------------------------------------------------------------------------
 
   do.call(rbind, lapply(NSCH_POOL, function(y) {
-    f <- file.path(STATE_DATA_ROOT, 'raw', 'US',
+    f <- file.path('resources', 'nsch',
                    sprintf('US_NSCH__child_health_survey_topical__%d.dta', y))
     d <- haven::read_dta(f)
     names(d) <- tolower(names(d))

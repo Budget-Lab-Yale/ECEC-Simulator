@@ -1,25 +1,47 @@
 year: 2019.0
 labor_requirements:
   unpaid_center_based:
-    no_ba: 0.0571519
-    ba: 0.0624165
+    no_ba: 0.0573535230338599
+    ba: 0.0626367455203804
   low_price_center_based:
-    no_ba: 0.2002029
-    ba: 0.0444455
+    no_ba: 0.2009092045056158
+    ba: 0.0446023551950935
   high_price_center_based:
-    no_ba: 0.1684952
-    ba: 0.0771569
+    no_ba: 0.169089629964923
+    ba: 0.0774291029496769
   paid_home_based:
-    no_ba: 0.1795058
-    ba: 0.0427012
+    no_ba: 0.1679618863901885
+    ba: 0.0399551237726873
 wages:
-  no_ba: 11.7099769
-  ba: 19.293224
+  no_ba: 11.70997686732
+  ba: 19.2932239591999988
 elasticities:
   no_ba: 4.0
   ba: 2.0
 per_unit_residual:
   unpaid_center_based: .na.real
-  low_price_center_based: 0.418087
-  high_price_center_based: 3.7825142
-  paid_home_based: 2.3175449
+  low_price_center_based: 0.41808698295
+  high_price_center_based: 3.7825141783229999
+  paid_home_based: 2.3175449476079999
+wage_path:
+- year: 2019
+  no_ba: 1.0
+  ba: 1.0
+- year: 2020
+  no_ba: 0.9774206825741554
+  ba: 0.967470418382597
+- year: 2021
+  no_ba: 0.9355806745506896
+  ba: 0.9638691974445728
+- year: 2022
+  no_ba: 0.9736741114937596
+  ba: 0.9627719922409682
+- year: 2023
+  no_ba: 0.9868682343184364
+  ba: 0.9785387095211698
+- year: 2024
+  no_ba: 0.9652766900176868
+  ba: 0.9797540576667207
+- year: 2025
+  no_ba: 0.9385648499656344
+  ba: 0.9565841237804776

@@ -169,7 +169,7 @@ if (length(extra)) {
 # children not yet in kindergarten, center program now, ages 3+ at
 # 2018-12-31, share 5+, weight FEWT, national. File in raw/US/
 # -- absent, block says so, counts nothing.
-NHES_FILE <- file.path(STATE_DATA_ROOT, 'raw', 'US',
+NHES_FILE <- file.path('resources', 'nhes',
                        'US_NHES__ecpp_public_use_file__2019.csv')
 if (file.exists(NHES_FILE)) {
   nh <- read_csv(NHES_FILE, show_col_types = FALSE)

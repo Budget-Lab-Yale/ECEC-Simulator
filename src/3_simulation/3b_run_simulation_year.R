@@ -1274,6 +1274,15 @@ pseudofamily_split <- function(df, n_child, child_weight_stub, other_weights = N
     stop('No child-suffixed columns found (expected columns like var.1, var.2, ...).')
   }
 
+  # Singleton-only samples still need typed second-child slots downstream.
+  for (nm in child_cols_all[grepl('\\.1$', child_cols_all)]) {
+    second <- sub('\\.1$', '.2', nm)
+    if (!second %in% names(df)) {
+      df[[second]] <- df[[nm]]
+      df[[second]][] <- NA
+    }
+  }
+  child_cols_all <- names(df)[grepl('\\.\\d+$', names(df))]
   child_idx_all <- as.integer(sub('.*\\.(\\d+)$', '\\1', child_cols_all))
 
   # We will keep only the .1 and .2 slots in the output
@@ -1282,7 +1291,8 @@ pseudofamily_split <- function(df, n_child, child_weight_stub, other_weights = N
   # Split into small (<=2 kids) and big (>=3 kids)
   df_small <- df %>%
     filter(is.na(.data[[n_child]]) | .data[[n_child]] <= 2) %>%
-    select(-any_of(child_cols_drop))
+    select(-any_of(child_cols_drop)) %>%
+    mutate(pseudofamily_id = 1L)
 
   df_big <- df %>%
     filter(.data[[n_child]] >= 3) %>%
@@ -1403,10 +1413,6 @@ pseudofamily_split <- function(df, n_child, child_weight_stub, other_weights = N
   # Clean up helper columns (keep pseudofamily_id for pivot uniqueness)
   df_rep <- df_rep %>%
     select(-any_of(c('.orig_row_id', 'split_count', 'child_appear_count', '.n_children')))
-
-  # Add pseudofamily_id = 1 to small families for consistency
-  df_small <- df_small %>%
-    mutate(pseudofamily_id = 1L)
 
   # Combine back with <=2-kid families
   bind_rows(df_small, df_rep)

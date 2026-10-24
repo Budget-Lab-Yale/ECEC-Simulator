@@ -1,0 +1,10 @@
+Derived web-tool source extract, retrieved 2026-10-20; direct download returned403.
+URL: https://rules.sos.ri.gov/regulations/part/214-40-00-2
+Title: Family Child Care Home Regulations for Licensure (214-RICR-40-00-2)
+Official page overview, lines808-836:
+Type of Filing: Technical Revision
+Regulation Status: Inactive
+Effective: 10/01/2007 to 10/28/2019
+Purpose: reformat into RICR Code format; no substantive changes.
+Editorial note: transferred to Department of Human Services; successor218-RICR-70-00-2.
+Download Regulation points to REG_10166_20180811131419.pdf.

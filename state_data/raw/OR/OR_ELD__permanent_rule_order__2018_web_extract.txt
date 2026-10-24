@@ -1,0 +1,339 @@
+Primary-source web-reader extraction; retrieved 2026-10-21 from a mirror of Oregon ELD permanent administrative order 11-2018. Direct PDF download returned 403; these are extracted text bytes, not original PDF bytes.
+ (https://foxrothschild.gjassets.com/content/uploads/2018/10/PERMANENT-ADMINISTRATIVE-ORDEROR.pdf)
+citeturn79view0 [wordlim: 200] Crawled: 4 months ago; Content type: application/pdf; Number of pages: 50; Source: open({"ref_id":"https://foxrothschild.gjassets.com/content/uploads/2018/10/PERMANENT-ADMINISTRATIVE-ORDEROR.pdf","lineno":null}); Total lines: 1267
+L0@P0:  PERMANENT ADMINISTRATIVE ORDER
+L1@P0:  ELD 11-2018
+L2@P0:  CHAPTER 414
+L3@P0:  OREGON DEPARTMENT OF EDUCATION
+L4@P0:  EARLY LEARNING DIVISION
+L5@P0: FILING CAPTION: Rules governing Certified Center child care providers to conform with federal law
+L6@P0: and HB4065(2018).
+L7@P0: EFFECTIVE DATE: 10/16/2018
+L8@P0: AGENCY APPROVED DATE: 09/27/2018
+L9@P0: CONTACT: Alyssa Chatterjee 700 Summer St NE Filed By:
+L10@P0: 971-701-1535 Suite 350 Alyssa Chatterjee
+L11@P0: alyssa.chatterjee@state.or.us Salem,OR 97301 Rules Coordinator
+L12@P0: RULES:
+L13@P0: 414-300-0000, 414-300-0005, 414-300-0010, 414-300-0020, 414-300-0060, 414-300-0070, 414-300-
+L14@P0: 0080, 414-300-0090, 414-300-0100, 414-300-0110, 414-300-0120, 414-300-0130, 414-300-0140,
+L15@P0: 414-300-0150, 414-300-0180, 414-300-0215, 414-300-0280, 414-300-0300, 414-300-0360, 414-300-
+L16@P0: 0400, 414-300-0410, 414-300-0415
+L17@P0: AMEND: 414-300-0000
+L18@P0: RULE TITLE: Applicability of Rules
+L19@P0: NOTICE FILED DATE: 06/30/2018
+L20@P0: RULE SUMMARY: Permanent rule filing. Editorial corrections to ORS numbers, agency name and
+L21@P0: rule number references. Revision to rules pertaining to exempt prohibition.
+L22@P0: RULE TEXT:
+L23@P0: (1) OAR 414-300-0000 through 414-300-0415 set forth the Office of Child Care's (OCC) requirements
+L24@P0-1: for inspecting and certifying those child care facilities subject to Oregon laws governing child care facilities, ORS 329A.030, 329A.250 through 329A.310, 329A.350 through 329A.460 and 329A.990,
+L25@P1: that:
+L26@P1: (a) Serve thirteen or more children; or
+L27@P1: (b) Serve twelve or fewer children and are located in a building constructed as other than a singlefamily dwelling.
+L28@P1: (2) Individuals who are not enrolled in the Central Background Registry because of removal, denial for
+L29@P1: cause, or voluntary surrender in lieu of legal action, may only care for their own children or children
+L30@P1: related within the fourth degree as determined by civil law, pursuant to ORS 329A.252.
+L31@P1: (3) These rules do not apply to child care facilities specifically excluded by law. Excluded facilities are
+L32@P1: those that:
+L33@P1: (a) Provide care for preschool children that is primarily educational for four hours or less per day and
+L34@P1: where no preschool age child is present at the facility for more than four hours per day except as
+L35@P1: provided in 414-300-0000(2); or
+L36@P1: (b) Provide care for school-age children that is primarily a single enrichment activity, for eight hours or
+L37@P1: less a week; or
+L38@P1: (c) Provide care in which youth development activities are provided to school-age children during
+L39@P1: hours that school is not in session and which does not take the place of a parent's care; or
+L40@P1: (d) Provide care that is primarily an incident of group athletic or social activities sponsored by or under
+L41@P1: the supervision of an organized club or hobby group; or. This exclusion applies only to the time
+L42@P1: engaged in the group athletic or social activities and if the children can come and go as they please;
+L43@P1: or
+--------------------------------------------------------------------------------
+ (https://foxrothschild.gjassets.com/content/uploads/2018/10/PERMANENT-ADMINISTRATIVE-ORDEROR.pdf)
+citeturn79view1 [wordlim: 200] Crawled: 4 months ago; Content type: application/pdf; Number of pages: 50; Source: find({"ref_id":"https://foxrothschild.gjassets.com/content/uploads/2018/10/PERMANENT-ADMINISTRATIVE-ORDEROR.pdf","pattern":"3B"}); Total lines: 1267
+L707@P27: (10) All infant caregivers, with the exception of Aide I's, must complete OCC approved training on safe
+L708@P27: sleep, prior to having unsupervised access to children and functioning in their position. Aide I's must
+L709@P27: complete the training within the first 30 days of employment.
+L710@P27: (11) If certified to care for infants, current infant caregivers must complete OCC approved safe sleep
+L711@P27: training by January 1, 2019.
+L712@P27: STATUTORY/OTHER AUTHORITY: ORS 329A.260
+L713@P27: STATUTES/OTHER IMPLEMENTED: ORS 329A.260
+L714@P27: AMEND: 414-300-0130
+L715@P27: RULE TITLE: Staff/Child Ratios and Group Size
+L716@P27: NOTICE FILED DATE: 04/26/2018
+L717@P27: RULE SUMMARY: Permanent rule filing. Editorial correction of agency name.
+L718@P27: RULE TEXT:
+L719@P27: (1) The number of caregivers and group size shall be determined by the number and ages of the
+L720@P27: children in attendance.
+L721@P27: (2) The maximum number of children in a group and the ratio of caregivers to children specified in
+L722@P27: Table 3A of this rule shall apply, except that:
+L723@P27: (a) When all toddler, preschool and school-age children are at rest, the situation permits, and the room
+L724@P27: is arranged so all children are supervised, there may be one teacher or Aide II supervising the resting
+L725@P27: room. As children awaken and become active, additional staff shall be added to return ratios to those
+L726@P27: in Table 3A. Sufficient staff to meet the required ratio shall be in the facility and able to be summoned
+L727@P27: by the caregiver without leaving the resting room; and
+L728@P27: (b) Maximum group size shall not apply to field trips, outdoor play, planned large group activities,
+L729@P27-28: napping and eating. Staff/child ratios shall apply to these activities.(c) Centers with certification in effect on July 15, 2001, shall comply with age groupings, staff/child
+L730@P28: ratios and group size in either Table 3A or Table 3B for as long as the facility is continuously used for
+L731@P28: child care, under the following conditions:
+L732@P28: (A) The center must choose to operate under Table 3A or Table 3B; centers shall not operate under
+L733@P28: a combination of both;
+L734@P28: (B) If centers wish to change from operating under one set of ratios to operating under the other set
+L735@P28: of ratios, the change shall occur at the time of certification renewal; and
+L736@P28: (C) Centers may change options only twice.
+L737@P28: (3) Children shall at all times have the full attention of the appropriate number of staff. Children shall
+L738@P28: be within sight and sound of a caregiver at all times, except as specified below.
+L739@P28: (a) School-age children shall be within sight and/or sound of staff at all times, and staff shall be near
+L740@P28: enough to children to respond when needed. Children out of direct visual contact shall be monitored
+L741@P28: regularly and frequently and must be in approved activity areas. A written plan regarding the use and
+L742@P28: monitoring of these activity areas must be approved by OCC.
+L743@P28: (b) School age programs with toilet facilities or activities off-site shall have a written plan, approved by
+L744@P28: OCC, to assure accountability for all children.
+L745@P28: (4) At least one caregiver who meets the qualifications of a teacher (OAR 414-300-0100) shall
+L746@P28: supervise each group of children.
+L747@P28: (5) In a mixed group of older toddler, preschool and school-age children, the number of caregivers
+L748@P28: shall be determined by the age of the youngest child in the group.
+L749@P28: (6) If there are four or fewer children of any age in care for 45 minutes or less directly after opening or
+L750@P28: directly before closing, OAR 414-300-0300(10) does not apply and infants and younger toddlers may
+L751@P28: be included with older children. The staff shall be teacher-qualified in one of the represented age
+L752@P28: groups and the staff/child ratio must be 1:4.
+L753@P28: (a) Each age group must have age appropriate activities, equipment and toys available for use; and
+L754@P28: (b) If infants or toddlers are part of the multiple age group, a diaper changing area must be located in
+L755@P28: the room being utilized for care.
+L756@P28-29: (7) Any time there are children in care,(a) There shall be a staff person and one other adult on site. The other adult shall be enrolled in the
+L757@P29: Central Background Registry and shall be physically available to be called on by staff, if needed; or
+L758@P29: (b) There shall be a written plan, approved by OCC, for a second caregiver to be available within 5
+L759@P29: minutes for emergencies. The name and telephone number of the emergency back-up shall be known
+L760@P29: to all staff who work alone.
+L761@P29: [NOTE: Tables referenced are available from the agency.]
+L762@P29: STATUTORY/OTHER AUTHORITY: ORS 329A.260
+L763@P29: STATUTES/OTHER IMPLEMENTED: ORS 329A.260
+L764@P29: AMEND: 414-300-0140
+L765@P29: RULE TITLE: Indoor Space
+L766@P29: NOTICE FILED DATE: 04/26/2018
+L767@P29: RULE SUMMARY: Permanent rule filing. Editorial correction of agency name.
+L768@P29: RULE TEXT:
+L769@P29: (1) There shall be a minimum of 35 square feet of indoor activity area per child. Space considered in
+L770@P29: determining the facility capacity shall be available for use by children at all times, shall be used
+L771@P29: exclusively for child care during the hours of operation and shall be determined on a room-by-room
+L772@P29: basis. The following shall not be counted as part of the 35 square feet per child requirement: heating
+L773@P29: units; storage areas; teachers' desks; large permanent equipment; any space not useable by children.
+L774@P29: Cribs will be counted as useable space if the space underneath the cribs is accessible to children.
+L775@P29: (2) A school-age program shall have a minimum of 50 square feet of indoor activity area per child or
+L776@P29: may have a minimum of 35 square feet of indoor activity area per child if:
+L777@P29: (a) The children in care have access to a larger gross motor area, either indoor or outdoor, on a daily
+L778@P29: basis; or
+L1002@P38: (e) The center shall have sufficient food available to supplement any lunch that does not meet nutrition
+L1003@P38: requirements as defined in OAR 414-300-0270;
+L1004@P38: (f) If parents bring food for all the children as snacks or for celebrations, the food shall be commercially
+L1005@P38: prepared and served by the center in an approved manner; and
+L1006@P38: (g) There shall be a refrigerator on site to store foods needing refrigeration.
+L1007@P38: (6) Catered foods shall be:
+L1008@P38-39: (a) Prepared in a kitchen approved by the State Health Division or a county health department; and(b) Delivered in a safe, sanitary manner with food maintained at the required temperature (OAR 414-
+L1009@P39: 300-0250).
+L1010@P39: (c) If meals are catered, the process of receiving, holding and serving food shall be approved by the
+L1011@P39: environmental health specialist.
+L1012@P39: (7) To serve family style meals, where food is brought to the table in larger quantities and served to
+L1013@P39: the plates from the table, a center must have a written plan, approved by the environmental health
+L1014@P39: specialist and OCC, which includes at least the following elements:
+L1015@P39: (a) Provision for handwashing immediately prior to eating;
+L1016@P39: (b) Separate serving portions for each table;
+L1017@P39: (c) Serving utensils distinct from eating utensils;
+L1018@P39: (d) Table accommodations for group sizes no larger than those stated in OAR 414-300-0130, Table
+L1019@P39: 3A or Table 3B, for that age group;
+L1020@P39: (e) Provision for serving mildly ill children so as to prevent the spread of the illness; and
+L1021@P39: (f) The discarding of any food brought to the table and not eaten.
+L1022@P39: (8) If there is no kitchen in the center and if meals or snacks are not catered:
+L1023@P39: (a) Only single service utensils shall be used;
+L1024@P39: (b) Either commercially-prepared, individually-packaged, single-serving foods shall be served or the
+L1025@P39: serving of bulk food shall be approved by the environmental health specialist;
+L1026@P39: (c) Utensils that require washing shall not be used or stored on site;
+L1027@P39: (d) Food shall be stored in a space used only for food, beverages and single-service utensils; and
+L1028@P39: (e) If foods needing refrigeration are served, the center shall have a refrigerator.
+L1029@P39: (9) A center serving children under 12 months of age shall comply with the following requirements for
+L1030@P39: those children:
+L1031@P39: (a) Each child shall be fed on his/her own feeding schedule;
+L1032@P39: (b) When formula is provided by the center, it shall be either the commercially prepared, iron-enriched,
+L1033@P39-40: ready-to-feed type or shall be prepared from powder or concentrate and diluted according to manufacturers' instructions. When formula is prepared on site, it must be mixed in a kitchen approved
+L1034@P40: by the environmental health specialist, and the program must have a written plan for mixing formula
+L1035@P40: and sanitizing bottles and nipples. The plan must be approved in writing by the environmental health
+L1036@P40: specialist;
+L1037@P40: (c) Formula, breast milk, and food provided by the parent(s) shall be clearly marked with the child's
+L1038@P40: name and refrigerated if required;
+L1039@P40: (d) Whole milk, skim milk, 1%, and 2% milk shall not be served unless requested in writing by the
+L1040@P40: child's parent(s) and with a medical provider's written permission.
+L1041@P40: (e) Any bottles used for feeding liquid must be sterilized at the center by boiling or must come from
+--------------------------------------------------------------------------------
+ (https://foxrothschild.gjassets.com/content/uploads/2018/10/PERMANENT-ADMINISTRATIVE-ORDEROR.pdf)
+citeturn79view2 [wordlim: 200] Crawled: 4 months ago; Content type: application/pdf; Number of pages: 50; Source: find({"ref_id":"https://foxrothschild.gjassets.com/content/uploads/2018/10/PERMANENT-ADMINISTRATIVE-ORDEROR.pdf","pattern":"EFFECTIVE"}); Total lines: 1267
+L0@P0:  PERMANENT ADMINISTRATIVE ORDER
+L1@P0:  ELD 11-2018
+L2@P0:  CHAPTER 414
+L3@P0:  OREGON DEPARTMENT OF EDUCATION
+L4@P0:  EARLY LEARNING DIVISION
+L5@P0: FILING CAPTION: Rules governing Certified Center child care providers to conform with federal law
+L6@P0: and HB4065(2018).
+L7@P0: EFFECTIVE DATE: 10/16/2018
+L8@P0: AGENCY APPROVED DATE: 09/27/2018
+L9@P0: CONTACT: Alyssa Chatterjee 700 Summer St NE Filed By:
+L10@P0: 971-701-1535 Suite 350 Alyssa Chatterjee
+L11@P0: alyssa.chatterjee@state.or.us Salem,OR 97301 Rules Coordinator
+L12@P0: RULES:
+L13@P0: 414-300-0000, 414-300-0005, 414-300-0010, 414-300-0020, 414-300-0060, 414-300-0070, 414-300-
+L14@P0: 0080, 414-300-0090, 414-300-0100, 414-300-0110, 414-300-0120, 414-300-0130, 414-300-0140,
+L15@P0: 414-300-0150, 414-300-0180, 414-300-0215, 414-300-0280, 414-300-0300, 414-300-0360, 414-300-
+L16@P0: 0400, 414-300-0410, 414-300-0415
+L17@P0: AMEND: 414-300-0000
+L18@P0: RULE TITLE: Applicability of Rules
+L19@P0: NOTICE FILED DATE: 06/30/2018
+L20@P0: RULE SUMMARY: Permanent rule filing. Editorial corrections to ORS numbers, agency name and
+L21@P0: rule number references. Revision to rules pertaining to exempt prohibition.
+L22@P0: RULE TEXT:
+L23@P0: (1) OAR 414-300-0000 through 414-300-0415 set forth the Office of Child Care's (OCC) requirements
+L24@P0-1: for inspecting and certifying those child care facilities subject to Oregon laws governing child care facilities, ORS 329A.030, 329A.250 through 329A.310, 329A.350 through 329A.460 and 329A.990,
+L25@P1: that:
+L26@P1: (a) Serve thirteen or more children; or
+L27@P1: (b) Serve twelve or fewer children and are located in a building constructed as other than a singlefamily dwelling.
+L28@P1: (2) Individuals who are not enrolled in the Central Background Registry because of removal, denial for
+L29@P1: cause, or voluntary surrender in lieu of legal action, may only care for their own children or children
+L30@P1: related within the fourth degree as determined by civil law, pursuant to ORS 329A.252.
+L325@P12: 700, or an authorized representative of the Health Division, and by a state or local fire marshal, before
+L326@P12: a certificate is issued by OCC.
+L332@P12: faucets and fixtures identified in OAR 414-300-0010(8). Results shall be those obtained within the past
+L333@P12: six years.
+L334@P12: (16) An applicant shall have all drinking water faucets and fixtures identified in OAR 414-300-0010(8)
+L335@P12: tested for lead.
+L336@P12: (17) An applicant shall use an Oregon Environmental Laboratory Accreditation Program (ORELAP)
+L337@P12: accredited drinking water laboratory and shall test in accordance with the United States Environmental
+L338@P12: Protection Agency 3T's for Reducing Lead in Drinking Water in Schools: Revised guidance dated
+L339@P12-13: October 2006.(18) An applicant may submit documented lead testing results obtained within six years immediately
+L340@P13: preceding the effective date of this section to the OCC. This provision applies only to tests conducted
+L341@P13: in accordance with the United States Environmental Protection Agency 3T's for Reducing Lead in
+L342@P13: Drinking Water in Schools: Revised guidance dated October 2006 and the results were below 15 ppb.
+L343@P13: The OCC shall determine whether the tests submitted conform to the requirements of OAR 414-300-
+L344@P13: 0010(17).
+L345@P13: (19) Upon receipt of a completed application, a representative of OCC shall evaluate the center and
+L346@P13: all aspects of the proposed operation to determine if the center meets certification requirements (OAR
+L347@P13: 414-300-0000 through 414-300-0415).
+L348@P13: STATUTORY/OTHER AUTHORITY: ORS 329A.260
+L349@P13: STATUTES/OTHER IMPLEMENTED: ORS 329A.260
+L350@P13: AMEND: 414-300-0020
+L351@P13: RULE TITLE: Exceptions to Rules
+L352@P13: NOTICE FILED DATE: 04/26/2018
+L353@P13: RULE SUMMARY: Permanent rule filing. Editorial corrections to agency name.
+L354@P13: RULE TEXT:
+L355@P13: (1) OCC may grant an exception to an individual rule (OAR 414-300-0000 through 414-300-0415) for
+L356@P13: a specified period of time when:
+L357@P13: (a) A requirement does not apply to the facility; or
+L358@P13: (b) The intent of the requirement can be met by a method not specified in the applicable rule.
+L359@P13: (2) The operator shall request an exception to a rule on a form provided by OCC. The request shall
+L360@P13: include:
+L361@P13: (a) A justification for the requested exception; and
+L362@P13: (b) An explanation of how the center will meet the intent of the rule.
+L363@P13: (3) No exception to a rule shall be granted:
+L364@P13-14: (a) If the requirement is established by statute; or(b) Unless the health, safety, and well-being of the children are ensured.
+L365@P14: (4) Exceptions may not be implemented until approval is received from OCC.
+L809@P31: on July 15, 2001, must comply with a barrier at least three feet high until such time as the existing
+L810@P31: barrier is replaced. Spacing between vertical slats of a fence shall be no greater than 4 inches. Fences
+L811@P31: must meet applicable local codes.
+L812@P31: STATUTORY/OTHER AUTHORITY: ORS 329A.260
+L813@P31: STATUTES/OTHER IMPLEMENTED: ORS 329A.260
+L814@P31: AMEND: 414-300-0180
+L815@P31: RULE TITLE: Sanitation
+L816@P31: NOTICE FILED DATE: 04/26/2018
+L817@P31: RULE SUMMARY: Permanent rule filing. Revision to rules pertaining to lead testing.
+L818@P31: RULE TEXT:
+L819@P31: (1) Water Supply:
+L820@P31: (a) The center's water supply shall be continuous in quantity and from a water supply system approved
+L821@P31: by the Health Division.
+L822@P31: (b) There shall be safe drinking water available to children that is supplied in a sanitary manner.
+L823@P31: Drinking water for preparing food, infant formula, drinking or cooking shall not be obtained from
+L824@P31: bathroom sinks or diaper changing sinks.
+L825@P31: (c) The facility shall identify the location of all drinking water faucets and fixtures identified in OAR 414-
+L826@P31: 300-0010(8) tested for lead. The facility shall sample in accordance with United States Environmental
+L827@P31: Protection Agency 3T's for Reducing Lead in Drinking Water in Schools: Revised guidance dated
+L828@P31: October 2006 and shall use an Oregon Environmental Laboratory Accreditation Program (ORELAP)
+L829@P31: accredited drinking water laboratory.
+L830@P31: (d) Lead testing as required by OAR 414-300-0010(16), 414-300-0010(17) and 414-300-0180(1)(c)
+L831@P31: shall be conducted within the past six years of the effective date of this section and no later than six
+L832@P31-32: months of the effective date of this section and at least once every six (6) years.(e) The test results shall be kept on the facility premises at all times and a copy provided to the OCC
+L833@P32: within ten (10) days of receiving the results.
+L834@P32: (f) Irrespective of test results, the facility must immediately notify all parents and guardians verbally, in
+L835@P32: writing, or by email, of the test results and post results in a prominent place in the facility where they
+L836@P32: will be seen by parents and guardians within one business day. Information provided to parents and
+L837@P32: guardians shall be in accordance with United States Environmental Protection Agency 3T's for
+L838@P32: Reducing Lead in Drinking Water in Schools: Revised guidance dated October 2006.
+L839@P32: (g) If test results are at or above 15 parts per billion (ppb), the facility shall:
+L840@P32: (A) Immediately prevent children from using or consuming water from faucets or fixtures identified in
+L841@P32: OAR 414-300-0010(8) that have test results at or above 15 ppb by supplying water from drinking water
+L842@P32: faucets or fixtures that have test results below 15 ppb or bottled or packaged water to meet the
+L843@P32: requirements of this section;
+L844@P32: (B) Within sixty days of receiving the test results, the provider shall submit a corrective action plan for
+L845@P32: approval by the OCC for any faucet or fixture that has test results at or above 15 ppb, following the
+L846@P32: United States Environmental Protection Agency 3T's for Reducing Lead in Drinking Water in Schools:
+L847@P32: Revised guidance dated October 2006; and
+L848@P32: (C) Implement corrective actions or remedies identified in the approved plan within 30 days of OCC
+L849@P32: approval.
+L850@P32: (h) The facility must conduct follow-up sampling and results must demonstrate lead below 15 ppb
+L851@P32: before the facility may resume use of faucets or fixtures identified in OAR 414-300-0010(8) that
+L852@P32: previously tested at or above 15 ppb.
+L853@P32: (i) A provider may submit documented lead testing results obtained within six years immediately
+L854@P32: preceding the effective date of this section to the OCC. This provision applies only to tests conducted
+L855@P32: in accordance with the United States Environmental Protection Agency 3T's for Reducing Lead in
+L856@P32: Drinking Water in Schools: Revised guidance dated October 2006 and the results were below 15 ppb.
+L857@P32: The OCC shall determine whether the tests submitted conform to the requirements of OAR 414-300-
+L858@P32: 0010(17).
+L859@P32: (j) Existing programs must submit testing results by September 30, 2018.
+L860@P32: (k) Irrespective of results obtained in accordance with 414-300-0010(16), 414-300-0010(17) and 414-
+L861@P32: 300-0180(1)(c), actions to protect children from exposure to lead contamination in drinking water
+L862@P32-33: should be taken at all times, including:(A) Flushing pipes before using to prepare food, infant formula, drinking or cooking by running the tap
+L863@P33: each time before use until the water is noticeably cooler (approximately 30 seconds to two minutes);
+L864@P33: and
+L865@P33: (B) Using only cold water from drinking water faucets and fixtures identified in OAR 414-300-0180(1)(c)
+L866@P33: that have lead test results below 15 ppb for preparing food, infant formula, drinking or cooking.
+L867@P33: (C) Boiling water does not remove lead from water and is not an acceptable action to protect children
+L868@P33: from exposure to lead contamination in drinking water.
+L869@P33: (l) If a provider replaces any faucets or fixtures identified pursuant to OAR 414-300-0010(8) at any
+L870@P33: time, the provider must notify OCC and sample the water from these faucets and fixtures pursuant to
+L871@P33: the requirements of OAR 414-300-0010(16) and 414-300-0010(17) and provide the test results to the
+L872@P33: OCC within ten (10) days of receiving the results. The provider may not allow access to the replaced
+L873@P33: faucet or fixture until the OCC approves access.
+L874@P33: (2) Heat and Ventilation:
+L875@P33: (a) The center shall be ventilated, by natural or mechanical means, and shall be free of excessive
+L876@P33: heat, condensation, and obnoxious odors.
+L877@P33: (b) Room temperature shall be at least 68° F. (20 C.) and not so warm as to be dangerous or unhealthy
+L878@P33: in the center when children are present.
+L879@P33: (c) After painting or laying carpet, the building must be aired out completely for at least 24 hours with
+L880@P33: good ventilation before children are allowed to return.
+L881@P33: (3) Insect and Rodent Control:
+L882@P33: (a) The center shall be in such condition as to prevent the infestation of rodents and insects.
+L883@P33: (b) Doors and windows used for ventilation shall be equipped with fine-meshed screens.
+L884@P33: (c) Automatic insecticide dispensers, vaporizers, or fumigants shall not be used.
+L885@P33: (4) Maintenance:
+L1192@P46: (8) A center whose certification has been denied or revoked must immediately notify all parents of the
+L1193@P46: closure and shall post a notice of the closure where it can be viewed by parents and others. The notice
+L1194@P46: shall remain posted for a minimum of 2 weeks.
+L1195@P46: (9) The center has the right to appeal any decision to suspend, deny or revoke the certification, subject
+L1196@P46: to the provisions of chapter 183, Oregon Revised Statutes.
+L1197@P46: (10) Any action taken by OCC to deny, suspend, or revoke certification may be reported to the
+L1198@P46: Department of Human Services, USDA Child Care Food Programs, child care resource and referral
+L1199@P46: system.
+L1200@P46: (11) A center whose certification has been denied for cause (e.g. health and safety concerns, criminal
+L1201@P46: activity or child protective services involvement) or revoked shall not be eligible to reapply for five
+L1202@P46: years after the effective date of the closure.
+L1203@P46: (12) If any person, who is enrolled in the CBR, has been charged with, arrested for, or a warrant is out
+L1204@P46: for any of the crimes which OCC has determined indicate behavior which may have a detrimental
+L1205@P46: effect on a child, with final disposition not yet reached, certification may be denied or suspended or
+L1206@P46: revoked until the charge, arrest, or warrant has been resolved if the person continues to operate, be
+L1207@P46: employed in or reside in the center, or have access to children in the center.
+L1208@P46: (13) Certification may be denied, suspended or revoked if an individual listed in OAR 414-350-0080(5)
+L1209@P46: has a child protective services history or an open child protective services or law enforcement case
+L1210@P46: that would disqualify the individual from the CBR.
+L1211@P46-47: STATUTORY/OTHER AUTHORITY: ORS 329ASTATUTES/OTHER IMPLEMENTED: ORS 329A.260
+L1212@P47: REPEAL: 414-300-0410
+L1213@P47: RULE TITLE: Suspension of Certification
+L1214@P47: NOTICE FILED DATE: 06/30/2018
+L1215@P47: RULE SUMMARY: Repeal of rule. Contents have been combined and moved to OAR 414-300-0400.
+L1216@P47: RULE TEXT:
+L1217@P47: (1) CCD may immediately, and without prior notice, suspend the child care certification when, in the
+L1218@P47: opinion of CCD, such action is necessary to protect the children from physical or mental abuse or a
+L1219@P47: substantial threat to health, safety or well-being. Such action may be taken before an investigation is
+L1220@P47: completed.
+

@@ -1,0 +1,16 @@
+Primary-source web-reader extraction, retrieved 2026-10-22.
+URL: https://secure.sos.state.or.us/oard/viewAttachment.action?ruleVrsnRsn=251269
+Direct download returned HTML, not PDF. These are extracted text bytes, not original PDF bytes.
+One-page attachment to former OAR 414-300-0130; effective date established separately.
+
+TABLE 3A
+Age of Children | Minimum Number of Caregivers to Children | Maximum Number of Children in a Group
+Six Weeks of Age through 23 Months | 1:4 | 8
+24 Months of Age through 35 Months | 1:5 | 10
+36 Months of Age to Attending Kindergarten | 1:10 | 20
+Attending Kindergarten and Older | 1:15 | 30
+
+TABLE 3B
+Six Weeks of Age and Under 30 Months | 1:4 | 8
+30 Months of Age to Attending Kindergarten | 1:10 | 20
+Attending Kindergarten and Older | 1:15 | 30

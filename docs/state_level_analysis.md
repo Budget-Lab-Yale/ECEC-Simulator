@@ -417,7 +417,7 @@ on the national parameters.
 **`wages` come from BLS OES May 2019 childcare occupations.**
 `resources/supply/oes_childcare_wage_ratios_2019.R` reads the OES state,
 national, and MSA files (extract in
-`state_data/raw/US/US_OES__childcare_occupation_wages__2019.csv`). OES is an
+`resources/bls_oews/US_BLS_OEWS__childcare_occupation_wages__2019.csv`). OES is an
 employer survey with SOC-coded occupations, so its samples are larger and its
 occupation codes cleaner than the ACS self-reports. OES has no education, so
 each education group mixes the occupation wages at national ACS weights:
@@ -429,7 +429,7 @@ ratio(g, s) = sum_o w(o, g) h(o, s) / sum_o w(o, g) h(o, US)
 `h` is the OES hourly median and `w(o, g)` the national share of group `g`'s
 childcare workers in occupation `o` (ACS 2015-2019 five-year, all five years,
 person weights; `resources/supply/acs_childcare_occupation_weights_2019.py`,
-output `resources/supply/childcare_occupation_weights_by_education_acs_2019.csv`;
+output `resources/acs/childcare_occupation_weights_by_education_acs_2019.csv`;
 same worker definition as the former ACS wage ratios):
 
 | SOC | Occupation | no-BA | BA |
@@ -455,44 +455,57 @@ averaged over ages 0–4 with the NSECE 2019 centre enrolment mix, relative to
 the PEP-weighted mean over the 50 states and DC; it scales all three centre
 sectors. For homes: 1 ÷ licensed maximum children per family child care home,
 relative to the mean over states that license homes (1 where a state does
-not); it scales `paid_home_based`. Rules: the 2017 Child Care Licensing Study
-(ICPSR 37700), extracted by `resources/supply/licensing_ratios_2017.R`. The
-centre ratio is read at five of the study's age points, one per year of age:
-age 0 at 11 months, age 1 at 18 months, age 2 at 35 months, age 3 at 3 years,
-and age 4 at 4 years (`NSECE_AGE_POINT` in
-`state_data/code/shared_nsece_ages.R`). The weights are NSECE 2019
-centre-enrolled children by single year of age (ACF 2023, Exhibit 1;
-weighted counts): 426,000, 718,000, 1,010,000, 2,170,000, and 2,340,000, or
-6.4%, 10.8%, 15.2%, 32.6%, and 35.1%. I use NSECE because it is a direct
-survey count of centre enrolment; the ACS children-by-care-type file is a
-forest prediction. This is a representative-age approximation: the ratio at
-one age stands for the whole year of age, and a state rule with a cut-off
-inside a year (for example at 12 or 24 months) is not split. The five points
-make one centre index, so the model adds no care sectors and no choices. If a
-state has no 18-month or 4-year ratio, the build uses the point from the
-three-point method (35 months or 3 years) and logs it; in the 2017 study
-every state except Idaho has all five. The index stays relative to the
-national mean, so a state at the mean keeps the national NSECE staffing. The
-home value is the maximum children in a small family child care home,
-without school-age add-ons. Idaho centres use a point system that the study
-does not tabulate: 12 points per staff member, and 2 points for a child
-under 24 months, 1.5 points from 24 to 36 months, and 1 point from 3 to 5
-years (Idaho Code 39-1109 before 2024, IDAPA 16.06.03.300 from July 2024). I
-read it at each of the five points (12 / points): 6, 6, 8, 12, and 12
-children per staff member (`ID_POINTS`). NYC centres
-use the city Health Code (Article 47, June 2019), which has three bands; they
-map onto the five points as infant to 11 months, toddler to 18 and 35 months,
-and preschool to 3 and 4 years. Centre index runs 0.719 (GA) to 1.453 (VT); home index 0.421 (AR) to 1.682 (DE).
-`state_data/out/licensing_ratio_change_3pt_5pt.csv` compares the five-point
-index with a three-point index (11 months, 35 months, and 3 years; ages 1 and
-2 at 35 months, age 4 at 3 years). The five-point index differs by more
-than 1% in 40 of 52 geographies and by more than 5% in 14 (unweighted
-counts), from -18.0% (AL, 4-year ratio 18) to +13.1% (MA, 18-month ratio 4).
-I use the 2017 study, not the 2014 study (CAP 2018 Table 1; PN3 2020 Table
-6), because CAP read different age points in different states. Against the
-2014 rules, ten centre rows and one home row (MA, 10 to 6) differ;
-`state_data/out/licensing_ratio_change_2014_2017.csv` lists them, with both
-years at the three points.
+not); it scales `paid_home_based`. Rules come from the reviewed October 1, 2019 audit in
+`resources/licensing/licensing_2019_evidence.csv`, with registered source hashes.
+The derived input is `resources/supply/licensing_ratios_reviewed_2019.csv`;
+the 2017 study remains the comparison baseline and fallback for unresolved rows.
+All 312 unweighted geography/setting/age records are reviewed, with no fallback
+currently used. There are 28 numerical changes, including seven home values
+that replace missing baseline values.
+
+I map ages 0, 1, 2, 3, and 4 to 11 months, 18 months, 35 months, 3 years,
+and 4 years (`state_data/code/shared_nsece_ages.R`). I weight inverse center
+ratios by NSECE 2019 center-enrolled children: 426,000, 718,000, 1,010,000,
+2,170,000, and 2,340,000 weighted children. One representative age stands for
+each whole year; rule cutoffs within that year are not split. I normalize by
+the 2019 child-population-weighted mean over 50 states and DC. NYC is a separate
+output and is excluded from that mean because it is already inside NY.
+Current center indices range from 0.722 (GA) to 1.458 (VT).
+
+I use licensed home capacity excluding school-age-only additions as a proxy,
+not children per adult. The reviewed configurations retain infant limits,
+own-child counting, and assistant requirements in
+`resources/licensing/licensing_2019_home_configurations.csv`. AR's selected
+capacity of 16 requires two or three adults, RI's eight requires an assistant,
+and WA's 12 requires an assistant. The national NSECE home anchor already counts respondent plus helpers.
+Inverse capacity does not capture state differences in required adult counts.
+The AR/RI/WA two-adult sensitivity raises their 2019 home-care anchor prices
+by 35.4%, 39.3%, and 30.0% after national renormalization; these are base-price
+sensitivities, not equilibrium results. `state_data/code/analyze_home_staffing.R`
+writes the scenario table without changing production inputs. Current home indices range from 0.394 (AR) to 1.574 (AZ).
+All 52 home inputs are now numeric; the neutral index remains a fallback for
+future unresolved unlicensed-home rows. Historical 2014/2017 and three/five-point
+comparisons in `state_data/out/licensing_ratio_change_*.csv` describe the old
+baseline, not current reviewed staffing.
+
+For a replacement home index, I would measure required adults per preschool child
+under common age compositions and provider categories, then normalize by the same
+2019 population-weighted state/DC mean. I would retain the national NSECE education
+mix and staffing anchor, which already include helpers. For configuration `k`, the
+raw score is `sum_k child_share_k * required_adults_gk / preschool_children_gk`.
+I would use the same child shares in every geography, exclude school-age-only places,
+and state the full-occupancy and resident-child assumptions. A mixed-age rule cannot
+be reconstructed by averaging the legal maxima for separate age groups.
+
+`review_home_staffing_inputs.R` writes all 52 capacity/configuration mappings and
+unresolved fields. Documented adult-count ranges are conditional on their recorded
+age compositions; they are not observed worker hours or exhaustive legal bounds.
+I have not promoted an age-adjusted index to production. The original national
+[methodology](https://budgetlab.yale.edu/research/budget-labs-early-childhood-education-and-care-model)
+uses provider-plus-helper headcounts divided by enrollment for home staffing and
+household net payments for home prices. `analyze_home_prices.R` therefore treats
+NDCP family-home market-rate prices as an external comparison, with fixed county
+and national age weights, not a target for fitting staffing or residuals.
 
 `per_unit_residual` is state-specific. The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
@@ -500,7 +513,7 @@ residual in **dollars** covering everything that is not labour — rent, food,
 insurance, administration, margin. Each national residual (0.510055 low-price
 centre, 4.6145667 high-price centre, 2.8273432 paid home; unpaid centre stays
 unset) is multiplied by the state's BEA 2019 housing-services RPP / 100
-(`resources/supply/US_BEA__regional_price_parities_housing_services__2019.csv`,
+(`resources/bea/US_BEA__regional_price_parities_housing_services__2019.csv`,
 line "RPPs: Services: Housing"; NYC = New York MSA 35620). Factor range 0.55
 to 1.70. Housing-services prices are a proxy for geographic variation in
 non-labour costs. Price check against NDCP 2019
@@ -508,7 +521,7 @@ non-labour costs. Price check against NDCP 2019
 `state_data/out/ndcp_model_prices_summary.csv`): 2019 base posted centre price x 40
 vs child-weighted county medians, 46 states, same states + weights for both
 residuals. Pearson correlation 0.89 housing-scaled vs 0.83 national; model mean
-$213.2 vs NDCP $190.6 a week (ratio 1.12; national residual 1.15). No power is fitted (k = 1). `state_supply_params.R --national-residual`
+$213.8 vs NDCP $190.6 a week (ratio 1.12; national residual 1.16). No power is fitted (k = 1). `state_supply_params.R --national-residual`
 restores the national value.
 
 `elasticities` stay national (no-BA 4, BA 2). The national values are

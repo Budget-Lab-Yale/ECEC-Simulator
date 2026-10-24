@@ -69,7 +69,7 @@ nsch_wave <- function(year) {
   # Returns: (data.frame) fipsst, sc_age_years, k6q20, fwc, stratum, hhid, year
   #----------------------------------------------------------------------------
 
-  f <- file.path(STATE_DATA_ROOT, 'raw', 'US',
+  f <- file.path('resources', 'nsch',
                  sprintf('US_NSCH__child_health_survey_topical__%d.dta', year))
   if (!file.exists(f)) stop('missing NSCH wave: ', f)
 

@@ -1,8 +1,9 @@
 # State-Level Analysis Inputs
 
 Optional per-state input files for state-level runs (runscript `state` column).
-All three are optional and independent; each falls back to the national input
-when absent. `<ST>` is the USPS postal abbreviation, uppercase (e.g. `NY`).
+Missing inputs fall back to national inputs, except a supply override requires
+a demand file: base-year labor is computed from re-anchored state demand.
+`<ST>` is an uppercase USPS abbreviation or sub-state code (e.g. `NYC`).
 Full design: `docs/state_level_analysis.md`.
 
 ```
@@ -37,9 +38,18 @@ When absent, the state uses national alphas (filter only).
 
 ## supply/<ST>.yaml
 
-Replaces the NSECE-derived national supply parameters for the state. Same
-schema as `estimation/supply/supply_2019.yaml`: `labor_requirements`, `wages`,
-`labor_supply`, `elasticities`, `per_unit_residual`.
+Replaces national `labor_requirements`, `wages`, `elasticities`, and
+`per_unit_residual`. State files omit `labor_supply`; initialization computes
+it from state base-year sector hours. `wage_path` holds annual local-to-national
+wage changes relative to 2019, with the last observed year carried forward.
+
+`Rscript resources/supply/00_update_state_supply.R` validates source hashes,
+refreshes the staffing audit, and rebuilds reviewed staffing, annual wages,
+and supply YAMLs. Set `PYTHON` to a working Python executable if needed.
+`Rscript resources/supply/state_supply_params.R --check` validates complete
+payloads without writing. Staffing uses reviewed October 1, 2019 rules;
+home inputs are licensed-capacity proxies, with assistant conditions retained
+in `resources/licensing/licensing_2019_home_configurations.csv`.
 
 ## employment/<ST>.csv
 

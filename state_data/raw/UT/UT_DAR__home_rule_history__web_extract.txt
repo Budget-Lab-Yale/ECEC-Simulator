@@ -1,0 +1,492 @@
+Primary-source web-reader extraction; retrieved 2026-10-21. Reader extracts preserve proposed markup. 2017 text gives the ratio, unchanged in the 2018 amendment; the official January 2019 index confirms the 2018 amendment effective August 10 2018. Not original HTML bytes.
+DAR File No. 42733 (Rule R430-90), 2018-8 Utah Bull. (04/15/2018) (https://rules.utah.gov/publicat/bulletin/2018/20180415/42733.htm)
+citeturn56view0 [wordlim: 200] Crawled: 3 weeks ago; Content type: text/html; Source: open({"ref_id":"https://rules.utah.gov/publicat/bulletin/2018/20180415/42733.htm","lineno":null}); Total lines: 1333
+L0: # DAR File No. 42733
+L1: 
+L2: This rule was published in the April 15, 2018, issue (Vol. 2018, No. 8) of the Utah State Bulletin.
+L3: 
+L4: * * *
+L5: 
+L6: Health, Family Health and Preparedness, Child Care Licensing
+L7: 
+L8: Rule R430-90
+L9: 
+L10: Licensed Family Child Care
+L11: 
+L12: ## Notice of Proposed Rule
+L13: 
+L14: (Amendment)
+L15: 
+L16: DAR File No.: 42733
+L17: Filed: 03/29/2018 02:00:03 PM
+L18: 
+L19: ### RULE ANALYSIS
+L20: #### Purpose of the rule or reason for the change:
+L21: 
+L22: The purpose of these changes is to clarify some rule language, to add needed subsections, and to delete some unnecessary subsections, so changes in statute, federal requirements, and Rule Committee (Committee) and Department of Health (Department) decisions can take effect.
+L23: #### Summary of the rule or change:
+L24: 
+L25: These changes will clarify language such as changing the word "screening" to "check", modify the appeal process timing to follow recommendations from the Legislative Auditor's Office, change the requirements for submission of background checks from 10 working days to 0 to follow federal requirements, remove the exceptions for required fingerprinting, and renumber subsections as needed.
+L26: #### Statutory or constitutional authorization for this rule:
+L27: 
+L28:   * Title 63G, Chapter 3
+L29: 
+L30: #### Anticipated cost or savings to:
+L31: ##### the state budget:
+L32: The proposed deletion of the fingerprint exception subsection is expected to have a one-time fiscal impact on the state government revenues because 21 out of the 773 currently licensed families will now have to submit fingerprints. The estimated number of covered individuals in these facilities (as reported in our records) who will have to pay the cost of the fingerprints is 57. The individual cost for a fingerprint is $37.
+L33: The expected revenues are a one-time event, and that is why there are no additional costs or benefits in the following years. The Department does not anticipate any additional costs or savings due to the other proposed rule changes.
+L34: ##### local governments:
+L35: 
+L36: These proposed changes are not expected to have any fiscal impact on local governments' revenues or expenditures because there are no licensed families operated by local governments to whom these changes will affect.
+L37: ##### small businesses:
+L38: These rule changes are expected to have some fiscal impact on small businesses expenditures because there are 57 licensed homes that operate as small businesses to whom the requirement for fingerprints will directly affect. The estimated number of covered individuals in these facilities (as reported in our records) who will have to pay the cost of the fingerprints is 57. The individual cost for a fingerprint is $37.
+L39: All other licensed families have already complied with this requirement, but will continue to submit and pay for fingerprints for all newly covered individuals. However, there is no way to estimate if there are going to be any additional covered individuals added to the current licensed families. The Department does not anticipate any additional costs or savings due to the other proposed rule changes.
+L40: ##### persons other than small businesses, businesses, or local governmental entities:
+L41: 
+L42: These proposed rule changes are not expected to have any fiscal impact on other individuals' revenues or expenditures because only a group of small businesses will be affected by these changes. Currently, there are no persons that are not small businesses to whom these changes will apply.
+L43: #### Compliance costs for affected persons:
+L44: 
+L45: Since fingerprints will be required of any licensed family provider, all new applicants for a family license will be required to pay for fingerprints, with no exceptions, if they have not already done so. The Department cannot project the number of new applicants, but the number of family providers has steadily decreased for the past five years.
+L46: #### Comments by the department head on the fiscal impact the rule may have on businesses:
+L47: These changes clarify language such as changing the word "screening" to "check", modify the appeal process timing to follow recommendations from the Legislative Auditor's Office, change the requirements for submission of background checks from 10 working days to 0 to follow federal requirements, remove the exceptions for required fingerprinting, and renumber subsections as needed. There is a one-time fiscal impact on small businesses for the cost of submitting fingerprints.
+L48: There are an estimated 21 individuals in licensed families who will be required to submit fingerprints at a cost of $37 per person. These individuals are in addition to individuals who are already required to be licensed. The minimal cost of the fingerprint process is balanced out by the need conduct background checks for the health and safety of children receiving care by the affected providers.
+L49: Joseph K. Miner, MD, Executive Director
+L50: #### The full text of this rule may be inspected, during regular business hours, at the Office of Administrative Rules, or at:
+L51: 
+L52: Health
+L53: Family Health and Preparedness, Child Care Licensing
+L54: 3760 S HIGHLAND DR
+L55: SALT LAKE CITY, UT 84106
+L56: 
+L57: #### Direct questions regarding this rule to:
+L58: 
+L59:   * Simon Bolivar at the above address, by phone at 801-803-4618, by FAX at 801-237-0786, or by Internet E-mail at cite0†[email protected] L60: #### Interested persons may present their views on this rule by submitting written comments to the address above no later than 5:00 p.m. on:
+L61: 
+L62: 05/15/2018
+L63: 
+L64: #### This rule may become effective on:
+L65: 
+L66: 05/28/2018
+L67: 
+L68: #### Authorized by:
+L69: 
+L70: Joseph Miner, Executive Director
+L71: ### RULE TEXT
+L72: 
+L73: Appendix 1: Regulatory Impact Summary Table*
+L74: Fiscal Costs  | FY 2018  | FY 2019  | FY 2020
+L75: State Government  | $0  | $0  | $0
+L76: Local Government  | $0  | $0  | $0
+L77: Small Businesses  | $0  | $0  | $0
+L78: Non-Small Businesses  | $2,109  | $0  | $0
+L79: Other Person  | $0  | $0  | $0
+L80: Total Fiscal Costs:  | $2,109  | $0  | $0
+L81:  |
+L82:  |
+L83:  |
+L84: Fiscal Benefits  |
+L85:  |
+L86:  |
+L87: State Government  | $2,109  | $0  | $0
+L88: Local Government  | $0  | $0  | $0
+L89: Small Businesses  | $0  | $0  | $0
+L90: Non-Small Businesses  | $0  | $0  | $0
+L91: Other Persons  | $0  | $0  | $0
+L92: Total Fiscal Benefits:  | $2,109  | $0  | $0
+L93:  |
+L94:  |
+L95:  |
+L96: Net Fiscal Benefits:  | $0  | $0  | $0
+L97: 
+L98: 
+L99: *This table only includes fiscal impacts that could be measured. If there are inestimable fiscal impacts, they will not be included in this table. Inestimable impacts for State Government, Local Government, Small Businesses and Other Persons are described above. Inestimable impacts for Non - Small Businesses are described below.
+L100: 
+L101: 
+L102: 
+L103: Appendix 2: Regulatory Impact to Non - Small Businesses
+L104: The proposed amendment is not expected to have any fiscal impact on large businesses revenues or expenditures because all businesses in the child care industry (NAICS 624410) in Utah are either center licensed or center licensed exempt and not licensed families. All licensed families are small businesses.
+L105: 
+L106: 
+L107: 
+L108: Department Head Comments:
+L109: The changes clarify language such as changing the word "screening" to "check", modify the appeal process timing to follow recommendations from the Legislative Auditor's Office, change the requirements for submission of background checks from 10 working days to 0 to follow federal requirements, remove the exceptions for required fingerprinting, and renumber subsections as needed.
+L110: There is a one-time fiscal impact on small businesses for the cost of submitting fingerprints. There are an estimated 21 individuals in licensed families who will be required to submit fingerprints at a cost of $37 per person. These individuals are in addition to individuals who are already required to be licensed.
+L111: 
+L112: 
+L113: 
+L114: The minimal cost of the fingerprint process is balanced out by the need conduct background checks for the health and safety of children receiving care in the affected providers.
+L115: R430. Health, Family Health and Preparedness, Child Care Licensing.
+L116: 
+L117: R430-90. Licensed Family Child Care.
+L118: 
+L119: R430-90-2. Definitions.
+L120: 
+L121: (1) "Applicant" means a person or business who has applied for a new or a renewal of a license, certificate, or exemption from Child Care Licensing.
+L122: 
+L123: (2) "ASTM" means American Society for Testing and Materials.
+L124: 
+L125: (3) "Background Finding" means information in a background [~~screening~~]check that may result in a denial from Child Care Licensing.
+L126: (4) "Background [~~screening~~]Check Denial" means that an individual has failed the background [~~screening~~]check and is prohibited from being involved with a child care facility.
+L127: 
+L128: (5) "Barrier" means an enclosing structure such as a fence, wall, bars, railing, or solid panel to prevent accidental or deliberate movement through or access to something.
+L129: 
+L130: (6) "Body Fluid" means blood, urine, feces, vomit, mucus, and/or saliva.
+L131: (7) "Business Days/Hours" means the days of the week and times the facility is open for business.
+L132: 
+L133: [~~(7)~~](8) "Capacity" means the maximum number of children for whom care can be provided at any given time.
+L134: 
+L135: [~~(8)~~](9) "Caregiver-to-Child Ratio" means the number of caregivers responsible for a specific number of children.
+L136: 
+L137: [~~(9)~~](10) "CCL" means the Child Care Licensing Program in the Department of Health that is delegated with the responsibility to enforce the Utah Child Care Licensing Act.
+L138: [~~(10)~~](11) "Child Care" means continuous care and supervision of 5 or more qualifying children, that is:
+L139: 
+L140: (a) in place of care ordinarily provided by a parent in the parent's home,
+L141: 
+L142: (b) for less than 24 hours a day, and
+L143: 
+L144: (c) for direct or indirect compensation.
+L145: 
+L146: [~~(11)~~](12) "Child Care Hours" means the days and times during which the provider is open for business.
+L147: 
+L148: [~~(12)~~](13) "Child Care Program" means a person or business that offers child care.
+L149: [~~(13)~~](14) "Choking Hazard" means an object or a removable part on an object with a diameter of less than 1-1/4 inch and a length of less than 2-1/4 inches that could be caught in a child's throat blocking their airway and making it difficult or impossible to breathe.
+L150: 
+L151: [~~(14)~~](15) "Conditional Status" means that the provider is at risk of losing their child care license because compliance with licensing rules has not been maintained.
+L152: [~~(15)~~](16) "Covered Individual" means any of the following individuals involved with a child care facility:
+L153: 
+L154: (a) an owner;
+L155: 
+L156: (b) an employee;
+L157: 
+L158: (c) a caregiver;
+L159: 
+L160: (d) a volunteer, except a parent of a child enrolled in the child care program;
+L161: 
+L162: (e) an individual age 12 years or older who resides in the facility; and
+L163: 
+L164: (f) anyone who has unsupervised contact with a child in care.
+L165: 
+L166: [~~(16)~~](17) "CPSC" means the Consumer Product Safety Commission.
+--------------------------------------------------------------------------------
+DAR File No. 42023 (Rule R430-90), 2017-17 Utah Bull. (09/01/2017) (https://rules.utah.gov/publicat/bulletin/2017/20170901/42023.htm)
+citeturn56view1 [wordlim: 200] Crawled: today; Content type: text/html; Source: open({"ref_id":"turn55view0","lineno":1834}); Total lines: 2677
+L1745: (b) for the care of children, or
+L1746: 
+L1747: (c) to store classroom materials.
+L1748: 
+L1749: (3) The following areas are not included when measuring indoor space for children's use:
+L1750: 
+L1751: (a) bathrooms,
+L1752: 
+L1753: (b) closets,
+L1754: 
+L1755: (c) hallways, and
+L1756: 
+L1757: (d) entryways.
+L1758: 
+L1759: (4) The maximum allowed capacity for a child care facility may be limited by local ordinances.
+L1760: 
+L1761: (5) The number of children in care at any given time shall not exceed the capacity identified on the license.
+L1762: (6) The provider shall ensure that any building or play structure on the premises constructed before 1978 that has peeling, flaking, chalking, or failing paint is tested for lead. If lead-based paint is found, the provider shall contact their local health department within 5 working days and follow required procedures for remediation of the lead hazard.
+L1763: 
+L1764: (7) Each room and indoor area that is used by children shall be ventilated by mechanical ventilation, or by windows that open and have screens.
+L1765: (8) All rooms and areas that are used for child care shall have adequate light intensity for the safety of the children and the type of activity being conducted.
+L1766: 
+L1767: (9) The providershallmaintainthe indoortemperaturebetween 65 and 82 degreesFahrenheit.
+L1768: 
+L1769: (10) Thereshall bea workingtelephonein the home, in each vehicle while transporting children, and during offsite activities.
+L1770: 
+L1771: (11) There shall be a working toilet and a working handwashing sinkaccessible to each nondiapered child in care.
+L1772: (12) A bathroom that provides privacy shall be available for use by school-age children.
+L1773: 
+L1774: (13) There shall be an outdoor area that is safely accessible to children.
+L1775: 
+L1776: (14) The outdoor area shall have at least 40 square feet of space for each child using the area at one time.
+L1777: 
+L1778: (15) The outdoor area shall be enclosed within a fence, wall, or solid natural barrier that is at least 4 feet highwhen the facility is on a street or within half a mile of a street that:
+L1779: (a) has a speed of 25 miles per hour or higher, or
+L1780: 
+L1781: (b) has more than 2 lanes of traffic.
+L1782: 
+L1783: (16) The following hazards shall be separated from the children's outdoor area with afence, wall, or solid natural barrier that is at least 4 feet high:
+L1784: 
+L1785: (a) barbed wire that is within 30 feet of the children's play area;
+L1786: 
+L1787: (b) livestock on or within 50 yards of the property line;
+L1788: 
+L1789: (c) dangerous machinery, such as farm equipment, on or within 50 yards of the property line;
+L1790: (d) a drop-off of more than 5 feet on or within 50 yards of the property line; or
+L1791: 
+L1792: (e) a water hazard, such as a swimming pool, pond, ditch, lake, reservoir, river, stream, creek, or animal watering trough, on or within 100 yards of the property line.
+L1793: 
+L1794: (17) There shall be no gap 5 by 5 inches or greater in or under the fence.
+L1795: 
+L1796: (18) Whenever there are children in the outdoor area, thereshall be shadeavailableto protectthem fromexcessivesun and heat.
+L1797: (19) If there is a swimming pool on the premises that is not emptied after each use:
+L1798: 
+L1799: (a) the provider shall meet applicable state and local laws and ordinances related to the operation of a swimming pool and maintain the pool in a safe manner; and
+L1800: (b) when not in use, the pool shall be enclosed within at least a 4-foot-high fence or solid barrier that is kept locked and that separates the pool from any other areas on the premises, or enclosed with a locked, properly working safety cover that meets ASTM Specification F1346-91.
+L1801: 
+L1802: (20) A hot tub on the premises with water in it shall be inaccessible to children by being:
+L1803: 
+L1804: (a) kept locked with a properly working cover; or
+L1805: (b) enclosed within at least a 4-foot-high fence or solid barrier that is kept locked and that separates the hot tub from any other areas on the premises.
+L1806: 
+L1807: (21) The provider shall maintain buildings and outdoor areas in good repair and safe condition including:
+L1808: 
+L1809: (a) ceilings, walls, and floor coverings;
+L1810: 
+L1811: (b) lighting, bathroom, and other fixtures;
+L1812: 
+L1813: (c) draperies, blinds, and other window coverings;
+L1814: 
+L1815: (d) indoor and outdoor play equipment;
+L1816: 
+L1817: (e) furniture, toys, and materials accessible to the children;
+L1818: (f) entrances, exits, steps, and walkways including keeping them free of ice, snow and other hazards.
+L1819: 
+L1820: (22) Accessible raised decks or balconies that are 5 feet or higher, and open basement stairwells that are 5 feet or deeper shall have protective barriers that are at least 3 feet high.
+L1821: (23) If the house is subdivided, any part of the house is rented out, or any other area of the facility is shared including the outdoor area, the entire facility shall be inspected and covered individuals in the facility shall comply with rules, except when all of the following conditions are met:
+L1822: 
+L1823: (a) there is a signed rental/lease agreement between the provider and the individual responsible for or living in the other part of the house;
+L1824: 
+L1825: (b) there is a separate mailing address;
+L1826: (c) there is a separate entrance for the child care program;
+L1827: 
+L1828: (d) there are no connecting interior doorways that can be used by unauthorized individuals; and
+L1829: 
+L1830: (e) there is no shared access to the outdoor area used for child care, or a qualified caregiver is present when children are using a shared outdoor area of the facility.
+L1831: 
+L1832: 
+L1833: 
+L1834: R430-90-10. Ratios and Group Size.
+L1835: 
+L1836: (1) The provider shall maintain at least 1 caregiver for up to 8 children in care, and at least 2 caregivers for 9 to 16 children in care.
+L1837: (2) The provider's or an employee's child age 4 years or older is not counted in the caregiver-to-child ratio when the parent of the child is working at the facility, but the child shall be counted in the group size.
+L1838: 
+L1839: (3) When caring for children younger than 2 years old:
+L1840: 
+L1841: (a) there shall be no more than 2 children younger than 2 years old with 1 caregiver;
+L1842: 
+L1843: (b) there shall be no more than 4 children younger than 2 years old with 2 caregivers; and
+L1844: (c) if there are 6 or fewer children in care, there may be up to 3 children younger than 2 years old with 1 caregiver.
+L1845: 
+L1846: (4) The provider shall not exceed the group sizes found in Table 1 and Table 2.
+L1847: TABLE 1
+L1848: MAXIMUM GROUP SIZE WITH 1 PROVIDER
+L1849: 
+L1850: 
+L1851: 
+L1852: 
+L1853:       # of Provider's      Maximum Allowed          Total # of Children
+L1854: 
+L1855:     and Caregivers'      # of Children in         Through age 12 Years
+L1856: 
+L1857:     Own Children         Care, Including the      Present in the Home
+L1858: 
+L1859:     Ages 4-12 Years      Provider's and           During Child Care
+L1860: 
+L1861:     Present During       Caregivers' Own          Hours
+L1862: 
+L1863:     Child Care Hours     Children Younger than
+L1864:                          4 years old
+L1865: 
+L1866: 
+L1867: 
+L1868:     0-4 Children         8 children               12 Children
+L1869: 
+L1870:     5 Children           7 children               12 Children
+L1871: 
+L1872:     6 Children           6 children               12 Children
+L1873: 
+L1874:     7 Children           5 children               12 Children
+L1875: 
+L1876:     8 Children           4 children               12 Children
+L1877: 
+L1878:     9 Children           3 children               12 Children
+L1879:     10 Children          2 children               12 Children
+L1880: 
+L1881:     11 Children          1 child                  12 Children
+L1882: TABLE 2
+L1883: MAXIMUM GROUP SIZE WITH 2 CAREGIVERS
+L1884: 
+L1885: 
+L1886: 
+L1887: 
+L1888:       # of Provider's      Maximum Allowed          Total # of Children
+L1889: 
+L1890:     and Caregivers'      # of Children in         Through age 12 Years
+L1891: 
+L1892:     Own Children         Care, Including the      Present in the Home
+L1893: 
+L1894:     Ages 4-12 Years      Provider's and           During Child Care
+L1895: 
+L1896:     Present During       Caregivers' Own          Hours
+L1897: 
+L1898:     Child Care Hours     Children Younger than
+L1899:                          4 years old
+L1900: 
+L1901: 
+L1902: 
+L1903:     0-8 Children         16 children              24 Children
+L1904: 
+L1905:     9   Children         15 children              24 Children
+L1906: 
+L1907:     10  Children         14 children              24 Children
+L1908: 
+L1909:     11  Children         13 children              24 Children
+L1910: 
+L1911:     12  Children         12 children              24 Children
+L1912: 
+L1913:     13  Children         11 children              24 Children
+L1914:     14  Children         10 children              24 Children
+L1915: 
+L1916:     15  Children          9 children              24 Children
+L1917: 
+L1918:     16  Children          8 children              24 Children
+L1919: 
+L1920:     17  Children          7 children              24 Children
+L1921: 
+L1922:     18  Children          6 children              24 Children
+L1923: 
+L1924:     19  Children          5 children              24 Children
+L1925: 
+L1926:     20  Children          4 children              24 Children
+L1927:     21  Children          3 children              24 Children
+L1928: 
+L1929:     22  Children          2 children              24 Children
+L1930: 
+L1931:     23  Children          1 child                 24 Children
+L1932: 
+L1933: 
+L1934: (5) Caregivers who are 16 or 17 years old may be included in the caregiver-to-child ratio only when there is a caregiver who is at least 18 years on the premises.
+L1935: 
+L1936: (6) Volunteers may be included in the caregiver-to-child ratio if they:
+L1937: 
+L1938: (a) are at least 16 years old,
+L1939: 
+L1940: (b) receive at least 2.5 hours of preservice training before counting in the caregiver-to-child ratio, and
+L1941: 
+L1942: (c) complete at least 1.5 hours of child care training for each month they volunteer 40 hours or more.
+L1943: (7) Guests shall not count in the caregiver-to-child ratio.
+L1944: 
+L1945: 
+L1946: 
+L1947: R430-90-11. Child Supervision and Security.
+L1948: 
+L1949: (1) The provider shall ensure that caregivers provide and maintain active supervision of each child at all times:
+L1950: 
+L1951: (a) a caregiver shall be inside the home when any child in care is inside the home,
+L1952: 
+L1953: (b) a caregiver shall be in the outdoor area when any child younger than 5 years old is in the outdoor area,
+L1954: 
+L1955: (c) caregivers shall know the number of children in their care at all times, and
+L1956: (d) caregivers' attention shall be focused on the children and not on the caregivers' own personal interests.
+L1957: 
+L1958: (2) A caregiver may allow only school-age children to play outdoors while the caregiver is indoors when:
+L1959: 
+L1960: (a) the caregiver can hear the children playing outdoors; and
+L1961: 
+L1962: (b) the children are in an area completely enclosed within a fence, wall, or solid natural barrier that is at least a 4 feet high.
+L1963: 
+L1964: (3) A caregiver shall monitor each sleeping infant by:
+L1965: (a) placing each infant to sleep within the sight and hearing of the caregiver, or
+L1966: 
+L1967: (b) personally observing each sleeping infant at least once every 15 minutes.
+L1968: 
+L1969: (4) A child may participate in supervised offsite activities without the provider if:
+L1970: 
+L1971: (a) the provider has prior written permission from the child's parent for the child's participation, and
+L1972: (b) the provider has clearly assigned the responsibility for the child's whereabouts and supervision to a responsible adult who accepts that responsibility throughout the period of the offsite activity.
+L1973: 
+L1974: (5) Whenever a child is in care, the child's parent shall have access to their child and the areas used to care for their child.
+L1975: 
+L1976: (6) To maintain security and supervision of children, the provider shall ensure that:
+L1977: 
+L1978: (a) each child is signed in and out;
+L1979: (b) only parents or persons with written authorization from the parent may sign out a child;
+L1980: 
+L1981: (c) photo identification is required if the individual signing the child in or out is unknown to the provider;
+L1982: 
+L1983: (d) persons signing children in and out use identifiers, such as a signature, initials, or electronic code;
+L1984: 
+L1985: (e) the sign-in and sign-out records include the date and time each child arrives and leaves; and
+L1986: (f) there is written permission from their parents if school-age children sign themselves in and out.
+L1987: 
+L1988: (7) In an emergency, the caregiver shall accept the parent's verbal authorization to release a child when the caregiver can confirm the identity of:
+L1989: 
+L1990: (a) the person giving verbal authorization, and
+L1991: 
+L1992: (b) the person picking up the child.
+L1993: 
+L1994: (8) A six-week record of each child's daily attendance, including sign-in and sign-out records, shall be kept on-site for review by the Department.
+L1995: R430-90-12. Child Guidance and Interaction.
+L1996: 
+L1997: (1) The provider shall ensure that no child is subjected to physical, emotional, or sexual abuse while in care.
+L1998: 
+L1999: (2) The provider shall inform parents, children, and those who interact with the children of the program's behavioral expectations and how any misbehavior will be handled.
+L2000: (3) Individuals who interact with the children shall guide children's behavior by using positive reinforcement, redirection, and by setting clear limits that promote children's ability to become self-disciplined.
+L2001: 
+L2002: (4) Caregivers shall use gentle, passive restraint with children only when it is needed to stop children from injuring themselves or others, or from destroying property.
+L2003: 
+L2004: (5) Interactions with the children shall not include:
+L2005: (a) any form of corporal punishment or any action that produces physical pain or discomfort such as hitting, spanking, shaking, biting, or pinching;
+L2006: 
+L2007: (b) restraining a child's movement by binding, tying, or any other form of restraint that exceeds gentle, passive restraint;
+L2008: 
+L2009: (c) shouting at children;
+L2010: 
+L2011: (d) any form of emotional abuse;
+L2012: 
+L2013: (e) forcing or withholding food, rest, or toileting; or
+L2014: 
+L2015: (f) confining a child in a closet, locked room, or other enclosure such as a box, cupboard, or cage.
+L2016: (6) Any person who witnesses or suspects that a child has been subjected to abuse, neglect, or exploitation shall immediately notify Child Protective Services or law enforcement as required in Utah Code Section 62A-4a-403 and Section 62A-4a-411.
+L2017: 
+L2018: 
+L2019: 
+L2020: R430-90-13. Child Safety and Injury Prevention.
+L2021: 
+L2022: (1) The building, outdoor area, toys, and equipment shall be used in a safe manner and as intended by the manufacturer to prevent injury to children.
+L2023: (2) Harmful objects and hazards, such as the following, shall be inaccessible to children:
+L2024: 
+L2025: (a) poisonous and harmful plants;
+L2026: 
+L2027: (b) sharp objects, edges, corners, or points that could cut or puncture skin;
+L2028: 
+L2029: (c) for children younger than 3 years of age, choking hazards;
+L2030: 
+L2031: (d) strangulation hazards such as ropes, cords, chains, and wires attached to a structure and long enough to encircle a child's neck;
+L2032: 
+L2033: (e) tripping hazards such as unsecured flooring, rugs with curled edges, or cords in walkways;
+L2034: (f) for children younger than 5 years of age, empty plastic bags large enough for a child's head to fit inside, latex gloves, and balloons; and
+L2035: 
+L2036: (g) standing water that is 2 inches or deeper and 5 by 5 inches or greater in diameter.
+L2037: 
+L2038: (3) Toxic or hazardous chemicals such as cleaners, insecticides, lawn products, and flammable materials shall be:
+L2039: 
+L2040: (a) inaccessible to children,
+L2041: 
+L2042: (b) used according to manufacturer instructions, and
+L2043: 
+L2044: (c) stored in containers labeled with their contents.
+L2045: (4) Items and substances that could burn a child or start a fire shall be inaccessible, such as:
+L2046: 
+L2047: (a) matches or cigarette lighters;
+L2048: 
+L2049: (b) open flames;
+L2050: 
+L2051: (c) hot wax or other substances; and
+L2052: 
+L2053: (d) when in use, portable space heaters, wood burning stoves, and fireplaces of all types.
+L2054: 
+L2055: (5) Children shall be protected from items that cause electrical shock such as:
+L2056: 
+L2057: (a) live electrical wires; and
+L2058: (b) for children younger than 5 years of age, electrical outlets and surge protectors without protective caps or safety devices when not in use.
+L2059: 
+L2060: (6) Unless used and stored in compliance with the Utah Concealed Weapons Act or as otherwise allowed by law, firearms such as guns, muzzles loaders, rifles, shotguns, hand guns, pistols, and automatic guns shall:
+L2061: 
+L2062: (a) be locked in a cabinet or area with a key, combination lock, or fingerprint lock; and
+L2063: 
+

@@ -1,0 +1,218 @@
+Actual primary-source web-reader output, retrieved2026-10-22. Direct PDF request returned403. Reader text preserved; not original PDF bytes.
+Microsoft Word - 1810 (https://doa.louisiana.gov/media/xzpl3mhr/1810.pdf)
+citeturn205view0 [wordlim: 200] Crawled: today; Content type: application/pdf; Number of pages: 165; Source: open({"ref_id":"https://doa.louisiana.gov/media/xzpl3mhr/1810.pdf","lineno":6104}); Total lines: 19732
+L6038@P51: b. children age two and older shall be provided
+L6039@P51: physical activity that includes a combination of both teacherled and free play, both indoors and outdoors, weather
+L6040@P51: permitting, for a minimum of 60 minutes per day;
+L6041@P51: 2. - 3. …
+L6042@P51: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6043@P51: 17:6 and 17:407.40(A)(1).
+L6044@P51: HISTORICAL NOTE: Promulgated by the Board of
+L6045@P51: Elementary and Secondary Education, LR 41:630 (April 2015),
+L6046@P51: effective July 1, 2015, amended LR 41:2106 (October 2015), LR
+L6047@P51: 44:1864 (October 2018).
+L6048@P51: Chapter 17. Minimum Staffing Requirements and
+L6049@P51: Standards
+L6050@P51: §1707. Required Staff
+L6051@P51: A. Director or Director Designee. Each center shall have
+L6052@P51: a qualified director or qualified director designee.
+L6053@P51: 1. The director or director designee shall be an on-site,
+L6054@P51: full-time staff person at the center during the daytime hours
+L6055@P51: of operation (prior to 9 p.m.). When the director is not an onsite full-time employee at the licensed location, there shall
+L6056@P51: be a qualified director designee who is an on-site full-time
+L6057@P51: employee at the licensed location.
+L6058@P51: 2. …
+L6059@P51: B. Staff-in-Charge. When the director or director
+L6060@P51: designee is not on the premises due to a temporary absence
+L6061@P51: of less than 11 consecutive business days, or during
+L6062@P51: nighttime care hours, there shall be an individual appointed
+L6063@P51: as staff-in-charge.
+L6064@P51: B.1. - D.2. …
+L6065@P51: 3. Repealed.
+L6066@P51: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6067@P51: 17:6 and 17:407.40(A)(3).
+L6068@P51: HISTORICAL NOTE: Promulgated by the Board of
+L6069@P51: Elementary and Secondary Education, LR 41:633 (April 2015),
+L6070@P51: effective July 1, 2015, amended LR 41:2107 (October 2015), LR
+L6071@P51-52: 44:1864 (October 2018). 1865 Louisiana Register Vol. 44, No. 10 October 20, 2018
+L6072@P52: §1709. Director Qualifications
+L6073@P52: A. …
+L6074@P52: B. The director/director designee shall have
+L6075@P52: documentation of at least one of the following upon date of
+L6076@P52: hire as director or director designee:
+L6077@P52: 1. an early childhood ancillary certificate and one year
+L6078@P52: of experience in teaching or care in a licensed early learning
+L6079@P52: center or comparable setting, subject to approval by the
+L6080@P52: department;
+L6081@P52: 2. a national administrator credential and one year
+L6082@P52: experience in teaching or care in a licensed early learning
+L6083@P52: center, or comparable setting, plus 6 credit hours or 90 clock
+L6084@P52: hours of training in child care, child development, early
+L6085@P52: childhood, or management/administration, subject to
+L6086@P52: approval by the department; or
+L6087@P52: 3. three years of experience as a director or staff in a
+L6088@P52: licensed early learning center, or comparable setting, subject
+L6089@P52: to approval by the department plus 6 credit hours or 90 clock
+L6090@P52: hours of training in child care, child development, early
+L6091@P52: childhood, or management/administration approved by the
+L6092@P52: department.
+L6093@P52: C. A director who was qualified on the director’s date of
+L6094@P52: hire remains qualified as long as the director remains
+L6095@P52: continuously employed at the licensed center or at another
+L6096@P52: licensed center without a break in service of more than 90
+L6097@P52: days.
+L6098@P52: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6099@P52: 17:6 and 17:407.40(A)(1) and (3).
+L6100@P52: HISTORICAL NOTE: Promulgated by the Board of
+L6101@P52: Elementary and Secondary Education, LR 41:633 (April 2015),
+L6102@P52: effective July 1, 2015, amended LR 44:250 (February 2018),
+L6103@P52: effective March 1, 2018, LR 44:1865 (October 2018).
+L6104@P52: §1711. Child-to-Staff Minimum Ratios
+L6105@P52: A. - B.2. …
+L6106@P52: C. The department's form noting required child-to-staff
+L6107@P52: ratios shall be posted in each room included in the center’s
+L6108@P52: licensed capacity.
+L6109@P52: D. Minimum child-to-staff ratios for type II and type III
+L6110@P52: centers are as follows.
+L6111@P52: Minimum Child-to-Staff Ratios—Types II and III Centers
+L6112@P52: Ages of Children Ratio
+L6113@P52: Infants under 1 year 5:1
+L6114@P52: 1 year 7:1
+L6115@P52: 2 years 11:1
+L6116@P52: 3 years 13:1
+L6117@P52: 4 years 15:1
+L6118@P52: 5 years 19:1
+L6119@P52: 6 years and up 23:1
+L6120@P52: E. Future Minimum Child-to-Staff Ratios for Two-YearOlds in Type I, Type II, and Type III Centers. If the
+L6121@P52: Louisiana Child Care Assistance Program subsidy rate
+L6122@P52: reaches the seventy-fifth percentile of the 2017 Louisiana
+L6123@P52: child care market rate survey for weekday care of toddlers
+L6124@P52: by December 1, 2021, the child-to-staff ratio for two-yearolds shall decrease to 10:1 as of July 1, 2022.
+L6125@P52: F. Minimum Child-to-Staff Ratios—Type I Centers
+L6126@P52: 1. Minimum child-to-staff ratios for type I centers
+L6127@P52: shall be in accordance with Paragraph 2 of this Subsection
+L6128@P52: until July 1, 2020, at which time minimum child-to-staff
+L6129@P52: ratios for children ages 3 and up shall be the same for type I
+L6130@P52: centers as those provided for in Subsection D of this Section
+L6131@P52: for type II and type III centers.
+L6132@P52: 2. Minimum child-to-staff ratios for children ages 2
+L6133@P52: and under for type I centers shall be the following until July
+L6134@P52: 1, 2021, at which time minimum child-to-staff ratios for
+L6135@P52: children ages 2 and under shall be the same for type I centers
+L6136@P52: as those provided for in Subsection D of this Section for type
+L6137@P52: II and type III centers.
+L6138@P52: Minimum Child-to-Staff Ratios—Types II and III Centers
+L6139@P52: (Effective until July 1, 2021)
+L6140@P52: Ages of Children Ratio
+L6141@P52: Infants under 1 year 6:1
+L6142@P52: 1 year 8:1
+L6143@P52: 2 years 12:1
+L6144@P52: 3 years 14:1
+L6145@P52: 4 years 16:1
+L6146@P52: 5 years 20:1
+L6147@P52: 6 years and up 25:1
+L6148@P52: G. - M. …
+L6149@P52: N. Maximum Group Sizes—Types I, II, and III Centers
+L6150@P52: 1. Maximum group sizes for type II and type III
+L6151@P52: centers are as follows.
+L6152@P52: Maximum Group Sizes—Types II and III Centers
+L6153@P52: Age of Children Maximum Group Size
+L6154@P52: Infants under 1 year 15
+L6155@P52: 1 year 21
+L6156@P52: 2 years 22
+L6157@P52: 3 years 26
+L6158@P52: 4 years 30
+L6159@P52: 5 years 38
+L6160@P52: 6 years and up 46
+L6161@P52: 2. Type I Centers
+L6162@P52: a. Maximum group sizes for type I centers shall be
+L6163@P52: in accordance with Subparagraph b of this Paragraph until
+L6164@P52: July 1, 2020, at which time maximum group sizes for type I
+L6165@P52: centers for children ages 3 and up shall be the same as those
+L6166@P52: provided for in Paragraph 1 of this Subsection for type II and
+L6167@P52: type III centers.
+L6168@P52: b. Maximum group sizes for type I centers for
+L6169@P52: children ages 2 and under shall be the following until July 1,
+L6170@P52: 2021, at which time maximum group size for children ages 2
+L6171@P52: and under shall be the same for type I centers as those
+L6172@P52: provided for in Paragraph 1 of this Subsection for type II and
+L6173@P52: type III centers.
+L6174@P52: Maximum Group Sizes—Type I Centers
+L6175@P52: (Effective until July 1, 2021)
+L6176@P52: Age of Children Maximum Group Size
+L6177@P52: Infants under 1 year 18
+L6178@P52: 1 year 24
+L6179@P52: 2 years 24
+L6180@P52: 3 years 28
+L6181@P52: 4 years 32
+L6182@P52: 5 years 40
+L6183@P52: 6 years and up 50
+L6184@P52: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6185@P52: 17:6 and 17:407.40(A)(3).
+L6186@P52: HISTORICAL NOTE: Promulgated by the Board of
+L6187@P52: Elementary and Secondary Education, LR 41:633 (April 2015),
+L6188@P52: effective July 1, 2015, amended LR 43:638 (April 2017), LR
+L6189@P52: 44:250 (February 2018), effective March 1, 2018, LR 44:1865
+L6190@P52-53: (October 2018). Louisiana Register Vol. 44, No. 10 October 20, 2018 1866
+L6191@P53: §1715. Staff Records and Personnel Files
+L6192@P53: A. Staff Members. Personnel files for each staff member
+L6193@P53: shall be maintained at the center and shall include the
+L6194@P53: following:
+L6195@P53: 1. an application or staff information form containing
+L6196@P53: the following information:
+L6197@P53: a. name;
+L6198@P53: b. date of birth;
+L6199@P53: c. home address and phone number;
+L6200@P53: d. training,
+L6201@P53: e. work experience;
+L6202@P53: f. educational background;
+L6203@P53: g. hire date; and
+L6204@P53: h. first day onsite working with children;
+L6205@P53: A.2. - B. …
+L6206@P53: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6207@P53: 17:6 and 17:407.40.
+L6208@P53: HISTORICAL NOTE: Promulgated by the Board of
+L6209@P53: Elementary and Secondary Education, LR 41:635 (April 2015),
+L6210@P53: effective July 1, 2015, amended LR 44:251 (February 2018),
+L6211@P53: effective March 1, 2018, LR 44:1866 (October 2018).
+L6212@P53: §1717. Records for Independent Contractors and
+L6213@P53: Student Trainees
+L6214@P53: A. Independent Contractors. The following information
+L6215@P53: shall be maintained for all independent contractors
+L6216@P53: including, but not limited to, therapeutic professionals,
+L6217@P53: extracurricular personnel, contracted transportation drivers,
+L6218@P53: local school district staff, and departmental staff other than
+L6219@P53: those responsible for inspecting centers:
+L6220@P53: A.1. - C. …
+L6221@P53: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6222@P53: 17:6, 17:407.40(A)(1), 17:407:40, and 17:407.42.
+L6223@P53: HISTORICAL NOTE: Promulgated by the Board of
+L6224@P53: Elementary and Secondary Education, LR 41:635 (April 2015),
+L6225@P53: effective July 1, 2015, amended LR 44:251 (February 2018),
+L6226@P53: effective March 1, 2018, LR 44:1866 (October 2018).
+L6227@P53: §1719. Orientation Training
+L6228@P53: A. Within seven calendar days of the first day present at
+L6229@P53: the center, and prior to assuming sole responsibility for any
+L6230@P53: children, each staff member shall receive orientation to the
+L6231@P53: policies and practices of the center that at a minimum shall
+L6232@P53: include:
+L6233@P53: A.1. - C.5. …
+L6234@P53: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6235@P53: 17:6 and 17:407.40(A)(1) and (3).
+L6236@P53: HISTORICAL NOTE: Promulgated by the Board of
+L6237@P53: Elementary and Secondary Education, LR 41:635 (April 2015),
+L6238@P53: effective July 1, 2015, amended LR 42:555 (April 2016), LR
+L6239@P53: 44:1866 (October 2018).
+L6240@P53: §1721. Continuing Education
+L6241@P53: A. - B. …
+L6242@P53: C. Continuing education for all types of centers shall be
+L6243@P53: conducted by trainers approved by the department. The
+L6244@P53: department shall keep a registry of approved trainers.
+L6245@P53: D. - D.10. …
+L6246@P53: 11. management/administrative education; or
+L6247@P53: D.12. - H. …
+L6248@P53: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L6249@P53: 17:6 and 17:407.40(A)(1) and (3).
+L6250@P53: HISTORICAL NOTE: Promulgated by the Board of
+L6251@P53: Elementary and Secondary Education, LR 41:636 (April 2015),
+

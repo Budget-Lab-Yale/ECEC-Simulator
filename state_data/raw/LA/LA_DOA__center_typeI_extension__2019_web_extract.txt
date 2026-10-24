@@ -1,0 +1,209 @@
+Actual primary-source web-reader output, retrieved2026-10-22. Direct PDF request returned403. Reader text preserved; not original PDF bytes.
+Microsoft Word - 1904 (https://www.doa.la.gov/media/oy2ddane/1904.pdf)
+citeturn206view0 [wordlim: 200] Crawled: last week; Content type: application/pdf; Number of pages: 160; Source: find({"ref_id":"https://www.doa.la.gov/media/oy2ddane/1904.pdf","pattern":"§1711."}); Total lines: 18430
+L28@P0:  (St. Bernard Parish)—Public Oyster Seed Grounds ..................................................................................... 501
+L29@P0:  Wildlife Management Areas—Turkey Season Closure ..................................................................................... 502
+L30@P0: III. RULES
+L31@P0:  Agriculture and Forestry
+L32@P0:  Office of Animal Health and Food Safety—Turtles (LAC 7:XXI.Chapter 19) .......................................................... 504
+L33@P0:  Children and Family Services
+L34@P0:  Division of Child Welfare—Extended Foster Care Services (LAC 67:V.3903) ....................................................... 508
+L35@P0:  Licensing Section—State Central Registry—Child Residential Care, Class B (LAC 67:V.Chapter 69) .................. 508
+L36@P0:  State Central Registry—Maternity Homes and Residential Homes—Type IV
+L37@P0:  (LAC 67:V.Chapters 67 and 71) ................................................................................................................... 514
+L38@P0:  Education
+L39@P0:  Board of Elementary and Secondary Education—Bulletin 137—Louisiana Early Learning Center Licensing
+L40@P0:  Regulations—Licensure and Minimum Child-to-Staff Ratios for Type I Centers (LAC 28:CLXI.305
+L41@P0:  and 1711) ..................................................................................................................................................... 525
+L42@P0:  Bulletin 746―Louisiana Standards for State Certification of School Personnel—Teaching Authorizations
+L43@P0:  and Certification (LAC 28:CXXXI.305 and Chapter 7) ................................................................................. 525
+L44@P0:  Bulletin 1530―Louisiana's IEP Handbook for Students with Exceptionalities—Statewide Assessments
+L45@P0:  (LAC 28:XCVII.503 and 505) ...................................................................................................................... 527
+L46@P0:  Board of Regents—Licensure of Degree Granting Institutions (LAC 28:IX.Chapters 1 and 3) .............................. 528
+L47@P0:  Office of Student Financial Assistance—Scholarship/Grant Programs Chafee Educational and Training
+L48@P0:  Voucher Program (LAC 28:IV.1805 and 1813) ............................................................................................. 530
+L49@P0:  Governor
+L50@P0:  Division of Administration—Tax Commission—Ad Valorem Taxation (LAC 61:V.101, 113, Chapter 3, 703, 907,
+L51@P0:  1103, 1307, 1503, 2503, Chapter 31 and 3501) ........................................................................................... 531
+L52@P0:  Board of Cosmetology—Cosmetology (LAC 46:XXXI.Chapters 3, 5, 7 and 17) .................................................... 542
+L53@P0:  Boxing and Wrestling Commission—Professional Wrestling (LAC 46:XI.Chapter 5) ............................................. 545
+L54@P0: This public document was published at a total cost of $1,365. Two hundred fifty copies of this public document were published in this monthly
+L55@P0: printing at a cost of $1,365. The total cost of all printings of this document including reprints is $1,365. This document was published by Moran
+L56@P0: Printing, Inc. 5425 Florida Boulevard, Baton Rouge, LA 70806, as a service to the state agencies in keeping them cognizant of the new rules and
+L57@P0: regulations under the authority of R.S. 49:950-971 and R.S. 49:981-999. This material was printed in accordance with standards for printing by
+L58@P0: state agencies established pursuant to R.S. 43:31. Printing of this material was purchased in accordance with the provisions of Title 43 of the
+L59@P0: Louisiana Revised Statutes.
+L60@P0: The Office of the State Register provides auxiliary aids for the Louisiana Register for visually impaired individuals. By appointment, oral
+L658@P8: designated as a "child with special needs". Furthermore, the
+L659@P8: child must have been placed for adoption in accordance with
+L660@P8: applicable state laws.
+L661@P8: 5. - 6. ...
+L662@P8: 7. Reimbursement is limited to costs incurred by or on
+L663@P8: behalf of adoptive parents that are not otherwise reimbursed
+L664@P8: from other sources. Payments for nonrecurring expenses
+L665@P8: shall be made directly by the Division of Child Welfare.
+L666@P8: 8. - 9. ...
+L667@P8: AUTHORITY NOTE: Promulgated in accordance with 45
+L668@P8: CFR Part 1356, as published in the Federal Register on December
+L669@P8: 14, 1988, Section 1711 of the Tax Reform Act of 1986 as it relates
+L670@P8: to the Adoption Assistance Program under Title IV-E, and Act 345
+L671@P8: of the 1990 Legislative Session.
+L672@P8: HISTORICAL NOTE: Promulgated by the Department of
+L673@P8: Social Services, Office of Community Services, LR 17:386 (April
+L674@P8: 1991), amended by the Department of Children and Family
+L675@P8: Services, Child Welfare, LR 45:
+L676@P8: Chapter 51. Adoption Petition Program
+L677@P8: §5101. Certificate of Adoption in Private Adoptions
+L678@P8: A. - C.2.b. ...
+L679@P8: c. Attorneys representing prospective adoptive
+L680@P8: couples living in Louisiana for private adoptions must
+L681@P8: request the court having jurisdiction to order a Louisiana
+L682@P8: child abuse/neglect records check from the Division of Child
+L683@P8: Welfare’s Regional Office for the parish of residence of the
+L684@P8: prospective adoptive couple with the results of said check to
+L685@P8: be submitted in writing to the court. The court order shall be
+L686@P8: sent to the attention of the Adoption Petition Unit.
+L687@P8: d. The mailing addresses of the regional offices of
+L688@P8: the Division of Child Welfare where this form may be
+L689@P8: obtained are as follows:
+L690@P8:  i. Greater New Orleans;
+L691@P8: (a). Jefferson District, Box 10009, Jefferson, LA,
+L692@P8: 70181;
+L693@P8: (b). Orleans District, Regional Office, 1450
+L694@P8: Poydras Street, Suite 1600, New Orleans, LA, 70112;
+L695@P8:  ii. Baton Rouge Regional Office, Box 3318,
+L696@P8: Baton Rouge, LA 70821;
+L697@P8:  iii. Lafayette Regional Office, 825 Kaliste Saloom
+L4513@P40: by a paid staff (employee) of the residential home, at any
+L4514@P40: and all times when he/she is present on the premises and/or
+L4515@P40: is in the presence of a child/youth. The employee
+L4516@P40: responsible for supervising the individual shall not be
+L4517@P40: suspected to be a perpetrator with a justified (valid)
+L4518@P40: determination of abuse and/or neglect. Under no
+L4519@P40: circumstances shall the individual with the valid (justified)
+L4520@P40: finding of abuse and/or neglect be left alone and
+L4521@P40: unsupervised with a child/youth pending the official
+L4522@P40: determination from Child Welfare that the individual is or is
+L4523@P40: not listed on the state central registry.
+L4524@P40: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L4525@P40-41: 46:1414.1. 525 Louisiana Register Vol. 45, No. 04 April 20, 2019
+L4526@P41: HISTORICAL NOTE: Promulgated by the Department of
+L4527@P41: Children and Family Services, Licensing Section, LR 45:521 (April
+L4528@P41: 2019), effective May 1, 2019.
+L4529@P41: Marketa Garner-Walters
+L4530@P41: Secretary
+L4531@P41: 1904#021
+L4532@P41: RULE
+L4533@P41: Board of Elementary and Secondary Education
+L4534@P41: Bulletin 137—Louisiana Early Learning Center Licensing
+L4535@P41: Regulations―Licensure and Minimum Child-to-Staff Ratios
+L4536@P41: for Type I Centers (LAC 28:CLXI.305 and 1711)
+L4537@P41: Under the authority granted in R.S. 17:6 and in
+L4538@P41: accordance with R.S. 49:950 et seq., the Administrative
+L4539@P41: Procedure Act, the Board of Elementary and Secondary
+L4540@P41: Education has amended Bulletin 137—Louisiana Early
+L4541@P41: Learning Center Licensing Regulations. The amendments
+L4542@P41: align policy with R.S. 17:407.37, which allows, rather than
+L4543@P41: mandates, a fine of up to $1000 per day, along with making
+L4544@P41: technical edits. This Rule is hereby adopted on the day of
+L4545@P41: promulgation.
+L4546@P41: Title 28
+L4547@P41: EDUCATION
+L4548@P41: Part CLXI. Bulletin 137—Louisiana Early Learning
+L4549@P41: Center Licensing Regulations
+L4550@P41: Chapter 3. Licensure
+L4551@P41: §305. Operating Without a License; Registry;
+L4552@P41: Penalties
+L4553@P41: A. Operating an early learning center without a valid
+L4554@P41: license may result in fines imposed by the department to a
+L4555@P41: maximum of $1,000 per day for each day of such offense.
+L4556@P41: B. - D. …
+L4557@P41: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L4558@P41: 17:6 and 17:407.37.
+L4559@P41: HISTORICAL NOTE: Promulgated by the Board of
+L4560@P41: Elementary and Secondary Education, LR 41:619 (April 2015),
+L4561@P41: effective July 1, 2015, amended LR 41:2104 (October 2015), LR
+L4562@P41: 44:1859 (October 2018), LR 45:525 (April 2019).
+L4563@P41: Chapter 17. Minimum Staffing Requirements and
+L4564@P41: Standards
+L4565@P41: §1711. Child-to-Staff Minimum Ratios
+L4566@P41: A. - E. …
+L4567@P41: F. Minimum Child-to-Staff Ratios—Type I Centers
+L4568@P41: 1. - 2. …
+L4569@P41: Minimum Child-to-Staff Ratios—Type I Centers
+L4570@P41: (Effective until July 1, 2021)
+L4571@P41: Ages of Children Ratio
+L4572@P41: * * *
+L4573@P41: G. - N.2.b. ...
+L4574@P41: * * *
+L4575@P41: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L4576@P41: 17:6 and 17:407.40(A)(3).
+L4577@P41: HISTORICAL NOTE: Promulgated by the Board of
+L4578@P41: Elementary and Secondary Education, LR 41:633 (April 2015),
+L4579@P41: effective July 1, 2015, amended LR 43:638 (April 2017), LR
+L4580@P41: 44:250 (February 2018), effective March 1, 2018, LR 44:1865
+L4581@P41: (October 2018), LR 45:525 (April 2019).
+L4582@P41: Shan N. Davis
+L4583@P41: Executive Director
+L4584@P41: 1904#063
+L4585@P41: RULE
+L4586@P41: Board of Elementary and Secondary Education
+L4587@P41: Bulletin 746―Louisiana Standards for State
+L4588@P41: Certification of School Personnel
+L4589@P41: Teaching Authorizations and Certification
+L4590@P41: (LAC 28:CXXXI.305 and Chapter 7)
+L4591@P41: Under the authority granted in R.S. 17:6 and in
+L4592@P41: accordance with R.S. 49:950 et seq., the Administrative
+L4593@P41: Procedure Act, the Board of Elementary and Secondary
+L4594@P41: Education has amended Bulletin 746―Louisiana Standards
+L4595@P41: for State Certification of School Personnel. The amendments
+L4596@P41: allow district-level administrators to renew educational
+L4597@P41: leader licenses using local evaluations and also establishes
+L4598@P41: an "operational role" status that allows teachers and schoolbased administrators serving in operational roles to freeze
+L4599@P41: the validity period of their certificate while serving in such a
+L4600@P41: role. This ensures that the educator certificate will not expire
+L4601@P41: while the educator is serving in a role that is not suited to
+L4602@P41: being evaluated per the standards of effectiveness. The
+L4603@P41: amendments do not affect teacher or school-level leader
+L4604@P41: evaluations. This Rule is hereby adopted on the day of
+L4605@P41: promulgation.
+L4606@P41: Title 28
+L4607@P41: EDUCATION
+L4608@P41: Part CXXXI. Bulletin 746―Louisiana Standards for
+L4609@P41: State Certification of School Personnel
+L4610@P41: Chapter 3. Teaching Authorizations and
+L4611@P41: Certifications
+L4612@P41: Subchapter A. Standard Teaching Authorizations
+L4613@P41: Editor's Note: The name of the Division of Student Standards
+L7054@P61: Governor, Division of Administration, Board of Cosmetology, LR
+L7055@P61: 29:334 (March 2003), amended LR 29:2782 (December 2003),
+L7056@P61: amended by the Office of the Governor, Board of Cosmetology, LR
+L7057@P61: 44:913 (May 2018), LR 45:545 (April 2019).
+L7058@P61: §1711. NSF Checks
+L7059@P61: A. Late Fee. If a check received by the board is returned
+L7060@P61: to the board by the bank due to non-sufficient funds the
+L7061@P61: payment date shall be the date of receipt of valid payment,
+L7062@P61: any bank charge imposed on the board and any applicable
+L7063@P61: late fee.
+L7064@P61: B. Revocation. If a license was issued before a check is
+L7065@P61: returned to the board by the bank due to non-sufficient
+L7066@P61: funds, the applicant's license shall be subject to revocation.
+L7067@P61: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L7068@P61: 37:575(A)(2).
+L7069@P61: HISTORICAL NOTE: Promulgated by the Office of the
+L7070@P61: Governor, Division of Administration, Board of Cosmetology, LR
+L7071@P61: 29:334 (March 2003), amended LR 45:545 (April 2019).
+L7072@P61: Steve Young
+L7073@P61: Executive Director
+L7074@P61: 1904#045
+L7075@P61: RULE
+L7076@P61: Office of the Governor
+L7077@P61: Boxing and Wrestling Commission
+L7078@P61: Professional Wrestling
+L7079@P61: (LAC 46:XI.Chapter 5)
+L7080@P61: The Louisiana State Boxing and Wrestling Commission
+L7081@P61: does hereby exercise the provisions of the Administrative
+L7082@P61: Procedure Act, R.S. 49:950 et seq., to adopt the following
+L7083@P61: Rule. This Rule is necessary to promote the safety of
+L7084@P61: contestants, other participants and spectators, to repeal
+

@@ -947,20 +947,18 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       return(0)
     }
 
+    # Near-certain baseline probabilities can require shifts beyond +/-20.
+    while (f_lower * f_upper > 0 && max(abs(bounds)) < 80) {
+      bounds <- 2 * bounds
+      f_lower <- objective(bounds[1])
+      f_upper <- objective(bounds[2])
+    }
     if (f_lower * f_upper > 0) {
-      # Root not bracketed - try expanding bounds
-      expanded_bounds <- c(-20, 20)
-      f_lower <- objective(expanded_bounds[1])
-      f_upper <- objective(expanded_bounds[2])
-
-      if (f_lower * f_upper > 0) {
-        warning(sprintf(
-          'solve_group_employment_shift: root not bracketed for group %s (f_lower=%.4f, f_upper=%.4f)',
-          group, f_lower, f_upper
-        ))
-        return(0)
-      }
-      bounds <- expanded_bounds
+      warning(sprintf(
+        'solve_group_employment_shift: root not bracketed for group %s (f_lower=%.4f, f_upper=%.4f)',
+        group, f_lower, f_upper
+      ))
+      return(0)
     }
 
     # Solve using uniroot

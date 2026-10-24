@@ -1,0 +1,187 @@
+Actual primary-source web-reader output, retrieved2026-10-22. Direct PDF request returned403. Reader text preserved; not original PDF bytes.
+Microsoft Word - September 2021 TOC (https://www.doa.la.gov/media/0yyotnwa/2109.pdf)
+citeturn207view0 [wordlim: 200] Crawled: 2 weeks ago; Content type: application/pdf; Number of pages: 243; Source: find({"ref_id":"https://www.doa.la.gov/media/0yyotnwa/2109.pdf","pattern":"§1711."}); Total lines: 28697
+L21@P0:  Louisiana Caused by the State of Emergency Declared by Governor John Bel Edwards on
+L22@P0:  August 26, 2021, Due to Hurricane Ida ...................................................................................................... 1240
+L23@P0:  Public Safety and Corrections
+L24@P0:  Gaming Control Board—Louisiana Sports Wagering (LAC 42:III.102, 104, 105, 107, 120, 2737, and
+L25@P0:  Part VI. Chapters 1-13) .............................................................................................................................. 1245
+L26@P0:  Revenue
+L27@P0:  Policy Services Division—Income Tax Withholding on Gaming Winnings (LAC 61:I.1525) ................................. 1271
+L28@P0:  Workforce Commission
+L29@P0:  Office of Unemployment Insurance Administration—Invocation of the Statutory Savings Clause
+L30@P0:  under R.S. 23:1664 to Delay Implementation of Act 297 of the 2021 Regular Legislative Session
+L31@P0:  (LAC 40:IV.385).......................................................................................................................................... 1272
+L32@P0: III. RULES
+L33@P0:  Agriculture and Forestry
+L34@P0:  Office of Agriculture and Environmental Sciences, Horticulture Commission—Minimum Examination
+L35@P0:  Performance Levels Required (LAC 7:XXIX.111) ....................................................................................... 1274
+L36@P0:  Education
+L37@P0:  Board of Elementary and Secondary Education—Bulletin 137―Louisiana Early Learning Center Licensing
+L38@P0:  Regulations (LAC 28: CLXI.103, 303, 701, 703, 709, 903, 1103, 1105, 1305, 1507, 1509, 1515, 1711,
+L39@P0:  1715, 1717, 1719, 1721, 1723, 1725, 1727, 1805, 1811, 1813, 1901, 1903, 1907, 1911,
+L40@P0:  1919 and 2105) .......................................................................................................................................... 1274
+L41@P0:  Bulletin 139—Louisiana Child Care and Development Fund Programs—CCAP Household Eligibility
+L42@P0:  (LAC 28:CLXV.103, 309, 311 and 313) ...................................................................................................... 1279
+L43@P0:  Bulletin 140—Louisiana Early Childhood Care and Education Network (LAC 28:CLXVII.509,
+L44@P0:  511 and 512) .............................................................................................................................................. 1286
+L45@P0:  Bulletin 1903—Regulations and Guidelines for Implementation of the Louisiana Law for the Education of
+L46@P0:  Dyslexic Students (LAC 28:XXXV. Chapter 1) ........................................................................................... 1287
+L47@P0:  Minimum Reopening Standards
+L48@P0:  (LAC 28:LXXIX.1105 and 1107; CXV.401 and 403; CXXXIX.4101 and 4103) ........................................... 1290
+L49@P0:  Board of Regents—Academic Program Standards; Student Level Data Collection and Reporting
+L50@P0:  (LAC 28:IX.Chapter 3) ............................................................................................................................... 1293
+L51@P0:  Proprietary Schools Section—General Provisions; License Requirements; Affidavits and Bonds;
+L52@P0:  Proprietary Schools Applications; Violations; Student Complaint Procedure; Student Records
+L53@P0:  (LAC 28:III. 101, 105, 501, 503, 505, 507, 509, 511, 513, 701, 703, 901, 903, 1501, 1701, and 1901) ..... 1296
+L54@P0:  Governor
+L55@P0:  Commission on Law Enforcement and Administration of Criminal Justice—Peace Officer Training
+L56@P0:  (LAC 22:III.Chapter 47) .............................................................................................................................. 1304
+L57@P0: This public document was published in accordance with R.S. 49:954.1. The publication date for this issue of the Louisiana Register is
+L58@P0: September 20, 2021. The Office of the State Register is the official state entity for all certified copies of the Louisiana Register and the content
+L59@P0: contained herein.
+L60@P0: The Office of the State Register provides auxiliary aids for the Louisiana Register for visually impaired individuals. By appointment, oral
+L61@P0: presentation of the Louisiana Register is available at the Office of the State Register, or an audio cd of requested sections of the Louisiana
+L62@P0-1: Register can be provided for the production cost incurred. For more information, contact the Office of the State Register. Health
+L63@P1:  Bureau of Health Services Financing—Case Management—Licensing Standards (LAC 48:I.Chapter 49) ......... 1305
+L64@P1:  Facility Need Review—Relocation of Nursing Facility Beds (LAC 48:I.12529) ............................................... 1306
+L8120@P68: examination for licensure must wait at least seven days
+L8121@P68: before reapplying to take the examination.
+L8122@P68: C. A passing score on an examination is valid for five
+L8123@P68: years, after which time the applicant must apply to retake the
+L8124@P68: examination.
+L8130@P68: Horticulture Commission, LR 20:153 (February 1994), LR 35:1229
+L8131@P68: (July 2009), LR 37:3464 (December 2011), LR 40:759 (April
+L8132@P68: 2014), , amended by the Department of Agriculture and Forestry,
+L8133@P68: Office of Agricultural and Environmental Sciences, Horticulture
+L8134@P68: Commission, LR 44:2127 (December 2018), LR 47:1274
+L8135@P68: (September 2021).
+L8136@P68: Mike Strain, DVM
+L8137@P68: Commissioner
+L8138@P68: 2109#063
+L8139@P68: RULE
+L8140@P68: Board of Elementary and Secondary Education
+L8141@P68: Bulletin 137―Louisiana Early Learning
+L8142@P68: Center Licensing Regulations
+L8143@P68: (LAC 28: CLXI.103, 303, 701, 703, 709, 903, 1103,
+L8144@P68: 1105, 1305, 1507, 1509, 1515, 1711, 1715, 1717,
+L8145@P68: 1719, 1721, 1723, 1725, 1727, 1805, 1811, 1813,
+L8146@P68: 1901, 1903, 1907, 1911, 1919 and 2105)
+L8147@P68: In accordance with R.S. 49:950 et seq., the Administrative
+L8148@P68: Procedure Act, the Board of Elementary and Secondary
+L8149@P68: Education has amended Bulletin 137―Louisiana Early
+L8150@P68: Learning Center Licensing Regulation. In accordance with
+L8151@P68: Louisiana R.S. 17:407.40, the Board of Elementary and
+L8152@P68: Secondary Education (BESE) shall conduct a comprehensive
+L8153@P68: review of all standards, rules, and regulations for licenses
+L8154@P68: every three years. As required, the Department of Education
+L8155@P68: (LDE) launched a workgroup comprised of providers and
+L8156@P68: child advocates to review and provide input on updates to
+L8157@P68: Bulletin 137—Louisiana Early Learning Center Licensing
+L8158@P68: Regulations. Draft revisions of Bulletin 137 regarding early
+L8159@P68: learning center licensing, child health and safety, and
+L8160@P68: technical edits were endorsed by the Early Childhood Care
+L8161@P68: and Education (ECCE) Advisory Council in January 2021.
+L8162@P68: This Rule is hereby adopted on the day of promulgation.
+L8163@P68: Title 28
+L8164@P68: EDUCATION
+L8165@P68: Part CLXI. Bulletin 137Louisiana Early Learning
+L8166@P68: Center Licensing Regulations
+L8167@P68: Chapter 1. General Provisions
+L8168@P68: §103. Definitions
+L8169@P68: * * *
+L8170@P68: CBCRepealed.
+L8171@P68: * * *
+L8172@P68: Child Day Care Centerin accordance with R.S.
+L8173@P68: 17:407.33(3), any place or center operated by any institution,
+L8174@P68: political subdivision, society, agency, corporation, person or
+L8175@P68: persons, or any other group for the purpose of providing
+L8176@P68: care, supervision, and guidance of seven or more children,
+L8177@P68: not including those related to the caregiver, unaccompanied
+L8178@P68: by parent or legal custodian, on a regular basis for at least 12
+L8179@P68: 1/2 hours in a continuous 7-day week.
+L8180@P68: 1. If a child day care center provides transportation or
+L8181@P68: arranges for transportation to and from the center, either
+L8182@P68: directly or by contract with third parties, all hours that a
+L8183@P68: child is being transported shall be included in the calculation
+L8184@P68: of the hours of operation.
+L8185@P68: 2. A child day care center that remains open for more
+L8186@P68: than 12 1/2 hours in a continuous 7-day week, and in which
+L8187@P68: no individual child remains for more than 24 hours in one
+L8188@P68: continuous stay shall be known as a full-time child day care
+L8189@P68: center.
+L8190@P68: 3. A child day care center that remains open after 9
+L8403@P70: 17:6 and 17:407.40(A)(1).
+L8404@P70: HISTORICAL NOTE: Promulgated by the Board of
+L8405@P70: Elementary and Secondary Education, LR 41:629 (April 2015),
+L8406@P70: effective July 1, 2015, amended LR 44:250 (February 2018),
+L8407@P70: effective March 1, 2018, LR 44:1864 (October 2018), LR 47:1276
+L8408@P70: (September 2021).
+L8409@P70: §1515. Child Records and Cumulative Files
+L8410@P70: A. - A.1.d. …
+L8411@P70: e. any special concerns, including but not limited to
+L8412@P70: allergies, chronic illnesses, and any special needs of the
+L8413@P70: child, if applicable; and
+L8414@P70: f. any special dietary needs, restrictions or food
+L8415@P70: allergies or intolerances, if applicable. See Paragraph 4;
+L8416@P70: A.2. - C. …
+L8417@P70: D. Retention of Records. Records of children shall be
+L8418@P70: maintained by a center for a minimum of two years from the
+L8419@P70: date of termination of the child’s enrollment at the center
+L8420@P70: and shall be available for on-site inspection, whether as hard
+L8421@P70: copies or in electronic form, upon request by the LDE.
+L8422@P70: E. …
+L8423@P70: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L8424@P70: 17:407.40.
+L8425@P70: HISTORICAL NOTE: Promulgated by the Board of
+L8426@P70: Elementary and Secondary Education, LR 41:630 (April 2015),
+L8427@P70: effective July 1, 2015, amended LR 41:2106 (October 2015), LR
+L8428@P70: 44:250 (February 2018), effective March 1, 2018, LR 47:1276
+L8429@P70: (September 2021).
+L8430@P70: Chapter 17. Minimum Staffing Requirements and
+L8431@P70: Standards
+L8432@P70: §1711. Child-to-Staff Minimum Ratios
+L8433@P70: A. …
+L8434@P70: B. Minimum child to staff ratios shall be met at all times.
+L8435@P70: 1. There shall be a minimum of two staff members
+L8436@P70: present at an early learning center when more than four
+L8437@P70: children are present.
+L8438@P70: B.2. - N.2.b. …
+L8439@P70: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L8440@P70: 17:6 and 17:407.40(A)(3).
+L8441@P70: HISTORICAL NOTE: Promulgated by the Board of
+L8442@P70: Elementary and Secondary Education, LR 41:633 (April 2015),
+L8443@P70: effective July 1, 2015, amended LR 43:638 (April 2017), LR
+L8444@P70: 44:250 (February 2018), effective March 1, 2018, LR 44:1865
+L8445@P70: (October 2018), LR 45:525 (April 2019), LR 47:1276 (September
+L8446@P70: 2021).
+L8447@P70: §1715. Staff Records and Personnel Files
+L8448@P70-71: A. - A.4. … 1277 Louisiana Register Vol. 47, No. 9 September 20, 2021
+L8449@P71: B. Records Retention. Staff records and personnel files
+L8450@P71: shall be maintained for a minimum of two years from the
+L8451@P71: date of termination of employment and shall be available for
+L8452@P71: on-site inspection, whether as hard copies or in electronic
+L8453@P71: form, upon request by the LDE.
+L8454@P71: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L8455@P71: 17:6 and 17:407.40.
+L8456@P71: HISTORICAL NOTE: Promulgated by the Board of
+L8457@P71: Elementary and Secondary Education, LR 41:635 (April 2015),
+L8458@P71: effective July 1, 2015, amended LR 44:251 (February 2018),
+L8459@P71: effective March 1, 2018, LR 44:1866 (October 2018), LR 47:1276
+L8460@P71: (September 2021).
+L8461@P71: §1717. Records for Independent Contractors and
+L8462@P71: Student Trainees
+L8463@P71: A. - B.3. …
+L8464@P71: C. Records Retention. Records for independent
+L8465@P71: contractors and student trainees shall be maintained for a
+L8466@P71: minimum of two years from the date the contractor or
+L8467@P71: student was last present at the center and shall be available
+L8468@P71: for on-site inspection, whether as hard copies or in electronic
+L8469@P71: form, upon request by the LDE.
+L8470@P71: AUTHORITY NOTE: Promulgated in accordance with R.S.
+L8471@P71: 17:6, 17:407.40(A)(1), 17:407:40, and 17:407.42.
+L8472@P71: HISTORICAL NOTE: Promulgated by the Board of
+L8473@P71: Elementary and Secondary Education, LR 41:635 (April 2015),
+L8474@P71: effective July 1, 2015, amended LR 44:251 (February 2018),
+L8475@P71: effective March 1, 2018, LR 44:1866 (October 2018), LR 47:1277
+

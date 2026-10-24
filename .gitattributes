@@ -30,3 +30,8 @@
 *.zip   binary
 *.gz    binary
 *.parquet binary
+
+# Archived source snapshots -- preserve bytes for SHA-256 registry.
+# Publisher whitespace retained; compare replacements via registered hashes.
+state_data/raw/** binary
+resources/licensing/US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv -text

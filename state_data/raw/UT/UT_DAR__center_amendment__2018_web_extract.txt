@@ -1,0 +1,313 @@
+Primary-source web extraction, retrieved 2026-10-21.
+URL: https://rules.utah.gov/publicat/bulletin/2018/20180415/42725.htm
+Original HTML download returned403; this file preserves the regulatory text returned by the web reader. Proposed amendment; adoption date requires separate confirmation.
+
+DAR File No. 42725 (Rule R381-100), 2018-8 Utah Bull. (04/15/2018) (https://rules.utah.gov/publicat/bulletin/2018/20180415/42725.htm)
+ [wordlim: 200] Crawled: 2 weeks ago; Content type: text/html; Source: find({"ref_id":"https://rules.utah.gov/publicat/bulletin/2018/20180415/42725.htm","pattern":"Ratios and Group Size"}); Total lines: 2022
+L186: [~~(23)~~](24) "Group" means the children who are supervised by one or more caregivers in an individual room or in an area within a room that is defined by furniture or other partition.
+L187: 
+L188: [~~(24)~~](25) "Group Size" means the number of children in a group.
+L189: 
+L190: [~~(25)~~](26) "Guest" means an individual who is not a covered individual and is at the child care facility with the provider's permission.
+L950: (24) The provider shall maintain buildings and outdoor areas in good repair and safe condition including:
+L951: 
+L952: (a) ceilings, walls, and floor coverings;
+L953: 
+L954: (b) lighting, bathroom, and other fixtures;
+L955: 
+L956: (c) draperies, blinds, and other window coverings;
+L957: 
+L958: (d) indoor and outdoor play equipment;
+L959: 
+L960: (e) furniture, toys, and materials accessible to the children; and
+L961: 
+L962: (f) entrances, exits, steps, and walkways including keeping them free of ice, snow, and other hazards.
+L963: (25) Accessible raised decks or balconies that are 5 feet or higher, and open basement stairwells that are 5 feet or deeper shall have protective barriers that are at least 3 feet high.
+L964: 
+L965: (26) If the facility is subdivided, any part of the building is rented out, or any area of the facility is shared including the outdoor area, the entire facility shall be inspected and covered individuals in the facility shall comply with all rules, except when all of the following conditions are met:
+L966: (a) there is a separate entrance for the child care program;
+L967: 
+L968: (b) there are no connecting interior doorways that can be used by unauthorized individuals; and
+L969: 
+L970: (c) there is no shared access to the outdoor area used for child care, or a qualified caregiver is present when children are using a shared outdoor area of the facility.
+L971: 
+L972: 
+L973: 
+L974: R381-100-10. Ratios and Group Size.
+L975: 
+L976: (1) As listed in Table 1 for single-age groups of children, the provider shall:
+L977: (a) maintain at least the number of caregivers and not exceed the number of children in the caregiver-to-child ratio, and
+L978: 
+L979: (b) not exceed the group sizes.
+L980: TABLE 1
+L981: Caregiver-to-Child Ratios and Group Sizes
+L982: 
+L983: 
+L984:                             # of        # of
+L985: 
+L986:     Ages of Children      Caregivers   Children   Group Size
+L987: 
+L988: 
+L989: 
+L990:     birth - 23 months         1           4          8
+L991: 
+L992:     2 years old               1           7          14
+L993: 
+L994:     3 years old               1           12         24
+L995: 
+L996:     4 years old               1           15         30
+L997: 
+L998:     School-age                1           20         40
+L999: (2) As listed in Tables 2-13 for mixed-age groups of children, the provider shall:
+L1000: 
+L1001: (a) maintain at least the number of caregivers and not exceed the number of children in the caregiver-to-child ratio, and
+L1002: 
+L1003: (b) not exceed the group sizes.
+L1004: TABLE 2
+L1005: Older Toddlers and Two-year-olds
+L1006: 
+L1007: 
+L1008:     # Caregivers Required     Age       # Children Present
+L1009: 
+L1010: 
+L1011: 
+L1012:                1          18 to 23 months    1-3
+L1013: 
+L1014:                                2             1-6
+L1015: 
+L1016:                             Total children: up to 7
+L1017: 
+L1018: 
+L1019: 
+L1020:                2          18 to 23 months    1-6
+L1021: 
+L1022:                                2             1-13
+L1023: 
+L1024:                             Total children: up to 14
+L1025: TABLE 3
+L1026: Two-year-olds and Three-year-olds
+L1027: 
+L1028: 
+L1029:     # Caregivers Required     Age       # Children Present
+L1030: 
+L1031: 
+L1032: 
+L1033:                1               2             1-6
+L1034: 
+L1035:                                3             1-9
+L1036: 
+L1037:                             Total children: up to 10
+L1038: 
+L1039: 
+L1040: 
+L1041:                2               2             1-13
+L1042: 
+L1043:                                3             1-19
+L1044: 
+L1045:                             Total children: up to 20
+L1046: TABLE 4
+L1047: Two-year-olds and Four-year-olds
+L1048: 
+L1049: 
+L1050:     # Caregivers Required     Age       # Children Present
+L1051: 
+L1052: 
+L1053: 
+L1054:                1               2             1-6
+L1055: 
+L1056:                                4             1-10
+L1057: 
+L1058:                             Total children: up to 11
+L1059: 
+L1060: 
+L1061: 
+L1062:                2               2             1-13
+L1063: 
+L1064:                                4             1-21
+L1065: 
+L1066:                             Total children: up to 22
+L1067: TABLE 5
+L1068: Two-year-olds and Five-twelve Year-olds
+L1069: 
+L1070: 
+L1071:     # Caregivers Required     Age       # Children Present
+L1072: 
+L1073: 
+L1074: 
+L1075:                1               2             1-6
+L1076: 
+L1077:                               5-12           1-13
+L1078: 
+L1079:                             Total children: up to 14
+L1080: 
+L1081: 
+L1082: 
+L1083:                2               2             1-13
+L1084: 
+L1085:                               5-12           1-27
+L1086: 
+L1087:                             Total children: up to 28
+L1290: (7) The provider's or an employee's child age 4 years or older is not counted in the caregiver-to-child ratio when the parent of the child is working at the facility, but the child shall be counted in the group size.
+L1291: 
+L1292: (8) Caregivers who are 16 or 17 years old may be included in the caregiver-to-child ratio, but shall not have unsupervised contact with any child in care.
+L1293: 
+L1294: (9) Volunteers may be included in the caregiver-to-child ratio if they:
+L1295: 
+L1296: (a) are at least 16 years old,
+L1297: (b) receive at least 2.5 hours of preservice training before counting in the caregiver-to-child ratio, and
+L1298: 
+L1304: (12) A center that has been constructed, licensed, and continuously operated since 1 January 2004 is
+L1305: 
+L1306: exempt from maximum group size requirements if:
+L1307: 
+L1308: (a) the caregiver-to-child ratio is maintained, and
+L1309: 
+L1310: (b) the required square footage for each group of children is maintained.
+L1311: 
+L1312: 
+L1313: 
+L1314: R381-100-13. Child Safety and Injury Prevention.
+L1315: 
+L1316: (1) The building, outdoor area, toys, and equipment shall be used in a safe manner and as intended by the manufacturer to prevent injury to children.
+--------------------------------------------------------------------------------
+DAR File No. 42725 (Rule R381-100), 2018-8 Utah Bull. (04/15/2018) (https://rules.utah.gov/publicat/bulletin/2018/20180415/42725.htm)
+ [wordlim: 200] Crawled: 2 weeks ago; Content type: text/html; Source: find({"ref_id":"https://rules.utah.gov/publicat/bulletin/2018/20180415/42725.htm","pattern":"TABLE 1"}); Total lines: 2022
+L950: (24) The provider shall maintain buildings and outdoor areas in good repair and safe condition including:
+L951: 
+L952: (a) ceilings, walls, and floor coverings;
+L953: 
+L954: (b) lighting, bathroom, and other fixtures;
+L955: 
+L956: (c) draperies, blinds, and other window coverings;
+L957: 
+L958: (d) indoor and outdoor play equipment;
+L959: 
+L960: (e) furniture, toys, and materials accessible to the children; and
+L961: 
+L962: (f) entrances, exits, steps, and walkways including keeping them free of ice, snow, and other hazards.
+L963: (25) Accessible raised decks or balconies that are 5 feet or higher, and open basement stairwells that are 5 feet or deeper shall have protective barriers that are at least 3 feet high.
+L964: 
+L965: (26) If the facility is subdivided, any part of the building is rented out, or any area of the facility is shared including the outdoor area, the entire facility shall be inspected and covered individuals in the facility shall comply with all rules, except when all of the following conditions are met:
+L966: (a) there is a separate entrance for the child care program;
+L967: 
+L968: (b) there are no connecting interior doorways that can be used by unauthorized individuals; and
+L969: 
+L970: (c) there is no shared access to the outdoor area used for child care, or a qualified caregiver is present when children are using a shared outdoor area of the facility.
+L971: 
+L972: 
+L973: 
+L974: R381-100-10. Ratios and Group Size.
+L975: 
+L976: (1) As listed in Table 1 for single-age groups of children, the provider shall:
+L977: (a) maintain at least the number of caregivers and not exceed the number of children in the caregiver-to-child ratio, and
+L978: 
+L979: (b) not exceed the group sizes.
+L980: TABLE 1
+L981: Caregiver-to-Child Ratios and Group Sizes
+L982: 
+L983: 
+L984:                             # of        # of
+L985: 
+L986:     Ages of Children      Caregivers   Children   Group Size
+L987: 
+L988: 
+L989: 
+L990:     birth - 23 months         1           4          8
+L991: 
+L992:     2 years old               1           7          14
+L993: 
+L994:     3 years old               1           12         24
+L995: 
+L996:     4 years old               1           15         30
+L997: 
+L998:     School-age                1           20         40
+L999: (2) As listed in Tables 2-13 for mixed-age groups of children, the provider shall:
+L1000: 
+L1001: (a) maintain at least the number of caregivers and not exceed the number of children in the caregiver-to-child ratio, and
+L1002: 
+L1003: (b) not exceed the group sizes.
+L1004: TABLE 2
+L1005: Older Toddlers and Two-year-olds
+L1006: 
+L1007: 
+L1008:     # Caregivers Required     Age       # Children Present
+L1009: 
+L1010: 
+L1011: 
+L1012:                1          18 to 23 months    1-3
+L1013: 
+L1014:                                2             1-6
+L1015: 
+L1016:                             Total children: up to 7
+L1017: 
+L1018: 
+L1019: 
+L1020:                2          18 to 23 months    1-6
+L1021: 
+L1022:                                2             1-13
+L1023: 
+L1024:                             Total children: up to 14
+L1025: TABLE 3
+L1026: Two-year-olds and Three-year-olds
+L1027: 
+L1028: 
+L1029:     # Caregivers Required     Age       # Children Present
+L1030: 
+L1031: 
+L1032: 
+L1033:                1               2             1-6
+L1034: 
+L1035:                                3             1-9
+L1036: 
+L1037:                             Total children: up to 10
+L1038: 
+L1039: 
+L1040: 
+L1041:                2               2             1-13
+L1042: 
+L1043:                                3             1-19
+L1044: 
+L1045:                             Total children: up to 20
+L1046: TABLE 4
+L1047: Two-year-olds and Four-year-olds
+L1048: 
+L1049: 
+L1050:     # Caregivers Required     Age       # Children Present
+L1051: 
+L1052: 
+L1053: 
+L1054:                1               2             1-6
+L1055: 
+L1056:                                4             1-10
+L1057: 
+L1058:                             Total children: up to 11
+L1059: 
+L1060: 
+L1061: 
+L1062:                2               2             1-13
+L1063: 
+L1064:                                4             1-21
+L1065: 
+L1066:                             Total children: up to 22
+L1067: TABLE 5
+L1068: Two-year-olds and Five-twelve Year-olds
+L1069: 
+L1070: 
+L1071:     # Caregivers Required     Age       # Children Present
+L1072: 
+L1073: 
+L1074: 
+L1075:                1               2             1-6
+L1076: 
+L1077:                               5-12           1-13
+L1078: 
+L1079:                             Total children: up to 14
+L1080: 
+L1081: 
+L1082: 
+L1083:                2               2             1-13
+L1084: 
+L1085:                               5-12           1-27
+L1086: 
+L1087:                             Total children: up to 28
+
