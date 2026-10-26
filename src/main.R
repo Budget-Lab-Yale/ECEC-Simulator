@@ -132,7 +132,7 @@ if (!is.null(slurm_phase)) {
 # 1a. NSECE Processing
 #     - 2019 NSECE household data
 #     - 2019 NSECE supply parameters (wages, labor requirements)
-#     - Price heterogeneity quantile grids (weighted empirical wedge distribution)
+#     - Price heterogeneity models (QRF)
 #
 # 1b. ACS Processing (demand-side data)
 #     - 2019 ACS hierarchical processing

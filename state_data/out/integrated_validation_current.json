@@ -1,9 +1,0 @@
-{
-  "timestamp": "202610221441",
-  "solver_records": 104,
-  "geographies": 52,
-  "nonconverged": [],
-  "max_price_gap": 0.000319,
-  "employment_max_abs_gap": 2.54460907345155e-06,
-  "simulation_complete": true
-}

@@ -1,75 +1,75 @@
 script: state_data/code/16_ndcp_model_prices.R
-run at: 2026-10-23 14:18:45 EDT
-git commit: ff4a84cf9083121a24b78a28426c5e76a7dcff8b
-git dirty files:  M .gitignore |  M README.md |  M config/state/README.md |  M config/state/supply/AK.yaml |  M config/state/supply/AL.yaml |  M config/state/supply/AR.yaml |  M config/state/supply/AZ.yaml |  M config/state/supply/CA.yaml |  M config/state/supply/CO.yaml |  M config/state/supply/CT.yaml |  M config/state/supply/DC.yaml |  M config/state/supply/DE.yaml |  M config/state/supply/FL.yaml |  M config/state/supply/GA.yaml |  M config/state/supply/HI.yaml |  M config/state/supply/IA.yaml |  M config/state/supply/ID.yaml |  M config/state/supply/IL.yaml |  M config/state/supply/IN.yaml |  M config/state/supply/KS.yaml |  M config/state/supply/KY.yaml |  M config/state/supply/LA.yaml |  M config/state/supply/MA.yaml |  M config/state/supply/MD.yaml |  M config/state/supply/ME.yaml |  M config/state/supply/MI.yaml |  M config/state/supply/MN.yaml |  M config/state/supply/MO.yaml |  M config/state/supply/MS.yaml |  M config/state/supply/MT.yaml |  M config/state/supply/NC.yaml |  M config/state/supply/ND.yaml |  M config/state/supply/NE.yaml |  M config/state/supply/NH.yaml |  M config/state/supply/NJ.yaml |  M config/state/supply/NM.yaml |  M config/state/supply/NV.yaml |  M config/state/supply/NY.yaml |  M config/state/supply/NYC.yaml |  M config/state/supply/OH.yaml |  M config/state/supply/OK.yaml |  M config/state/supply/OR.yaml |  M config/state/supply/PA.yaml |  M config/state/supply/RI.yaml |  M config/state/supply/SC.yaml |  M config/state/supply/SD.yaml |  M config/state/supply/TN.yaml |  M config/state/supply/TX.yaml |  M config/state/supply/UT.yaml |  M config/state/supply/VA.yaml |  M config/state/supply/VT.yaml |  M config/state/supply/WA.yaml |  M config/state/supply/WI.yaml |  M config/state/supply/WV.yaml |  M config/state/supply/WY.yaml |  M docs/state_level_analysis.md |  D resources/supply/US_BEA__regional_price_parities_all_items__2019.csv |  D resources/supply/US_BEA__regional_price_parities_housing_services__2019.csv |  D resources/supply/US_ICPSR37700__center_and_home_child_staff_ratios_by_age__2017.csv |  D resources/supply/childcare_occupation_weights_by_education_acs_2019.csv |  M resources/supply/licensing_ratios_2017.R |  M resources/supply/oes_childcare_wage_ratios_2019.R |  M resources/supply/state_supply_params.R |  M src/3_simulation/3a_initialize_simulation.R |  M src/3_simulation/3b_run_simulation_year.R |  M src/3_simulation/3c_run_scenario.R |  M src/shared_functions/income_rank.R |  M src/shared_functions/prepare_year_context.R |  M state_data/README.md |  M state_data/code/00_build_demand_targets.R |  M state_data/code/01_nsch_participation_rate.R |  M state_data/code/09_ccdf_subsidy_children.R |  M state_data/code/11_ndcp_price_comparison.R |  M state_data/code/12_participation_bias.R |  M state_data/code/16_ndcp_model_prices.R |  M state_data/code/shared_setup.R |  M state_data/out/ndcp_model_prices.csv |  M state_data/out/ndcp_model_prices_provenance.txt |  M state_data/out/ndcp_model_prices_summary.csv |  D state_data/raw/US/US_ACF__center_and_home_child_staff_ratios_by_age__2014.csv |  D state_data/raw/US/US_ACS__p0_children_by_care_type_and_hours__2019.csv |  D state_data/raw/US/US_ACS__p0_children_by_care_type_hours_age__2019.csv |  D state_data/raw/US/US_CAP__state_licensing_ratios_childcare_dollar_methodology__2018.pdf |  D state_data/raw/US/US_CCD__public_school_prekindergarten_children_by_county__2018-19.csv |  D state_data/raw/US/US_DOL__ndcp_technical_report__2020-10.pdf |  D state_data/raw/US/US_HSSL__head_start_funded_slots_by_service_location__2026-09-23.csv |  D state_data/raw/US/US_ICPSR37700__licensing_center_regulations__2017.rda |  D state_data/raw/US/US_ICPSR37700__licensing_small_family_home_regulations__2017.rda |  D state_data/raw/US/US_ICPSR38677__ccdf_acf801_child_records__FY2019.rda |  D state_data/raw/US/US_ICPSR38677__ccdf_acf801_family_records__FY2019.rda |  D state_data/raw/US/US_ICPSR38677__ccdf_acf801_pooling_factor__FY2019.rda |  D state_data/raw/US/US_ICPSR38677__ccdf_acf801_setting_records__FY2019.rda |  D state_data/raw/US/US_ICPSR38677__citation__FY2019.html |  D state_data/raw/US/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx |  D state_data/raw/US/US_NHES__ecpp_public_use_file__2019.csv |  D state_data/raw/US/US_NIEER__prek_and_head_start_enrollment_age_3_4__2018-19.csv |  D state_data/raw/US/US_NIEER__state_of_preschool_yearbook__2019.pdf |  D state_data/raw/US/US_NIEER__state_prek_enrollment_age_3_4__2018-19.csv |  D state_data/raw/US/US_NIEER__states_of_head_start_and_early_head_start__2023.pdf |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2016.dta |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2017.dta |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2018.dta |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2019.dta |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2020.dta |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2021.dta |  D state_data/raw/US/US_NSCH__child_health_survey_topical__2022.dta |  D state_data/raw/US/US_NSECE__measuring_supply_capacity_centers__2023-12.pdf |  D state_data/raw/US/US_OES__childcare_occupation_wages__2019.csv |  D state_data/raw/US/US_OHS__biennial_report_to_congress__FY2019.pdf |  D state_data/raw/US/US_OHS__services_snapshot_aian__2018-19.pdf |  D state_data/raw/US/US_OHS__services_snapshot_ehs__2018-19.pdf |  D state_data/raw/US/US_OHS__services_snapshot_hs__2018-19.pdf |  D state_data/raw/US/US_PEP__population_children_age_0_4_by_county__2019.csv |  D state_data/raw/US/US_PN3__child_care_ratios_evidence_review__2020.pdf |  M state_data/tests/check_constants_match_derivation.R |  M state_data/tests/check_nyc_rest_of_state.R |  M state_data/tests/check_program_counts_match_sources.R |  M state_data/tests/check_summarise_shadowing.py
+run at: 2026-10-26 14:37:03 EDT
+git commit: ef05ac375165ef88eb7fcfe2958318b61ae4d065
+git dirty files:  M config/state/supply/AK.yaml |  M config/state/supply/AL.yaml |  M config/state/supply/AR.yaml |  M config/state/supply/AZ.yaml |  M config/state/supply/CA.yaml |  M config/state/supply/CO.yaml |  M config/state/supply/CT.yaml |  M config/state/supply/DC.yaml |  M config/state/supply/DE.yaml |  M config/state/supply/FL.yaml |  M config/state/supply/GA.yaml |  M config/state/supply/HI.yaml |  M config/state/supply/IA.yaml |  M config/state/supply/ID.yaml |  M config/state/supply/IL.yaml |  M config/state/supply/IN.yaml |  M config/state/supply/KS.yaml |  M config/state/supply/KY.yaml |  M config/state/supply/LA.yaml |  M config/state/supply/MA.yaml |  M config/state/supply/MD.yaml |  M config/state/supply/ME.yaml |  M config/state/supply/MI.yaml |  M config/state/supply/MN.yaml |  M config/state/supply/MO.yaml |  M config/state/supply/MS.yaml |  M config/state/supply/MT.yaml |  M config/state/supply/NC.yaml |  M config/state/supply/ND.yaml |  M config/state/supply/NE.yaml |  M config/state/supply/NH.yaml |  M config/state/supply/NJ.yaml |  M config/state/supply/NM.yaml |  M config/state/supply/NV.yaml |  M config/state/supply/NY.yaml |  M config/state/supply/NYC.yaml |  M config/state/supply/OH.yaml |  M config/state/supply/OK.yaml |  M config/state/supply/OR.yaml |  M config/state/supply/PA.yaml |  M config/state/supply/RI.yaml |  M config/state/supply/SC.yaml |  M config/state/supply/SD.yaml |  M config/state/supply/TN.yaml |  M config/state/supply/TX.yaml |  M config/state/supply/UT.yaml |  M config/state/supply/VA.yaml |  M config/state/supply/VT.yaml |  M config/state/supply/WA.yaml |  M config/state/supply/WI.yaml |  M config/state/supply/WV.yaml |  M config/state/supply/WY.yaml |  M resources/acs/US_ACS__p0_children_nyc_partition__2019.csv.provenance.txt |  M resources/supply/state_supply_params.R |  M state_data/code/analyze_home_staffing.R |  M state_data/out/home_price_benchmark.csv |  M state_data/out/home_price_benchmark_provenance.txt |  M state_data/out/home_price_benchmark_summary.csv |  M state_data/out/home_staffing_sensitivity.csv |  M state_data/out/ndcp_model_prices.csv |  M state_data/out/ndcp_model_prices_summary.csv |  M tests/test_state_staffing_inputs.R
 R: R version 4.6.1 (2026-06-24 ucrt)
 settings: model price = 2019 base supply price x 40; tier weights = p0 children;
   NDCP = 2019 county medians, PEP 0-4 weights; ages infant 0-1, toddler 2, preschool 3-4;
   geo = age groups weighted by model paid-centre children; NYC out of summary
 p0 input metadata: calibration_interface: 202610191203 | income_rank: national_rpp | urban_density: 1 | a90886dd4638f789facb2451e3fcf9ab  /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1021-data-updates/p0_by_age.csv
-git status of code files:  M resources/supply/state_supply_params.R |  M state_data/code/11_ndcp_price_comparison.R |  M state_data/code/16_ndcp_model_prices.R |  M state_data/code/shared_setup.R | ?? src/shared_functions/get_raw_data_path.R | ?? src/shared_functions/get_state_supply_year_factors.R
+git status of code files:  M resources/supply/state_supply_params.R
 code (md5):
   5abb0f8d83d9f43b198391f6156354a1  state_data/code/16_ndcp_model_prices.R
-  85eb0d673b4d49481bc74eced81848a6  state_data/code/11_ndcp_price_comparison.R
+  47aa4474d69508fded3ea2e304320338  state_data/code/11_ndcp_price_comparison.R
   dcf20d3ce756ff67d3f50b7c1f9922de  state_data/code/shared_setup.R
   81a7b6737ea2eb24a4c542cc1bb08a50  src/shared_functions/get_raw_data_path.R
   7ec60209818a6158d931e5051d8780db  src/shared_functions/constants.R
   db716e928284ffedda5fc92073167ea2  src/shared_functions/reprice_alpha_to_state_supply.R
   64e59b2ea9f17aa674e93302bd281406  src/shared_functions/get_state_supply_year_factors.R
-  6bf1c9c83fb147a7807579dbfa523db5  resources/supply/state_supply_params.R
+  8b14b767a48dd443f3a0712b1e1e7c4e  resources/supply/state_supply_params.R
 inputs (md5):
   ef1b0b9731808915d550a16841bccc6a  resources/ndcp/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx
   99bef65b1b0ab00a5f3fdfe6a4c98d42  resources/census_population/US_PEP__population_children_age_0_4_by_county__2019.csv
   a90886dd4638f789facb2451e3fcf9ab  resources/acs/US_ACS__p0_children_by_care_type_hours_age__2019.csv
-  55c7878e2631dbecaffd01f6dd47a954  config/state/supply/AK.yaml
-  9a9876087d5c7ff69e2d00ec08910f0b  config/state/supply/AL.yaml
-  6eaf5fdd539e98737108dd510fc5e477  config/state/supply/AR.yaml
-  1489850b1fae32d785fa2d8a7b840a94  config/state/supply/AZ.yaml
-  9e3d2774bd5fbd9da07fde4dfd60720e  config/state/supply/CA.yaml
-  dd79ae4766123f07d4b9e1b808ae6197  config/state/supply/CO.yaml
-  83a998289f009059fbd573b5204e70dc  config/state/supply/CT.yaml
-  07ab8495659dce8e0119811739694115  config/state/supply/DC.yaml
-  8dc3e25aacbf6d12eee1d455108a3bf2  config/state/supply/DE.yaml
-  cc377caab4d7e449674e890fcb59e331  config/state/supply/FL.yaml
-  e6b6f8c74513db49287cf91099eacef7  config/state/supply/GA.yaml
-  5a6f9fe2b421b4068deb8f51bd964e69  config/state/supply/HI.yaml
-  c17e3dafa97571b986f8830f5bb2a711  config/state/supply/IA.yaml
-  90d97a8d5b9fb15e1b4070cdca94a3d7  config/state/supply/ID.yaml
-  1ea7222734146c9391c54d0015b19a4a  config/state/supply/IL.yaml
-  1066ca8430e05d362f900a405ef27cdc  config/state/supply/IN.yaml
-  c87e023b5b87c046ad2888531668ba4d  config/state/supply/KS.yaml
-  be8df301c1d0bba23cce1f35e9842a1c  config/state/supply/KY.yaml
-  3864184682516b3c060d436e2e6d5931  config/state/supply/LA.yaml
-  da42ab0a65db8040622a0a72e97db8c0  config/state/supply/MA.yaml
-  31328de2b9c806bea057969e88f8737a  config/state/supply/MD.yaml
-  2d3aa755444b3bca58ac91271a8efba8  config/state/supply/ME.yaml
-  720a154e909b39e1438c2fe86bcc214a  config/state/supply/MI.yaml
-  4e6b09835b2f3cf8ff81561570dd5c4a  config/state/supply/MN.yaml
-  f98a656bb3a25b4f77c36008c5481768  config/state/supply/MO.yaml
-  e511abee151453ee545d6139e993f14b  config/state/supply/MS.yaml
-  024570b821240ba410a2cc24617c3e78  config/state/supply/MT.yaml
-  e269b2c5fc96c56c2ce647fc788e3bad  config/state/supply/NC.yaml
-  586f8ca6f26fa5820739c71e4292117e  config/state/supply/ND.yaml
-  fbc619eacf311b57a91ea757a3909966  config/state/supply/NE.yaml
-  9526d82dae847bce867dbf9adfdf81d1  config/state/supply/NH.yaml
-  2c892169260db5e922e1187beef2d19f  config/state/supply/NJ.yaml
-  33f21159ba0fa66d20bd490de64cc065  config/state/supply/NM.yaml
-  2973f12d72c4b025bc90b4276703a3bb  config/state/supply/NV.yaml
-  68aa48f4694293bcd4b7a6bd31fd2957  config/state/supply/NY.yaml
-  ea67d2c169eeeb6c1c38fee0d48697e4  config/state/supply/NYC.yaml
-  a4c857ea9ceb57b98e6ed97b0d5c692d  config/state/supply/OH.yaml
-  ae66ea6fd6471c2aa144f22617c2dc9f  config/state/supply/OK.yaml
-  c4a536de7e121c5a6668c1adf5fcef5c  config/state/supply/OR.yaml
-  82e0bd29a4428ea26c6c6520dd1e4520  config/state/supply/PA.yaml
-  34c21c26ca8ab3f51825a81f657fcc71  config/state/supply/RI.yaml
-  488281ac66660c9a9aeb98d0ccde1dfd  config/state/supply/SC.yaml
-  909905e7bf2cc3bbf43531fe7f5b7598  config/state/supply/SD.yaml
-  b72060d7391ccd6c04c3b38456a4a4fb  config/state/supply/TN.yaml
-  3666a7de4cb5df2905ea541defdaadc8  config/state/supply/TX.yaml
-  48db285c0731d3b3ed2e4922aafba112  config/state/supply/UT.yaml
-  cb6bc5c50c61274d1f428b37281ae783  config/state/supply/VA.yaml
-  7d9152b66f092973b9a99b5339d27d94  config/state/supply/VT.yaml
-  2d875e59818b920fc48b934ea64cc87e  config/state/supply/WA.yaml
-  a7aed843237c488ad8bce18dfebb3826  config/state/supply/WI.yaml
-  dc2b9185575b65023926e569df9043db  config/state/supply/WV.yaml
-  11a98ee16d3e1ebd545337c6f91d7809  config/state/supply/WY.yaml
+  72334c516f77552468c2710e2c4942f8  config/state/supply/AK.yaml
+  ed4c34ed5009bbafaaeac5f2baa05e8c  config/state/supply/AL.yaml
+  28a23056b59c2fb0aafb26a2428fb635  config/state/supply/AR.yaml
+  fa8a39c868d6140de3d4879e473e1007  config/state/supply/AZ.yaml
+  504f73ab83aad0fdf067160e0472e542  config/state/supply/CA.yaml
+  cffd33d3da7bc4f29792021a8e072551  config/state/supply/CO.yaml
+  b9a98ae31f972c7e428ea058bfcda769  config/state/supply/CT.yaml
+  da8133ce980b98ee1b03aa4313c85dce  config/state/supply/DC.yaml
+  ca9f587c9595b03e08e0047d41a8d3a8  config/state/supply/DE.yaml
+  f0e55ed00bc46abee8ad8a65996aa5d5  config/state/supply/FL.yaml
+  582987b1e43ac5acff276a1b4b9a57d5  config/state/supply/GA.yaml
+  b43f120b4a06ea96cbd84cf12864b6ab  config/state/supply/HI.yaml
+  1cd96261b9b2f2693c6dc346d21ebe0b  config/state/supply/IA.yaml
+  c039f9dfe7ba0fb8f8f139c91f387e67  config/state/supply/ID.yaml
+  347903a7fbb04d1f83f7ad03deb6f1f4  config/state/supply/IL.yaml
+  abbf2fe2d970b7f3f02dc40865410057  config/state/supply/IN.yaml
+  6e65123893c8d67652d0da73adeef46e  config/state/supply/KS.yaml
+  d4e99fa231e8d3539058b6446b67cdbf  config/state/supply/KY.yaml
+  96e492704b4702a174eca5750ccf4536  config/state/supply/LA.yaml
+  b69bd6bc35de3f9f52151f2c5dcb1a69  config/state/supply/MA.yaml
+  f2fa654a8092ee41dc7698e85876041e  config/state/supply/MD.yaml
+  b7d43c8790b55747e33fedf50138dcb3  config/state/supply/ME.yaml
+  3e24903793fb8cd951d0c345252eb1ef  config/state/supply/MI.yaml
+  f7ed8e6f89f782988d37cd19653f533d  config/state/supply/MN.yaml
+  4f5c11981a4cb8256e522504565ab2f4  config/state/supply/MO.yaml
+  664dacd88f1068d04889409ef85ee842  config/state/supply/MS.yaml
+  bfae1ca92993fa9e11975d805510c654  config/state/supply/MT.yaml
+  41cd5af6aa5017f7224a19ddbe73df80  config/state/supply/NC.yaml
+  eeae64665694335cb7817d1608fda7be  config/state/supply/ND.yaml
+  ee0b968586940b86b56a0d3927b7864c  config/state/supply/NE.yaml
+  08b78a48ae1d6629404abe61148eccb5  config/state/supply/NH.yaml
+  10691b3a524744b981bdb7c7439ab4e7  config/state/supply/NJ.yaml
+  45e357c8b1a12dac741cd88adb3b142f  config/state/supply/NM.yaml
+  52948237650cb69ae9dee0b43ccbbc76  config/state/supply/NV.yaml
+  a9ecb6a8392cd7f8fc7956a36d0848b2  config/state/supply/NY.yaml
+  8a44e07cbed404e8dd456cc46a516493  config/state/supply/NYC.yaml
+  b3b399406af802f9f783139dd07f7898  config/state/supply/OH.yaml
+  47c33cba3fb6b3a9ce6547712b2089d9  config/state/supply/OK.yaml
+  15edc0a4e1a2cd18a4866763d10b8a0a  config/state/supply/OR.yaml
+  608adb36937134a397ed07a6f62a81b2  config/state/supply/PA.yaml
+  b7880fbac098d701f02af3523b52cd27  config/state/supply/RI.yaml
+  efd92438237e413047055a1d16778226  config/state/supply/SC.yaml
+  d6446c03ba5ccebd9dd6efda234bb2e4  config/state/supply/SD.yaml
+  cdbfce163d3c7abfeb21ac5a0a88a39d  config/state/supply/TN.yaml
+  4a2ab50d5179de059f7be00e7d9574c9  config/state/supply/TX.yaml
+  a73c8e60ed42d26e678eafdd0887804c  config/state/supply/UT.yaml
+  2d510251d7bbba1e3f1df982494c55ec  config/state/supply/VA.yaml
+  984d53c38ad7213c1ace3ab8bf9cd339  config/state/supply/VT.yaml
+  9b35fd62c330b71b2326f63d51039356  config/state/supply/WA.yaml
+  61f1fd17a352f279e988b8b1be2f5fb4  config/state/supply/WI.yaml
+  acc3bd352a6f69d789d75905ab35286a  config/state/supply/WV.yaml
+  303e482062445160c2f39929a651a366  config/state/supply/WY.yaml

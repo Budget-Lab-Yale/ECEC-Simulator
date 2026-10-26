@@ -1,10 +1,9 @@
 #------------------------------------------------------------------------------
 # income_rank.R
 #
-# Income-rank scheme for care-choice forest (1b), price wedge income-quintile
-# grids (center_low, other_paid: 1a builds on NSECE ranks,
-# price_wedge_income_pctiles() ranks ACS parent unit baseline AGI --
-# compute_price_wedge_cache.R),
+# Income-rank scheme for care-choice forest (1b), price forest income
+# percentile (1a trains on NSECE ranks, price_wedge_income_pctiles() ranks
+# ACS parent unit baseline AGI -- compute_price_wedge_cache.R),
 # 1a price-by-income diagnostic. One scheme for training (NSECE) and
 # prediction (ACS). Set by env var ECEC_INCOME_RANK (config.R ->
 # income_rank_scheme); unset -> derived from ECEC_URBAN_DENSITY

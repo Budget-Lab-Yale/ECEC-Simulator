@@ -167,10 +167,9 @@ if (length(extra)) {
 
 # AGE5_NHES_NATIONAL (00_) -- NHES-ECPP 2019, recomputed by its recipe:
 # children not yet in kindergarten, center program now, ages 3+ at
-# 2018-12-31, share 5+, weight FEWT, national. File in raw/US/
+# 2018-12-31, share 5+, weight FEWT, national. File via raw_path()
 # -- absent, block says so, counts nothing.
-NHES_FILE <- file.path('resources', 'nhes',
-                       'US_NHES__ecpp_public_use_file__2019.csv')
+NHES_FILE <- raw_path('US_NHES__ecpp_public_use_file__2019.csv')
 if (file.exists(NHES_FILE)) {
   nh <- read_csv(NHES_FILE, show_col_types = FALSE)
   base <- nh$CPNNOWX == 1 & nh$AGE2018 >= 3

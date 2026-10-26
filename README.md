@@ -93,7 +93,7 @@ config/
 ├── wage_floor/               # Wage floor configs (YAML)
 ├── demand/                   # Calibrated demand parameters (timestamped)
 ├── supply/                   # Calibrated supply parameters (timestamped)
-└── state/                    # State inputs: demand, supply, employment, aging (per geography)
+└── state/                    # State inputs: demand, demand_counts, supply, employment (per geography)
 
 tests/                        # testthat test suite
 slurm/                        # SLURM parallel execution scripts
@@ -101,7 +101,7 @@ slurm/                        # SLURM parallel execution scripts
 
 ## Model Flow
 
-1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment (random forest), price wedges (weighted empirical NSECE price distribution per care type, by income quintile for low-priced center and Other Paid), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`; see `docs/ecec_team_taxid_memo_2026-08-17.md`).
+1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment (random forest), price wedges (price quantile regression forest per care type), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`; see `docs/ecec_team_taxid_memo_2026-08-17.md`).
 
 2. **Calibration** - Estimates CRRA demand parameters (beta, rho) by targeting empirical elasticities. Backs out household-level preference heterogeneity (alpha matrices) from observed/imputed choice probabilities.
 
@@ -379,7 +379,7 @@ The 52-geography, 1% ACS sample for 2026--2027 completed successfully (job
 `30293994`, output `202610221441`). All 104 price solves and employment targets
 pass: maximum paid-sector gap $0.000319/child-hour and maximum employment miss
 0.0002545 percentage points. Local source, supply, and annual wage checks pass.
-The refreshed 2019 NDCP comparison covers 46 states (weekly RMSE $34.73,
-correlation 0.892). The strict NY/NYC hours-additivity diagnostic still fails;
+The refreshed 2019 NDCP comparison covers 46 states (weekly RMSE $33.98,
+correlation 0.897). The strict NY/NYC hours-additivity diagnostic still fails;
 the methodology appendix explains the care-mix difference. Adaptive employment-shift
 bounds are covered by `Rscript tests/test_employment_shift_bounds.R`.

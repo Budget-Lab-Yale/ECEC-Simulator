@@ -34,24 +34,42 @@ are kept outside git. This file is the map, and the record of every
 source. A machine-readable source register (one row per source and geography,
 with its URL, vintage, and retrieval date) is kept outside git.
 
+## Status: paused 26 October
+
+Work on this branch is paused. Two items are open:
+
+1. **The state staffing inputs still have an issue.** The audit below passes, but
+   the inputs are not final. Do not treat the 312 reviewed records as settled.
+2. **The paired state smoke from 24 October did not run.** The 24 October commit
+   (`cc915b7`) waited on it after the Bouchet SSH master dropped. No ECEC job
+   ran on Bouchet after 23 October.
+
 ## 22 October supply update
 
 Annual wage inputs contain 1,473 occupation records and 728 geography/year/education
 ratios. All 52 saved wage paths match the source panel. The staffing review covers
-312 of 312 unweighted geography/setting/age records. Only 28 change a number;
-the other 284 confirm the old input. Supply files have been rebuilt with all reviewed
-values and no unresolved staffing records. Local source, supply, and annual wage checks pass.
+312 of 312 unweighted geography/setting/age records. On 22 October, 28 changed a
+number and the other 284 confirmed the old input. On 26 October the one-adult home
+rule and the ordinary center band (below) changed 10 more: 38 records now differ
+from the 2017 input (31 changed values, 7 home values with no 2017 value) and 274
+confirm it. Center inputs are now month-weighted from full age bands. Supply files
+have been rebuilt with all reviewed values and no unresolved staffing records.
+Local source, supply, and annual wage checks pass.
 
-The updated 1% ACS sample completed 2026--2027 for all 52 geographies on
-22 October with all 28 numerical staffing corrections (job `30293994`, exit 0,
-38 minutes). All 104 price solves and employment targets passed. The largest
-paid-sector price gap was $0.000319 per child-hour; the largest employment miss
-was 0.0002545 percentage points. Extracted diagnostics are in
-`out/integrated_validation_current.{csv,json}` and `out/integrated_employment_current.csv`.
+The 1% ACS sample completed 2026--2027 for all 52 geographies on 26 October with
+the current staffing inputs (one-adult home rule, month-weighted ordinary center
+bands, NY blend, licensed-share home blend) on calibration interface
+`202610261104` (run `202610261506`, job `30885764`, exit 0, 36 minutes). All 104
+price solves and employment targets passed. The largest paid-sector price gap was
+$0.00033 per child-hour (OR 2026); the largest employment miss was 0.00019
+percentage points. `Rscript state_data/cluster/integrated_validation.R <run root>
+<out prefix>` on Bouchet writes `out/integrated_validation_current.csv` (solver),
+`_employment.csv`, `_summary.csv`, and a provenance file with the supply YAML
+hashes. The supply YAMLs the run read match the committed ones.
 
-The refreshed 2019 NDCP comparison covers 46 states: weekly RMSE is $34.73,
-correlation is 0.892, and the child-weighted model mean is 11.8% above NDCP.
-2020--2022 weekly RMSE is $39.20, $41.71, and $47.35 across 46, 41, and 45 states.
+The refreshed 2019 NDCP comparison covers 46 states: weekly RMSE is $33.98,
+correlation is 0.897, and the child-weighted model mean is 11.7% above NDCP.
+2020--2022 weekly RMSE is $38.34, $41.09, and $46.93 across 46, 41, and 45 states.
 Program-count and other source checks pass. The corrected 23 October NY/NYC
 diagnostic validates common-rank partition identities and reports differences
 between independently calibrated geographies. `--strict-additivity` retains
@@ -66,8 +84,8 @@ program type, and need for an assistant. A source's publication year alone is no
 enough. A reviewed record can confirm an existing value without changing it.
 
 Current coverage is 312 reviewed records and zero unresolved records. The strict
-`--require-verified` source/hash check passes. The last 13 reviews confirmed
-existing numbers; job `30293994` contains all 28 numerical corrections.
+`--require-verified` source/hash check passes. Job `30293994` (22 October) ran
+with the first 28 numerical corrections, not the 26 October changes.
 
 Run `python state_data/code/analyze_licensing_2019.py` from the repository root.
 It checks source hashes and writes `out/licensing_2019_audit.csv` and
@@ -81,25 +99,68 @@ The registry is under `resources/licensing/` in the repository root:
 - `licensing_2019_search_log.csv`: unresolved questions and next source to check.
 - `licensing_2019_home_configurations.csv`: total and preschool capacity,
   required adults, infant limits, and school-age additions.
+- `licensing_2019_center_bands.csv`: each geography's ordinary center ratio bands,
+  0 to 60 months (220 rows, all read in the cited source).
 
 For a conditional record, `permitted_values` lists legal alternatives and
 `selection_basis` explains the chosen model input. This does not imply one ratio
 applies to every provider or every child of that age.
 
-For centers, the input is children per adult at the model's five ages. For homes,
-it is regulated capacity excluding school-age-only additions. Home capacity is a
-rough staffing measure: Arkansas's 16, Rhode Island's 8, and Washington's 12
-require additional staff under the chosen arrangements. The model uses inverse
-capacity. The national NSECE anchor already includes respondent plus helpers;
-the capacity index does not represent state differences in required adult counts.
-The selected two-adult sensitivity for AR/RI/WA, renormalized over 50 states and
-DC, raises their 2019 home-care anchor prices by 35.4%, 39.3%, and 30.0%.
-Three adults at AR's selected capacity raises its anchor by 71.0%.
-These are illustrative base-price sensitivities, not fitted staffing estimates
-or equilibrium results. `Rscript state_data/code/analyze_home_staffing.R` from repository root writes `out/home_staffing_sensitivity.csv`.
-RI's source also permits limited provider absence when an assistant is present;
-licensed headcounts do not establish an exact adult-hour requirement. Age limits and
-own-child counting remain in the evidence and configuration records.
+For centers, I use the **ordinary band**: the ratio that applies to a child of
+that age by default, without opt-in groupings (special age groups, toddler
+extensions that need parent agreement, Montessori or half-day ratios, two-adult
+group bonuses). Where bands overlap, a month takes the band that starts latest at
+or before it. I **month-weight** each year of age: staff per child for age a is
+the mean of 1 / ratio over months 12a to 12a + 11. The five audited age points
+(11, 18, 35, 36, and 48 months) must equal the band at that month, so the audit
+checks the bands. On 26 October the ordinary band changed six points: AL 35
+months 8 to 11, CO 35 months 7 to 8, KS 35 months 7 to 10, MN 35 months 7 to 10,
+VT 35 months 5 to 6, and VT 3 years 6 to 10. The NY center input blends the New
+York State and NYC rules by staff per child, at NYC's share of New York children
+ages 0-4 (0.4647, PEP 2019); the NYC run keeps NYC's own rules. For homes,
+I use one rule in every geography: **one adult, mixed-age**. The input is the
+maximum number of preschool children (ages 0-4, school-age-only additions excluded)
+that one adult may care for when an infant may be present. I never use a
+configuration that needs a second adult, and I never use a preschool-only
+configuration that excludes infants. NYC homes use the New York State rule.
+Licensing applies only to licensed homes, so I blend the home index toward 1:
+home index = 0.257 x licensing index + 0.743. The 0.257 is the share of children
+ages 0-5 in paid home-based care who are in licensed (listed) homes, NSECE 2019
+home-based provider survey with survey weights
+(`state_data/cluster/nsece_home_licensed_share.R` writes
+`resources/supply/US_NSECE__home_licensed_share__2019.csv`; paid children of any
+age give 0.243, all children 0.209). Unlicensed paid home care keeps the national
+staffing level. Home indices run from 0.873 (SD) to 1.135 (AZ, MS, and RI).
+On 26 October this rule changed seven home inputs:
+
+- Arkansas: 16 (two or three adults) to 8 (one caregiver, at most one child under 2).
+- Kansas: 7 (no child under 18 months) to 6 (one to three children under 18 months).
+- Maine: 8 (all children ages 2-5) to 6 (at most three children under 2).
+- Mississippi: 12 (all children age 2 or older) to 4. The youngest child sets the
+  ratio, and an infant under 1 sets it at 4. If the youngest child is age 1, the
+  ratio is 8.
+- Rhode Island: 8 (full-time assistant) to 4. A provider alone with any child under
+  18 months may have at most four children under 6.
+- Virginia: 8 (all children ages 2-4) to 7. One infant (4 points) plus six children
+  ages 2-4 (2 points each) uses the 16-point limit.
+- Washington: 12 (qualified assistant) to 6. A second staff member is required when
+  more than six children are in care and any child is under 2.
+
+Florida (6) and Wisconsin (8) keep their numbers but now cite a configuration that
+admits infants. Nevada stays at 6 with all children age 3 or older: its 2017 table
+does not settle the capacity of a mixed group with an infant. The model uses
+inverse capacity. The national NSECE anchor already includes respondent plus helpers.
+
+`Rscript state_data/code/analyze_home_staffing.R` from repository root writes
+`out/home_staffing_sensitivity.csv`. It swaps AR, RI, and WA to their licensed
+multi-adult configurations (adults divided by capacity) and renormalizes over
+50 states and DC. The two-adult configurations give the same staff per child as
+the one-adult inputs (2/16, 2/8, and 2/12), so their anchor prices do not change.
+Three adults at AR's 16 raises AR's 2019 home-care anchor price by 26.1%. These are
+illustrative base-price sensitivities, not fitted staffing estimates or equilibrium
+results. RI's source also permits limited provider absence when an assistant is
+present; licensed headcounts do not establish an exact adult-hour requirement.
+Age limits and own-child counting remain in the evidence and configuration records.
 
 `Rscript state_data/code/review_home_staffing_inputs.R` writes
 `out/home_staffing_input_review.csv`: one record for each of 52 geographies,
@@ -118,8 +179,10 @@ calibration target. `Rscript tests/test_home_staffing_review.R` checks home/cent
 column isolation, unknown flags, audit coverage, and unchanged production YAMLs.
 
 Source documents stay under `raw/<STATE>/`; national source files are under
-`resources/<SOURCE>/` in the repository root. `docs/SOURCES.csv` gives the full
-source list. Acquisition logs record successful and failed downloads separately.
+`resources/<SOURCE>/` in the repository root. The full source list,
+`docs/SOURCES.csv`, is kept outside git; the tracked staffing register is
+`resources/licensing/licensing_2019_sources.csv`, and each derived file carries a
+`.provenance.txt`. Acquisition logs record successful and failed downloads separately.
 
 The 13 final capacity-source reviews, supply rebuild, center NDCP refresh, and
 52-geography baseline validation are complete. A home capacity is not a complete
@@ -286,7 +349,7 @@ cluster/baseline_consistency.R          re-anchored 2019 children vs target coun
                                         employment vs forest base rate; 2026 care hours
                                         with vs without employment shifts (runs on the
                                         cluster; alpha_drift.sbatch <mode> <run>
-                                        baseline_consistency)
+                                        <calib> <run dir> baseline_consistency)
 cluster/state_check_summary.sh          start-of-run state checks per geography from a
                                         state run's log (out/state_checks_<run>.csv)
 cluster/acs_kindergarten_flags_2019.py  ACS 2019 children 0-4 already in kindergarten
@@ -431,7 +494,7 @@ so.
 | National supply parameters | Simulator's NSECE calibration | `resources/supply/US_NSECE__national_supply_parameters__2019.yaml` | 2019 | step 7; simulator base-year labor |
 | State employment paths | ACS state age-sex composition × CBO national cell rates, scaled to the national rate | `resources/epop/US_ACS__epop_by_state_sex_age__2006-2024.csv`, `resources/epop/epop_projections.csv` | 2006–2024 composition | step 8 |
 | Center enrollment by age | ACF, *Measuring Supply Capacity at Center-based CCEE Programs* (2023), Exhibit 1, NSECE 2019, ages 0–4 | constant, `code/shared_nsece_ages.R` (with the age-to-licensing-point map) | 2019 | supply centre staffing index weights |
-| Licensing ratios | Reviewed October 1, 2019 center ratios at five representative ages and home capacity excluding school-age additions; 2017 study retained as comparison baseline | `resources/licensing/licensing_2019_evidence.csv` → `resources/supply/licensing_ratios_reviewed_2019.csv` (`resources/supply/00_update_state_supply.R`) | October 1, 2019 | supply staffing index; home capacity is a proxy, assistant conditions retained separately |
+| Licensing ratios | Reviewed October 1, 2019 ordinary center ratio bands, month-weighted by year of age, and home capacity excluding school-age additions; 2017 study retained as comparison baseline | `resources/licensing/licensing_2019_evidence.csv`, `licensing_2019_center_bands.csv` → `resources/supply/licensing_ratios_reviewed_2019.csv` (`resources/supply/00_update_state_supply.R`) | October 1, 2019 | supply staffing index; home input is one-adult, mixed-age capacity with an infant present, assistant configurations retained separately |
 | CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `resources/ccdf/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
 | Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `resources/idea/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
 | Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `resources/ndcp/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `resources/ndcp/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |

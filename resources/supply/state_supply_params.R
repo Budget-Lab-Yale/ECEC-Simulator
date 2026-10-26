@@ -31,15 +31,20 @@
 # NSECE 2019 centre enrolment age mix, / same quantity averaged over 51
 # states w/ PEP 2019 children 0-4 weights. Home index = 1 / licensed max
 # children per family child care home, / 0-4-weighted mean over states that
-# license homes; state w/out home licence -> 1. Centre index scales all three
+# license homes; state w/out home licence -> 1; blended toward 1 by NSECE
+# licensed share of paid home-based children (licensing binds licensed homes
+# only; unlicensed paid home care at national level). Centre index scales all three
 # centre sectors, home index paid_home_based, both education groups alike.
 # Ratios: reviewed October 1, 2019 rules, licensing_ratios_reviewed_2019.csv.
 # 2017 study retained as baseline/fallback; source audit refreshed by 00_.
-# Five representative ages (NSECE_AGE_POINT): 11 months, 18 months, 35 months,
-# 3 years, 4 years for ages 0-4; one aggregate center index, no new choices.
-# Home capacity excludes school-age-only additions; inverse capacity proxy
-# doesn't adjust for assistants. Conditions retained in licensing registry.
-# NYC own center rules, NYS home rules; excluded from national mean (inside NY).
+# Centre ratio per year of age 0-4 (NSECE_AGE_YEAR): ordinary age bands,
+# month-weighted (licensing_ratios_2019.R centre_age_years()); NY blends NYS,
+# NYC rules by NYC child share. One aggregate center index, no new choices.
+# Home capacity: one adult, mixed-age -- max preschool children one adult may
+# care for w/ infant present; excludes school-age-only additions, second-adult,
+# preschool-only configurations. Conditions retained in licensing registry.
+# NYC own center rules, NYS home rules; excluded from national mean (inside NY,
+# NY row already carries NYC's share).
 # Historical 2014/2017, three/five-point comparisons remain diagnostics only.
 
 #
@@ -90,9 +95,13 @@ GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 RATIOS  <- file.path(DIR, 'licensing_ratios_reviewed_2019.csv')
 POP_0_4 <- file.path('resources', 'census_population',
                      'US_PEP__population_children_age_0_4_by_county__2019.csv')
+# Licensed share of children in paid home-based care, NSECE 2019
+# (state_data/cluster/nsece_home_licensed_share.R, measure children_0_5)
+HOME_SHARE <- file.path(DIR, 'US_NSECE__home_licensed_share__2019.csv')
 
 # NSECE_CENTRE_ENROLLED (NSECE 2019 centre enrolment by age 0-4),
-# NSECE_AGE_POINT (age 0-4 -> licensing age point in RATIOS), NSECE_AGE_BAND
+# NSECE_AGE_YEAR (age 0-4 -> age-year row in RATIOS), NSECE_AGE_POINT (2017
+# age point), NSECE_AGE_BAND
 # (age 0-4 -> 2014 band), NSECE_AGES_0_4 --
 # state_data/code/shared_nsece_ages.R
 source('state_data/code/shared_nsece_ages.R')
@@ -122,7 +131,32 @@ require_input <- function(path, hint = '') {
 
 
 
-licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
+home_licensed_share <- function(path = HOME_SHARE) {
+
+  #----------------------------------------------------------------------------
+  # Licensed share of children 0-5 in paid home-based care, NSECE 2019 listed
+  # vs paid unlisted home-based providers (measure children_0_5).
+  #
+  # Params:
+  #   - path (chr): nsece_home_licensed_share.R output
+  #
+  # Returns: (dbl) share in (0, 1)
+  #----------------------------------------------------------------------------
+
+  require_input(path, ' -- run state_data/cluster/nsece_home_licensed_share.R on cluster')
+  s <- read_csv(path, show_col_types = FALSE) %>%
+    filter(measure == 'children_0_5') %>%
+    pull(licensed_share)
+  if (length(s) != 1 || !is.finite(s) || s <= 0 || s >= 1) {
+    stop(path, ': no valid children_0_5 licensed share')
+  }
+  s
+}
+
+
+
+licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
+                              home_share = home_licensed_share()) {
 
   #----------------------------------------------------------------------------
   # Licensing staffing index, every geography in ratios file.
@@ -130,13 +164,17 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
   # NSECE_CENTRE_ENROLLED ages 0-4, map = age_map, r = licensed children per
   # staff; index = geo value / PEP children-0-4-weighted mean over 50 states
   # + DC. Home: 1 / max children, same weighting over states that license
-  # homes; geo w/ home value NA (no home licence) -> index 1. NYC carries own
-  # rows, not in national mean (inside NY).
+  # homes; geo w/ home value NA (no home licence) -> 1. Licensing binds
+  # licensed homes only -- home index = home_share x licensing index +
+  # (1 - home_share), unlicensed paid home care at national level; national
+  # mean stays 1. NYC carries own rows, not in national mean (inside NY).
   #
   # Params:
   #   - ratios (chr): csv w/ state, setting, age_group, children_per_staff
   #   - age_map (chr): age_0..age_4 -> centre age_group in ratios;
-  #     NSECE_AGE_POINT (2017 file, 5 points), NSECE_AGE_BAND (2014 file)
+  #     NSECE_AGE_YEAR (reviewed 2019 file), NSECE_AGE_POINT (2017 file, 5
+  #     points), NSECE_AGE_BAND (2014 file)
+  #   - home_share (dbl): licensed share of paid home-based children
   #
   # Returns: (tibble) state, centre, home -- indices
   #----------------------------------------------------------------------------
@@ -193,7 +231,7 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_POINT) {
   centre %>%
     transmute(state, centre = s / natl_mean(centre)) %>%
     inner_join(home %>% transmute(state, home = s / natl_mean(home)), by = 'state') %>%
-    mutate(home = ifelse(is.na(home), 1, home))
+    mutate(home = home_share * ifelse(is.na(home), 1, home) + (1 - home_share))
 }
 
 

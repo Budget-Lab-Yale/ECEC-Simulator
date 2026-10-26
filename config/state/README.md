@@ -9,6 +9,7 @@ Full design: `docs/state_level_analysis.md`.
 ```
 state/
 ├── demand/<ST>.csv       # Base-year (2019) annual hours by care type
+├── demand_counts/<ST>.csv  # Base-year children by care type (00_build_demand_targets.R)
 ├── supply/<ST>.yaml      # Supply params (schema = estimation/supply/supply_2019.yaml)
 └── employment/<ST>.csv   # Epop projections (schema = resources/epop/epop_projections.csv)
 ```
@@ -48,8 +49,9 @@ refreshes the staffing audit, and rebuilds reviewed staffing, annual wages,
 and supply YAMLs. Set `PYTHON` to a working Python executable if needed.
 `Rscript resources/supply/state_supply_params.R --check` validates complete
 payloads without writing. Staffing uses reviewed October 1, 2019 rules;
-home inputs are licensed-capacity proxies, with assistant conditions retained
-in `resources/licensing/licensing_2019_home_configurations.csv`.
+home inputs use one rule, one adult, mixed-age: the maximum number of preschool
+children one adult may care for when an infant may be present. Assistant and
+other configurations stay in `resources/licensing/licensing_2019_home_configurations.csv`.
 
 ## employment/<ST>.csv
 

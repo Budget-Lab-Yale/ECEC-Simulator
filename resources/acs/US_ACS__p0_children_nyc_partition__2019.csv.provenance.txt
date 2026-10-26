@@ -1,10 +1,3 @@
-interface: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610191203
-urban_density: 1
-income_rank: national_rpp
-NY, NYC_parent, NYR: national alpha p0; NYC: own alpha p0
-NY = NYC_parent + NYR in every care/hour cell; NYC own p0 intentionally separate
-  72f541052a7739b5f3e19bfe13be6d0d  /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610191203/estimation/data/acs_households_2019.csv
-  ee4aec932d38759999469dbaf07f4927  /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610191203/estimation/alpha_c1_2019_NYC.rds
-  983d3128b4fcda2afbe96a238b1cd750  /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610191203/estimation/alpha_c1_2019.rds
-  7e4b009921c4e213041eb3fef4f4f2dd  /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610191203/estimation/alpha_c2plus_2019_NYC.rds
-  90cce135f708971e31e33d1d9cfab21f  /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610191203/estimation/alpha_c2plus_2019.rds
+interface: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610261104
+NY, NYC_parent, NYR: national alpha p0; NYC: production p0 (own when available)
+NY = NYC_parent + NYR; partition controls never replace production NYC p0

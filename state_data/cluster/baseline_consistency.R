@@ -69,8 +69,8 @@ file.copy(src_est, output_root, recursive = TRUE)
 captured <- list()
 .orig_adjust <- adjust_alpha_for_state
 adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids, targets_csv_path,
-                                   state_postal) {
-  r <- .orig_adjust(alpha_data_by_type, state_hh_ids, targets_csv_path, state_postal)
+                                   state_postal, ...) {
+  r <- .orig_adjust(alpha_data_by_type, state_hh_ids, targets_csv_path, state_postal, ...)
   captured[[state_postal]] <<- list(res = r, alpha_data = alpha_data_by_type,
                                     hh = state_hh_ids, targets = targets_csv_path)
   r

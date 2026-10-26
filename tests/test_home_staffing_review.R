@@ -31,8 +31,10 @@ test_that('all home inputs audited without promoting unresolved assumptions', {
   audit <- review_home_staffing_inputs()
   expect_equal(nrow(audit), 52)
   expect_false(any(audit$ready_for_production))
-  expect_equal(audit$minimum_documented_adults[match(c('AR', 'RI', 'WA'), audit$geo)], c(2, 2, 2))
-  expect_equal(audit$maximum_documented_adults[audit$geo == 'AR'], 3)
+  # One adult, mixed-age rule: every capacity-matched selection has a one-adult configuration
+  expect_equal(audit$minimum_documented_adults[match(c('AR', 'RI', 'WA'), audit$geo)], c(1, 1, 1))
+  expect_equal(audit$maximum_documented_adults[audit$geo == 'AR'], 1)
+  expect_true(all(audit$minimum_documented_adults == 1, na.rm = TRUE))
   expect_true(all(audit$adult_count_status[is.na(audit$minimum_documented_adults)] ==
                     'unresolved_configuration_mapping'))
   expect_identical(tools::md5sum(supply), before)

@@ -460,29 +460,45 @@ not); it scales `paid_home_based`. Rules come from the reviewed October 1, 2019 
 The derived input is `resources/supply/licensing_ratios_reviewed_2019.csv`;
 the 2017 study remains the comparison baseline and fallback for unresolved rows.
 All 312 unweighted geography/setting/age records are reviewed, with no fallback
-currently used. There are 28 numerical changes, including seven home values
-that replace missing baseline values.
+currently used. There are 38 numerical differences from the 2017 input,
+including seven home values that replace missing baseline values.
 
-I map ages 0, 1, 2, 3, and 4 to 11 months, 18 months, 35 months, 3 years,
-and 4 years (`state_data/code/shared_nsece_ages.R`). I weight inverse center
-ratios by NSECE 2019 center-enrolled children: 426,000, 718,000, 1,010,000,
-2,170,000, and 2,340,000 weighted children. One representative age stands for
-each whole year; rule cutoffs within that year are not split. I normalize by
-the 2019 child-population-weighted mean over 50 states and DC. NYC is a separate
-output and is excluded from that mean because it is already inside NY.
-Current center indices range from 0.722 (GA) to 1.458 (VT).
+Center inputs come from each geography's ordinary age bands,
+`resources/licensing/licensing_2019_center_bands.csv` (0 to 60 months). The
+ordinary band is the default ratio for a child of that age, without opt-in
+groupings; where bands overlap, a month takes the band that starts latest at or
+before it. I month-weight each year of age: staff per child for age a is the
+mean of 1 ÷ ratio over months 12a to 12a + 11, so cut-offs inside a year
+(for example 18 months) are split. The audited points at 11, 18, 35, 36, and
+48 months must equal the band at that month. I weight the five age-year values
+by NSECE 2019 center-enrolled children: 426,000, 718,000, 1,010,000, 2,170,000,
+and 2,340,000 weighted children. The NY input blends New York State and NYC
+staff per child at NYC's share of New York children ages 0-4 (0.4647, PEP 2019).
+I normalize by the 2019 child-population-weighted mean over 50 states and DC.
+NYC is a separate output and is excluded from that mean because it is already
+inside NY. Current center indices range from 0.715 (GA) to 1.351 (ND).
 
-I use licensed home capacity excluding school-age-only additions as a proxy,
-not children per adult. The reviewed configurations retain infant limits,
-own-child counting, and assistant requirements in
-`resources/licensing/licensing_2019_home_configurations.csv`. AR's selected
-capacity of 16 requires two or three adults, RI's eight requires an assistant,
-and WA's 12 requires an assistant. The national NSECE home anchor already counts respondent plus helpers.
-Inverse capacity does not capture state differences in required adult counts.
-The AR/RI/WA two-adult sensitivity raises their 2019 home-care anchor prices
-by 35.4%, 39.3%, and 30.0% after national renormalization; these are base-price
-sensitivities, not equilibrium results. `state_data/code/analyze_home_staffing.R`
-writes the scenario table without changing production inputs. Current home indices range from 0.394 (AR) to 1.574 (AZ).
+For homes I use one rule in every geography: **one adult, mixed-age**. The input
+is the maximum number of preschool children (ages 0-4, school-age-only additions
+excluded) that one adult may care for when an infant may be present. I never use
+a configuration that needs a second adult, and I never use a preschool-only
+configuration that excludes infants. NYC homes use the New York State rule.
+The reviewed configurations retain infant limits, own-child counting, and
+assistant alternatives in `resources/licensing/licensing_2019_home_configurations.csv`.
+This rule replaced seven earlier home inputs on 26 October: AR 16 to 8, KS 7 to 6,
+ME 8 to 6, MS 12 to 4, RI 8 to 4, VA 8 to 7, and WA 12 to 6. Nevada stays at 6;
+its source does not settle mixed groups with an infant. The national NSECE home
+anchor already counts respondent plus helpers. AR, RI, and WA's licensed
+two-adult configurations give the same staff per child as their one-adult inputs,
+so that sensitivity leaves their anchor prices unchanged; three adults at AR's 16
+raises AR's 2019 home-care anchor price by 26.1% after national renormalization.
+These are base-price sensitivities, not equilibrium results.
+`state_data/code/analyze_home_staffing.R` writes the scenario table without
+changing production inputs. Licensing applies only to licensed homes, so I blend
+the home index toward 1: home index = 0.257 x licensing index + 0.743, where 0.257
+is the licensed share of children ages 0-5 in paid home-based care (NSECE 2019
+home-based provider survey, `resources/supply/US_NSECE__home_licensed_share__2019.csv`).
+Current home indices range from 0.873 (SD) to 1.135 (AZ, MS, and RI).
 All 52 home inputs are now numeric; the neutral index remains a fallback for
 future unresolved unlicensed-home rows. Historical 2014/2017 and three/five-point
 comparisons in `state_data/out/licensing_ratio_change_*.csv` describe the old

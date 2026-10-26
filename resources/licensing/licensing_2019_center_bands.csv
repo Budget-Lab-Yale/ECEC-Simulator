@@ -1,0 +1,221 @@
+geo,from_months,to_months,children_per_staff,source_id,locator,status,note
+AK,0,19,5,AK_DHSS__rules__2016_web_extract,"7 AAC 57.505(c) table, printed p.34",verified,"""Through 18 months"" includes month 18; next band starts 19 months."
+AK,19,36,6,AK_DHSS__rules__2016_web_extract,"7 AAC 57.505(c) table, printed p.34",verified,"19 to 36 months, toddlers."
+AK,36,60,10,AK_DHSS__rules__2016_web_extract,"7 AAC 57.505(c) table, printed p.34",verified,"3 and 4 years, preschoolers. Anchorage municipal rule not modeled."
+AL,0,18,5,AL_DHR__center_minimum_standards__2019,"D.1.a(1) table, printed p.24",verified,0 up to 18 months.
+AL,18,30,7,AL_DHR__center_minimum_standards__2019,"D.1.a(1) table, printed p.24",verified,18 months up to 2.5 years.
+AL,30,48,11,AL_DHR__center_minimum_standards__2019,"D.1.a(1) table, printed p.24",verified,2.5 years up to 4 years. Special 24-36 month group at 1:8 (D.1.a(2)) ignored as opt-in exception.
+AL,48,60,18,AL_DHR__center_minimum_standards__2019,"D.1.a(1) table, printed p.24",verified,4 years up to school age.
+AR,0,18,5,AR_ADE__approved_CCDF_plan__2019,"Plan PDF pp.152-154 (301.2); 2015 rule 301.2, PDF p.22",verified,Birth to 18 months.
+AR,18,36,8,AR_ADE__approved_CCDF_plan__2019,"Plan PDF pp.152-154 (301.2); 2015 rule 301.2, PDF p.22",verified,"18-36 months toddler. Table also lists 2.5-3 years at 1:12; 301.3 placement of 30-36 months by maturity ignored per brief, so 30-36 stays toddler 8. Latest-start overlap rule alone would give 12 for months 30-35."
+AR,36,48,12,AR_ADE__approved_CCDF_plan__2019,"Plan PDF pp.152-154 (301.2); 2015 rule 301.2, PDF p.22",verified,2.5-3 years band covers 3-year-olds; next band is 4 years.
+AR,48,60,15,AR_ADE__approved_CCDF_plan__2019,"Plan PDF pp.152-154 (301.2); 2015 rule 301.2, PDF p.22",verified,4 years. 5 years to kindergarten 1:18 is outside 0-60.
+AZ,0,13,5,AZ_DHS__center_rules_historical,"R9-5-404(A), printed p.29; R9-5-101 def. 61",verified,"Infant = 12 months or younger (month 12 included), or to 18 months if not walking; walking default used. 2:11 two-adult option ignored."
+AZ,13,24,6,AZ_DHS__center_rules_historical,"R9-5-404(A), printed p.29; R9-5-101 def. 79",verified,"1-year-old not an infant, under 2 years. 2:13 two-adult option ignored."
+AZ,24,36,8,AZ_DHS__center_rules_historical,"R9-5-404(A), printed p.29",verified,2-year-old children.
+AZ,36,48,13,AZ_DHS__center_rules_historical,"R9-5-404(A), printed p.29",verified,3-year-old children.
+AZ,48,60,15,AZ_DHS__center_rules_historical,"R9-5-404(A), printed p.29",verified,4-year-old children.
+CA,0,24,4,CA_Agency__historical_rule_candidate__2019_audit,Infant center 101416.5(b) (infant archive p.159); 101216.4(a),verified,Infant center 1 teacher per 4 infants. Infant/preschool boundary 24 months from 101216.4(a) (preschool sections apply over 24 months); 101152 infant definition not in saved text. Optional 18-30 month toddler component (1:6) ignored.
+CA,24,60,12,CA_Agency__historical_rule_candidate__2019_audit,"101216.3(a), printed p.96",verified,Preschool center 1 teacher per 12. Teacher+aide 15/2 and 18/2 options and Title 5 ratios ignored.
+CO,0,24,5,CO_CDHS__center_rules__2016_archive,"7.702.45 A.12 table, PDF p.17",verified,6 weeks-18 months 1:5 and 12-36 months 1:5 overlap; both 5.
+CO,24,30,7,CO_CDHS__center_rules__2016_archive,"7.702.45 A.12 table, PDF p.17",verified,Overlap rule: 24-36 month band (start 24) is the latest start; 12-36 band at 5 not used.
+CO,30,36,8,CO_CDHS__center_rules__2016_archive,"7.702.45 A.12 table, PDF p.17",verified,Overlap rule: 2.5-3 years band (start 30) is the latest start; differs from current point value 7 at 35 months.
+CO,36,48,10,CO_CDHS__center_rules__2016_archive,"7.702.45 A.12 table, PDF p.17",verified,3 years to 4 years. Mixed age 2.5-6 at 1:10 ignored.
+CO,48,60,12,CO_CDHS__center_rules__2016_archive,"7.702.45 A.12 table, PDF p.17",verified,4 years to 5 years.
+CT,0,36,4,CT_SOTS__center_rules__2008_final,"19a-79-10(c)(1)-(2), PDF p.35",verified,"Under-three endorsement: 6 weeks to 36 months, 1 staff per 4."
+CT,36,60,10,CT_SOTS__center_rules__2008_final,"19a-79-4a(c)(4)(A), PDF p.13",verified,General center ratio 1 per 10.
+DC,0,24,4,DC_OSSE__licensing_final_rule__2016,"5-A DCMR 121.3(a) table, PDF p.62",verified,0-24 months.
+DC,24,30,4,DC_OSSE__licensing_final_rule__2016,"5-A DCMR 121.3(a) table, PDF p.62",verified,24-30 months (group size 12).
+DC,30,48,8,DC_OSSE__licensing_final_rule__2016,"5-A DCMR 121.3(a) table, PDF p.62",verified,30-48 months; differs from current 4 at 35 months.
+DC,48,60,10,DC_OSSE__licensing_final_rule__2016,"5-A DCMR 121.3(a) table, PDF p.62",verified,48-60 months.
+DE,0,12,4,DE_Register__center_final__2019_api,"Final adopted 27.1 table, PDF p.77",verified,Under 12 months.
+DE,12,24,6,DE_Register__center_final__2019_api,"Final adopted 27.1 table, PDF p.77",verified,12 through 23 months.
+DE,24,36,8,DE_Register__center_final__2019_api,"Final adopted 27.1 table, PDF p.77",verified,24 through 35 months.
+DE,36,48,10,DE_Register__center_final__2019_api,"Final adopted 27.1 table, PDF p.77",verified,36 through 47 months.
+DE,48,60,12,DE_Register__center_final__2019_api,"Final adopted 27.1 table, PDF p.77",verified,48 months to kindergarten.
+FL,0,12,4,FL_Senate__child_care_center_standards__2019,s.402.305(4)(a)1,verified,"""Birth through 1 year""; read as under 12 months since next band starts at 1 year."
+FL,12,24,6,FL_Senate__child_care_center_standards__2019,s.402.305(4)(a)2,verified,"1 year or older, under 2."
+FL,24,36,11,FL_Senate__child_care_center_standards__2019,s.402.305(4)(a)3,verified,"2 years, under 3."
+FL,36,48,15,FL_Senate__child_care_center_standards__2019,s.402.305(4)(a)4,verified,"3 years, under 4."
+FL,48,60,20,FL_Senate__child_care_center_standards__2019,s.402.305(4)(a)5,verified,"4 years, under 5."
+GA,0,12,6,GA_DECAL__center_rules_history__2026,"591-1-1-.32(1), printed p.62; history p.63",verified,Infants under 1 year; non-walking extension to 18 months ignored (walking at 12 months). Printed table is post-2020 text; 2017 amendment and 2020 change cross-checked in evidence.
+GA,12,24,8,GA_DECAL__center_rules_history__2026,"591-1-1-.32(1), printed p.62",verified,One-year-olds who are walking.
+GA,24,36,10,GA_DECAL__center_rules_history__2026,"591-1-1-.32(1), printed p.62",verified,Two-year-olds.
+GA,36,48,15,GA_DECAL__center_rules_history__2026,"591-1-1-.32(1), printed p.62",verified,Three-year-olds. Parent-agreed stay with 2-year-olds (.32(4)(b)) ignored.
+GA,48,60,18,GA_DECAL__center_rules_history__2026,"591-1-1-.32(1), printed p.62",verified,Four-year-olds.
+HI,0,12,4,HI_CCDF__state_plan_candidate__2019-2021,"Section 5.2.1(a)1, page 222",verified,Infant 6 weeks to 12 months.
+HI,12,18,4,HI_CCDF__state_plan_candidate__2019-2021,"Section 5.2.1(a)2, page 223",verified,Toddler 12-24 months at 4.
+HI,18,24,6,HI_CCDF__state_plan_candidate__2019-2021,"Section 5.2.1(a)2, page 223",verified,Overlap rule: 18-36 month band at 6 (start 18) is the latest start.
+HI,24,36,8,HI_CCDF__state_plan_candidate__2019-2021,"Section 5.2.1(a)3, page 225",verified,Overlap rule: preschool 2-year-old band at 8 (start 24) is the latest start; infant/toddler center 18-36 at 6 not used.
+HI,36,48,12,HI_CCDF__state_plan_candidate__2019-2021,"Section 5.2.1(a)3, page 225",verified,3-year-old.
+HI,48,60,16,HI_CCDF__state_plan_candidate__2019-2021,"Section 5.2.1(a)3, page 225",verified,4-year-old.
+IA,0,24,4,IA_Legislature__center_rules__2019_09_25,"441 IAC 109.8(2), PDF p.17",verified,Two weeks to two years.
+IA,24,36,6,IA_Legislature__center_rules__2019_09_25,"441 IAC 109.8(2), PDF p.17",verified,Two years. 2022+ change to 7 not backdated.
+IA,36,48,8,IA_Legislature__center_rules__2019_09_25,"441 IAC 109.8(2), PDF p.17",verified,Three years. 2022+ change to 10 not backdated.
+IA,48,60,12,IA_Legislature__center_rules__2019_09_25,"441 IAC 109.8(2), PDF p.17",verified,Four years.
+ID,0,24,6,ID_IDAPA__licensing_rules__2019_C2,IDAPA 16.06.02.335 (PDF p.27),verified,"12 points per adult; under 24 months = 2 points, so 12/2 = 6"
+ID,24,36,8,ID_IDAPA__licensing_rules__2019_C2,IDAPA 16.06.02.335 (PDF p.27),verified,"24 to under 36 months = 1.5 points, so 12/1.5 = 8"
+ID,36,60,12,ID_IDAPA__licensing_rules__2019_C2,IDAPA 16.06.02.335 (PDF p.27),verified,"36 months to under 5 years = 1 point, so 12/1 = 12"
+IL,0,15,4,IL_CCDF__state_plan_candidate__2019-2021,"CCDF plan 5.2.1(a), PDF pp.153-155",verified,"Infant 6 weeks through 14 months, 1:4"
+IL,15,24,5,IL_CCDF__state_plan_candidate__2019-2021,"CCDF plan 5.2.1(a), PDF pp.153-155",verified,Toddler 15-35 months 1:5; 2-year-old 1:8 applies from 24 months
+IL,24,36,8,IL_CCDF__state_plan_candidate__2019-2021,"CCDF plan 5.2.1(a), PDF pp.153-155",verified,Ratio for 2-year-old 1:8 (overrides toddler 1:5 for 24-35 months)
+IL,36,60,10,IL_CCDF__state_plan_candidate__2019-2021,"CCDF plan 5.2.1(a), PDF pp.153-155",verified,"Preschool 36 through 59 months, 1:10"
+IN,0,12,4,IN_Agency__historical_rule_candidate__2019_audit,"470 IAC 3-4.7-47 (PDF pp.40-41); definitions 3-4.7-1(43),(74)",verified,"Infant = until child walks unassisted; no age given, walking mapped to 12 months per brief"
+IN,12,24,5,IN_Agency__historical_rule_candidate__2019_audit,470 IAC 3-4.7-47 (PDF pp.40-41),verified,"Toddler (walking, under 30 months) 1:5; walking mapped to 12 months"
+IN,24,30,5,IN_Agency__historical_rule_candidate__2019_audit,470 IAC 3-4.7-47 (PDF pp.40-41),verified,Chart row '2 years' 1:5
+IN,30,36,7,IN_Agency__historical_rule_candidate__2019_audit,470 IAC 3-4.7-47 (PDF pp.40-41); 3-4.7-49(e),verified,Chart row '30-36 months' 1:7
+IN,36,48,10,IN_Agency__historical_rule_candidate__2019_audit,470 IAC 3-4.7-47 (PDF pp.40-41),verified,3 years 1:10
+IN,48,60,12,IN_Agency__historical_rule_candidate__2019_audit,470 IAC 3-4.7-47 (PDF pp.40-41),verified,4 years 1:12
+KS,0,12,3,KS_SOS__rules__2022_vol2,"K.A.R. 28-4-428(a)(2) table (amended May 12, 2017); 28-4-420(k)",verified,Infant 2 weeks-12 months (or non-walker) 1:3; mixed infant/under-6 rows excluded
+KS,12,24,5,KS_SOS__rules__2022_vol2,K.A.R. 28-4-428(a)(2); 28-4-420(dd),verified,Toddler 12-30 months 1:5
+KS,24,30,7,KS_SOS__rules__2022_vol2,K.A.R. 28-4-428(a)(2),verified,Overlap rule: 2-under-3 band (start 24) 1:7 replaces toddler band (start 12)
+KS,30,36,10,KS_SOS__rules__2022_vol2,K.A.R. 28-4-428(a)(2),verified,Overlap rule: 2.5-under-school-age band (start 30) 1:10; evidence kept 7 at 35 months
+KS,36,60,12,KS_SOS__rules__2022_vol2,K.A.R. 28-4-428(a)(2),verified,Overlap rule: 3-under-school-age band (start 36) 1:12
+KY,0,12,5,KY_LRC__register__2018-07,"922 KAR 2:120 Section 2(2), printed p.44 / PDF p.48",verified,Infant under 12 months 1:5
+KY,12,24,6,KY_LRC__register__2018-07,"922 KAR 2:120 Section 2(2), printed p.44 / PDF p.48",verified,Toddler 12 to 24 months 1:6
+KY,24,36,10,KY_LRC__register__2018-07,"922 KAR 2:120 Section 2(2), printed p.44 / PDF p.48",verified,Toddler 24 to 36 months 1:10
+KY,36,48,12,KY_LRC__register__2018-07,"922 KAR 2:120 Section 2(2), printed p.44 / PDF p.48",verified,Preschool-age 3 to 4 years 1:12
+KY,48,60,14,KY_LRC__register__2018-07,"922 KAR 2:120 Section 2(2), printed p.44 / PDF p.48",verified,Preschool-age 4 to 5 years 1:14; accredited mixed-age exception ignored
+LA,0,12,5,LA_DOA__center_ratio_amendment__2018_web_extract,"LAC 28:CLXI.1711.D (LR 44:1865, Oct 2018)",verified,Type II/III table per brief: infants under 1 year 5:1; Type I 6:1 ignored
+LA,12,24,7,LA_DOA__center_ratio_amendment__2018_web_extract,LAC 28:CLXI.1711.D,verified,1 year 7:1 (Type II/III)
+LA,24,36,11,LA_DOA__center_ratio_amendment__2018_web_extract,LAC 28:CLXI.1711.D,verified,2 years 11:1 (Type II/III); future 10:1 from 2022 not applied
+LA,36,48,13,LA_DOA__center_ratio_amendment__2018_web_extract,LAC 28:CLXI.1711.D,verified,3 years 13:1 (Type II/III)
+LA,48,60,15,LA_DOA__center_ratio_amendment__2018_web_extract,LAC 28:CLXI.1711.D,verified,4 years 15:1 (Type II/III)
+MA,0,15,3,MA_EEC__rules_part4__2010_archive,"606 CMR 7.10(9)(b), Part 4 PDF p.9 / printed 49",verified,Infants up to 15 months 1:3; 2-educator group-of-7 option (3.5) ignored
+MA,15,33,4,MA_EEC__rules_part4__2010_archive,"606 CMR 7.10(9)(b), Part 4 PDF p.9 / printed 49",verified,Toddlers 15 to 33 months 1:4; 2-educator group-of-9 option (4.5) ignored
+MA,33,60,10,MA_EEC__rules_part4__2010_archive,"606 CMR 7.10(9)(b), Part 4 PDF p.9 / printed 49",verified,"Preschool 33 months to school age, full day 1:10; half-day 1:12 ignored"
+MD,0,18,3,MD_MSDE__center_rules__2015,"COMAR 13A.16.08.03D(1), PDF p.46; infant def. 13A.16.01.02B(31)",verified,No same-age infant row in .03C; infant group max 6 with 2 staff = 3 per staff (as evidence)
+MD,18,24,3,MD_MSDE__center_rules__2015,"COMAR 13A.16.08.03D(1), PDF p.46; toddler def. 13A.16.01.02B(59)",verified,No same-age toddler row in .03C; 4+ toddlers group max 9 with 3 staff = 3 per staff (as evidence)
+MD,24,36,6,MD_MSDE__center_rules__2015,"COMAR 13A.16.08.03C, PDF p.46",verified,2 years old 1:6 (age by most recent birthday); Montessori/approved-program options ignored
+MD,36,60,10,MD_MSDE__center_rules__2015,"COMAR 13A.16.08.03C, PDF p.46",verified,3 or 4 years old 1:10; approved educational program 1:12 ignored
+ME,0,12,4,ME_DHHS__center_rules__2008,"10-148 CMR ch.32 s.28.2.1, printed 28-1",verified,6 weeks-1 year 1:4
+ME,12,30,5,ME_DHHS__center_rules__2008,"10-148 CMR ch.32 s.28.2.1, printed 28-1",verified,1-2.5 years: 1:5 with group 10 or 1:4 with group 12; 5 kept as in evidence
+ME,30,36,7,ME_DHHS__center_rules__2008,"10-148 CMR ch.32 s.28.2.1, printed 28-1",verified,2.5-3.5 years 1:7
+ME,36,60,10,ME_DHHS__center_rules__2008,"10-148 CMR ch.32 s.28.2.1, printed 28-1",verified,Overlap rule: 3 years-school age band (start 36) beats 2.5-3.5 band; 1:10 with group 20 (1:8 with group 24 also allowed)
+MI,0,30,4,MI_LARA__center_TA_manual__2015,"R 400.8182(3) table, TA manual p.180",verified,Infants and toddlers birth until 30 months 1:4
+MI,30,36,8,MI_LARA__center_TA_manual__2015,R 400.8182(3)(b),verified,30 months until 3 years 1:8; 33-month parental-permission move to 1:10 ignored
+MI,36,48,10,MI_LARA__center_TA_manual__2015,R 400.8182(3)(c),verified,3 until 4 years 1:10; 45-month parental-permission move ignored
+MI,48,60,12,MI_LARA__center_TA_manual__2015,R 400.8182(3)(d),verified,4 years until school-age 1:12; 57-month school-age move ignored
+MN,0,16,4,MN_Revisor__9503_0040__history,Minn. R. 9503.0040 subp.1; 9503.0005 subp.2 definitions,verified,Infant 6 weeks to under 16 months 1:4; subp.6 agreed extension to 18 months ignored
+MN,16,33,7,MN_Revisor__9503_0040__history,Minn. R. 9503.0040 subp.1; 9503.0005 subp.2,verified,Toddler 16 to under 33 months 1:7; subp.6 agreed extension to 35 months ignored
+MN,33,60,10,MN_Revisor__9503_0040__history,Minn. R. 9503.0040 subp.1; 9503.0005 subp.2,verified,Preschooler 33 months to kindergarten 1:10
+MO,0,24,4,MO_Agency__historical_rule_candidate__2019_audit,"19 CSR 30-62.112(1)(A), PDF p.22",verified,Birth through 2 years mixed groups 1:4; read as under 24 months (same-age 2-year-olds have own row)
+MO,24,36,8,MO_Agency__historical_rule_candidate__2019_audit,"19 CSR 30-62.112(1)(B), PDF p.22",verified,Groups solely of 2-year-olds 1:8
+MO,36,60,10,MO_Agency__historical_rule_candidate__2019_audit,"19 CSR 30-62.112(1)(C), PDF p.22",verified,Groups solely of 3- and 4-year-olds 1:10
+MS,0,12,5,MS_DOH__center_rules__2014_archive,"Miss. Admin. Code 15-11-55:1.8.2, archive PDF pp.31-32",verified,Less than 1 year 5
+MS,12,24,9,MS_DOH__center_rules__2014_archive,15-11-55:1.8.2,verified,1 year 9
+MS,24,36,12,MS_DOH__center_rules__2014_archive,15-11-55:1.8.2,verified,2 years 12
+MS,36,48,14,MS_DOH__center_rules__2014_archive,15-11-55:1.8.2,verified,3 years 14
+MS,48,60,16,MS_DOH__center_rules__2014_archive,15-11-55:1.8.2,verified,4 years 16
+MT,0,24,4,MT_SOS__childcare_final_rules__2018,ARM 37.95.623(1)(a); final notice printed p.312 / PDF p.87,verified,Zero months through 23 months. 37.95.623(2) youngest-child mixed-age rule not a band.
+MT,24,48,8,MT_SOS__childcare_final_rules__2018,ARM 37.95.623(1)(b) 'remains as proposed'; final notice printed p.312 / PDF p.87,verified,Two years through three years. Final notice does not reprint (b); 8:1 text read in MT_DPHHS__center_interpretive_guide p.4 and MT_CCDF__state_plan_candidate__2019-2021 (8:1 for 24 through 48 months).
+MT,48,60,10,MT_SOS__childcare_final_rules__2018,ARM 37.95.623(1)(c); final notice printed p.312 / PDF p.87,verified,Four years through five years. (d) 14:1 for five years and over starts at 60.
+NC,0,12,5,NC_OAH__center_readoption__2017,"10A NCAC 09 .0713(a) single-age table, PDF p.57",verified,0 to 12 months. Multi-age and one-level-up placement provisions excluded.
+NC,12,24,6,NC_OAH__center_readoption__2017,"10A NCAC 09 .0713(a) single-age table, PDF p.57",verified,12 to 24 months.
+NC,24,36,10,NC_OAH__center_readoption__2017,"10A NCAC 09 .0713(a) single-age table, PDF p.57",verified,2 to 3 years.
+NC,36,48,15,NC_OAH__center_readoption__2017,"10A NCAC 09 .0713(a) single-age table, PDF p.57",verified,3 to 4 years.
+NC,48,60,20,NC_OAH__center_readoption__2017,"10A NCAC 09 .0713(a) single-age table, PDF p.57",verified,4 to 5 years.
+ND,0,18,4,ND_Legislature__center_amendments__2014,"Section 16, NDAC 75-03-10-08(2)(a)(1), page 17",verified,Less than 18 months.
+ND,18,36,5,ND_Legislature__center_amendments__2014,"Section 16, NDAC 75-03-10-08(2)(a)(2), page 17",verified,18 months to 36 months.
+ND,36,48,7,ND_Legislature__center_amendments__2014,"Section 16, NDAC 75-03-10-08(2)(a)(3), page 17",verified,Three to four years.
+ND,48,60,10,ND_Legislature__center_amendments__2014,"Section 16, NDAC 75-03-10-08(2)(a)(4), page 17",verified,Four to five years.
+NE,0,18,4,NE_DHHS__center_rules__2013,"391 NAC 3-006.15C ratio table, printed p.33 / PDF p.39",verified,6 weeks to 18 months; 6 weeks mapped to 0.
+NE,18,36,6,NE_DHHS__center_rules__2013,"391 NAC 3-006.15C ratio table, printed p.33 / PDF p.39",verified,18 months to 3 years.
+NE,36,48,10,NE_DHHS__center_rules__2013,"391 NAC 3-006.15C ratio table, printed p.33 / PDF p.39",verified,3 years.
+NE,48,60,12,NE_DHHS__center_rules__2013,"391 NAC 3-006.15C ratio table, printed p.33 / PDF p.39",verified,4 and 5 years.
+NH,0,13,4,NH_Agency__historical_rule_candidate__2019_audit,"He-C 4002.34(b)(1), PDF p.115",verified,"Ages 6 weeks to 12 months; 12 is inclusive (next band starts at 13), so band ends at 13. 6 weeks mapped to 0."
+NH,13,25,5,NH_Agency__historical_rule_candidate__2019_audit,"He-C 4002.34(b)(2), PDF p.115",verified,"Ages 13 to 24 months, 24 inclusive."
+NH,25,36,6,NH_Agency__historical_rule_candidate__2019_audit,"He-C 4002.34(b)(3), PDF p.115",verified,Ages 25 to 35 months. Average-age mixed-group rule excluded.
+NH,36,48,8,NH_Agency__historical_rule_candidate__2019_audit,"He-C 4002.33(b)(1), PDF p.114",verified,Ages 36 to 47 months: one associate teacher with up to 8 children.
+NH,48,60,12,NH_Agency__historical_rule_candidate__2019_audit,"He-C 4002.33(b)(2), PDF p.114",verified,Ages 48 to 59 months: one associate teacher with up to 12 children.
+NJ,0,18,4,NJ_DCF__center_manual__2017_moved,"N.J.A.C. 3A:52-4.3(c), printed p.20 / PDF p.24",verified,"Under 18 months. Nap (d), disability (e), and sick-child ratios excluded."
+NJ,18,30,6,NJ_DCF__center_manual__2017_moved,"N.J.A.C. 3A:52-4.3(c), printed p.20 / PDF p.24",verified,18 months up to 2 1/2 years.
+NJ,30,48,10,NJ_DCF__center_manual__2017_moved,"N.J.A.C. 3A:52-4.3(c), printed p.20 / PDF p.24",verified,2 1/2 years up to 4 years.
+NJ,48,60,12,NJ_DCF__center_manual__2017_moved,"N.J.A.C. 3A:52-4.3(c), printed p.20 / PDF p.24",verified,4 years.
+NM,0,24,6,NM_SRCA__8_16_2_old_compilation,"8.16.2.23(C)(1) grouped-by-age table, PDF p.21; infant/toddler definitions 8.16.2.7",verified,Infants (6 weeks to 12 months) and toddlers (12 to 24 months) both 1:6. Combined-age table excluded.
+NM,24,36,10,NM_SRCA__8_16_2_old_compilation,"8.16.2.23(C)(1) grouped-by-age table, PDF p.21",verified,Two years.
+NM,36,60,12,NM_SRCA__8_16_2_old_compilation,"8.16.2.23(C)(1) grouped-by-age table, PDF p.21",verified,Three years and four years both 1:12. Combined 3-5 group 1:14 excluded.
+NV,0,9,4,NV_Legislature__adopted_R092_16__2017,R092-16 Sec. 5(1) daytime table (evidence cites NAC 432A.5205(1)),verified,"Less than 9 months. Night-time (Sec. 5(2)), mixed-age, and special-needs ratios excluded."
+NV,9,24,6,NV_Legislature__adopted_R092_16__2017,R092-16 Sec. 5(1) daytime table (evidence cites NAC 432A.5205(1)),verified,9 months or older but less than 2 years.
+NV,24,36,9,NV_Legislature__adopted_R092_16__2017,R092-16 Sec. 5(1) daytime table (evidence cites NAC 432A.5205(1)),verified,2 years or older but less than 3 years.
+NV,36,48,12,NV_Legislature__adopted_R092_16__2017,R092-16 Sec. 5(1) daytime table (evidence cites NAC 432A.5205(1)),verified,3 years or older but less than 4 years.
+NV,48,60,13,NV_Legislature__adopted_R092_16__2017,R092-16 Sec. 5(1) daytime table (evidence cites NAC 432A.5205(1)),verified,4 years or older but less than 5 years.
+NY,0,18,4,NY_OCFS__center_rules__2015_mirror,"18 NYCRR 418-1.8(k)(2), printed p.24",verified,"6 weeks to 18 months; 6 weeks mapped to 0. Under-6-weeks 1:3 needs office approval, excluded. Up-to-3-month developmental retention (418-1.8) excluded."
+NY,18,36,5,NY_OCFS__center_rules__2015_mirror,"18 NYCRR 418-1.8(k)(3), printed p.24",verified,18 months to 36 months.
+NY,36,48,7,NY_OCFS__center_rules__2015_mirror,"18 NYCRR 418-1.8(k)(4), printed p.24",verified,Three year old children.
+NY,48,60,8,NY_OCFS__center_rules__2015_mirror,"18 NYCRR 418-1.8(k)(5), printed p.24",verified,Four year old children.
+NYC,0,12,4,NYC_DOHMH__compliance_guide__2019-06,Health Code 47.23 table; guide printed p.10 / PDF p.11,verified,Under 12 months. Emergency 1:3 excluded.
+NYC,12,24,5,NYC_DOHMH__compliance_guide__2019-06,Health Code 47.23 table; guide printed p.10 / PDF p.11,verified,12 to 24 months; 24 assigned to next band (2 years to under 3).
+NYC,24,36,6,NYC_DOHMH__compliance_guide__2019-06,Health Code 47.23 table; guide printed p.10 / PDF p.11,verified,2 years to under 3.
+NYC,36,48,10,NYC_DOHMH__compliance_guide__2019-06,Health Code 47.23 table; guide printed p.10 / PDF p.11,verified,3 years to under 4.
+NYC,48,60,12,NYC_DOHMH__compliance_guide__2019-06,Health Code 47.23 table; guide printed p.10 / PDF p.11,verified,4 years to under 5.
+OH,0,12,5,OH_Legislature__5104_033__2014,"ORC 5104.033(A) age table, version effective 2014-01-01",verified,"Less than 12 months, one staff 5:1. Two-staff 12:2 alternative and nap exception excluded."
+OH,12,18,6,OH_Legislature__5104_033__2014,"ORC 5104.033(A) age table, version effective 2014-01-01",verified,At least 12 months but less than 18 months.
+OH,18,30,7,OH_Legislature__5104_033__2014,"ORC 5104.033(A) age table, version effective 2014-01-01",verified,At least 18 months but less than 30 months.
+OH,30,36,8,OH_Legislature__5104_033__2014,"ORC 5104.033(A) age table, version effective 2014-01-01",verified,At least 30 months but less than three years.
+OH,36,48,12,OH_Legislature__5104_033__2014,"ORC 5104.033(A) age table, version effective 2014-01-01",verified,Three years old.
+OH,48,60,14,OH_Legislature__5104_033__2014,"ORC 5104.033(A) age table, version effective 2014-01-01",verified,Four and five years old not in school.
+OK,0,12,4,OK_DHS__center_rules__2018,"Appendix GG Single-Age Group Chart, PDF p.119 / printed p.114; 'Infant' definition birth up to 12 months",verified,Infants. Mixed-Age Group Chart excluded.
+OK,12,24,6,OK_DHS__center_rules__2018,"Appendix GG Single-Age Group Chart, PDF p.119 / printed p.114",verified,1-year-olds.
+OK,24,36,8,OK_DHS__center_rules__2018,"Appendix GG Single-Age Group Chart, PDF p.119 / printed p.114",verified,2-year-olds.
+OK,36,48,12,OK_DHS__center_rules__2018,"Appendix GG Single-Age Group Chart, PDF p.119 / printed p.114",verified,3-year-olds.
+OK,48,60,15,OK_DHS__center_rules__2018,"Appendix GG Single-Age Group Chart, PDF p.119 / printed p.114",verified,4-year-olds.
+OR,0,24,4,OR_SOS__center_ratio_tables__web_extract,"Former OAR 414-300-0130, Table 3A; plan OR_CCDF__state_plan__2019-2021 sec. 5.2.1(a) PDF pp.152-155",verified,"Six weeks through 23 months; 6 weeks mapped to 0. Infant and younger toddler both 1:4, so walking cutoff does not matter."
+OR,24,36,5,OR_SOS__center_ratio_tables__web_extract,"Former OAR 414-300-0130, Table 3A; plan sec. 5.2.1(a) older toddler 1:5, PDF p.153",verified,"24 through 35 months. Grandfathered Table 3B (1:4 under 30 months, 1:10 from 30 months; centers certified by July 15 2001) excluded."
+OR,36,60,10,OR_SOS__center_ratio_tables__web_extract,"Former OAR 414-300-0130, Table 3A; plan sec. 5.2.1(a) preschool 1:10, PDF p.154",verified,36 months to attending kindergarten.
+PA,0,12,4,PA_Code__center_chapter__2026,55 Pa. Code 3270.51 table; 3270.4 definitions,verified,Infant birth to 1 year
+PA,12,24,5,PA_Code__center_chapter__2026,55 Pa. Code 3270.51 table; 3270.4 definitions,verified,Young toddler 1 to 2 years
+PA,24,36,6,PA_Code__center_chapter__2026,55 Pa. Code 3270.51 table; 3270.4 definitions,verified,Older toddler 2 to 3 years
+PA,36,60,10,PA_Code__center_chapter__2026,55 Pa. Code 3270.51 table; 3270.4 definitions,verified,Preschool 3 years to kindergarten entry; 2026 code text with 1992 history per evidence
+RI,0,18,4,RI_DCYF__center_rules__2017,214-RICR-40-00-1 s1.10(B)(1) table,verified,Younger infant 6wk-12m and older infant 12-18m both 1:4
+RI,18,36,6,RI_DCYF__center_rules__2017,214-RICR-40-00-1 s1.10(B)(1) table,verified,Toddler 18-36 months; toddler admission at 18 months
+RI,36,48,9,RI_DCYF__center_rules__2017,214-RICR-40-00-1 s1.10(B)(1) table,verified,Preschool 3
+RI,48,60,10,RI_DCYF__center_rules__2017,214-RICR-40-00-1 s1.10(B)(1) table,verified,Preschool 4
+SC,0,12,5,SC_Legislature__budget_provisos__2019,Act 91 proviso 38.20 freezes Reg 114-504(B) at June 24 2008 level; Reg 114-504(B)(1) table 'three years after' column (SC_DSS__center_regulations__114500 PDF p.15),verified,Birth to one year; 2008 column read from DSS regulation PDF since proviso has no table
+SC,12,24,6,SC_Legislature__budget_provisos__2019,Act 91 proviso 38.20; Reg 114-504(B)(1) 'three years after' column,verified,One to two years
+SC,24,36,8,SC_Legislature__budget_provisos__2019,Act 91 proviso 38.20; Reg 114-504(B)(1) 'three years after' column,verified,Two to three years
+SC,36,48,12,SC_Legislature__budget_provisos__2019,Act 91 proviso 38.20; Reg 114-504(B)(1) 'three years after' column,verified,Three to four years
+SC,48,60,17,SC_Legislature__budget_provisos__2019,Act 91 proviso 38.20; Reg 114-504(B)(1) 'three years after' column,verified,Four to five years
+SD,0,36,5,SD_LRC__center_staffing_rule__2013,ARSD 67:42:10:07(1),verified,Up to three years of age
+SD,36,60,10,SD_LRC__center_staffing_rule__2013,ARSD 67:42:10:07(2),verified,Three to six years of age
+TN,0,12,4,TN_SOS__center_ratios__2019_web_extract,1240-04-01-.22(1)(c)1 Chart 1,verified,6wk-15m band; overlap with 12-30m resolved by latest start so 12-15m uses 1:6
+TN,12,24,6,TN_SOS__center_ratios__2019_web_extract,1240-04-01-.22(1)(c)1 Chart 1,verified,12-30m band; overlap with 24-35m resolved by latest start so 24-30m uses 1:7
+TN,24,36,7,TN_SOS__center_ratios__2019_web_extract,1240-04-01-.22(1)(c)1 Chart 1,verified,24-35 months (through 35 months)
+TN,36,48,9,TN_SOS__center_ratios__2019_web_extract,1240-04-01-.22(1)(c)1 Chart 1,verified,Three years; Chart 2 combined-age and 10% variance excluded
+TN,48,60,13,TN_SOS__center_ratios__2019_web_extract,1240-04-01-.22(1)(c)1 Chart 1,verified,Four years
+TX,0,12,4,TX_TWC__center_rules__2019_web_extract,746.1601 classroom ratio chart,verified,0-11 months
+TX,12,18,5,TX_TWC__center_rules__2019_web_extract,746.1601 classroom ratio chart,verified,12-17 months
+TX,18,24,9,TX_TWC__center_rules__2019_web_extract,746.1601 classroom ratio chart,verified,18-23 months
+TX,24,36,11,TX_TWC__center_rules__2019_web_extract,746.1601 classroom ratio chart,verified,2 years
+TX,36,48,15,TX_TWC__center_rules__2019_web_extract,746.1601 classroom ratio chart,verified,3 years
+TX,48,60,18,TX_TWC__center_rules__2019_web_extract,746.1601 classroom ratio chart,verified,4 years; TRS quality ratios excluded
+UT,0,24,4,UT_DAR__center_amendment__2018_web_extract,R381-100-10(1) Table 1,verified,Birth-23 months; single-age groups; mixed-age Tables 2-13 excluded
+UT,24,36,7,UT_DAR__center_amendment__2018_web_extract,R381-100-10(1) Table 1,verified,2 years old
+UT,36,48,12,UT_DAR__center_amendment__2018_web_extract,R381-100-10(1) Table 1,verified,3 years old
+UT,48,60,15,UT_DAR__center_amendment__2018_web_extract,R381-100-10(1) Table 1,verified,4 years old
+VA,0,16,4,VA_Register__center_rules_final__2012-09,22VAC40-185-350(E)(1),verified,Birth to 16 months
+VA,16,24,5,VA_Register__center_rules_final__2012-09,22VAC40-185-350(E)(2),verified,16 months to two years
+VA,24,36,8,VA_Register__center_rules_final__2012-09,22VAC40-185-350(E)(3),verified,Two-year-olds
+VA,36,60,10,VA_Register__center_rules_final__2012-09,22VAC40-185-350(E)(4),verified,Three years to school eligibility; balanced mixed-age 1:14 excluded; 2019-09-16 Register amendment effective Oct 17 2019 so not in force
+VT,0,24,4,VT_Legislature__center_rules__2016,6.2.1.3 table printed p.79-80,verified,Birth-18m 1:4 and 18-30m 1:4; overlap with 24-36m resolved by latest start so 24m+ moves to 1:5
+VT,24,32,5,VT_Legislature__center_rules__2016,6.2.1.3 table printed p.79-80,verified,24-36m band; latest-start rule hands 32m+ to 32-42m band
+VT,32,36,6,VT_Legislature__center_rules__2016,6.2.1.3 table printed p.79-80,verified,32-42m band; latest-start rule hands 36m+ to 36m-K band
+VT,36,60,10,VT_Legislature__center_rules__2016,6.2.1.3 table printed p.79-80,verified,36 months-kindergarten; text gives no default placement so latest-start rule applied
+WA,0,12,4,WA_Legislature__center_ratios__2019,WAC 110-300-0356(5)(a),verified,Infants birth through 11 months; 1:4 group 8 (alt 1:3 group 9 not used); effective 2019-08-01
+WA,12,30,7,WA_Legislature__center_ratios__2019,WAC 110-300-0356(5)(b),verified,Toddlers 12-29 months; 1:7 group 14 (alt 1:5 group 15 not used)
+WA,30,60,10,WA_Legislature__center_ratios__2019,WAC 110-300-0356(5)(c),verified,Preschool 30 months through 6 years
+WI,0,24,4,WI_Legislature__EmR1918_full_text__2019,DCF 251.055 Table PDF p.125,verified,Birth to 2 years; EmR1918 states no change to prior 251.05 ratios
+WI,24,30,6,WI_Legislature__EmR1918_full_text__2019,DCF 251.055 Table PDF p.125,verified,2 to 2.5 years
+WI,30,36,8,WI_Legislature__EmR1918_full_text__2019,DCF 251.055 Table PDF p.125,verified,2.5 to 3 years
+WI,36,48,10,WI_Legislature__EmR1918_full_text__2019,DCF 251.055 Table PDF p.125,verified,3 to 4 years
+WI,48,60,13,WI_Legislature__EmR1918_full_text__2019,DCF 251.055 Table PDF p.125,verified,4 to 5 years
+WV,0,12,4,WV_SOS__center_rules__2018_word,78CSR1 Appendix 78-1-E Table A,verified,6 weeks-1 year (6wk-12m)
+WV,12,24,4,WV_SOS__center_rules__2018_word,78CSR1 Appendix 78-1-E Table A,verified,1-2 years (13-24m); year labels used for edges -- month labels leave month 24 at 1:4 vs 1:8
+WV,24,36,8,WV_SOS__center_rules__2018_word,78CSR1 Appendix 78-1-E Table A,verified,2 years (25-35m label)
+WV,36,48,10,WV_SOS__center_rules__2018_word,78CSR1 Appendix 78-1-E Table A,verified,3 years (36-47m)
+WV,48,60,12,WV_SOS__center_rules__2018_word,78CSR1 Appendix 78-1-E Table A,verified,4 years (48-59m)
+WY,0,12,4,WY_Agency__historical_rule_candidate__2019_audit,Chapter 4 s2(c) Table 4-1 PDF pp.21-22,verified,Birth-12 mos 1:4 one-caregiver; 3 caregivers 3:10 lower per adult not used
+WY,12,24,5,WY_Agency__historical_rule_candidate__2019_audit,Chapter 4 s2(c) Table 4-1,verified,12-24 mos
+WY,24,36,8,WY_Agency__historical_rule_candidate__2019_audit,Chapter 4 s2(c) Table 4-1,verified,24-36 mos
+WY,36,48,10,WY_Agency__historical_rule_candidate__2019_audit,Chapter 4 s2(c) Table 4-1,verified,3 year olds
+WY,48,60,12,WY_Agency__historical_rule_candidate__2019_audit,Chapter 4 s2(c) Table 4-1,verified,4 and 5 year olds

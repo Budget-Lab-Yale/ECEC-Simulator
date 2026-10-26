@@ -40,7 +40,7 @@
 #
 # Usage (from a run copy w/ run's code + config, env as run):
 #   ECEC_STATE_ALPHA_PRICE=<state|national> ECEC_URBAN_DENSITY=1 \
-#   ECEC_INCOME_RANK=national ECEC_STATE_AGING=national \
+#   ECEC_INCOME_RANK=national_rpp \
 #   Rscript state_data/cluster/alpha_drift.R -r state_targets_all -C <calib ts> \
 #     --drift-run <run ts> --drift-src-root <shared output root> --drift-out <dir>
 #   config/default_paths.yaml roots.output must point at a scratch root that
@@ -94,8 +94,8 @@ file.copy(src_est, output_root, recursive = TRUE)
 captured <- list()
 .orig_adjust <- adjust_alpha_for_state
 adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids, targets_csv_path,
-                                   state_postal) {
-  r <- .orig_adjust(alpha_data_by_type, state_hh_ids, targets_csv_path, state_postal)
+                                   state_postal, ...) {
+  r <- .orig_adjust(alpha_data_by_type, state_hh_ids, targets_csv_path, state_postal, ...)
   captured[[state_postal]] <<- list(res = r, alpha_data = alpha_data_by_type,
                                     hh = state_hh_ids, targets = targets_csv_path)
   r

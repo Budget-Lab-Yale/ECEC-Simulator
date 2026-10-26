@@ -5,7 +5,9 @@ source('resources/supply/state_supply_params.R')
 
 analyze_home_staffing <- function() {
 
-  # Scenarios change AR/RI/WA adult assumptions, renormalize over 50 states + DC.
+  # Inputs: one adult, mixed-age capacity every geo. Scenarios swap AR/RI/WA to
+  # multi-adult licensed configurations (adults / capacity), renormalize over
+  # 50 states + DC, blend w/ NSECE licensed share as build does.
   # Returns: (df) 2019 staffing and anchor-price sensitivities, not equilibria.
   rules <- read_csv(RATIOS, show_col_types = FALSE) %>% filter(setting == 'home')
   stopifnot(nrow(rules) == 52, !anyDuplicated(rules$state),
@@ -22,23 +24,34 @@ analyze_home_staffing <- function() {
                         'experienced_with_assistant', 'licensed_three_adults')) %>%
     left_join(configurations, by = c('state', 'configuration'))
   stopifnot(nrow(chosen) == 4, !anyNA(chosen$required_adults),
-    all(chosen$max_preschool_children == capacity[chosen$state]),
+    all(chosen$max_preschool_children > capacity[chosen$state]),
     all(chosen$required_adults == c(2, 2, 2, 3)),
     all(chosen$status == 'historical_rule_configuration_verified'))
-  scenarios <- list(capacity_proxy = setNames(rep(1, length(capacity)), names(capacity)))
-  scenarios$uniform_two_adults <- scenarios$capacity_proxy * 2
-  scenarios$AR_RI_WA_two_adults <- scenarios$capacity_proxy
-  scenarios$AR_RI_WA_two_adults[c('AR', 'RI', 'WA')] <- 2
-  scenarios$AR_three_RI_WA_two <- scenarios$AR_RI_WA_two_adults
-  scenarios$AR_three_RI_WA_two['AR'] <- 3
+  # Selected AR/RI/WA inputs must match one-adult configuration
+  one_adult <- configurations %>% filter(required_adults == 1, state %in% c('AR', 'RI', 'WA'))
+  stopifnot(all(vapply(c('AR', 'RI', 'WA'), function(s) {
+    capacity[s] %in% one_adult$max_preschool_children[one_adult$state == s]
+  }, logical(1))))
+  ones <- setNames(rep(1, length(capacity)), names(capacity))
+  scenarios <- list(capacity_proxy = list(adults = ones, capacity = capacity),
+                    uniform_two_adults = list(adults = ones * 2, capacity = capacity))
+  multi <- list(adults = ones, capacity = capacity)
+  multi$adults[chosen$state[1:3]] <- chosen$required_adults[1:3]
+  multi$capacity[chosen$state[1:3]] <- chosen$max_preschool_children[1:3]
+  scenarios$AR_RI_WA_two_adults <- multi
+  multi$adults['AR'] <- chosen$required_adults[4]
+  multi$capacity['AR'] <- chosen$max_preschool_children[4]
+  scenarios$AR_three_RI_WA_two <- multi
   raw_base <- 1 / capacity
-  baseline_index <- raw_base / weighted.mean(raw_base[states], weights)
+  share <- home_licensed_share()
+  baseline_index <- share * raw_base / weighted.mean(raw_base[states], weights) + (1 - share)
   rows <- list()
   for (scenario in names(scenarios)) {
-    adults <- scenarios[[scenario]]
-    raw <- adults / capacity
+    adults <- scenarios[[scenario]]$adults
+    cap <- scenarios[[scenario]]$capacity
+    raw <- adults / cap
     denominator <- weighted.mean(raw[states], weights)
-    index <- raw / denominator
+    index <- share * raw / denominator + (1 - share)
     stopifnot(abs(weighted.mean(index[states], weights) - 1) < 1e-12)
     for (geo in names(capacity)) {
       y <- read_yaml(file.path('config', 'state', 'supply', paste0(geo, '.yaml')))
@@ -48,7 +61,7 @@ analyze_home_staffing <- function() {
       factor <- unname(index[geo] / baseline_index[geo])
       current_labor_cost <- sum(current * wage)
       rows[[length(rows) + 1]] <- tibble(
-        scenario, geo, capacity = unname(capacity[geo]),
+        scenario, geo, capacity = unname(cap[geo]),
         assumed_adults = unname(adults[geo]),
         national_raw_staff_per_child = denominator,
         staffing_index = unname(index[geo]),
@@ -66,7 +79,7 @@ analyze_home_staffing <- function() {
   write_csv(result, 'state_data/out/home_staffing_sensitivity.csv')
   cat('Four scenarios, 52 geographies each; uniform adult-count scaling cancels in normalization.\n')
   cat('National home anchor already includes NSECE helpers.\n')
-  cat('Sensitivity changes selected state multipliers only; other states retain capacity proxies.\n')
+  cat('Sensitivity swaps AR/RI/WA to multi-adult configurations; other states keep one-adult capacity.\n')
   print(as.data.frame(result %>% filter(geo %in% c('AR', 'RI', 'WA')) %>%
     select(scenario, geo, staffing_index, labor_requirement_factor, anchor_price_change_pct)), row.names = FALSE)
   invisible(result)

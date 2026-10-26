@@ -1,0 +1,4 @@
+input: /nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1/2019/37941-0007-Data.tsv
+md5: a82d4949c98e344729b7fc5ff62e0add
+date: 2026-10-26 14:31:04
+R: R version 4.4.2 (2024-10-31)

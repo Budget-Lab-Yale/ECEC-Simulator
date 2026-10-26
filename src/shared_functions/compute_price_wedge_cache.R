@@ -484,7 +484,7 @@ keyed_hash_2_32 <- function(key1, key2, seed, caller) {
   keys <- c(as.numeric(key1), as.numeric(key2))
   if (anyNA(keys) || any(keys < 0) || any(keys != floor(keys))) {
     stop(caller, ': keys must be non-negative integers w/out NA. ',
-         'Check hh_id / parent_unit_id / child_id in input tables.')
+         'Check hh_id / parent_unit_id in input tables.')
   }
   seed_mix <- mul_mod_2_32(as.numeric(seed) %% 4294967296, 2654435769)   # 0x9e3779b9
   h <- fmix_2_32(xor_2_32(seed_mix, as.numeric(key1) %% 4294967296))
@@ -503,7 +503,7 @@ keyed_unif_2_32 <- function(key1, key2, seed) {
   #
   # Params:
   #   - key1 (num): non-negative integers (hh_id)
-  #   - key2 (num): non-negative integers, same length (child_id)
+  #   - key2 (num): non-negative integers, same length (parent_unit_id)
   #   - seed (int): stream seed
   #
   # Returns: dbl vector in [0, 1), one per key pair
