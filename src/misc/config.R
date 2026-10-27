@@ -286,7 +286,7 @@ print_usage <- function() {
   cat('                              Valid: part_wage, part_cost, paid_cost, hours_income\n')
   cat('  --calib-target2-value <val> Value for second target (default: -0.05 for hours_income)\n')
   cat('  --nsece-year <year>         NSECE survey year to calibrate on (default: 2019)\n')
-  cat('                              2019 pairs with the 2019 ACS; 2024 pairs with the 2023 ACS.\n')
+  cat('                              2019 pairs with the 2019 ACS; 2024 pairs with the 2024 ACS.\n')
   cat('                              The ACS year is the model base year (dollars, growth, taxes).\n')
   cat('                              Pass the same value when reusing a run with -N, -A, or -C\n')
   cat('  --nsece-2024-options <list> Optional 2024 NSECE data treatments, comma-separated, or all\n')
@@ -657,7 +657,7 @@ if (!interactive()) {
 }
 
 # ACS base year: the ACS year paired with the NSECE survey year (2019 -> 2019,
-# 2024 -> 2023; see NSECE_ACS_YEAR_PAIRS in constants.R)
+# 2024 -> 2024; see NSECE_ACS_YEAR_PAIRS in constants.R)
 if (!exists('nsece_year') || is.null(nsece_year)) nsece_year <- DEFAULT_NSECE_YEAR
 acs_base_year <- unname(NSECE_ACS_YEAR_PAIRS[as.character(nsece_year)])
 if (is.na(acs_base_year)) {

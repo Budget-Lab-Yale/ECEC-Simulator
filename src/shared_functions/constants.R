@@ -67,15 +67,17 @@ OASI_TAX_RATE     <- 0.062   # Old-Age and Survivors Insurance rate (6.2%)
 # year to the base year in 1a when the two differ.
 #
 # 2019: the 2019 NSECE with the 2019 ACS (the default).
-# 2024: the 2024 NSECE with the 2023 ACS, the latest ACS year on disk
-#       (raw_data/ACS/v1/2023/ipums_usa.csv holds 2019 and 2023 only).
+# 2024: the 2024 NSECE with the 2024 ACS. The 2024 ACS with IPUMS tax-unit
+#       (TAXID, ADJGINC) and SPM variables is not yet released; 1b stops with
+#       a message until an extract with YEAR == 2024 is on disk. The 2023 ACS
+#       is deliberately not used as a stand-in.
 #------------------------------------------------------------------------------
 
 DEFAULT_NSECE_YEAR <- 2019
 
 NSECE_ACS_YEAR_PAIRS <- c(
   '2019' = 2019,
-  '2024' = 2023
+  '2024' = 2024
 )
 
 # Optional data treatments for the 2024 NSECE (--nsece-2024-options). Each is

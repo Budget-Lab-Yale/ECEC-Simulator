@@ -41,7 +41,8 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   nsece_settings <- get_nsece_year_settings(nsece_year)
 
   # Model base year: the ACS year paired with this survey (2019 -> 2019,
-  # 2024 -> 2023). Supply-side dollar values are written in base-year dollars.
+  # 2024 -> 2024). Supply-side dollar values are written in base-year dollars;
+  # with equal years the conversion factors are 1.
   base_year <- unname(NSECE_ACS_YEAR_PAIRS[as.character(nsece_year)])
   dollar_conversion <- get_nsece_dollar_conversion(
     nsece_year, base_year, estimation_info$paths$`Macro-Projections`
@@ -750,9 +751,12 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
 
           # is_other will be derived below using location/relationship.
           # Low/high center split on the household's own out-of-pocket price
-          # per hour: $4.75 in 2019 dollars, grown to the survey year (see
-          # get_nsece_year_settings())
-          is_paid      = !is.na(paid_calc)   & paid_calc == 1,
+          # per hour: the within-year median ($4.75 in 2019, $6.86 in 2024;
+          # see get_nsece_year_settings())
+          # A payment of don't know / refused (-1 -> NA) is missing, not
+          # unpaid: is_paid stays NA, so the arrangement gets no category and
+          # the child is classified by its other arrangements, or is NA
+          is_paid      = paid_calc == 1,
           is_lowprice  = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost <  nsece_settings$center_price_cut,
           is_highprice = is_center & is_paid & net_hourly_cost_status == 'OK' & net_hourly_cost >= nsece_settings$center_price_cut,
 
@@ -945,6 +949,22 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   nsece_hb <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'home')
   nsece_wf <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'workforce')
 
+  # Administrative-data centers (CB9_METH_DATA_SOURCE = 2: public-school
+  # programs built from administrative records, 483 in 2019 and 1,141 in
+  # 2024) have no staffing, wage, education or classroom data, and their
+  # workforce records carry none either, so they cannot enter the numerator
+  # of the sector labor ratios (staff per FTE child). Keeping their enrollment
+  # in the denominator understates Unpaid Center-Based staffing per child
+  # (by 8% in 2019 and 19% in 2024). Drop them from the center file in both
+  # years, so the ratios come from interviewed centers on both sides. They
+  # never enter the price medians (75%+ report that no family pays).
+  # Their enrollment also leaves hours_by_sector; L_0 still sits above baseline
+  # labor demand (91% / 78% in 2019), so adding it back would widen that gap.
+  # See docs/nsece_2019_to_2024_crosswalk.md, Administrative-data centers.
+  n_admin_centers <- sum(nsece_cb$CB9_METH_DATA_SOURCE == 2, na.rm = TRUE)
+  nsece_cb <- nsece_cb %>% filter(!(CB9_METH_DATA_SOURCE %in% 2))
+  cat('  Administrative-data centers dropped from the supply side:', n_admin_centers, '\n')
+
   # Optional 2024 treatment 'supply', part 1: the 2019 public file deleted
   # posted rates outside the 5th-95th percentile of each pay unit (code -2,
   # treated as missing below), while the 2024 file sets them equal to the
@@ -999,6 +1019,11 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
             B1_3A_AGERATE ==  2 ~ 'NORATE',
             STDRATE_WKLY  == -1 ~ 'MISS',
             STDRATE_WKLY  == -2 ~ 'MISS',
+            # Any other reserve code (e.g. 2024 -9, no rate / no family pays)
+            # is not a price. None reaches this line in the 2019 or 2024
+            # public files (src/misc/nsece_2024_checks/06_supply_checks.py),
+            # but a negative value here would be read as a price.
+            STDRATE_WKLY  <   0 ~ 'MISS',
             T                   ~ 'OK'
           ),
 
@@ -1373,11 +1398,13 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           n_no_ba   = n_workers - n_ba
         ) %>%
 
-        # Get totals
+        # Get weighted totals. Provider weights make the home-based labor
+        # stock and hours national totals, like the center side; unweighted
+        # sums made home-based care under 1% of L_0 instead of 7-16%.
         summarise(
-          enrollment = sum(enrollment),
-          ba         = sum(n_ba),
-          no_ba      = sum(n_no_ba),
+          enrollment = sum(enrollment * hb_weight),
+          ba         = sum(n_ba       * hb_weight),
+          no_ba      = sum(n_no_ba    * hb_weight),
         ) %>%
         mutate(
 
@@ -1803,10 +1830,14 @@ get_nsece_year_settings <- function(nsece_year) {
   # harmonize functions recode the few 2024 reserve codes that differ from
   # 2019, so the processing code serves both years unchanged.
   #
-  # The household-side cut between low- and high-priced center care is $4.75
-  # per hour in 2019 dollars. For 2024 it is grown by the CPI-U index for
-  # day care and preschool (CUUR0000SEEB03), which rose by a factor of 1.212
-  # between the 2019 and 2024 annual averages.
+  # The household-side cut between low- and high-priced center care is the
+  # within-year weighted median hourly out-of-pocket price of paid center care
+  # for the youngest child under 5 (Borowsky et al. 2022): child weights,
+  # positive fees only. That recipe gives $4.73 on 2019 (the model keeps the
+  # published $4.75) and $6.86 on 2024. See
+  # src/misc/nsece_2024_checks/05_price_cutoff.py and
+  # docs/nsece_2019_to_2024_crosswalk.md. Growing $4.75 by the CPI for day
+  # care ($5.76) is not used: center prices rose faster than that index.
   #
   # Params:
   #   - nsece_year (int): Survey year, 2019 or 2024
@@ -1836,7 +1867,7 @@ get_nsece_year_settings <- function(nsece_year) {
         home      = '39466-0003-Data.tsv',
         workforce = '39466-0001-Data.tsv'
       ),
-      center_price_cut = 4.75 * 1.212,
+      center_price_cut = 6.86,
       harmonize        = list(
         household = harmonize_nsece_2024_household,
         center    = harmonize_nsece_2024_centers,
@@ -1940,15 +1971,10 @@ harmonize_nsece_2024_centers <- function(nsece_cb) {
   #    (missing). The 2024 public file censors rates at the 5th and 95th
   #    percentiles within each time unit instead of coding them -2 as in
   #    2019; nothing can be done about that here.
-  # 3. Administrative-data cases (CB4_METH_DATA_SOURCE = 2: 1,141 public
-  #    school programs, 16% of the file; 482 cases, 7%, in 2019). In 2019
-  #    these carried enrollment by age. In 2024 only total enrollment under
-  #    age 6 (CB4_ENRL_0TO5) and whether the program runs full-time or
-  #    part-time (CB4_ADMIN_FULLTIME_CARE, CB4_ADMIN_PARTTIME_CARE) are
-  #    public. Total enrollment is split across ages using the weighted age
-  #    mix of interviewed public-school centers where no family pays; the
-  #    full-time share is 100% for full-time-only programs, 0% for
-  #    part-time-only programs, and 50% otherwise.
+  # 3. Administrative-data cases (CB4_METH_DATA_SOURCE = 2) are left as they
+  #    are here (enrollment by age -8 -> 0 below); run_nsece_processing()
+  #    drops them from the supply side in both years, because they have no
+  #    staffing data to match their enrollment.
   # 4. Enrollment by age unknown (-1, 1-2% of centers per age): set to 0, so
   #    the center does not count at that age. Full-time share unknown (-4):
   #    set to the enrollment-weighted mean share for that age.
@@ -1961,29 +1987,7 @@ harmonize_nsece_2024_centers <- function(nsece_cb) {
 
   ages      <- c('INF', '1YR', '2YR', '3YR', '4YR', '5YR')
   rate_ages <- c('INF', '2YR', '3YR', '4YR')
-  is_admin  <- nsece_cb$CB9_METH_DATA_SOURCE == 2
-
-  # Age mix of enrollment in interviewed public-school centers where no family pays
-  donors <- nsece_cb %>%
-    filter(
-      CB9_METH_DATA_SOURCE == 1,
-      CB9_METH_PUBSCHFLAG  == 1,
-      CB9_B1_3_FAMPAY      == 2
-    ) %>%
-    filter(if_all(all_of(paste0('CB9_ENRL_', ages)), ~ .x >= 0))
-  age_totals <- map_dbl(ages, ~ sum(donors[[paste0('CB9_ENRL_', .x)]] * donors$CB9_METH_WEIGHT))
-  age_shares <- set_names(age_totals / sum(age_totals), ages)
-
-  cat('  2024 administrative-data centers:', sum(is_admin),
-      '| age mix used to split their enrollment (INF..5YR):',
-      paste(round(age_shares, 3), collapse = ' '), '\n')
-
-  admin_ft_share <- case_when(
-    nsece_cb$CB9_ADMIN_FULLTIME_CARE == 1 & nsece_cb$CB9_ADMIN_PARTTIME_CARE == 2 ~ 100,
-    nsece_cb$CB9_ADMIN_FULLTIME_CARE == 2 & nsece_cb$CB9_ADMIN_PARTTIME_CARE == 1 ~ 0,
-    TRUE                                                                          ~ 50
-  )
-  admin_total <- pmax(nsece_cb$CB9_ENRL_0TO5, 0)
+  is_admin  <- nsece_cb$CB9_METH_DATA_SOURCE %in% 2
 
   # Enrollment and full-time share by age
   for (age in ages) {
@@ -1993,8 +1997,6 @@ harmonize_nsece_2024_centers <- function(nsece_cb) {
     enrl <- as.numeric(nsece_cb[[enrl_col]])
     ft   <- as.numeric(nsece_cb[[ft_col]])
 
-    enrl <- if_else(is_admin, admin_total * age_shares[[age]], enrl)
-    ft   <- if_else(is_admin, if_else(enrl > 0, admin_ft_share, -2), ft)
     enrl <- if_else(enrl < 0, 0, enrl)
 
     reported <- !is_admin & enrl > 0 & ft >= 0

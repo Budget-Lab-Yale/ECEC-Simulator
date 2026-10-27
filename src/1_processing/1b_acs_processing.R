@@ -18,7 +18,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   # imputations (random forest), employment probability estimates, and SPM
   # unit processing. Requires NSECE data from run_nsece_processing() or
   # copy_nsece_interface(). The ACS year is the one paired with the NSECE
-  # survey year (NSECE_ACS_YEAR_PAIRS: 2019 -> 2019, 2024 -> 2023), and output
+  # survey year (NSECE_ACS_YEAR_PAIRS: 2019 -> 2019, 2024 -> 2024), and output
   # files carry it (acs_*_<ACS year>.csv). Variable names below still say
   # 2019 (processed_acs_2019); they hold whichever ACS year is processed.
   #
@@ -556,6 +556,14 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     #            Census sporder  = IPUMS PERNUM
     acs <- acs_raw %>%
       filter(YEAR == acs_year) %>%
+      {
+        if (nrow(.) == 0) {
+          stop('No ', acs_year, ' records in ', acs_raw_path, '. The ', acs_year, ' ACS (with IPUMS ',
+               'TAXID, ADJGINC and SPM variables) is required for the ', nsece_year, ' NSECE; ',
+               'see NSECE_ACS_YEAR_PAIRS in constants.R.')
+        }
+        .
+      } %>%
       filter(GQ == 1 | GQ == 2) %>%
       mutate(census_serialno = as.numeric(CBSERIAL) - acs_year * 1e9) %>%
       left_join(taxid_crosswalk, by = c('census_serialno', 'PERNUM')) %>%
@@ -1181,26 +1189,31 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
             return(NULL)
           }
 
-          sample_size  <- 50000
-          replace_flag <- nrow(train_raw) < sample_size
-
+          # Train on the original records with the child weights as case
+          # weights. The previous recipe drew 50,000 records with replacement
+          # in proportion to the weight; with 1,000-2,000 families per group
+          # each family was copied 25-50 times, so a 10-record leaf could be
+          # a single family and the forest memorized families (held-out log
+          # loss 2.66 in 2019 / 2.94 in 2024, worse than the no-feature
+          # forecast's 1.55 / 1.62). These settings (square root of the
+          # features per split, leaf 50, 63% of records drawn without
+          # replacement per tree) score 1.35 / 1.42 and were the best of nine
+          # settings tried; see docs/nsece_2024/care_choice_shift.md.
           train_df <- train_raw %>%
-            sample_n(
-              size    = sample_size,
-              weight  = model_weight,
-              replace = replace_flag
-            ) %>%
             mutate(ecec_class = factor(ecec_class))
 
           rf <- ranger(
-            formula        = ecec_class ~ .,
-            data           = train_df[, c('ecec_class', features)],
-            num.trees      = 500,
-            min.node.size  = 10,
-            mtry           = length(features),
+            formula         = ecec_class ~ .,
+            data            = train_df[, c('ecec_class', features)],
+            case.weights    = train_df$model_weight,
+            num.trees       = 500,
+            min.node.size   = 50,
+            mtry            = floor(sqrt(length(features))),
+            replace         = FALSE,
+            sample.fraction = 0.632,
             importance      = 'impurity',
-            probability    = TRUE,
-            verbose        = FALSE
+            probability     = TRUE,
+            verbose         = FALSE
           )
 
           # Save RF report
