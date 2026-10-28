@@ -1,4 +1,7 @@
 2024 NSECE HOUSEHOLD FILE: THE WEEKLY CALENDAR, THE REFERENCE WEEK, AND MISSING WORK HOURS
+
+Status, 2026-10-28: this report records the review runs of 2026-10-16 on commit `c05fefa`. Words like "current", "today", and "the model" and every line number refer to that commit, not to the current code. The current record is `docs/nsece_2019_to_2024_crosswalk.md`. The `hours` option now draws donors by earner rank and hourly wage band (crosswalk mismatch item 3).
+
 (Markdown-formatted text; saved as .txt because writing a .md report file was blocked.)
 
 Prepared 2026-10-16. Everything here was computed from the public-use household files (ICPSR 37941 for 2019, 39466 for 2024) and from the step 1a outputs of branch `review/nsece-2024` (commit `c05fefa`, seed 76) in `analysis/nsece2024/out/new_{2019,2024}`. No repository file was edited. The scripts re-implement the model's own classification rules and were checked against the 1a output: they reproduce every 1a care category, care-hours figure and parent work-hours figure exactly in both years (0 differences; `csv/wh_t0_check_against_1a.csv` and the job logs).
@@ -53,7 +56,7 @@ This option moves 2019 a great deal: Parent Only −4.7 points, Other Unpaid +3.
 Hours are missing for 5.1% of two-parent primary caregivers, 5.7% of partners and 3.7% of single parents in 2024 (children under 5, child weights); the model counts them as not employed. Options:
 
 - **a, current**.
-- **b, extend the existing donor rule**: parents with a missing hours record who said yes to D1a get hours drawn from working parents of the same earner rank, as the current rule does for parents with zero hours; those who said no get zero. New draws use their own random stream so the existing draws are unchanged.
+- **b, extend the existing donor rule**: parents with a missing hours record who said yes to D1a get hours drawn from working parents of the same earner rank, as the rule at `c05fefa` does for parents with zero hours (the `hours` option now also matches the hourly wage band); those who said no get zero. New draws use their own random stream so the existing draws are unchanged.
 - **c, D1a decides employment for every parent, hours imputed**: as b, but hours for every D1a-yes parent without positive hours (including those the current rule already imputes) are drawn from working parents in the same cell of family type, sex and questionnaire version.
 
 | Option | Single parent employed 2019 / 2024 | Single parent full-time 2019 / 2024 | Two-parent primary caregiver employed 2019 / 2024 | Primary caregiver full-time 2019 / 2024 | Partner employed 2019 / 2024 |

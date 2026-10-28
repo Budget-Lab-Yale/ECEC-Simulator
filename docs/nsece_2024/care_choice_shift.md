@@ -1,12 +1,14 @@
 # Care choices in the 2019 and 2024 NSECE, holding the population fixed
 
+Status, 2026-10-28: this report records the review runs of 2026-10-17 on commit `c05fefa`. It does not describe the current code; the current record is `docs/nsece_2019_to_2024_crosswalk.md`. The model uses the original forest settings ("model's forest settings" below). The regularized forest is an experiment that Anna did not adopt, and its held-out log-loss scores are not a basis for the model. The review runs paired 2024 with the 2023 ACS and used a $5.76 cutoff; the code now uses the 2024 ACS and $6.86.
+
 Prepared 2026-10-17. (Written as .txt because writing a .md report was blocked; the content is Markdown.) All numbers come from Slurm jobs; scripts, logs and CSV files are listed at the end. No repository file was edited and nothing was pushed. The model code was read from the worktree `ECEC-Simulator-caregiver-review/nsece2024` (branch `review/nsece-2024`, commit `c05fefa`) and sourced, not changed.
 
 ## Answer
 
 **Holding the population fixed, care choices changed by roughly half as much as the raw NSECE comparison suggests.** The model's care-choice forest was trained once on the 2019 NSECE and once on the 2024 NSECE, and both forests were applied to the same 2019 ACS children under 5, each at the employment state their primary caregiver actually had. The difference between the two sets of predictions is the change in care choices for an unchanged population. Results for all children under 5 (2019 forest / 2024 forest / change, in percent of children; the range in brackets is the middle 95 percent of 60 bootstrap draws over NSECE households):
 
-| Care category | Raw NSECE, 2019 / 2024 / change | Fixed population, model's forest settings | Fixed population, regularized forest |
+| Care category | Raw NSECE, 2019 / 2024 / change | Fixed population, model's forest settings (used) | Fixed population, regularized forest (experiment, not adopted) |
 |---|---|---|---|
 | Parent Only | 52.6 / 45.9 / −6.7 | 45.6 / 42.7 / **−2.9** [−4.4 to −0.5] | 49.0 / 46.0 / **−3.0** [−5.0 to −1.1] |
 | High-Priced Center-Based | 7.3 / 10.6 / +3.3 | 6.7 / 9.7 / **+3.0** [+2.0 to +4.4] | 6.3 / 9.9 / **+3.6** [+1.8 to +5.1] |
@@ -40,7 +42,7 @@ In words:
 
 ### The model's care-choice forest
 
-The care-choice step is in `src/1_processing/1b_acs_processing.R` (the `ecec_result` block, from line 1085 of commit `c05fefa`). Children under 5 are grouped into families. Families with three or more children under 5 keep their two youngest for training (the dropped children's weight is spread over the rest; in the ACS the extra children are predicted with the one-child forest). Six forests are trained: one-child and two-child families, each split by whether the family has no identified parent, one parent, or two parents. One-child forests predict the child's care class; two-child forests predict the pair's joint class, which is then split into each child's own probabilities. A care class is one of the seven non-parental categories crossed with part-time or full-time hours (under or at least 20 hours a week), plus Parent Only: 15 classes.
+The care-choice step is in `src/1_processing/1b_acs_processing.R` (the `ecec_result` block; line 1085 at commit `c05fefa`, line 1139 now). Children under 5 are grouped into families. Families with three or more children under 5 keep their two youngest for training (the dropped children's weight is spread over the rest; in the ACS the extra children are predicted with the one-child forest). Six forests are trained: one-child and two-child families, each split by whether the family has no identified parent, one parent, or two parents. One-child forests predict the child's care class; two-child forests predict the pair's joint class, which is then split into each child's own probabilities. A care class is one of the seven non-parental categories crossed with part-time or full-time hours (under or at least 20 hours a week), plus Parent Only: 15 classes.
 
 Features: child age and sex (both children in two-child families), household income as a percentile within the survey, household size, Census region, the caregiver's and partner's ages (or the single parent's age and sex), the primary caregiver's employment (none, part time under 35 hours, full time), and in two-child families whether there were originally three or more children under 5.
 
@@ -76,7 +78,7 @@ Each treatment was applied to both years, so the comparison stays like for like.
 
 The treatment functions were taken from the calendar-hours scripts (`calendar_hours/scripts/02_calendar_treatments.R`, `03_work_hours.R`) and checked against the 1a output (zero differences); the raking factors use the employment report's targets (`employment/out/raking_targets.csv`).
 
-### Regularized forest and held-out accuracy (experiment 3)
+### Regularized forest and held-out accuracy (experiment 3; not adopted)
 
 Held-out accuracy was measured by five-fold cross-validation with folds formed by household, so resampled copies of a child cannot appear on both sides. For each held-out child, the forest's probability for the category the child is actually in was recorded (two-child forests collapsed to each child's own category, as the model uses them). **Log loss** is the weighted average of minus the natural log of that probability, with probabilities below 0.0001 set to 0.0001; lower is better, and a forecast that always gives the true category probability 1 scores 0. The **no-feature forecast** gives every child its family group's weighted class shares from the training folds.
 
@@ -182,7 +184,7 @@ A 3-point shift between the years is small relative to the uncertainty about any
 
 - **The 2019 ACS population is held fixed**, including its employment. The results describe how a 2019 population would choose under 2024 behavior, not 2024 outcomes.
 - **Type-of-care coding.** The 2024 survey moved some "other organizational" care into center care (OPRE scales 2019 center shares up 7 to 9 percent to compare them). No adjustment was made. This probably overstates the rise in center care by roughly 1.5 to 2 points of the raw comparison and understates the fall in Other Paid and Other Unpaid (`reports/04_model_processing_2019_vs_2024.md`, comparability problem 4). The rise in Other Unpaid runs against the direction of this coding change.
-- **The low/high center price cut** is $4.75 in 2019 and $5.76 in 2024 (grown by the CPI day care index). The split between the two paid center categories depends on that choice; their sum does not.
+- **The low/high center price cut** in these runs is $4.75 in 2019 and $5.76 in 2024 (grown by the CPI day care index). The code now uses $6.86 for 2024, the within-year median. The split between the two paid center categories depends on that choice; their sum does not.
 - **Bootstrap bands** ignore the survey's strata and clusters and the uncertainty in the raking targets. The check against the design-based standard error suggests this matters little for the overall shares; group-level bands are rougher.
 - **Small groups.** Children with no parent unit and some two-child groups rest on a handful of 2024 records.
 - **The usual-week treatment** uses one random draw of the imputed hours, not an average over draws.

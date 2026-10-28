@@ -502,15 +502,29 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
 
   cat('Processing', acs_year, 'ACS data (paired with the', nsece_year, 'NSECE)...\n')
 
-  acs_raw_path <- file.path(estimation_info$paths$ACS, 'ipums_usa.csv')
+  # ACS file by year: dependency ACS-<year> in config/default_paths.yaml where
+  # one exists (ACS-2024), else ACS (holds 2019 records)
+  acs_key      <- paste0('ACS-', acs_year)
+  acs_dir      <- estimation_info$paths[[if (acs_key %in% names(estimation_info$paths)) acs_key else 'ACS']]
+  acs_raw_path <- file.path(acs_dir, 'ipums_usa.csv')
   if (!file.exists(acs_raw_path)) {
     stop('ACS data file not found: ', acs_raw_path, '\n',
          'Please ensure raw ACS data exists.')
   }
+  cat('  ACS file:', acs_raw_path, '\n')
 
   acs_raw <- acs_raw_path %>%
     fread() %>%
     tibble()
+
+  # Tax units, AGI from IPUMS TAXID, ADJGINC outside 2019 (no corrected
+  # crosswalk) -- not yet released for 2024
+  missing_tax_vars <- setdiff(c('TAXID', 'ADJGINC'), names(acs_raw))
+  if (acs_year != 2019 && length(missing_tax_vars) > 0) {
+    stop('The ', acs_year, ' ACS file lacks ', paste(missing_tax_vars, collapse = ', '), ': ', acs_raw_path, '\n',
+         'IPUMS has not released them for ', acs_year, '. The model needs a source of ', acs_year,
+         ' tax units and AGI before it can run on the ', nsece_year, ' NSECE.')
+  }
 
   # Corrected Census tax-unit crosswalk (April 2024 Census correction).
   # The legacy IPUMS TAXID splits nearly all married couples into two
@@ -1189,31 +1203,26 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
             return(NULL)
           }
 
-          # Train on the original records with the child weights as case
-          # weights. The previous recipe drew 50,000 records with replacement
-          # in proportion to the weight; with 1,000-2,000 families per group
-          # each family was copied 25-50 times, so a 10-record leaf could be
-          # a single family and the forest memorized families (held-out log
-          # loss 2.66 in 2019 / 2.94 in 2024, worse than the no-feature
-          # forecast's 1.55 / 1.62). These settings (square root of the
-          # features per split, leaf 50, 63% of records drawn without
-          # replacement per tree) score 1.35 / 1.42 and were the best of nine
-          # settings tried; see docs/nsece_2024/care_choice_shift.md.
+          sample_size  <- 50000
+          replace_flag <- nrow(train_raw) < sample_size
+
           train_df <- train_raw %>%
+            sample_n(
+              size    = sample_size,
+              weight  = model_weight,
+              replace = replace_flag
+            ) %>%
             mutate(ecec_class = factor(ecec_class))
 
           rf <- ranger(
-            formula         = ecec_class ~ .,
-            data            = train_df[, c('ecec_class', features)],
-            case.weights    = train_df$model_weight,
-            num.trees       = 500,
-            min.node.size   = 50,
-            mtry            = floor(sqrt(length(features))),
-            replace         = FALSE,
-            sample.fraction = 0.632,
+            formula        = ecec_class ~ .,
+            data           = train_df[, c('ecec_class', features)],
+            num.trees      = 500,
+            min.node.size  = 10,
+            mtry           = length(features),
             importance      = 'impurity',
-            probability     = TRUE,
-            verbose         = FALSE
+            probability    = TRUE,
+            verbose        = FALSE
           )
 
           # Save RF report

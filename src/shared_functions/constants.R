@@ -67,10 +67,10 @@ OASI_TAX_RATE     <- 0.062   # Old-Age and Survivors Insurance rate (6.2%)
 # year to the base year in 1a when the two differ.
 #
 # 2019: the 2019 NSECE with the 2019 ACS (the default).
-# 2024: the 2024 NSECE with the 2024 ACS. The 2024 ACS with IPUMS tax-unit
-#       (TAXID, ADJGINC) and SPM variables is not yet released; 1b stops with
-#       a message until an extract with YEAR == 2024 is on disk. The 2023 ACS
-#       is deliberately not used as a stand-in.
+# 2024: the 2024 NSECE with the 2024 ACS. 2024 extract (config key ACS-2024)
+#       lacks IPUMS tax-unit (TAXID, ADJGINC) and SPM variables -- not yet
+#       released; 1b stops, names them. 2023 ACS deliberately not used as a
+#       stand-in.
 #------------------------------------------------------------------------------
 
 DEFAULT_NSECE_YEAR <- 2019
@@ -81,16 +81,16 @@ NSECE_ACS_YEAR_PAIRS <- c(
 )
 
 # Optional data treatments for the 2024 NSECE (--nsece-2024-options). Each is
-# off by default and has no effect when the 2019 survey is used.
-#   hours:   parents whose work-hours record is missing (calendar code -10)
-#            and who said they worked last week (D1a) get hours drawn from
-#            working parents; those who said they did not work get zero
+# off by default and has no effect when the 2019 survey is used. The former
+# 'hours' option (missing-hours fill) is always on for 2024 since 2026-10-28;
+# config.R still accepts the name and drops it.
 #   weights: child weights of children under 5 raked to the March 2024 CPS
 #            share of children by mother's work status and family type
 #   supply:  2024 posted center rates at or beyond each age's 5th / 95th
-#            percentile set to missing, as the 2019 file did, and center
-#            staffing measured from directors' staff counts
-NSECE_2024_OPTIONS <- c('hours', 'weights', 'supply')
+#            percentile across all pay units set to missing (2019 file
+#            trimmed per pay unit -- not same rule, crosswalk mismatch
+#            item 4), center staffing from directors' staff counts
+NSECE_2024_OPTIONS <- c('weights', 'supply')
 
 
 

@@ -234,10 +234,10 @@ See section 1, items 3 and 4. In short: in 2024, Head Start and public pre-K are
 |---|---|---|---|
 | `HH9_METH_WEIGHT` | `HH4_METH_WEIGHT` | Confirmed (p. 61) | Same role. Range 81–73,893 (2019: 0–33,184). Stated weighted total identical to 2019; see open questions. |
 | `HH9_RSPOUSEPARTNER_LOOP` | `HH4_RSPOUSEPARTNER_LOOP` | Confirmed (p. 140) | Same codes (−2, −1, loop number), but loop numbers now run to 13. |
-| `HH9_RGENDER` | `HH4_RGENDER_1` (male, 0/1) and `HH4_RGENDER_2` (female, 0/1) | Confirmed (pp. 146–147) | One categorical variable became two yes/no indicators. Multiple answers allowed. 0 means "no, don't know or refused." Third category only in `L1_HH4_RGENDER_3`. Model code `HH9_RGENDER != 3` / `== 1` must be rewritten. |
+| `HH9_RGENDER` | `HH4_RGENDER_1` (male, 0/1) and `HH4_RGENDER_2` (female, 0/1) | Confirmed (pp. 146–147) | One categorical variable became two yes/no indicators. Multiple answers allowed. 0 means "no, don't know or refused." Third category only in `L1_HH4_RGENDER_3`. Handled in `harmonize_nsece_2024_household()` in `1a`. |
 | `HH9_PARCH_X_Y` | `HH4_PARCH_X_Y` | Confirmed (p. 132) | Household-member index Y now 1–13 (was 1–9). Same codes. Model regex `[1-9]_[1-9]` will miss members 10–13. |
 | `HH9_HRS_WEEK_PROVY_X` | `HH4_HRS_WEEK_PROVY_X` | Confirmed (p. 340) | Provider index now 1–15 (was 1–14). For summer and fall households the value is usual weekly hours in a typical week, not calendar hours. Zero for non-existent arrangements, as before. |
-| `HH9_HOURS_WEEK_PROV` | none | Confirmed absent | Not in the 2019 public file either; the 2019 user's guide lists it once as a typo for `HRS_WEEK_PROV`. The model's fallback rename can be dropped. |
+| `HH9_HOURS_WEEK_PROV` | none | Confirmed absent | Not in the 2019 public file either; the 2019 user's guide lists it once as a typo for `HRS_WEEK_PROV`. The model's fallback rename is still in `1a`; it is harmless. |
 | `HH9_PRIORREL_Y` | `HH4_PRIORREL_Y` | Confirmed (p. 293) | Provider index 1–15. Codes −9, −1, 0, 1; 2019 code 2 ("inferred no relationship, individual with family day care") is not in the 2024 value labels (inferred from ICPSR labels). |
 | `HH9_HHM_AGE_X` | `HH4_HHM_AGE_X` | Confirmed (p. 130) | Index 1–13. Valid skip moved from −2 to −3. |
 | `HH9_HHCOMP_NUMMOTHER` | `HH4_HHCOMP_NUMMOTHER` | Confirmed (p. 125) | Built from the new multi-answer gender item B4. How a parent who selects both or the third category is counted is not stated. |
@@ -299,7 +299,7 @@ See section 1, items 3 and 4. In short: in 2024, Head Start and public pre-K are
 |---|---|---|---|
 | `WF9_WORK_FT` | `WF4_WORK_FT` | Confirmed (p. 99) | Same 35-hour rule. |
 | `WF9_CHAR_EDUC` | `WF4_CHAR_EDUC` | Confirmed (p. 63) | Same categories. |
-| `WF9_WORK_WAGE` | `WF4_WORK_WAGE` | Confirmed (p. 105) | Same construction and top-coding. Reserve codes: −1 now "don't know or refused" (2019: "not enough information"); −5 "not enough information"; −3 "not paid." The model maps only −1 to missing and everything else non-positive to "admin." |
+| `WF9_WORK_WAGE` | `WF4_WORK_WAGE` | Confirmed (p. 105) | Same construction and top-coding. Reserve codes: −1 now "don't know or refused" (2019: "not enough information"); −5 "not enough information"; −3 "not paid." The model labels −1 MISS and the other non-positive codes ADMIN. Both labels set the wage to missing, so −3 and −5 leave the wage averages either way. |
 | `WF9_WORK_WAGE_IMP` | `WF4_WORK_WAGE_IMP` | Confirmed (p. 107) | Codes 0–7 as before plus −1 (655 cases). Documentation statistics look wrong. |
 | `WF9_WORK_ROLE` | `WF4_WORK_ROLE` | Confirmed (p. 113) | Same three categories, same source (director's report). |
 | `WF9_METH_WEIGHT` | `WF4_METH_WEIGHT` | Confirmed (p. 34) | Same population definition; 1,141 placeholder records carry weights. |
@@ -381,9 +381,9 @@ Wages are not adjusted for inflation and are measured at the interview date, whi
 6. **Gender coding.** How many respondents have both `HH4_RGENDER_1` and `HH4_RGENDER_2` equal to 0, or both equal to 1, and how are they counted in `HH4_HHCOMP_NUMMOTHER` and `HH4_HHCOMP_NUMFATHER`?
 7. **Weekly payment top-coding.** What rule produced `HH4_WEEKLY_PAYMENT_TC`? Compare its distribution by type of care and age with 2019.
 8. **Subsidy income screen.** Was the J15 screen applied at the nominal 2019 dollar cut-offs (as the questionnaire shows) or at 250 percent of poverty (as the comparability exhibit says)? This affects which households were asked the co-payment and sliding-fee items.
-9. **Center price censoring.** How many 2024 rates sit exactly at the 5th or 95th percentile values within each time unit, and how should they be treated to match the 2019 practice of dropping trimmed values?
+9. **Center price censoring.** Answered on 2026-10-28: per age, the four largest cap values hold 9.2% to 10.3% of 2024 positive rates, against the 9.0% to 9.5% that 2019 deleted. Deleting them is a test variant (crosswalk mismatch item 4).
 10. **Spring versus fall prices.** For the 1,380 centers reporting spring 2024 and those reporting fall 2024, how large is the difference in weekly prices, and should the model deflate or align them to one date?
-11. **Administrative cases.** Should the center-side model drop administrative cases (and use `CB4_METH_PUBSCHFLAG = 0`), impute their classroom and price data, or reweight? NORC warns that interview cases alone are not a valid population.
+11. **Administrative cases.** Decided on 2026-10-27 for free centers: administrative cases where no family pays join Unpaid Center-Based with their own staff count, in both years. Cases where families pay are in no sector; where they belong is open (crosswalk mismatch item 5).
 12. **Workforce placeholders.** Confirm that the 1,141 workforce placeholder records have −8 on all wage, role, education and full-time variables, and decide whether the wage model uses them only for totals.
 13. **Very low wages.** `WF4_WORK_WAGE` has values as low as $0.11 per hour. How many values are under the federal minimum wage, and were they in the 2019 file? Check against `WF4_WORK_WAGE_IMP`.
 14. **Wage imputation flag.** What is the actual distribution of `WF4_WORK_WAGE_IMP`, given that the user's guide statistics appear wrong?

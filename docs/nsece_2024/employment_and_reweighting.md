@@ -1,5 +1,7 @@
 # Maternal employment and family mix in the 2019 and 2024 NSECE, against the CPS and ACS
 
+Status, 2026-10-28: this report records the review runs of 2026-10-16 on commit `c05fefa`. Words like "current", "today", and "the model" refer to that commit, not to the current code. The current record is `docs/nsece_2019_to_2024_crosswalk.md`. The review used the 2023 ACS because the model's file ended in 2023. A 2024 ACS file now exists (`raw_data/ACS/v1/2024`, config key `ACS-2024`), and the model pairs the 2024 NSECE with it. On the per-child measure below, the 2024 ACS gives 62.9% (check `src/misc/nsece_2024_checks/11_acs_mother_at_work.R`, which reproduces this report's 61.1% for 2019 and 62.6% for 2023). The 2024 NSECE's 64.3% is 1.4 points above it, and the ACS change from 2019 is +1.8 points. The ACS raking targets below (options C, E, and G) are still the 2023 ones; they have not been rebuilt from the 2024 ACS. The care shares used a $5.76 cutoff for 2024; the code now uses $6.86.
+
 Prepared 2026-10-16. All numbers were computed from the microdata in Slurm jobs; scripts, logs and CSV outputs are listed at the end. No model code was changed and no model run was made. (Written as .txt because writing a .md report was blocked; the content is Markdown.)
 
 ## Short answer

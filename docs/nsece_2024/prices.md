@@ -1,5 +1,7 @@
 # Care prices for the 2024 NSECE: options and their consequences
 
+Status, 2026-10-28: this report records the review runs of 2026-10-16 on commit `c05fefa`. Words like "current", "today", and "the model" and every line number refer to that commit, not to the current code. The current record is `docs/nsece_2019_to_2024_crosswalk.md`. The code now uses a $6.86 cutoff for 2024 (the within-year median for the youngest child), not $5.76. Dropping weekly rates above $2,000 and deleting the 2024 cap values are measured as test variants (crosswalk mismatch items 2 and 4).
+
 Prepared 2026-10-16. (Saved as REPORT.txt because writing REPORT.md was blocked; the text is Markdown.) Nothing in any git worktree was changed. All numbers come from the public-use NSECE files (2019: ICPSR 37941; 2024: ICPSR 39466) processed with the model's own step 1a code on branch `review/nsece-2024` (commit `c05fefa`), plus the scripts in `prices/scripts/`. Dollar figures are nominal and per hour of care unless stated. "CPI day care" means the CPI-U index for day care and preschool (series CUUR0000SEEB03), which rose by a factor of 1.212 between the 2019 and 2024 annual averages.
 
 ## Choices John has to make
@@ -12,7 +14,7 @@ The 2019 public file deleted posted rates outside the 5th to 95th percentile of 
 
 | Rule | Low-price center 2019 → 2024 | Ratio | High-price center 2019 → 2024 | Ratio |
 |---|---|---|---|---|
-| A. Public files as released (model today) | $3.31 → $4.30 | 1.30 | $8.08 → $9.04 | 1.12 |
+| A. Public files as released (model at `c05fefa`; still the rule in 1a) | $3.31 → $4.30 | 1.30 | $8.08 → $9.04 | 1.12 |
 | B. A, dropping rates above $50 an hour in 2019 dollars in both years | $3.31 → $4.30 | 1.30 | $6.70 → $9.01 | 1.35 |
 | C1. B, and drop 2024 records at detected censoring points (both years "trimmed") | $3.31 → $4.38 | 1.32 | $6.70 → $8.71 | 1.30 |
 | C2. B, and drop the same share of the 2024 tails that 2019 trimmed | $3.31 → $4.61 | 1.39 | $6.70 → $8.44 | 1.26 |
@@ -27,7 +29,7 @@ Today a family's center arrangement is "high-price" if its out-of-pocket payment
 
 | Rule for 2024 | 2024 cut ($/hour) | High-price children | Low-price children | High share of paid center | Mean household price, high / low |
 |---|---|---|---|---|---|
-| $4.75 × CPI day care (branch now) | 5.76 | 10.6% | 7.9% | 57% | $11.98 / $2.99 |
+| $4.75 × CPI day care (review setting, not used) | 5.76 | 10.6% | 7.9% | 57% | $11.98 / $2.99 |
 | $4.75 × CPI-U | 5.83 | 10.4% | 8.1% | 56% | $12.11 / $3.06 |
 | $4.75 × model wage factor | 6.15 | 10.0% | 8.5% | 54% | $12.36 / $3.20 |
 | $4.75, not grown | 4.75 | 11.8% | 6.7% | 64% | $11.31 / $2.61 |

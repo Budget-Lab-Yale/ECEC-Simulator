@@ -1,5 +1,7 @@
 # Supply-side parameters for the move to the 2024 NSECE: choices, options and their effects
 
+Status, 2026-10-28: this report records the review runs of 2026-10-16 on commit `c05fefa`. Words like "current", "today", and "the model" and every line number refer to that commit, not to the current code. The current record is `docs/nsece_2019_to_2024_crosswalk.md`. Since then, home-based enrollment and staff carry provider weights in both years (option b1), and free administrative-data centers join Unpaid Center-Based with their own staff count (crosswalk, Administrative-data centers). Current supply parameters are in the crosswalk (Open item 4).
+
 Prepared 2026-10-16 for John Ricco. Nothing in the repository was edited. All numbers come from standalone scripts that read the review branch `review/nsece-2024` (worktree `ECEC-Simulator-caregiver-review/nsece2024`, commit `c05fefa`) and the NSECE public files. The rebuild of the model's supply step reproduces `supply_2019.yaml` and `supply_2024.yaml` exactly (largest difference in any staffing ratio 5e-8). Scripts, logs and CSV files are in `analysis/nsece2024_options/supply/` (list at the end). This file is plain text in Markdown layout; it is named .txt because writing a .md file was blocked.
 
 Terms used throughout:

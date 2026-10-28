@@ -162,6 +162,11 @@ parse_args <- function() {
     } else if (arg == '--nsece-2024-options') {
       nsece_2024_options <- trimws(strsplit(consume_arg('--nsece-2024-options'), ',')[[1]])
       if (identical(nsece_2024_options, 'all')) nsece_2024_options <- NSECE_2024_OPTIONS
+      # 'hours' is always on for 2024 now -- accept the old name, drop it
+      if ('hours' %in% nsece_2024_options) {
+        cat('Note: --nsece-2024-options hours is always on for 2024 and no longer an option; ignored.\n')
+        nsece_2024_options <- setdiff(nsece_2024_options, 'hours')
+      }
       unknown_options <- setdiff(nsece_2024_options, NSECE_2024_OPTIONS)
       if (length(unknown_options) > 0) {
         stop(paste('Error: unknown --nsece-2024-options value(s):', paste(unknown_options, collapse = ', '),
