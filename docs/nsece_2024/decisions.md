@@ -22,7 +22,7 @@ The 2024 survey reports far more maternal employment than outside sources. Among
 | March CPS | 57.1% | 59.6% | +2.5 points |
 | ACS | 61.1% | 62.9% | +1.8 points |
 
-The review had only the 2023 ACS (62.6%). The 2024 ACS figure comes from check `11_acs_mother_at_work.R`, which reproduces the review's 2019 and 2023 figures. The 2024 NSECE is 1.4 points above it. The review's ACS raking targets are still the 2023 ones.
+The review had only the 2023 ACS (62.6%). The 2024 ACS figure comes from check `11_acs_mother_at_work.R`, which reproduces the review's 2019 and 2023 figures. The 2024 NSECE is 1.4 points above it. The 2024 ACS raking targets were built on 29 October from the review's code (factor range 0.805 to 1.802; crosswalk Open item 4).
 
 Fathers agree across all three surveys at about 90 percent. The 2019 survey is below both benchmarks and the 2024 survey is above both. Interview timing does not explain the difference, and reweighting on income, family type, and education does not remove it.
 
@@ -82,9 +82,9 @@ Report: `calendar_and_work_hours.md`.
 
 ## Decision 4: how to build center prices
 
-Status: open. Two fixes are measured as test variants (crosswalk mismatch items 2 and 4).
+Status: partly decided. Weekly rates above $2,000 are set to missing in both years (decided and in the code on 28 October; crosswalk mismatch item 2). Deleting the 2024 censoring caps, as the 2019 file did, is open (mismatch item 4; it is the first part of the `supply` option).
 
-Both public files censor posted rates at the 5th and 95th percentiles within each reported time unit. The 2019 file deletes the censored rates; the 2024 file sets each one to the cap value. The model does no trimming of its own, so 40 posted 2019 rates above $50 an hour stay in the data (38 of them at an age with enrollment, in 32 of the model's center-by-age-bin records). Treating both years the same way (review runs):
+Both public files censor posted rates at the 5th and 95th percentiles within each reported time unit. The 2019 file deletes the censored rates; the 2024 file sets each one to the cap value. The review found 40 posted 2019 rates above $50 an hour left in the data (38 of them at an age with enrollment, in 32 of the model's center-by-age-bin records); since 28 October the model sets weekly rates above $2,000 to missing in both years. Treating both years the same way (review runs):
 
 | High-price center price per child-hour | 2019 | 2024 | Change |
 |---|---|---|---|
@@ -134,7 +134,7 @@ Negative non-labor cost at low-price centers. Status: open (crosswalk Open item 
 |---|---|
 | Current method | −$0.47 |
 | Pool low- and high-price staffing | −$0.30 |
-| Drop 2024 rates beyond the 5th and 95th percentiles of all units | −$0.26 |
+| Drop 2024 rates beyond the 5th and 95th percentiles of all units (the review's version, replaced on 29 October by the rule below) | −$0.26 |
 | Value each sector's staff at its own wages | +$0.26 |
 | Staff from directors' reports, same centers as prices | +$0.53 |
 | Floor at zero | $0 (model price $4.77, 11% above posted) |
@@ -143,7 +143,7 @@ Deleting only the 2024 cap values, the 2019 rule, gives −$0.25 (crosswalk mism
 
 Home-based workers. Status: decided and in the code. Home-based enrollment and workers now carry provider weights (`hb_weight`) in both years (crosswalk, Home-based labor totals).
 
-Administrative-data centers. Status: decided for free centers, open for paying ones. Free admin centers join Unpaid Center-Based with their own staff count, in both years. Paying admin centers are in no sector (crosswalk mismatch item 5).
+Administrative-data centers. Status: decided for free centers, open for paying ones. Free admin centers join Unpaid Center-Based with their own staff count, in both years. Paying admin centers are in no sector (crosswalk mismatch item 5). Tested 2026-10-29: a Low or High fit on region, size, and community context beats the fixed 72/28 split in 2019 but not in 2024, where the price is withheld. Recommendation: the fixed split for 2024, each center's own price for 2019 (most 2019 paying admin centers carry one). Still open.
 
 Market response. Under the review's 2024 parameters, 10 percent more paid center hours raises care wages about 2 to 3 percent and the low-price price 2.4 percent, against 1.6 percent in 2019. No option broke the equilibrium solver.
 
@@ -152,7 +152,7 @@ Report: `supply_side.md`.
 
 ## Decision 8: the calibration year and ACS pairing
 
-Status: decided on 27 October. The model pairs the 2024 NSECE with the 2024 ACS, never the 2023 ACS. The 2024 ACS file is `raw_data/ACS/v1/2024/ipums_usa.csv` (config key `ACS-2024`). It has no `TAXID` or `ADJGINC`, so `1b` stops for 2024 until a source of 2024 tax units and AGI exists; SPM variables are also missing (crosswalk Open item 3). The calibration year is a setting (`--nsece-year`; see the README section "Calibration year").
+Status: the pairing is decided (27 October): the model pairs the 2024 NSECE with the 2024 ACS. Whether to use the 2023 ACS for now, or to make 2024 tax units and AGI, is open (crosswalk Open item 3). The 2024 ACS file is `raw_data/ACS/v1/2024/ipums_usa.csv` (config key `ACS-2024`). IPUMS has not released `TAXID`, `ADJGINC`, or the SPM variables for 2024, so `1b` stops for 2024 unless a tax-unit crosswalk file sits beside the ACS file. The calibration year is a setting (`--nsece-year`; see the README section "Calibration year").
 
 
 ## How much care choices changed with the population held fixed

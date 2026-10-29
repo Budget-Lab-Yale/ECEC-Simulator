@@ -85,7 +85,7 @@ The model sums listed home-based providers' enrollment and staff without weights
 | (b1) Weighted, all ages | 710,400 / 640,300 | 1.42 / 1.28 | 0.231 / 0.210 | 1.49 / 0.59 | 1.85 / 0.75 | 0.78 / 0.71 | 0.79 / 0.77 |
 | (b2) Weighted, children under 6 not in kindergarten (staff scaled by each provider's under-6 share) | 483,100 / 458,700 | 0.97 / 0.92 | 0.149 / 0.149 | 1.41 / 0.58 | 1.79 / 0.74 | 0.82 / 0.73 | 0.82 / 0.79 |
 
-For comparison, household-side paid home-based hours for children under 5 are 1.54 billion (ACS calibration, 2019) and 1.24 billion (NSECE household survey, 2019). Weighting brings the home-based provider side close to the household side; under the current method the household side is 24 times the provider side. Weighting barely changes the home-based staffing ratios (2019: 0.160 / 0.038 unweighted, 0.163 / 0.033 weighted, all ages) or delta_0 (+$0.06 to +$0.17). Its effect is on L_0, and through L_0 on the first-year wage level (Choice 6).
+For comparison, household-side paid home-based hours for children under 5 are 1.54 billion (ACS calibration, 2019) and 1.24 billion (NSECE household survey, 2019). Weighting brings the home-based provider side close to the household side; under the current method the household side is 24 times the provider side. Weighting barely changes the no-BA home-based staffing ratio but lowers the BA ratio by 12.4% (2019: 0.160 / 0.038 unweighted, 0.163 / 0.033 weighted, all ages) or delta_0 (+$0.06 to +$0.17). Its effect is on L_0, and through L_0 on the first-year wage level (Choice 6).
 
 ### Choice 6. What L_0 is anchored to
 

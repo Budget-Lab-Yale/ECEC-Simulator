@@ -86,10 +86,11 @@ NSECE_ACS_YEAR_PAIRS <- c(
 # config.R still accepts the name and drops it.
 #   weights: child weights of children under 5 raked to the March 2024 CPS
 #            share of children by mother's work status and family type
-#   supply:  2024 posted center rates at or beyond each age's 5th / 95th
-#            percentile across all pay units set to missing (2019 file
-#            trimmed per pay unit -- not same rule, crosswalk mismatch
-#            item 4), center staffing from directors' staff counts
+#   supply:  2024 posted center rates equal to NORC's censoring caps (5th /
+#            95th percentile of each pay unit, found per age as pile-ups
+#            of one exact value) set to missing, as 2019 file deleted
+#            them (crosswalk mismatch item 4); center staffing from
+#            directors' staff counts instead of workforce file
 NSECE_2024_OPTIONS <- c('weights', 'supply')
 
 

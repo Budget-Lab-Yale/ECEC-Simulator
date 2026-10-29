@@ -517,13 +517,23 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     fread() %>%
     tibble()
 
+  # Own tax-unit crosswalk: tax_unit_crosswalk_<year>.csv beside ipums_usa.csv
+  # (serialno, sporder, tax_unit, agi -- same columns as the 2019 corrected
+  # crosswalk below, but tax_unit is a numeric id unique across households and
+  # agi is unit AGI repeated on every member). Used for ACS years where IPUMS
+  # lacks TAXID, ADJGINC (2024: Census SPM file not out). One legacy fragment
+  # per unit, so reconstruct_tax_unit_agi() returns unit AGI unchanged.
+  own_crosswalk_path <- file.path(acs_dir, paste0('tax_unit_crosswalk_', acs_year, '.csv'))
+  use_own_units      <- acs_year != 2019 && file.exists(own_crosswalk_path)
+
   # Tax units, AGI from IPUMS TAXID, ADJGINC outside 2019 (no corrected
-  # crosswalk) -- not yet released for 2024
+  # crosswalk) -- not yet released for 2024 -- unless an own crosswalk exists
   missing_tax_vars <- setdiff(c('TAXID', 'ADJGINC'), names(acs_raw))
-  if (acs_year != 2019 && length(missing_tax_vars) > 0) {
+  if (acs_year != 2019 && !use_own_units && length(missing_tax_vars) > 0) {
     stop('The ', acs_year, ' ACS file lacks ', paste(missing_tax_vars, collapse = ', '), ': ', acs_raw_path, '\n',
          'IPUMS has not released them for ', acs_year, '. The model needs a source of ', acs_year,
-         ' tax units and AGI before it can run on the ', nsece_year, ' NSECE.')
+         ' tax units and AGI before it can run on the ', nsece_year, ' NSECE.\n',
+         'Put an own tax-unit crosswalk at ', own_crosswalk_path, ' (serialno, sporder, tax_unit, agi).')
   }
 
   # Corrected Census tax-unit crosswalk (April 2024 Census correction).
@@ -535,10 +545,13 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   # against 0.13% in the 2019 legacy TAXID and 99.4% in the corrected 2019
   # crosswalk. Unmarried partners, whom IPUMS also links through SPLOC, are
   # in separate tax units in every file.
-  use_taxid_crosswalk <- acs_year == 2019
+  use_taxid_crosswalk <- acs_year == 2019 || use_own_units
   if (use_taxid_crosswalk) {
-    crosswalk_path <- file.path(estimation_info$paths[['Census-ACS-SPM']],
-                                'tax_unit_crosswalk_2019.csv')
+    crosswalk_path <- if (use_own_units) own_crosswalk_path else
+      file.path(estimation_info$paths[['Census-ACS-SPM']], 'tax_unit_crosswalk_2019.csv')
+    if (use_own_units) {
+      cat('  Own tax-unit crosswalk for', acs_year, ':', crosswalk_path, '\n')
+    }
     if (!file.exists(crosswalk_path)) {
       stop('Corrected Census tax-unit crosswalk not found: ', crosswalk_path, '\n',
            'Build it with make_crosswalk.R in that directory (see its README.md).')
@@ -581,10 +594,13 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       filter(GQ == 1 | GQ == 2) %>%
       mutate(census_serialno = as.numeric(CBSERIAL) - acs_year * 1e9) %>%
       left_join(taxid_crosswalk, by = c('census_serialno', 'PERNUM')) %>%
-      # Without a crosswalk the IPUMS TAXID is the tax unit
+      # Without a crosswalk the IPUMS TAXID is the tax unit. Own units: legacy
+      # id = unit id, person AGI = unit AGI (no IPUMS TAXID, ADJGINC to read)
       mutate(
         tax_unit_id_corrected = if (use_taxid_crosswalk) tax_unit_id_corrected else as.numeric(TAXID),
-        agi_corrected         = if (use_taxid_crosswalk) agi_corrected else as.numeric(ADJGINC)
+        agi_corrected         = if (use_taxid_crosswalk) agi_corrected else as.numeric(ADJGINC),
+        tax_unit_id_legacy    = if (use_own_units) tax_unit_id_corrected else TAXID,
+        agi                   = if (use_own_units) agi_corrected else ADJGINC
       ) %>%
       select(
         hh_id = SERIAL,
@@ -598,8 +614,8 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         UHRSWORK, WKSWORK1, EMPSTATD, INCWAGE, INCBUS00,
         census_serialno,
         tax_unit_id = tax_unit_id_corrected,
-        tax_unit_id_legacy = TAXID,
-        agi = ADJGINC,
+        tax_unit_id_legacy,
+        agi,
         agi_corrected,
         any_of(c('SPMFAMUNIT', 'SPMTOTRES', 'SPMTHRESH',
                  'SPMCHXPNS', 'SPMWKXPNS', 'SPMCAPXPNS'))

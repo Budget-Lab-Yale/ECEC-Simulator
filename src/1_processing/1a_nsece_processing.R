@@ -1018,23 +1018,32 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
     nsece_cb[[rate_col]] <- if_else(too_high, -2, nsece_cb[[rate_col]])
   }
 
-  # Optional 2024 treatment 'supply', part 1: the 2019 public file deleted
-  # posted rates outside the 5th-95th percentile of each pay unit (code -2,
-  # treated as missing below), while the 2024 file sets them equal to the
-  # 5th or 95th percentile. Approximates 2019 rule across all units: positive
-  # weekly rates at or beyond 5th or 95th percentile of each age's positive
-  # rates (unweighted; pay unit not in public file) set to -2. Not the same
-  # rates as a per-unit trim -- see crosswalk mismatch item 4.
+  # Optional 2024 treatment 'supply', part 1: NORC censors posted rates at
+  # 5th, 95th percentile of each pay unit (hourly, weekly, monthly, ...), per
+  # age. 2019 file deletes them (code -2, missing below); 2024 file sets each
+  # to its unit's cap value, no flag (2019 user's guide p. 317; 2024 p.
+  # CB-508). Pay unit not in public file, but caps show as pile-ups of one
+  # exact value -- same rule as NORC, per age: most frequent value below 15th
+  # percentile, above 85th percentile, separately for monthly amounts (rate x
+  # 4.34524 a whole dollar) and others -> four caps. Positive weekly rates
+  # equal to one of them set to -2. Crosswalk mismatch item 4 (run 24_caps2:
+  # 253, 309, 346, 360 of 2,460-3,805 rates per age; L_0 -8.0%, -7.4%).
   if (use_2024_supply) {
     for (rate_age in c('INF', '2YR', '3YR', '4YR')) {
       rate_col <- paste0('CB9_STDRATE_WKLY_', rate_age)
       rate     <- nsece_cb[[rate_col]]
       positive <- !is.na(rate) & rate > 0
-      cutoffs  <- quantile(rate[positive], c(0.05, 0.95))
-      trimmed  <- positive & (rate <= cutoffs[1] | rate >= cutoffs[2])
-      cat('  Option supply: ', rate_age, ' posted weekly rates at or below $', round(cutoffs[1], 2),
-          ' or at or above $', round(cutoffs[2], 2), ' set to missing (', sum(trimmed), ' of ',
-          sum(positive), ')\n', sep = '')
+      v        <- round(rate[positive], 2)
+      q        <- quantile(v, c(0.15, 0.85))
+      tab      <- table(v)
+      vals     <- as.numeric(names(tab))
+      month    <- abs(vals * 4.34524 - round(vals * 4.34524)) < 0.05
+      pick     <- function(sel) if (any(sel)) vals[sel][which.max(tab[sel])] else numeric(0)
+      caps     <- c(pick(vals < q[1] & !month), pick(vals > q[2] & !month),
+                    pick(vals < q[1] &  month), pick(vals > q[2] &  month))
+      trimmed  <- positive & round(rate, 2) %in% caps
+      cat('  Option supply: ', rate_age, ' censoring caps found: $', paste(caps, collapse = ' / $'),
+          ' per week; set to missing (', sum(trimmed), ' of ', sum(positive), ')\n', sep = '')
       nsece_cb[[rate_col]] <- if_else(trimmed, -2, rate)
     }
   }
