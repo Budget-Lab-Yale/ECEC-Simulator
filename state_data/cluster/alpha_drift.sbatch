@@ -4,12 +4,14 @@
 #SBATCH -t 12:00:00
 #SBATCH --mem=96G
 # State baseline diagnostics on a finished 52-geography run.
-# Usage: sbatch alpha_drift.sbatch <state|national> <run ts> <calib ts> <run dir> [script]
+# Usage: sbatch alpha_drift.sbatch <state|national> <run ts> <calib ts> <run dir> [script] [main.R args]
 #   run dir = run copy holding run's code + config (copied to a scratch run dir here)
 #   script  = alpha_drift (default) | baseline_consistency (state_data/cluster/<script>.R)
+#   main.R args = run's own sampling flags (e.g. --sim-sample 1) -- must match run, else QD gate fails
 # Writes state_data/out-style files to $E/analysis/<script>/<run ts>/.
 set -eu
 MODE=$1; RUN=$2; CAL=$3; SRC=$4; SCRIPT=${5:-alpha_drift}
+shift $(( $# < 5 ? $# : 5 ))
 module load R/4.4.2-gfbf-2024a
 export R_LIBS_USER=$HOME/R/4.4.2-gfbf-2024a
 export ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp
@@ -31,9 +33,10 @@ cd $W
   echo "date: $(date)"
   echo "run dir: $SRC; code: $(cat code_sha.txt 2>/dev/null)"
   echo "script md5: $(md5sum state_data/cluster/$SCRIPT.R | cut -d' ' -f1)"
+  echo "main.R args: $*"
   echo "env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=$MODE"
   echo "R: $(Rscript --version 2>&1)"
 } > $D/${SCRIPT}_${MODE}_provenance.txt
 Rscript state_data/cluster/$SCRIPT.R -r state_targets_all -C $CAL \
-  --drift-run $RUN --drift-src-root $SHARED --drift-out $D
+  "$@" --drift-run $RUN --drift-src-root $SHARED --drift-out $D
 echo "exit $? $(date)"

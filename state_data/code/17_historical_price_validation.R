@@ -1,6 +1,6 @@
 # Historical price anchors vs NDCP, 2019 onward; fixed 2019 county/age weights.
 # Usage: Rscript state_data/code/17_historical_price_validation.R <macro_dir>
-# Fixed 2019 geographic housing factors; CPI growth over time.
+# Fixed 2019 local residuals (build supply yamls); CPI growth over time.
 suppressPackageStartupMessages({library(dplyr); library(readr); library(tidyr)})
 source('state_data/code/16_ndcp_model_prices.R')
 source('src/shared_functions/get_state_supply_year_factors.R')
@@ -15,7 +15,7 @@ historical_price_validation <- function(macro_dir) {
                      read_csv(file.path(macro_dir, 'projections.csv'), show_col_types = FALSE))
   if (anyDuplicated(macro$year)) stop('Macro series has duplicate years; resolve historical/projection overlap.')
   weights <- read_csv(OUT_DET, show_col_types = FALSE) %>%
-    filter(residual == 'housing_scaled') %>% select(geo, age_group, c_low, c_high)
+    filter(residual == 'local') %>% select(geo, age_group, c_low, c_high)
   nd <- read_ndcp(NULL) %>% filter(year >= 2019, st %in% names(STATE_POSTAL_TO_FIPS))
   pep <- read_csv(PEP_FILE, col_types = cols(.default = col_character())) %>%
     transmute(fips = paste0(STATE, COUNTY), kids = as.numeric(TOT_POP))
@@ -36,7 +36,7 @@ historical_price_validation <- function(macro_dir) {
         get_state_supply_year_factors(supply$wage_path, year))) * wage_growth
       price <- labor + supply$delta_0 * inflation
       anchors[[length(anchors) + 1]] <- tibble(
-        year = year, geo = geo, variant = 'fixed_housing',
+        year = year, geo = geo, variant = 'fixed_local',
         p_low = price[2], p_high = price[3])
     }
   }

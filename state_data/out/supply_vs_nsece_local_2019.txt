@@ -1,0 +1,19 @@
+script: state_data/tests/test_supply_vs_nsece_local.R; run at 2026-11-02 17:35:39
+== model 2019 wages by region, PEP 0-4 weighted (region 0 = 50 states + DC)
+ region  no_ba     ba
+      1 13.382 22.319
+      2 11.327 18.714
+      3 10.742 17.828
+      4 13.146 21.085
+      0 11.862 19.510
+
+== legal centre children per adult, NSECE enrolment-weighted over ages: national 8.88 
+== legal home capacity (one adult, infant present), harmonic, PEP weights: national 6.14 
+ region legal_cps
+      1      5.76
+      2      6.77
+      3      6.18
+      4      5.84
+
+== CCDF FY2019 subsidised home-based children 0-4: licensed share (child weight), national 0.844 
+== correlation of state licensed share w/ selected home capacity (50 states):0.055

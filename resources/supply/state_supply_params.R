@@ -51,17 +51,17 @@
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
 # delta_0 (per_unit_residual; non-labour cost + margin, P_supply = unit_cost +
-# delta_0 * cpi_factor) = national residual x state BEA housing-services RPP /
-# 100 (US_BEA__regional_price_parities_housing_services__2019.csv, line
-# 'RPPs: Services: Housing'; NYC = New York MSA 35620). Applies to low-price
-# centre, high-price centre, paid home; unpaid centre residual untouched (0).
+# delta_0 * cpi_factor) = local 2019 price - local labour cost, as 1a computes
+# national residual (NSECE price - L_req %*% w). Local price: LOCAL_PRICES
+# (ndcp_local_prices_2019.R -- NDCP county prices at NSECE national level;
+# IN, NM, MS home: NSECE region x urban density). Local labour cost: geo's
+# 2019 w, L_req above. Centre: one factor on both national tier residuals --
+# tier-mix-weighted price (p0 low-tier share) = local centre price, national
+# low/high gap kept. Home: residual = local home price - home labour cost.
+# Unpaid centre residual untouched (none). Residual <= 0 stops build.
 # CHANGE vs main (one national residual per sector: 0.510055 low, 4.6145667
-# high, 2.8273432 home). WHY: national
-# residual gives every state same non-wage cost; housing-services prices proxy
-# geographic variation in non-labour costs. NDCP check: state_data/code/
-# 16_ndcp_model_prices.R (corr 0.89 housing-scaled vs 0.83 national, 46 states,
-# out/ndcp_model_prices_summary.csv). Factor 1 = national mean, k = 1 (not fitted).
-# --national-residual restores national delta_0.
+# high, 2.8273432 home). WHY: residual = non-labour cost + margin, local as
+# wages, staffing. --national-residual restores national delta_0 (diagnostic).
 #
 # Usage: Rscript resources/supply/state_supply_params.R [--check]
 #          [--national-residual] [--out <dir>]
@@ -86,7 +86,7 @@ OUT_DIR  <- file.path('config', 'state', 'supply')
 ARGS     <- commandArgs(TRUE)
 if ('--out' %in% ARGS) OUT_DIR <- ARGS[which(ARGS == '--out') + 1]
 NATIONAL_RESIDUAL <- '--national-residual' %in% ARGS
-HOUSING  <- file.path('resources', 'bea', 'US_BEA__regional_price_parities_housing_services__2019.csv')
+LOCAL_PRICES <- file.path(DIR, 'US_DOL_NDCP__local_care_prices__2019.csv')   # ndcp_local_prices_2019.R
 
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 
@@ -268,24 +268,47 @@ staffing_index <- function(L_req, geo, indices = licensing_indices()) {
 
 
 
-residual_factor <- function(geo) {
+local_residual <- function(geo, L_req, w, natl_resid, prices) {
 
   #----------------------------------------------------------------------------
-  # Housing-services RPP / 100 for geo (HOUSING; NYC = New York MSA). Scales
-  # national per_unit_residual. 1 under --national-residual.
+  # Local per-unit residual = local 2019 price - local labour cost. Centre:
+  # factor m on both national tier residuals, tier-weighted price = local
+  # centre price. Home: local home price - home labour cost. National
+  # residual under --national-residual.
   #
   # Params:
-  #   - geo (chr): postal or sub-state code w/ HOUSING row
+  #   - geo (chr): postal or sub-state code w/ LOCAL_PRICES rows
+  #   - L_req (list): geo labor_requirements, sector -> no_ba / ba
+  #   - w (list): geo 2019 wages no_ba / ba
+  #   - natl_resid (list): national per_unit_residual
+  #   - prices (df): LOCAL_PRICES
   #
-  # Returns: (dbl) factor, > 0
+  # Returns: (list) resid (per_unit_residual), centre_factor, home_factor
   #----------------------------------------------------------------------------
 
-  if (NATIONAL_RESIDUAL) return(1)
-  require_input(HOUSING)
-  h <- read_csv(HOUSING, show_col_types = FALSE)
-  v <- h$rpp_housing_services_2019[h$geo == geo]
-  if (length(v) != 1 || !is.finite(v) || v <= 0) stop(HOUSING, ': no usable row for ', geo)
-  v / 100
+  if (NATIONAL_RESIDUAL) return(list(resid = natl_resid, centre_factor = 1, home_factor = 1))
+  lab <- function(s) sum(unlist(L_req[[s]])[names(GROUPS)] * unlist(w)[names(GROUPS)])
+  row <- function(s) {
+    x <- prices[prices$geo == geo & prices$setting == s, ]
+    if (nrow(x) != 1 || !is.finite(x$target_price) || x$target_price <= 0) {
+      stop(LOCAL_PRICES, ': no usable ', s, ' price for ', geo, ' -- rerun ndcp_local_prices_2019.R')
+    }
+    x
+  }
+  ce <- row('center'); ho <- row('home'); sl <- ce$low_tier_share
+  r_lo <- natl_resid$low_price_center_based; r_hi <- natl_resid$high_price_center_based
+  m <- (ce$target_price - (sl * lab('low_price_center_based') + (1 - sl) * lab('high_price_center_based'))) /
+    (sl * r_lo + (1 - sl) * r_hi)
+  r_home <- ho$target_price - lab('paid_home_based')
+  if (m <= 0 || r_home <= 0) {
+    stop(geo, ': local price below local labour cost (centre factor ', round(m, 3), ', home residual ',
+         round(r_home, 3), '). Check staffing, wages, local price.')
+  }
+  resid <- natl_resid
+  resid$low_price_center_based  <- m * r_lo
+  resid$high_price_center_based <- m * r_hi
+  resid$paid_home_based         <- r_home
+  list(resid = resid, centre_factor = m, home_factor = r_home / natl_resid$paid_home_based)
 }
 
 
@@ -324,6 +347,8 @@ main <- function() {
   }
 
   indices <- licensing_indices()
+  require_input(LOCAL_PRICES, ' -- run resources/supply/ndcp_local_prices_2019.R first')
+  local_prices <- read_csv(LOCAL_PRICES, show_col_types = FALSE)
   annual_wages <- file.path(DIR, 'state_childcare_wage_ratios_annual.csv')
   aw <- if (file.exists(annual_wages)) read_csv(annual_wages, show_col_types = FALSE) else NULL
   rows <- list()
@@ -335,9 +360,9 @@ main <- function() {
     w <- lapply(GROUPS, function(g) natl$wages[[g]] * r[[g]])
     # Computed in check mode too
     L_req <- staffing_index(natl$labor_requirements, st, indices)
-    # Residual: unpaid centre (0) unchanged; paid sectors x housing factor
-    f_res <- residual_factor(st)
-    resid <- lapply(natl$per_unit_residual, function(x) x * f_res)
+    # Residual: local price - local labour cost; unpaid centre unchanged
+    lr <- local_residual(st, L_req, w, natl$per_unit_residual, local_prices)
+    resid <- lr$resid
 
     # Validate complete payload in check mode too; write after all geographies pass.
     # No labor_supply -- 3a sets state L_0 from base-year sector hours
@@ -373,7 +398,8 @@ main <- function() {
       wage_ratio_ba          = r$ba,
       w_no_ba                = w$no_ba,
       w_ba                   = w$ba,
-      residual_factor        = f_res)
+      centre_residual_factor = lr$centre_factor,
+      home_residual_factor   = lr$home_factor)
   }
 
   d <- bind_rows(rows) %>% arrange(state)

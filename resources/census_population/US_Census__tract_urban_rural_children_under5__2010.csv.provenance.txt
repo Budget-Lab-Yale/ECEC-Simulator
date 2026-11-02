@@ -1,0 +1,4 @@
+source: https://api.census.gov/data/2010/dec/sf1?get=P002001,P002002,P002005,P012003,P012027&for=tract:*&in=state:<state fips>
+retrieved: 2026-11-02 17:05:01 EST
+tracts: 73057  children under 5: 20201362
+md5: e7586162833db4cdd0326b44cd2785e5

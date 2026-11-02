@@ -1,7 +1,8 @@
 #------------------------------------------------------------------------------
 # 16_ndcp_model_prices.R -- model base-year (2019) posted centre price vs NDCP
 # 2019 county centre prices, by geography, under two non-labour residuals:
-# housing-scaled (config/state/supply, build) and national (main).
+# local (config/state/supply, build -- set from NDCP local price, so 2019
+# matches by construction except NSECE-fallback geos) and national (main).
 #
 # DIAGNOSTIC ONLY -- writes nothing simulator or 00_ reads. Definitions fixed
 # before any result was looked at (2026-10-19 review):
@@ -141,7 +142,7 @@ main <- function() {
   if (length(stale)) stop('config/state/supply out of date vs generator: ',
                           paste(stale, collapse = ', '))
 
-  mp <- bind_rows(model_prices(SUPPLY_DIR, 'housing_scaled'),
+  mp <- bind_rows(model_prices(SUPPLY_DIR, 'local'),
                   model_prices(tmp, 'national'))
 
   # Model paid-centre children by tier, age group
@@ -202,7 +203,7 @@ main <- function() {
     excl <- sort(unique(g$geo[in_scope & g$n_age < length(AGE_GROUPS)]))
     keep <- g %>% filter(geo %in% names(STATE_POSTAL_TO_FIPS), !geo %in% excl)
     # Same geos for both residuals by construction (geo set from yaml names)
-    stopifnot(setequal(keep$geo[keep$residual == 'housing_scaled'],
+    stopifnot(setequal(keep$geo[keep$residual == 'local'],
                        keep$geo[keep$residual == 'national']))
     keep %>%
       group_by(residual) %>%

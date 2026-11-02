@@ -1,0 +1,52 @@
+script: state_data/tests/test_supply_vs_nsece_cluster.R; run at 2026-11-02 17:39:53
+nsece: /nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1/2019
+interface data: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610261104/estimation/data
+== NSECE 2019 supply by region (0 national, 1 NE, 2 MW, 3 S, 4 W)
+              ecec_choice  price ba_ratio no_ba_ratio labor_cost residual children_per_fte_staff wage_no_ba wage_ba n_workers_no_ba n_workers_ba region
+ High-Priced Center-Based  7.828    0.070       0.152      3.214    4.615                  4.500     12.062  19.695            2830         1417      0
+  Low-Priced Center-Based  3.487    0.040       0.181      2.977    0.510                  4.518     12.062  19.695            2830         1417      0
+      Unpaid Center-Based  0.000    0.056       0.052      1.736       NA                  9.244     12.062  19.695            2830         1417      0
+          Paid Home-Based  5.508    0.038       0.160      2.680    2.827                  5.047     12.062  19.695            2830         1417      0
+ High-Priced Center-Based 11.584    0.100       0.135      3.537    8.047                  4.253     12.091  19.027             433          280      1
+  Low-Priced Center-Based  4.368    0.073       0.206      3.883    0.484                  3.580     12.091  19.027             433          280      1
+      Unpaid Center-Based  0.000    0.034       0.037      1.096       NA                 14.066     12.091  19.027             433          280      1
+          Paid Home-Based  7.252    0.040       0.165      2.747    4.505                  4.890     12.091  19.027             433          280      1
+ High-Priced Center-Based  7.050    0.069       0.182      3.595    3.455                  3.980     11.480  21.734             516          312      2
+  Low-Priced Center-Based  3.527    0.042       0.202      3.235    0.292                  4.093     11.480  21.734             516          312      2
+      Unpaid Center-Based  0.000    0.062       0.041      1.813       NA                  9.723     11.480  21.734             516          312      2
+          Paid Home-Based  6.028    0.033       0.148      2.414    3.614                  5.530     11.480  21.734             516          312      2
+ High-Priced Center-Based  6.460    0.055       0.138      2.583    3.876                  5.187     11.244  18.824            1102          452      3
+  Low-Priced Center-Based  3.176    0.034       0.174      2.593    0.583                  4.811     11.244  18.824            1102          452      3
+      Unpaid Center-Based  0.000    0.059       0.058      1.763       NA                  8.557     11.244  18.824            1102          452      3
+          Paid Home-Based  4.674    0.044       0.168      2.713    1.961                  4.722     11.244  18.824            1102          452      3
+ High-Priced Center-Based  9.545    0.088       0.175      4.331    5.214                  3.800     14.780  19.767             779          373      4
+  Low-Priced Center-Based  3.650    0.032       0.159      2.992    0.658                  5.222     14.780  19.767             779          373      4
+      Unpaid Center-Based  0.000    0.078       0.078      2.688       NA                  6.424     14.780  19.767             779          373      4
+          Paid Home-Based  4.694    0.038       0.163      3.150    1.544                  4.990     14.780  19.767             779          373      4
+
+== classrooms: observed children per staff vs legal, by region x age of youngest child
+ region   age   n obs_cps legal_cps obs_over_legal
+      1 age_0 119   2.830     3.851          0.735
+      1 age_1 143   3.614     4.585          0.788
+      1 age_2 147   5.357     5.612          0.954
+      1 age_3 335   6.054     9.168          0.660
+      1 age_4 197   6.466    10.107          0.640
+      2 age_0 150   3.279     4.088          0.802
+      2 age_1 145   3.550     4.734          0.750
+      2 age_2 166   5.133     6.783          0.757
+      2 age_3 426   5.653    10.184          0.555
+      2 age_4 217   5.898    11.462          0.515
+      3 age_0 291   2.958     4.296          0.689
+      3 age_1 310   3.868     5.858          0.660
+      3 age_2 342   4.920     9.375          0.525
+      3 age_3 487   6.633    12.911          0.514
+      3 age_4 411   7.573    15.822          0.479
+      4 age_0 147   2.725     4.230          0.644
+      4 age_1 186   4.350     4.554          0.955
+      4 age_2 300   5.712     9.250          0.618
+      4 age_3 681   6.517    11.472          0.568
+      4 age_4 298   7.505    12.030          0.624
+slope log observed on log legal, pooled        0.658 (se 0.056)
+slope log observed on log legal, within_age    0.214 (se 0.127)
+slope log observed on log legal, within_region 0.684 (se 0.050)
+share of classrooms (classroom weight) w/ more children per staff than regional legal ratio: 0.134 

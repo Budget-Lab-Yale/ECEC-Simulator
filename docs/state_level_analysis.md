@@ -498,7 +498,7 @@ changing production inputs. Licensing applies only to licensed homes, so I blend
 the home index toward 1: home index = 0.257 x licensing index + 0.743, where 0.257
 is the licensed share of children ages 0-5 in paid home-based care (NSECE 2019
 home-based provider survey, `resources/supply/US_NSECE__home_licensed_share__2019.csv`).
-Current home indices range from 0.873 (SD) to 1.135 (AZ, MS, and RI).
+Current home indices range from 0.873 (SD) to 1.135 (AZ and RI); MS is 0.940.
 All 52 home inputs are now numeric; the neutral index remains a fallback for
 future unresolved unlicensed-home rows. Historical 2014/2017 and three/five-point
 comparisons in `state_data/out/licensing_ratio_change_*.csv` describe the old
@@ -521,24 +521,52 @@ I have not promoted an age-adjusted index to production. The original national
 uses provider-plus-helper headcounts divided by enrollment for home staffing and
 household net payments for home prices. `analyze_home_prices.R` therefore treats
 NDCP family-home market-rate prices as an external comparison, with fixed county
-and national age weights, not a target for fitting staffing or residuals.
+and national age weights, not a target for fitting staffing. NDCP prices do set
+the local non-labour residual (below).
 
-`per_unit_residual` is state-specific. The equilibrium solves
+`per_unit_residual` is local. The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
 residual in **dollars** covering everything that is not labour — rent, food,
-insurance, administration, margin. Each national residual (0.510055 low-price
-centre, 4.6145667 high-price centre, 2.8273432 paid home; unpaid centre stays
-unset) is multiplied by the state's BEA 2019 housing-services RPP / 100
-(`resources/bea/US_BEA__regional_price_parities_housing_services__2019.csv`,
-line "RPPs: Services: Housing"; NYC = New York MSA 35620). Factor range 0.55
-to 1.70. Housing-services prices are a proxy for geographic variation in
-non-labour costs. Price check against NDCP 2019
-(`state_data/code/16_ndcp_model_prices.R`; definitions in its header, results in
-`state_data/out/ndcp_model_prices_summary.csv`): 2019 base posted centre price x 40
-vs child-weighted county medians, 46 states, same states + weights for both
-residuals. Pearson correlation 0.89 housing-scaled vs 0.83 national; model mean
-$213.8 vs NDCP $190.6 a week (ratio 1.12; national residual 1.16). No power is fitted (k = 1). `state_supply_params.R --national-residual`
-restores the national value.
+insurance, administration, margin. Nationally, 1a sets it to the NSECE price
+minus the national labour cost (0.510055 low-price centre, 4.6145667 high-price
+centre, 2.8273432 paid home; unpaid centre stays unset). I set each geography's
+residual the same way: local 2019 price minus local labour cost
+(`L_req %*% w` at the state wages and staffing).
+
+1. **Local price.** `resources/supply/ndcp_local_prices_2019.R` writes
+   `resources/supply/US_DOL_NDCP__local_care_prices__2019.csv`. It takes the NDCP
+   2019 county median full-time weekly price (centre and family child care;
+   infant, toddler, and preschool), weights counties by Census PEP 2019 children
+   0-4, and weights age groups by the geography's p0 children in the setting.
+   NDCP gives the geography only. I keep the NSECE national level, because β
+   and ρ are calibrated at NSECE prices: each price is multiplied by one national
+   factor per setting (centre 1.080, home 1.366), then divided by 40.
+2. **Fallbacks.** A geography with no 2019 NDCP price takes the nearest NDCP year
+   in 2016-2022, scaled by the national change in each age group's price (CO and
+   DC 2022; NV 2016 and 2022 averaged; MS home 2018). IN and NM have no NDCP price
+   in 2016-2022. They take the NSECE region × community urban density price at
+   their 2010 child-under-5 mix by density
+   (`state_data/cluster/nsece_price_region_density.R`, output
+   `resources/supply/US_NSECE__price_region_density__2019.csv`; density mix from
+   `resources/census_population/US_Census__tract_urban_rural_children_under5__2010.csv`).
+   A cell is used when its design-based relative SE is 0.30 or less and it has at
+   least one design degree of freedom. Otherwise the cell takes the national
+   density price × region price / national price.
+3. **Centre.** One factor `m` multiplies both national centre residuals, so the
+   p0 tier mix of local low and high prices equals the local centre price.
+   Factor range 0.021 (SD) to 1.992 (DC), median 0.963.
+4. **Home.** Home residual = local home price minus local home labour cost.
+   Factor on the national home residual 0.076 (MS) to 2.825 (DC), median 0.918.
+5. **Guard.** The build stops if any residual is 0 or less.
+
+The 2019 model centre price therefore matches NDCP (at the NSECE level) by
+construction, except in IN and NM. `state_data/code/16_ndcp_model_prices.R`
+(definitions in its header, results in
+`state_data/out/ndcp_model_prices_summary.csv`) compares the local and national
+residuals on the same states and weights: 46 states with an NDCP 2019 price in
+all three centre age groups. Local: Pearson correlation 1.00, model mean / NDCP
+mean 1.080 (the NSECE level factor). National: Pearson correlation 0.85, ratio
+1.155. `state_supply_params.R --national-residual` restores the national value.
 
 `elasticities` stay national (no-BA 4, BA 2). The national values are
 assumptions (Borowsky et al. 2022, NBER w30140, section 4.4); no state
@@ -607,8 +635,8 @@ base-year labour `L_0` by education group (`no_ba`, `ba`).
    revisited.
 2. **Partial supply anchoring.** Each state supply yaml re-bases labour
    supply to the state's base-year hours and takes state wages and staffing
-   (§7). The non-labour residual is scaled by the state's housing-services
-   price parity (§7); the elasticities stay national. Base-year
+   (§7). The non-labour residual is the local price minus the local labour
+   cost (§7); the elasticities stay national. Base-year
    *quantities* match; price *responses* use national elasticities. The demand and
    supply files are not forced to jointly reproduce an observed state
    equilibrium.
@@ -647,8 +675,7 @@ on the stored alpha, unchanged. Adopted 15 October 2026. Evidence runs: 52 geogr
 
 1. **Rebuild.** `reprice_alpha_to_supply()` (`reprice_alpha_to_state_supply.R`)
    sets `alpha_state = log p0 - V_state`, where `V_state` uses the state's base-year
-   supply prices: state `L_req %*% wages` plus the state residual (housing-parity
-   scaled, §7), with
+   supply prices: state `L_req %*% wages` plus the local residual (§7), with
    sector 1 at zero. Only the cost of sectors 2--4 changes (cost = wedge x
    price x hours). The Other Paid base price stays national. The stored alpha
    has choice 1 as reference, so

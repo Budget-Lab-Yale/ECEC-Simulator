@@ -220,7 +220,7 @@ The national run (no `state` column, default settings) is main's. State machiner
 | Input | Location | Description |
 |-------|----------|-------------|
 | Demand | `config/state/demand/<GEO>.csv` | Base-year 2019 annual hours by care type. Re-anchors the calibrated alpha matrices with a per-care-type contraction (`adjust_alpha_for_state.R`). |
-| Supply | `config/state/supply/<GEO>.yaml` | Same schema as `supply_2019.yaml`. State wages, staffing scaled by licensing ratios, and the non-labor residual scaled by the BEA housing-services price parity. Elasticities stay national. |
+| Supply | `config/state/supply/<GEO>.yaml` | Same schema as `supply_2019.yaml`. State wages, staffing scaled by licensing ratios, and a local non-labor residual: local 2019 price (NDCP county prices at the NSECE national level; nearest NDCP year or NSECE region x urban density where NDCP has no price) minus local labor cost. Elasticities stay national. |
 | Employment | `config/state/employment/<GEO>.csv` | State employment growth in place of the national CBO path. |
 
 `state_data/code/00_build_demand_targets.R` writes the demand files, and `resources/supply/state_supply_params.R` writes the supply files. NYC households are selected by STATEFIP 36 and the five borough county FIPS (`config/substate_geographies.csv`), which needs an ACS pull with `COUNTYFIP`. A state run needs an interface that stores `STATEFIP`, `p0`, and child weights with the alpha matrices.
@@ -364,14 +364,14 @@ dependencies:
 4. Regenerate care-mix weights from the calibration interface, with `ECEC_URBAN_DENSITY=1`, `ECEC_INCOME_RANK=national_rpp`. The price comparison requires a `.provenance.txt` sidecar beside its p0-by-age input.
 5. Run `Rscript state_data/code/16_ndcp_model_prices.R`; run `Rscript state_data/code/17_historical_price_validation.R <macro_dir>` on a compute node for historical price validation. Historical comparisons hold 2019 county population and care-mix weights fixed.
 
-Annual wage paths multiply each education group's 2019 wage by its local-to-national ratio change, in addition to national wage growth. The last observed ratio is carried forward; missing interior years stop the run. Annual all-items RPPs are available through `get_regional_price_parity()` for survey-year matching; the 2019 training ranks remain fixed. Non-labor costs retain fixed 2019 geographic housing factors and CPI growth over time. Staffing evidence and source status are recorded in `state_data/docs/SOURCES.csv` and the detailed licensing audit registry.
+Annual wage paths multiply each education group's 2019 wage by its local-to-national ratio change, in addition to national wage growth. The last observed ratio is carried forward; missing interior years stop the run. Annual all-items RPPs are available through `get_regional_price_parity()` for survey-year matching; the 2019 training ranks remain fixed. Non-labor residuals stay at their 2019 local values and grow with CPI. Staffing evidence and source status are recorded in `state_data/docs/SOURCES.csv` and the detailed licensing audit registry.
 
 ## Requirements
 
 - R 4.0+
 - Key packages: data.table, tidyverse, yaml, ranger, openxlsx, sampleSelection, Hmisc
 
-State input diagnostics: `Rscript state_data/code/analyze_annual_wages.R` checks saved annual wage paths; `Rscript state_data/code/analyze_national_care_totals.R` writes six care-type gaps against the price-adjusted national calibration, excluding NYC. Historical price validation uses fixed 2019 geographic housing factors with CPI growth.
+State input diagnostics: `Rscript state_data/code/analyze_annual_wages.R` checks saved annual wage paths; `Rscript state_data/code/analyze_national_care_totals.R` writes six care-type gaps against the price-adjusted national calibration, excluding NYC. Historical price validation uses the fixed 2019 local residuals with CPI growth.
 
 State-input validation (22 October 2026): the updated build contains all 28
 numerical staffing corrections; all 312 geography/setting/age records are reviewed.

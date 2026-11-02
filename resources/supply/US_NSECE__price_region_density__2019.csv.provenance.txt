@@ -1,0 +1,6 @@
+script: state_data/cluster/nsece_price_region_density.R
+run at: 2026-11-02 17:13:41
+nsece: /nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1/2019
+interface data: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202610261104/estimation/data
+RSE_MAX: 0.3
+R: R version 4.4.2 (2024-10-31)

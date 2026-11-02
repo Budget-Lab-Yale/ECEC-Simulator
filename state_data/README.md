@@ -130,7 +130,7 @@ home-based provider survey with survey weights
 (`state_data/cluster/nsece_home_licensed_share.R` writes
 `resources/supply/US_NSECE__home_licensed_share__2019.csv`; paid children of any
 age give 0.243, all children 0.209). Unlicensed paid home care keeps the national
-staffing level. Home indices run from 0.873 (SD) to 1.135 (AZ, MS, and RI).
+staffing level. Home indices run from 0.873 (SD) to 1.135 (AZ and RI); MS is 0.940.
 On 26 October this rule changed seven home inputs:
 
 - Arkansas: 16 (two or three adults) to 8 (one caregiver, at most one child under 2).
@@ -138,7 +138,11 @@ On 26 October this rule changed seven home inputs:
 - Maine: 8 (all children ages 2-5) to 6 (at most three children under 2).
 - Mississippi: 12 (all children age 2 or older) to 4. The youngest child sets the
   ratio, and an infant under 1 sets it at 4. If the youngest child is age 1, the
-  ratio is 8.
+  ratio is 8. On 2 November I changed MS to 8 (youngest child age 1). With 4, the
+  MS home labour cost was above its NDCP 2018 home price, so the local residual
+  was negative. The 4 also made MS stricter than every other state, because MS
+  ties the whole group to the youngest child where other states cap the infant
+  count.
 - Rhode Island: 8 (full-time assistant) to 4. A provider alone with any child under
   18 months may have at most four children under 6.
 - Virginia: 8 (all children ages 2-4) to 7. One infant (4 points) plus six children
@@ -321,9 +325,13 @@ code/11_ndcp_price_comparison.R         diagnostic: NDCP 2019 centre prices by a
                                         model high-priced centre share (writes nothing the
                                         simulator reads)
 code/16_ndcp_model_prices.R             diagnostic: model 2019 base posted centre price
-                                        (x 40) against NDCP 2019 county medians, housing-
-                                        scaled vs national residual on the same 46 states
-                                        and weights (writes nothing the simulator reads)
+                                        (x 40) against NDCP 2019 county medians, local
+                                        vs national residual on the same 46 states and
+                                        weights (writes nothing the simulator reads)
+cluster/nsece_price_region_density.R    NSECE 2019 centre and home price by region x
+                                        community urban density, design SEs, RSE rule;
+                                        fallback local price for IN and NM (feeds
+                                        resources/supply/ndcp_local_prices_2019.R)
 code/12_participation_bias.R            diagnostic: national non-parental share in NSECE,
                                         p0, NSCH, targets, and NHES; aligned NHES
                                         five-to-ten-hour ratio (prints only)
@@ -349,7 +357,9 @@ cluster/baseline_consistency.R          re-anchored 2019 children vs target coun
                                         employment vs forest base rate; 2026 care hours
                                         with vs without employment shifts (runs on the
                                         cluster; alpha_drift.sbatch <mode> <run>
-                                        <calib> <run dir> baseline_consistency)
+                                        <calib> <run dir> baseline_consistency
+                                        [main.R args]; pass the run's sampling flags,
+                                        e.g. --sim-sample 1, or the Qd check fails)
 cluster/state_check_summary.sh          start-of-run state checks per geography from a
                                         state run's log (out/state_checks_<run>.csv)
 cluster/acs_kindergarten_flags_2019.py  ACS 2019 children 0-4 already in kindergarten
@@ -497,7 +507,9 @@ so.
 | Licensing ratios | Reviewed October 1, 2019 ordinary center ratio bands, month-weighted by year of age, and home capacity excluding school-age additions; 2017 study retained as comparison baseline | `resources/licensing/licensing_2019_evidence.csv`, `licensing_2019_center_bands.csv` → `resources/supply/licensing_ratios_reviewed_2019.csv` (`resources/supply/00_update_state_supply.R`) | October 1, 2019 | supply staffing index; home input is one-adult, mixed-age capacity with an infant present, assistant configurations retained separately |
 | CCDF subsidy records | ACF-801 FY2019 public-use sample, ICPSR 38677 (child, family, setting, pooling factor) | `resources/ccdf/US_ICPSR38677__ccdf_acf801_*__FY2019.rda` | FY2019 | diagnostic only (`code/09_`) |
 | Preschool special education | IDEA Part B Child Count and Educational Environments, Table 12, ages 3-5 | `resources/idea/US_IDEA__child_count_educational_environment_age_3_5__2018-19.xlsx` | 2018–19 | diagnostic only (`code/10_`) |
-| Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL, five-digit imputation flags; definitions from the ICF technical report | `resources/ndcp/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `resources/ndcp/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | diagnostic only (`code/11_`) |
+| Centre prices by county | DOL Women's Bureau NDCP 2008-2022 county file, STUDYYEAR 2019: MCINFANT, MCTODDLER, MCPRESCHOOL (centre) and MFCCINFANT, MFCCTODDLER, MFCCPRESCHOOL (family child care); 2016-2022 for nearest-year fallback, five-digit imputation flags; definitions from the ICF technical report | `resources/ndcp/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx` (git-ignored, from Bouchet), `resources/ndcp/US_DOL__ndcp_technical_report__2020-10.pdf` | 2019 | local residual (`resources/supply/ndcp_local_prices_2019.R` → `resources/supply/US_DOL_NDCP__local_care_prices__2019.csv`); diagnostic (`code/11_`, `code/16_`) |
+| Price by region × urban density | NSECE 2019 centre (CB9) and household (HH9) files: posted centre price, household home net hourly cost, community urban density, design strata and PSUs | `state_data/cluster/nsece_price_region_density.R` → `resources/supply/US_NSECE__price_region_density__2019.csv` | 2019 | local residual fallback (IN, NM) |
+| Children under 5 by tract urban share | Census 2010 SF1 P002 (urban, rural) and P012 (under 5), by tract, Census API | `resources/census_population/acquire_tract_urban_children_2010.R` → `resources/census_population/US_Census__tract_urban_rural_children_under5__2010.csv` | 2010 | density mix for the local residual fallback |
 
 A **file** is read by the code. A **constant** is read by hand once and written
 into `states.R` next to its provenance comment.
@@ -976,6 +988,17 @@ Rscript state_data/tests/check_program_counts_match_sources.R # program counts m
 Rscript state_data/tests/check_nyc_rest_of_state.R          # common-rank partition and cross-calibration sensitivity
 python  state_data/tests/check_summarise_shadowing.py      # scans for the shadowing trap
 ```
+
+Two supply comparison tests sit outside the check suite. They write
+diagnostics to `out/` and change no input.
+
+```bash
+Rscript state_data/tests/test_supply_vs_nsece_local.R      # model wages by region, legal ratios, CCDF licensed share
+Rscript state_data/tests/test_supply_vs_nsece_cluster.R --nsece <dir> --est <interface>/estimation/data --out state_data/out
+                                                           # cluster: NSECE regional supply (reproduces 1a), observed vs legal staffing
+```
+
+Run the local test first: the cluster test reads its legal-ratio table.
 
 **Run `check_outputs_are_current.R` first.** It is the only check that
 compares the demand targets in `config/state/demand/` to the code. The other
