@@ -1,7 +1,48 @@
-alpha_drift provenance -- mode state run 202610151655 calibration 202610151431
-date: Mon Oct 19 10:49:40 EDT 2026
-code: code_sim2.tar.gz md5 2492aadb9f69ea069dd004d49c8fde8c; commit.txt: main-national-revert-state-setup
-script md5: 64e1810c4c6964286bc33bde1c447053
-env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national ECEC_STATE_AGING=national ECEC_STATE_ALPHA_PRICE=state
+alpha_drift provenance -- mode state run 202611031505 calibration 202610261104
+date: Tue Nov  3 15:22:10 EST 2026
+run dir: /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1103full/c1; code: 10b3bd7+staffing+NY-sum full chunk 1
+script md5: 053f570629f4ee845415d594b20a6307
+main.R args: 
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=state
 R: Rscript (R) version 4.4.2 (2024-10-31)
-run log (checks): /nfs/roberts/project/pi_nrs36/agr55/ecec-state/logs/nomsim52_state_29679882.out
+
+alpha_drift provenance -- mode state run 202611031509 calibration 202610261104
+date: Tue Nov  3 15:22:09 EST 2026
+run dir: /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1103full/c2; code: 10b3bd7+staffing+NY-sum full chunk 2
+script md5: 053f570629f4ee845415d594b20a6307
+main.R args: 
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=state
+R: Rscript (R) version 4.4.2 (2024-10-31)
+
+alpha_drift provenance -- mode state run 202611031507 calibration 202610261104
+date: Tue Nov  3 15:22:19 EST 2026
+run dir: /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1103full/c3; code: 10b3bd7+staffing+NY-sum full chunk 3
+script md5: 053f570629f4ee845415d594b20a6307
+main.R args: 
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=state
+R: Rscript (R) version 4.4.2 (2024-10-31)
+
+alpha_drift provenance -- mode state run 202611031506 calibration 202610261104
+date: Tue Nov  3 15:14:42 EST 2026
+run dir: /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1103full/c4; code: 10b3bd7+staffing+NY-sum full chunk 4
+script md5: 053f570629f4ee845415d594b20a6307
+main.R args: 
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=state
+R: Rscript (R) version 4.4.2 (2024-10-31)
+
+alpha_drift provenance -- mode state run 202611031508 calibration 202610261104
+date: Tue Nov  3 15:18:23 EST 2026
+run dir: /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1103full/c5; code: 10b3bd7+staffing+NY-sum full chunk 5
+script md5: 053f570629f4ee845415d594b20a6307
+main.R args: 
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=state
+R: Rscript (R) version 4.4.2 (2024-10-31)
+
+alpha_drift provenance -- mode state run 202611031504 calibration 202610261104
+date: Tue Nov  3 15:14:43 EST 2026
+run dir: /nfs/roberts/project/pi_nrs36/agr55/ecec-state/runs/1103full/c6; code: 10b3bd7+staffing+NY-sum full chunk 6
+script md5: 053f570629f4ee845415d594b20a6307
+main.R args: 
+env: ECEC_URBAN_DENSITY=1 ECEC_INCOME_RANK=national_rpp ECEC_STATE_ALPHA_PRICE=state
+R: Rscript (R) version 4.4.2 (2024-10-31)
+

@@ -1,4 +1,4 @@
-# NY/NYC structural checks plus cross-calibration sensitivity, annual hours.
+# NY/NYC structural checks: NY target = NYC + rest of state exactly (build_target()), annual hours.
 # Default: fail invalid partitions, stale controls, inconsistent decomposition.
 # --strict-additivity: also apply historical 1% / 0.1%-of-total thresholds.
 suppressPackageStartupMessages(library(dplyr))
@@ -6,7 +6,6 @@ source('state_data/code/00_build_demand_targets.R')
 
 MAX_GAP <- 0.01
 MAX_GAP_TOTAL <- 0.001
-NYC_PARTITION_FILE <- file.path('resources', 'acs', 'US_ACS__p0_children_nyc_partition__2019.csv')
 
 
 
@@ -61,31 +60,17 @@ nyc_rest_of_state_diagnostic <- function(partition_path = NYC_PARTITION_FILE,
     mutate(children = num(children))
   validate_nyc_partition(partition, reference)
 
-  # Override diagnostic geographies only; restore resolver on every exit.
-  build_env <- environment(build_geo)
-  assign('p0_rows', function(geo, types = NULL, hint = '') {
-    if (!geo %in% c('NYR', 'NYC_parent')) return(original_p0(geo, types, hint))
-    x <- partition[partition$geo == geo, ]
-    if (!is.null(types)) x <- x[x$ecec_type %in% types, ]
-    x
-  }, envir = build_env)
-  on.exit(assign('p0_rows', original_p0, envir = build_env), add = TRUE)
-
+  # NY target = NYC + rest of state (build_target()); NYR, NYC_parent p0 read
+  # from partition controls by p0_rows()
   ny <- load_spec('NY'); nyc <- load_spec('NYC')
-  pep <- read_chr(raw_path('US_PEP__population_children_age_0_4_by_county__2019.csv'))
-  ny_counties <- paste0(pep$STATE, pep$COUNTY)[num(pep$STATE) == ny$fips]
-  rest <- ny
-  rest$geo <- 'NYR'; rest$name <- 'New York outside NYC'
-  rest$county_fips <- setdiff(ny_counties, nyc$county_fips)
-  rest$programs$n_children <- ny$programs$n_children - nyc$programs$n_children
-  rest$prek_all_settings <- ny$prek_all_settings - nyc$prek_all_settings
-  rest$age5_share <- AGE5_NHES_NATIONAL
+  rest <- rest_of_state_spec(ny, nyc)
   city_parent <- nyc
   city_parent$geo <- 'NYC_parent'; city_parent$name <- 'NYC parent-rank diagnostic control'
   city_parent$age5_share <- c(prek = 0, head_start = 0)
 
-  quiet <- function(spec) { utils::capture.output(x <- build_geo(spec)); x }
-  n <- quiet(ny); c <- quiet(nyc); r <- quiet(rest); cp <- quiet(city_parent)
+  quiet <- function(f, spec) { utils::capture.output(x <- f(spec)); x }
+  n <- quiet(build_target, ny); c <- quiet(build_geo, nyc); r <- quiet(build_geo, rest)
+  cp <- quiet(build_geo, city_parent)
   d <- tibble::tibble(
     ecec_type = n$care$ecec_type,
     ny_less_nyc = n$care$annual_hours - c$care$annual_hours,
@@ -107,21 +92,12 @@ nyc_rest_of_state_diagnostic <- function(partition_path = NYC_PARTITION_FILE,
   stopifnot(all(abs(d$decomposition_residual) < 1e-5),
             all(abs(d$rank_decomposition_residual) < 1e-5))
 
-  # Program counts additive; p0 mix uses different geographic weights.
-  i <- match('Unpaid Center-Based', d$ecec_type)
-  p0 <- partition %>% filter(ecec_type == 'Unpaid Center-Based') %>%
-    group_by(geo) %>% summarise(n = sum(children), .groups = 'drop')
-  p0 <- setNames(p0$n, p0$geo)
-  a <- p0['NYC_parent'] / p0['NY']
-  b <- cp$care$children[i] / n$care$children[i]
-  predicted <- -(FT_CARE_HOURS - PT_CARE_HOURS) * WEEKS_PER_YEAR * n$care$children[i] *
-    (a - b) * (d$pt_city_parent[i] - d$pt_rest[i])
-  stopifnot(abs(d$children_gap[i]) < 1e-6,
-            abs(predicted - d$same_rank_aggregation_hours[i]) < 1e-5)
-  cat('PASS: common-rank p0 partitions, production controls, program children, hours decompositions\n')
-  print(as.data.frame(d %>% select(ecec_type, gap, gap_total, same_rank_aggregation_hours,
-                                  city_rank_effect_hours, material_gap)), row.names = FALSE)
-  cat(sprintf('Unpaid-center NYC share: p0 %.4f%%; program children %.4f%%\n', 100 * a, 100 * b))
+  # NY built as NYC + rest: exact by construction; city rank effect = NYC's own
+  # income ranks vs parent ranks, now inside NY's target
+  stopifnot(all(abs(d$ny_less_nyc - d$rest_of_state) <= 1e-6 * d$rest_of_state),
+            all(abs(d$children_gap) < 1e-6), !any(d$material_gap))
+  cat('PASS: common-rank p0 partitions, production controls, NY = NYC + rest of state exactly, hours decompositions\n')
+  print(as.data.frame(d %>% select(ecec_type, gap, gap_total, city_rank_effect_hours)), row.names = FALSE)
   if (write_output) readr::write_csv(d, file.path(STATE_DATA_ROOT, 'out', 'nyc_rest_of_state_validation.csv'))
   d
 }

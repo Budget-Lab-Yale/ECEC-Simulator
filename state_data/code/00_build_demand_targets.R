@@ -126,10 +126,19 @@ PROGRAMS_TOO_LARGE <- 'meets or exceeds'
 
 
 
+# NY partition controls (acs_p0_shares.R sidecar): NY households at parent
+# (NY) income ranks split NYC_parent + NYR (rest of state). NYR p0 builds NY's
+# rest-of-state target (build_target()).
+NYC_PARTITION_FILE <- file.path('resources', 'acs', 'US_ACS__p0_children_nyc_partition__2019.csv')
+PARTITION_GEOS <- c('NYR', 'NYC_parent')
+
+
+
 p0_rows <- function(geo, types = NULL, hint = '') {
 
   #----------------------------------------------------------------------------
-  # Geography's rows of P0_SHARES_FILE, all character.
+  # Geography's rows of P0_SHARES_FILE, all character; PARTITION_GEOS from
+  # NYC_PARTITION_FILE.
   #
   # Params:
   #   - geo (chr); types (chr vec|NULL): ecec_type values kept, NULL all
@@ -138,6 +147,16 @@ p0_rows <- function(geo, types = NULL, hint = '') {
   # Returns: (tibble); stops if file missing or no rows
   #----------------------------------------------------------------------------
 
+  if (geo %in% PARTITION_GEOS) {
+    if (!file.exists(NYC_PARTITION_FILE)) {
+      stop('no ', NYC_PARTITION_FILE, ' -- run state_data/cluster/acs_p0_shares.R, copy its ',
+           '.nyc_partition.csv sidecar here')
+    }
+    d <- read_chr(NYC_PARTITION_FILE) %>% dplyr::filter(geo == !!geo)
+    if (!is.null(types)) d <- dplyr::filter(d, ecec_type %in% !!types)
+    if (!nrow(d)) stop('no p0 rows for ', geo, ' in ', NYC_PARTITION_FILE)
+    return(d)
+  }
   f <- raw_path(P0_SHARES_FILE)
   if (!file.exists(f)) stop('no ', f, ' -- run state_data/cluster/acs_p0_shares.R', hint)
   d <- read_chr(f) %>% dplyr::filter(geo == !!geo)
@@ -758,19 +777,107 @@ build_geo <- function(spec) {
 
 
 
+sub_geos_of <- function(geo) {
+
+  #----------------------------------------------------------------------------
+  # Sub-state geographies inside geo (NY -> NYC); empty for others.
+  #
+  # Params:
+  #   - geo (chr)
+  #
+  # Returns: (chr vec)
+  #----------------------------------------------------------------------------
+
+  Filter(function(sg) sg != geo && parent_geo(sg) == geo, names(SUBSTATE_GEOGRAPHIES))
+}
+
+
+
+rest_of_state_spec <- function(parent, sub) {
+
+  #----------------------------------------------------------------------------
+  # Parent state less its sub-state geography (NY less NYC = NYR): counties,
+  # program slots, all-settings pre-K by difference; national age-5 shares
+  # (sub-state geography holds none); p0 = parent-rank NYR partition control.
+  #
+  # Params:
+  #   - parent, sub (list): load_spec() results (NY, NYC)
+  #
+  # Returns: (list) spec, geo 'NYR'
+  #----------------------------------------------------------------------------
+
+  if (length(sub_geos_of(parent$geo)) != 1 || sub$geo != 'NYC') {
+    stop('rest_of_state_spec(): partition controls cover NY less NYC only')
+  }
+  pep <- read_chr(raw_path('US_PEP__population_children_age_0_4_by_county__2019.csv'))
+  counties <- paste0(pep$STATE, pep$COUNTY)[num(pep$STATE) == parent$fips]
+  rest <- parent
+  rest$geo <- 'NYR'; rest$name <- 'New York outside NYC'
+  rest$county_fips <- setdiff(counties, sub$county_fips)
+  rest$programs$n_children <- parent$programs$n_children - sub$programs$n_children
+  rest$prek_all_settings <- parent$prek_all_settings - sub$prek_all_settings
+  rest$age5_share <- AGE5_NHES_NATIONAL
+  rest
+}
+
+
+
+build_target <- function(spec) {
+
+  #----------------------------------------------------------------------------
+  # Target geography's build result. State w/ sub-state geography (NY): care =
+  # sub-state build (own income ranks) + rest-of-state build -- NY less NYC
+  # equals rest of state exactly (check_nyc_rest_of_state.R). NY's own
+  # build_geo() result kept for programs, rest_mix; participation total,
+  # part-time, formal, centre shares recomputed from summed care. Others:
+  # build_geo().
+  #
+  # Params:
+  #   - spec (list): from load_spec()
+  #
+  # Returns: (list) build_geo() result layout
+  #----------------------------------------------------------------------------
+
+  subs <- sub_geos_of(spec$geo)
+  res <- build_geo(spec)
+  if (!length(subs)) return(res)
+
+  sub <- load_spec(subs)
+  parts <- list(build_geo(sub), build_geo(rest_of_state_spec(spec, sub)))
+  add <- function(col) Reduce(`+`, lapply(parts, function(p) p$care[[col]]))
+  care <- tibble::tibble(ecec_type = ECEC_TYPES, children = add('children'),
+                         part_time = add('part_time'), annual_hours = add('annual_hours'))
+  k <- setNames(care$children, care$ecec_type)
+  np <- sum(care$children)
+  own_hours <- sum(res$care$annual_hours)
+  res$care <- care
+  res$participation$nonparental_total <- np
+  res$shares$part_time <- setNames(care$part_time / care$children, ECEC_TYPES)
+  res$shares$formal <- sum(k[FORMAL_TYPES]) / np
+  res$shares$informal <- 1 - res$shares$formal
+  res$shares$centre <- k[['Center-Based']] / (k[['Center-Based']] + k[['Paid Home-Based']])
+  res$hours$annual_per_child <- setNames(care$annual_hours / care$children, ECEC_TYPES)
+  cat('  ', spec$geo, ' target = ', paste(c(subs, 'rest of state'), collapse = ' + '),
+      ' (own-build hours differ by ', sprintf('%.3f%%', 100 *
+      (sum(care$annual_hours) / own_hours - 1)), ')\n', sep = '')
+  res
+}
+
+
+
 build_of <- function(geo) {
 
   #----------------------------------------------------------------------------
-  # Geography's build_geo() result, step print-out muted -- what comparison
+  # Geography's build_target() result, step print-out muted -- what comparison
   # scripts read in place of re-deriving build quantities.
   #
   # Params:
   #   - geo (chr)
   #
-  # Returns: (list) build_geo() result
+  # Returns: (list) build_target() result
   #----------------------------------------------------------------------------
 
-  utils::capture.output(res <- build_geo(load_spec(geo)))
+  utils::capture.output(res <- build_target(load_spec(geo)))
   res
 }
 
@@ -982,7 +1089,7 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
 
   for (g in geos) {
     spec <- load_spec(g)
-    res  <- build_geo(spec)
+    res  <- build_target(spec)
     write_geo(res, g)
     if (run_checks) failures <- failures + check_geo(res, g)
     results[[g]] <- res

@@ -26,27 +26,20 @@
 # state; at L = L_0 market wage = state's own base-year wage.
 #
 # L_req (labor_requirements) = national NSECE worker-hours per child-hour x
-# state licensing staffing index, staffing_index(). Centre index = required
-# staff per child (1 / licensed children-per-staff), averaged over ages 0-4 w/
-# NSECE 2019 centre enrolment age mix, / same quantity averaged over 51
-# states w/ PEP 2019 children 0-4 weights. Home index = 1 / licensed max
-# children per family child care home, / 0-4-weighted mean over states that
-# license homes; state w/out home licence -> 1; blended toward 1 by NSECE
-# licensed share of paid home-based children (licensing binds licensed homes
-# only; unlicensed paid home care at national level). Centre index scales all three
+# state observed staffing index, staffing_index(observed_indices()). Index =
+# NSECE 2019 observed staff per child by Census region x urban density
+# (nsece_staffing_region_density.R; centre classrooms age-standardised,
+# listed homes) at state's 2010 child-under-5 density mix, / PEP 2019
+# children-0-4-weighted mean over 51 states. Home index blended toward 1 by
+# NSECE licensed share of paid home-based children (cells = listed homes;
+# unlisted paid home care at national level). Centre index scales all three
 # centre sectors, home index paid_home_based, both education groups alike.
-# Ratios: reviewed October 1, 2019 rules, licensing_ratios_reviewed_2019.csv.
-# 2017 study retained as baseline/fallback; source audit refreshed by 00_.
-# Centre ratio per year of age 0-4 (NSECE_AGE_YEAR): ordinary age bands,
-# month-weighted (licensing_ratios_2019.R centre_age_years()); NY blends NYS,
-# NYC rules by NYC child share. One aggregate center index, no new choices.
-# Home capacity: one adult, mixed-age -- max preschool children one adult may
-# care for w/ infant present; excludes school-age-only additions, second-adult,
-# preschool-only configurations. Conditions retained in licensing registry.
-# NYC own center rules, NYS home rules; excluded from national mean (inside NY,
-# NY row already carries NYC's share).
-# Historical 2014/2017, three/five-point comparisons remain diagnostics only.
-
+# WHY observed, not legal: observed staffing follows legal ratios weakly --
+# NSECE log slope 0.21 across regions, ACS 0.10-0.23 across states within
+# region (state_data/code/analyze_observed_staffing.R).
+# Legal-ratio index (licensing_indices()) -- diagnostic only: reviewed October
+# 1, 2019 rules (licensing_ratios_reviewed_2019.csv; rule detail in its
+# docstring, licensing_ratios_2019.R).
 #
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
@@ -90,14 +83,19 @@ LOCAL_PRICES <- file.path(DIR, 'US_DOL_NDCP__local_care_prices__2019.csv')   # n
 
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 
-# staffing_index() inputs -- licensed children per staff by state, setting, age
-# point (licensing_ratios_2019.R); county children 0-4
+# licensing_indices() input -- licensed children per staff by state, setting,
+# age point (licensing_ratios_2019.R); county children 0-4 (both indices)
 RATIOS  <- file.path(DIR, 'licensing_ratios_reviewed_2019.csv')
 POP_0_4 <- file.path('resources', 'census_population',
                      'US_PEP__population_children_age_0_4_by_county__2019.csv')
 # Licensed share of children in paid home-based care, NSECE 2019
 # (state_data/cluster/nsece_home_licensed_share.R, measure children_0_5)
 HOME_SHARE <- file.path(DIR, 'US_NSECE__home_licensed_share__2019.csv')
+# Observed staff per child, NSECE region x urban density cells
+# (state_data/cluster/nsece_staffing_region_density.R)
+STAFFING_CELLS <- file.path(DIR, 'US_NSECE__staffing_region_density__2019.csv')
+# density_mix(), REGION_OF -- sourced into own environment by observed_indices()
+NDCP_LOCAL <- file.path(DIR, 'ndcp_local_prices_2019.R')
 
 # NSECE_CENTRE_ENROLLED (NSECE 2019 centre enrolment by age 0-4),
 # NSECE_AGE_YEAR (age 0-4 -> age-year row in RATIOS), NSECE_AGE_POINT (2017
@@ -155,11 +153,36 @@ home_licensed_share <- function(path = HOME_SHARE) {
 
 
 
+pop_0_4_by_state <- function() {
+
+  #----------------------------------------------------------------------------
+  # PEP 2019 children 0-4 by state (county rows summed), 50 states + DC --
+  # national-mean weights for both staffing indices.
+  #
+  # Returns: (tibble) state, pop
+  #----------------------------------------------------------------------------
+
+  require_input(POP_0_4)
+  pop <- read_csv(POP_0_4, col_types = cols(.default = col_character())) %>%
+    mutate(state = names(STATE_POSTAL_TO_FIPS)[match(as.integer(STATE),
+                                                     STATE_POSTAL_TO_FIPS)],
+           pop   = as.numeric(TOT_POP)) %>%
+    group_by(state) %>%
+    dplyr::summarise(pop = sum(pop), .groups = 'drop')
+  if (anyNA(pop$state) || nrow(pop) != length(STATE_POSTAL_TO_FIPS) ||
+      any(!is.finite(pop$pop) | pop$pop <= 0)) {
+    stop(POP_0_4, ': expected 50 states + DC')
+  }
+  pop
+}
+
+
+
 licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
                               home_share = home_licensed_share()) {
 
   #----------------------------------------------------------------------------
-  # Licensing staffing index, every geography in ratios file.
+  # Legal-ratio staffing index (diagnostic), every geography in ratios file.
   # Centre: staff per child = sum_a w_a / r(geo, map(a)) / sum_a w_a, w =
   # NSECE_CENTRE_ENROLLED ages 0-4, map = age_map, r = licensed children per
   # staff; index = geo value / PEP children-0-4-weighted mean over 50 states
@@ -168,6 +191,12 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
   # licensed homes only -- home index = home_share x licensing index +
   # (1 - home_share), unlicensed paid home care at national level; national
   # mean stays 1. NYC carries own rows, not in national mean (inside NY).
+  # Rules: October 1, 2019. Centre ratio per year of age 0-4, ordinary age
+  # bands month-weighted (licensing_ratios_2019.R centre_age_years()); NY
+  # blends NYS, NYC rules by NYC child share. Home capacity: one adult,
+  # mixed-age -- max preschool children w/ infant present. NYC own centre
+  # rules, NYS home rules. 2017 study = baseline/fallback; 2014/2017
+  # three/five-point comparisons via age_map.
   #
   # Params:
   #   - ratios (chr): csv w/ state, setting, age_group, children_per_staff
@@ -180,7 +209,6 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
   #----------------------------------------------------------------------------
 
   require_input(ratios)
-  require_input(POP_0_4)
   rt <- read_csv(ratios, col_types = cols(.default = col_character())) %>%
     mutate(children_per_staff = suppressWarnings(as.numeric(children_per_staff)))
   if (anyNA(rt[c('state', 'setting', 'age_group')]) ||
@@ -191,17 +219,7 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
       any(rt$children_per_staff <= 0, na.rm = TRUE)) {
     stop(ratios, ': invalid staffing keys, coverage, or ratios')
   }
-
-  pop <- read_csv(POP_0_4, col_types = cols(.default = col_character())) %>%
-    mutate(state = names(STATE_POSTAL_TO_FIPS)[match(as.integer(STATE),
-                                                     STATE_POSTAL_TO_FIPS)],
-           pop   = as.numeric(TOT_POP)) %>%
-    group_by(state) %>%
-    dplyr::summarise(pop = sum(pop), .groups = 'drop')
-  if (anyNA(pop$state) || nrow(pop) != length(STATE_POSTAL_TO_FIPS) ||
-      any(!is.finite(pop$pop) | pop$pop <= 0)) {
-    stop(POP_0_4, ': expected 50 states + DC')
-  }
+  pop <- pop_0_4_by_state()
 
   # Staff per child, every geography in ratios
   centre <- rt %>%
@@ -236,22 +254,82 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
 
 
 
-staffing_index <- function(L_req, geo, indices = licensing_indices()) {
+observed_indices <- function(cells = STAFFING_CELLS, home_share = home_licensed_share()) {
 
   #----------------------------------------------------------------------------
-  # Scales national labor_requirements by geo's licensing staffing index
-  # (licensing_indices() on RATIOS). Prints one line per geo.
+  # Observed staffing index, 50 states + DC + NYC. Geo staff per child =
+  # NSECE region x urban density cell values (est_used; centre classroom
+  # values age-standardised) at geo's 2010 child-under-5 mix by density
+  # (density_mix()); index = geo value / PEP children-0-4-weighted mean over
+  # 50 states + DC. NYC: Northeast cells at own mix, not in national mean.
+  # Home cells: listed (licensed) homes only -- home index = home_share x
+  # observed index + (1 - home_share), unlisted paid home care at national
+  # level, as licensing_indices().
+  #
+  # Params:
+  #   - cells (chr): nsece_staffing_region_density.R output
+  #   - home_share (dbl): licensed share of paid home-based children
+  #
+  # Returns: (tibble) state, centre, home -- indices
+  #----------------------------------------------------------------------------
+
+  require_input(cells, ' -- run state_data/cluster/nsece_staffing_region_density.R on cluster')
+  e <- new.env()
+  sys.source(NDCP_LOCAL, envir = e)
+  mix <- e$density_mix()
+  geos <- c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))
+  region <- c(e$REGION_OF, setNames(rep(e$REGION_OF[['NY']], length(SUBSTATE_GEOGRAPHIES)),
+                                    names(SUBSTATE_GEOGRAPHIES)))
+  if (!setequal(unique(mix$geo), geos) || any(!geos %in% names(region))) {
+    stop('density mix or region map does not cover 50 states + DC + sub-state geographies')
+  }
+
+  cl <- read_csv(cells, show_col_types = FALSE) %>% filter(region > 0, density > 0)
+  if (nrow(cl) != 24 || anyNA(cl$est_used) || any(cl$est_used <= 0) ||
+      !setequal(cl$setting, c('center', 'home'))) {
+    stop(cells, ': want 2 settings x 4 regions x 3 densities, positive est_used')
+  }
+
+  pop <- pop_0_4_by_state()
+
+  v <- mix %>%
+    mutate(region = unname(region[geo])) %>%
+    inner_join(cl %>% select(setting, region, density, est_used), by = c('region', 'density'),
+               relationship = 'many-to-many') %>%
+    group_by(state = geo, setting) %>%
+    dplyr::summarise(s = sum(share * est_used), .groups = 'drop') %>%
+    left_join(pop, by = 'state')
+  if (nrow(v) != 2 * length(geos)) stop(cells, ': cell missing for some geo x density')
+
+  v %>%
+    group_by(setting) %>%
+    mutate(idx = s / weighted.mean(s[!is.na(pop)], pop[!is.na(pop)])) %>%
+    ungroup() %>%
+    select(state, setting, idx) %>%
+    tidyr::pivot_wider(names_from = setting, values_from = idx) %>%
+    transmute(state, centre = center, home = home_share * home + (1 - home_share))
+}
+
+
+
+staffing_index <- function(L_req, geo, indices = observed_indices()) {
+
+  #----------------------------------------------------------------------------
+  # Scales national labor_requirements by geo's staffing index (default
+  # observed_indices(); licensing_indices() for legal-ratio diagnostics).
+  # Prints one line per geo.
   #
   # Params:
   #   - L_req (list): national labor_requirements, sector -> no_ba / ba
-  #   - geo (chr): postal or sub-state code w/ RATIOS rows
+  #   - geo (chr): postal or sub-state code w/ row in indices
+  #   - indices (tibble): state, centre, home
   #
   # Returns: (list) L_req, centre sectors x centre index, home sectors x home
   #   index
   #----------------------------------------------------------------------------
 
   ix <- indices
-  if (!geo %in% ix$state) stop(RATIOS, ': no centre or home rows for ', geo)
+  if (!geo %in% ix$state) stop('staffing index: no centre or home value for ', geo)
   i_c <- ix$centre[ix$state == geo]
   i_h <- ix$home[ix$state == geo]
 
@@ -346,7 +424,7 @@ main <- function() {
     quit(status = 1)
   }
 
-  indices <- licensing_indices()
+  indices <- observed_indices()
   require_input(LOCAL_PRICES, ' -- run resources/supply/ndcp_local_prices_2019.R first')
   local_prices <- read_csv(LOCAL_PRICES, show_col_types = FALSE)
   annual_wages <- file.path(DIR, 'state_childcare_wage_ratios_annual.csv')

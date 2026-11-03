@@ -1,2 +1,2 @@
-run_root,geographies,solver_records,failed_records,max_price_gap,employment_rows,employment_max_abs_gap
-/nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611021732,52,104,0,3.64e-4,832,1.78424778540798e-6
+geographies,solver_records,failed_records,max_price_gap,employment_rows,employment_max_abs_gap
+52,104,0,1.67e-4,832,4.05176338369451e-7

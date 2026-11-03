@@ -449,13 +449,44 @@ run 0.764 (AL) to 1.298 (DC) for no-BA and 0.746 (AL) to 1.278 (DC) for BA.
 OES 2019 has no metropolitan divisions, so NYC takes the New
 York-Newark-Jersey City MSA (35620), suburbs included.
 
-`labor_requirements` scale by a state licensing staffing index. For
+Regional check (3 November 2026): NSECE center teacher wages by region and
+education with design SEs (`state_data/cluster/nsece_wage_region.R`), model
+wages averaged by ACS center staff hours, and ACS 2015–2019 hourly earnings of
+center care workers (`state_data/code/analyze_regional_wages.R` →
+`state_data/out/regional_wage_comparison.csv`), each relative to its national
+mean. Three model cells differ from NSECE by more than 2 SE (Northeast both
+groups, West no-BA); in all three the ACS sides with OEWS, so the regional
+pattern stays on OEWS.
+
+`labor_requirements` scale by a state **observed** staffing index
+(`observed_indices()`, since 3 November 2026). NSECE 2019 gives observed staff
+per child in each Census region × community urban density cell
+(`state_data/cluster/nsece_staffing_region_density.R` writes
+`resources/supply/US_NSECE__staffing_region_density__2019.csv`). Centre cells use
+the classroom module, age-standardised to national staff per child at each
+classroom's youngest-child age; home cells use listed providers (respondent plus
+helpers per enrolled child). Cells carry design standard errors and the same
+reliability rule and fallback as the price cells; all 24 cells pass. A geography
+takes its region's cells at its 2010 mix of children under 5 by density
+(`density_mix()`), relative to the PEP-weighted mean over the 50 states and DC.
+The home index blends toward 1 by the licensed share, as below. Centre indices run
+0.937 (ID) to 1.134 (ND); home indices 0.965 (ND) to 1.024 (DE).
+
+I replaced the legal-ratio index because observed staffing follows legal ratios
+weakly. In NSECE, the log slope of observed on legal children per staff across
+regions within an age is 0.21 (SE 0.13). In the ACS 2015–2019 (care workers by
+place of work over state care-hour targets), the slope across states within a
+region is 0.10–0.23 (SE about 0.15). Legal levels are also about twice observed
+staffing. `state_data/code/analyze_observed_staffing.R` writes the comparison to
+`state_data/out/observed_staffing_summary.txt`. The legal index below
+(`licensing_indices()`) remains a diagnostic.
+
+The legal-ratio index: for
 centres: required staff per child (1 ÷ licensed children per staff by age),
 averaged over ages 0–4 with the NSECE 2019 centre enrolment mix, relative to
-the PEP-weighted mean over the 50 states and DC; it scales all three centre
-sectors. For homes: 1 ÷ licensed maximum children per family child care home,
+the PEP-weighted mean over the 50 states and DC. For homes: 1 ÷ licensed maximum children per family child care home,
 relative to the mean over states that license homes (1 where a state does
-not); it scales `paid_home_based`. Rules come from the reviewed October 1, 2019 audit in
+not). Rules come from the reviewed October 1, 2019 audit in
 `resources/licensing/licensing_2019_evidence.csv`, with registered source hashes.
 The derived input is `resources/supply/licensing_ratios_reviewed_2019.csv`;
 the 2017 study remains the comparison baseline and fallback for unresolved rows.

@@ -244,10 +244,10 @@ isolation across sequential, parallel, and finalization paths using small fixtur
 Configured raw-data roots take precedence over repository resources, including
 nested source folders; check with `Rscript tests/test_raw_data_paths.R`.
 
-NY and NYC retain their own production calibration. The NY/NYC diagnostic now
-uses a separate common-rank partition sidecar from `acs_p0_shares.R`; its default
-checks structural identities and reports cross-calibration gaps. Add
-`--strict-additivity` to retain the historical 1% / 0.1%-of-total gap test.
+NY and NYC retain their own production calibration. The NY demand target is the
+NYC target plus a rest-of-state target built from the common-rank partition
+sidecar of `acs_p0_shares.R`, so NY minus NYC equals rest of state exactly; the
+NY/NYC diagnostic checks this and passes `--strict-additivity`.
 See `Rscript tests/test_nyc_partition.R`. Home-staffing scenarios are diagnostic
 only: `Rscript state_data/code/analyze_home_staffing.R` writes staffing and
 2019 anchor-price sensitivities. The national anchor already includes NSECE

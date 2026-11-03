@@ -1,17 +1,17 @@
 year: 2019.0
 labor_requirements:
   unpaid_center_based:
-    no_ba: 0.0369519446331898
-    ba: 0.040355839188917
+    no_ba: 0.0505570831494475
+    ba: 0.055214239404528
   low_price_center_based:
-    no_ba: 0.1294425417738823
-    ba: 0.0287365740149205
+    no_ba: 0.1771012977124898
+    ba: 0.0393169392389072
   high_price_center_based:
-    no_ba: 0.1089417060015936
-    ba: 0.0498863151528612
+    no_ba: 0.1490523690549753
+    ba: 0.0682536902519986
   paid_home_based:
-    no_ba: 0.1609945538568643
-    ba: 0.0382977201812098
+    no_ba: 0.1635268176125388
+    ba: 0.0389001003637473
 wages:
   no_ba: 10.2432142106799997
   ba: 17.3946257663999972
@@ -20,9 +20,9 @@ elasticities:
   ba: 2.0
 per_unit_residual:
   unpaid_center_based: .na.real
-  low_price_center_based: 0.458323334913054
-  high_price_center_based: 4.1465402733484167
-  paid_home_based: 1.9599377697833757
+  low_price_center_based: 0.3008646004238948
+  high_price_center_based: 2.7219805047002992
+  paid_home_based: 1.9235210718517251
 wage_path:
 - year: 2019
   no_ba: 1.0

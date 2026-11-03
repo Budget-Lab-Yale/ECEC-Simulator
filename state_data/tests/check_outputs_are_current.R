@@ -32,7 +32,7 @@ for (g in GEOGRAPHIES) {
     cat('  [FAIL]', g, '-', f, 'does not exist\n'); fails <- fails + 1; next
   }
 
-  quiet <- utils::capture.output(res <- build_geo(load_spec(g)))
+  quiet <- utils::capture.output(res <- build_target(load_spec(g)))
   built_res[[g]] <- res
   built <- setNames(res$care$annual_hours, res$care$ecec_type)
   have  <- read_csv(f, show_col_types = FALSE)
@@ -74,7 +74,7 @@ for (g in GEOGRAPHIES) {
     cat('  [FAIL]', g, '-', fc, 'does not exist\n'); fails <- fails + 1; next
   }
   res <- built_res[[g]]
-  if (is.null(res)) quiet <- utils::capture.output(res <- build_geo(load_spec(g)))
+  if (is.null(res)) quiet <- utils::capture.output(res <- build_target(load_spec(g)))
   have  <- read_csv(fc, show_col_types = FALSE)
   have  <- have[match(res$care$ecec_type, have$ecec_type), ]
   d <- max(abs(c(have$children - res$care$children, have$part_time - res$care$part_time)) /

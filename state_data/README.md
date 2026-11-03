@@ -34,51 +34,51 @@ are kept outside git. This file is the map, and the record of every
 source. A machine-readable source register (one row per source and geography,
 with its URL, vintage, and retrieval date) is kept outside git.
 
-## Status: paused 26 October
+## Status: 3 November
 
-Work on this branch is paused. Two items are open:
+Staffing uses the observed index (below); the legal-rule audit is a diagnostic.
+The NY target is NYC plus rest of state. Annual wage inputs hold 1,473 occupation
+records and 728 geography/year/education ratios; all 52 saved wage paths match
+the source panel. Local source, supply, and annual wage checks pass.
 
-1. **The state staffing inputs still have an issue.** The audit below passes, but
-   the inputs are not final. Do not treat the 312 reviewed records as settled.
-2. **The paired state smoke from 24 October did not run.** The 24 October commit
-   (`cc915b7`) waited on it after the Bouchet SSH master dropped. No ECEC job
-   ran on Bouchet after 23 October.
-
-## 22 October supply update
-
-Annual wage inputs contain 1,473 occupation records and 728 geography/year/education
-ratios. All 52 saved wage paths match the source panel. The staffing review covers
-312 of 312 unweighted geography/setting/age records. On 22 October, 28 changed a
-number and the other 284 confirmed the old input. On 26 October the one-adult home
-rule and the ordinary center band (below) changed 10 more: 38 records now differ
-from the 2017 input (31 changed values, 7 home values with no 2017 value) and 274
-confirm it. Center inputs are now month-weighted from full age bands. Supply files
-have been rebuilt with all reviewed values and no unresolved staffing records.
-Local source, supply, and annual wage checks pass.
-
-The 1% ACS sample completed 2026--2027 for all 52 geographies on 26 October with
-the current staffing inputs (one-adult home rule, month-weighted ordinary center
-bands, NY blend, licensed-share home blend) on calibration interface
-`202610261104` (run `202610261506`, job `30885764`, exit 0, 36 minutes). All 104
-price solves and employment targets passed. The largest paid-sector price gap was
-$0.00033 per child-hour (OR 2026); the largest employment miss was 0.00019
+The 1% ACS sample ran 2026--2027 for all 52 geographies on 3 November on
+calibration interface `202610261104` (run `202611031204`, job `31814810`, exit 0).
+All 104 price solves and employment targets passed. The largest paid-sector price
+gap was $0.00032 per child-hour; the largest employment miss was 0.00030
 percentage points. `Rscript state_data/cluster/integrated_validation.R <run root>
 <out prefix>` on Bouchet writes `out/integrated_validation_current.csv` (solver),
 `_employment.csv`, `_summary.csv`, and a provenance file with the supply YAML
 hashes. The supply YAMLs the run read match the committed ones.
 
-The refreshed 2019 NDCP comparison covers 46 states: weekly RMSE is $33.98,
-correlation is 0.897, and the child-weighted model mean is 11.7% above NDCP.
-2020--2022 weekly RMSE is $38.34, $41.09, and $46.93 across 46, 41, and 45 states.
-Program-count and other source checks pass. The corrected 23 October NY/NYC
-diagnostic validates common-rank partition identities and reports differences
-between independently calibrated geographies. `--strict-additivity` retains
-the historical 1% / 0.1%-of-total limits; see the partition discussion below.
+The 2019 NDCP comparison is a build check: the local residual sets the model
+center price 8.0% above NDCP in each of the 46 states with a 2019 price, the
+NSECE level factor. With residuals fixed at 2019 and grown by CPI, 2020--2022
+weekly RMSE is $22.72, $23.73, and $33.03 across 46, 41, and 45 states.
+Program-count and other source checks pass.
+
+A full-sample run on 3 November, split into six chunk runs by geography
+(`202611031504`--`202611031509`; one day-partition job cannot hold all 52 at full
+sample), passed all 104 solves: largest price gap $0.00017 per child-hour, largest
+employment miss 0.00004 percentage points. `code/combine_chunk_runs.R` stacks the
+chunks' validation, drift, and consistency files into `out/`. The 2019-to-2026
+paid-center share drift over the 50 states and DC runs from -2.0 to +1.0
+percentage points (population-weighted mean -0.1). `code/analyze_state_fit_shifts.R`
+writes the 2019 fit shifts to `out/state_fit_shifts*.csv`.
 
 ## Staffing-rule audit: October 1, 2019
 
+Since 3 November 2026 the supply inputs scale staffing by **observed** NSECE
+staffing by Census region × urban density at each geography's density mix
+(`observed_indices()` in `resources/supply/state_supply_params.R`; cells from
+`cluster/nsece_staffing_region_density.R`). Observed staffing follows legal
+ratios weakly (`code/analyze_observed_staffing.R`, `code/analyze_observed_staffing_acs.py`,
+`out/observed_staffing_summary.txt`), so the legal ratios audited below are a
+diagnostic, not an input. Method: `docs/state_level_analysis.md`.
+
 The audit has 312 unweighted records: five center age points and one home input
 for each of 52 geographies. These are records, not counts of children or providers.
+All 312 are reviewed: 38 differ from the 2017 input (31 changed values, 7 home
+values with no 2017 value), and 274 confirm it.
 I check the rule that applied on **October 1, 2019**, including its age bands,
 program type, and need for an assistant. A source's publication year alone is not
 enough. A reviewed record can confirm an existing value without changing it.
@@ -207,21 +207,18 @@ covers only the 50 states and DC, NSECE places Puerto Rico in no Census region,
 and the simulator's ACS households do not include it. Building it needs a participation rate, a region or a stand-in
 for one, a wage, and households. New York is all 62 counties, city
 included. New York City is the five boroughs, built on its own. NY includes
-NYC. Each production run retains its own calibration. The NY/NYC diagnostic
-uses separate common-rank controls to obtain a true rest-of-state household
-partition; subtracting own-rank NYC p0 from national-rank NY p0 is invalid.
-The corrected Unpaid Center-Based annual-hour gap is 1.98%, or 0.265% of
-all rest-of-state annual hours: 1.00 million annual hours from NYC's own
-income-rank calibration and 0.69 million from different geographic weights
-for program children and p0 part-time shares. Estimated program-child counts
-still add exactly. These differences don't require either production run
-to use the other's calibration.
+NYC. Each production run retains its own calibration. Since 3 November 2026 the
+NY target is built as the NYC target (NYC's own income ranks) plus a
+rest-of-state target (`build_target()`, `rest_of_state_spec()` in
+`code/00_build_demand_targets.R`; rest-of-state p0 = NYR partition control at
+NY ranks), so NY minus NYC equals rest of state exactly in every care type. It
+moved NY's total target hours by 0.04% and single care types by up to 0.8%.
+Subtracting own-rank NYC p0 from NY p0 is still invalid.
 
 `tests/check_nyc_rest_of_state.R` checks the common-rank p0 partition,
-agreement with production controls, and exact hours decompositions. It always
-reports material cross-calibration gaps in `out/nyc_rest_of_state_validation.csv`.
-`--strict-additivity` retains the historical 1% per-type and 0.1%-of-total
-thresholds and currently exits 1. Default structural checks pass.
+agreement with production controls, exact hours decompositions, and NY = NYC +
+rest of state. It reports NYC's own-rank effect in
+`out/nyc_rest_of_state_validation.csv`. `--strict-additivity` passes.
 The partition file in `resources/acs/` was regenerated from interface
 `202610191203` on 23 October (Bouchet job `30447222`, exit 0).
 

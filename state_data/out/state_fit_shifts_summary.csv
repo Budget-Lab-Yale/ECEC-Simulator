@@ -1,0 +1,16 @@
+kind,name,n_geos,min,median,max
+care,Center-Based,51,-0.9408,0.4056,1.7465
+care,Other Paid,51,-0.9193,0.4009,1.6158
+care,Other Unpaid,51,-0.8245,0.37,1.559
+care,Paid Home-Based,51,-0.891,0.3914,1.758
+care,Unpaid Center-Based,51,-0.7379,0.4077,2.9076
+care,Unpaid Home-Based,51,-0.941,0.4375,1.9124
+employment,F_25_35,51,-0.9183,-0.2171,0.3959
+employment,F_35_45,51,-0.5582,-0.1759,0.3722
+employment,F_45plus,51,-0.7726,-0.0948,0.373
+employment,F_u25,51,-1.0448,-0.1847,0.2762
+employment,M_25_35,51,-0.4571,-0.1403,0.6575
+employment,M_35_45,51,-1.4527,-0.1014,0.437
+employment,M_45plus,46,-0.8568,-0.09505,0.4105
+employment,M_u25,49,-0.6841,-0.1092,0.2496
+iterations,all,51,32,61,152

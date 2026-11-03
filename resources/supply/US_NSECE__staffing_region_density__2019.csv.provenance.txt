@@ -1,0 +1,6 @@
+script: state_data/cluster/nsece_staffing_region_density.R
+run at: 2026-11-03 11:10:33
+nsece: /nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1/2019
+RSE_MAX: 0.3
+R: R version 4.4.1 (2024-06-14)
+centre classrooms: 5484  listed homes: 4127

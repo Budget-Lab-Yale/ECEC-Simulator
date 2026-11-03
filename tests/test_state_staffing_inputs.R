@@ -56,17 +56,52 @@ stopifnot(nrow(share) == 1, abs(s - share$licensed_share) < 1e-12, s > 0.2, s < 
 home <- s * home_lic + (1 - s)
 stopifnot(abs(weighted.mean(center[states], pop) - 1) < 1e-12,
           abs(weighted.mean(home[states], pop) - 1) < 1e-12)
+# Legal-ratio index -- diagnostic since 3 November; licensing_indices() reproduces it
+legal <- licensing_indices()
+stopifnot(max(abs(legal$centre - center[legal$state])) < 1e-12,
+          max(abs(legal$home - home[legal$state])) < 1e-12)
+cat('PASS: 312 reviewed records, month-weighted bands, NY blend, independent population normalization, legal index diagnostic\n')
+
+# Observed index (YAML input): NSECE region x density cells at geo's 2010 tract
+# child mix, recomputed here from cells + tract file
+cells <- read_csv(STAFFING_CELLS, show_col_types = FALSE) %>% filter(region > 0, density > 0)
+stopifnot(nrow(cells) == 24, all(cells$reliable), all(cells$est_used == cells$est))
+tracts <- read_csv(file.path('resources', 'census_population',
+                             'US_Census__tract_urban_rural_children_under5__2010.csv'),
+                   col_types = cols(.default = col_character()))
+u <- ifelse(as.numeric(tracts$pop_total) > 0, as.numeric(tracts$pop_urban) / as.numeric(tracts$pop_total), 0)
+dens <- ifelse(u >= 0.85, 1L, ifelse(u >= 0.30, 2L, 3L))
+kids <- as.numeric(tracts$children_under5)
+geo_of <- names(STATE_POSTAL_TO_FIPS)[match(as.integer(tracts$state), STATE_POSTAL_TO_FIPS)]
+is_nyc <- as.integer(tracts$state) == 36 & as.integer(tracts$county) %in% counties$countyfip[counties$geo == 'NYC']
+# Census regions (NSECE _REGION 1-4), census.gov region definitions
+NE <- c('CT', 'ME', 'MA', 'NH', 'RI', 'VT', 'NJ', 'NY', 'PA')
+MW <- c('IL', 'IN', 'MI', 'OH', 'WI', 'IA', 'KS', 'MN', 'MO', 'NE', 'ND', 'SD')
+WE <- c('AZ', 'CO', 'ID', 'MT', 'NV', 'NM', 'UT', 'WY', 'AK', 'CA', 'HI', 'OR', 'WA')
+region_of <- function(g) ifelse(g %in% c(NE, 'NYC'), 1L, ifelse(g %in% MW, 2L, ifelse(g %in% WE, 4L, 3L)))
+obs_raw <- function(setting) {
+  cv <- function(r, d) cells$est_used[cells$setting == setting & cells$region == r & cells$density == d]
+  setNames(vapply(geos, function(g) {
+    in_g <- if (g == 'NYC') is_nyc else geo_of == g
+    m <- tapply(kids[in_g], factor(dens[in_g], 1:3), sum, default = 0)
+    sum(m / sum(m) * vapply(1:3, function(d) cv(region_of(g), d), numeric(1)))
+  }, numeric(1)), geos)
+}
+obs_center <- obs_raw('center'); obs_center <- obs_center / weighted.mean(obs_center[states], pop)
+obs_home <- obs_raw('home'); obs_home <- s * obs_home / weighted.mean(obs_home[states], pop) + (1 - s)
+stopifnot(abs(weighted.mean(obs_center[states], pop) - 1) < 1e-12,
+          abs(weighted.mean(obs_home[states], pop) - 1) < 1e-12)
 national <- read_yaml(NATIONAL)
 for (st in geos) {
   saved <- read_yaml(file.path(OUT_DIR, paste0(st, '.yaml')))
   stopifnot(is.null(saved$labor_supply), identical(saved$elasticities, national$elasticities))
   for (sector in names(national$labor_requirements)) {
-    scale <- if (sector %in% CENTRE_SECTORS) center[st] else home[st]
+    scale <- if (sector %in% CENTRE_SECTORS) obs_center[st] else obs_home[st]
     want <- unlist(national$labor_requirements[[sector]]) * scale
     stopifnot(max(abs(unlist(saved$labor_requirements[[sector]]) - want)) < 1e-12)
   }
 }
-cat('PASS: 312 reviewed records, month-weighted bands, NY blend, independent population normalization, all 52 YAML staffing payloads\n')
+cat('PASS: observed staffing index (24 reliable cells, tract density mix, licensed-share home blend), all 52 YAML staffing payloads\n')
 
 # Rejected audit must never overwrite existing derived inputs.
 input <- tempfile(fileext = '.csv')

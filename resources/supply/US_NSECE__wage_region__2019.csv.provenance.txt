@@ -1,0 +1,5 @@
+script: state_data/cluster/nsece_wage_region.R
+run at: 2026-11-03 11:36:59
+nsece: /nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1/2019
+R: R version 4.4.2 (2024-10-31)
+workers: 4247
