@@ -44,14 +44,10 @@ Replaces national `labor_requirements`, `wages`, `elasticities`, and
 it from state base-year sector hours. `wage_path` holds annual local-to-national
 wage changes relative to 2019, with the last observed year carried forward.
 
-`Rscript resources/supply/00_update_state_supply.R` validates source hashes,
-refreshes the staffing audit, and rebuilds reviewed staffing, annual wages,
-and supply YAMLs. Set `PYTHON` to a working Python executable if needed.
-`Rscript resources/supply/state_supply_params.R --check` validates complete
-payloads without writing. Staffing uses reviewed October 1, 2019 rules;
-home inputs use one rule, one adult, mixed-age: the maximum number of preschool
-children one adult may care for when an infant may be present. Assistant and
-other configurations stay in `resources/licensing/licensing_2019_home_configurations.csv`.
+`Rscript resources/supply/00_update_state_supply.R` rebuilds annual wages and
+supply YAMLs. `Rscript resources/supply/state_supply_params.R --check` validates
+complete payloads without writing. Staffing uses NSECE 2019 observed staffing by
+Census region and urban density, at each geography's density mix.
 
 ## employment/<ST>.csv
 

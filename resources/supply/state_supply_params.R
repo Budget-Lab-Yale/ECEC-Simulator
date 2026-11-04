@@ -38,8 +38,9 @@
 # NSECE log slope 0.21 across regions, ACS 0.10-0.23 across states within
 # region (state_data/code/analyze_observed_staffing.R).
 # Legal-ratio index (licensing_indices()) -- diagnostic only: reviewed October
-# 1, 2019 rules (licensing_ratios_reviewed_2019.csv; rule detail in its
-# docstring, licensing_ratios_2019.R).
+# 1, 2019 rules, frozen in licensing_ratios_reviewed_2019.csv (builder
+# licensing_ratios_2019.R, rule sources resources/licensing/, state_data/raw/
+# removed 2026-11-04; commit f96978c holds them).
 #
 # NOT CHANGED: elasticities stay national (no_ba 4, ba 2) -- assumed values
 # (Borowsky et al. 2022, NBER w30140); no state evidence supports a proxy.
@@ -84,7 +85,7 @@ LOCAL_PRICES <- file.path(DIR, 'US_DOL_NDCP__local_care_prices__2019.csv')   # n
 GROUPS <- c(no_ba = 'no_ba', ba = 'ba')   # named -> lapply() keeps names
 
 # licensing_indices() input -- licensed children per staff by state, setting,
-# age point (licensing_ratios_2019.R); county children 0-4 (both indices)
+# age year (frozen, see header); county children 0-4 (both indices)
 RATIOS  <- file.path(DIR, 'licensing_ratios_reviewed_2019.csv')
 POP_0_4 <- file.path('resources', 'census_population',
                      'US_PEP__population_children_age_0_4_by_county__2019.csv')
@@ -98,9 +99,7 @@ STAFFING_CELLS <- file.path(DIR, 'US_NSECE__staffing_region_density__2019.csv')
 NDCP_LOCAL <- file.path(DIR, 'ndcp_local_prices_2019.R')
 
 # NSECE_CENTRE_ENROLLED (NSECE 2019 centre enrolment by age 0-4),
-# NSECE_AGE_YEAR (age 0-4 -> age-year row in RATIOS), NSECE_AGE_POINT (2017
-# age point), NSECE_AGE_BAND
-# (age 0-4 -> 2014 band), NSECE_AGES_0_4 --
+# NSECE_AGE_YEAR (age 0-4 -> age-year row in RATIOS), NSECE_AGES_0_4 --
 # state_data/code/shared_nsece_ages.R
 source('state_data/code/shared_nsece_ages.R')
 CENTRE_SECTORS <- c('unpaid_center_based', 'low_price_center_based',
@@ -192,17 +191,15 @@ licensing_indices <- function(ratios = RATIOS, age_map = NSECE_AGE_YEAR,
   # (1 - home_share), unlicensed paid home care at national level; national
   # mean stays 1. NYC carries own rows, not in national mean (inside NY).
   # Rules: October 1, 2019. Centre ratio per year of age 0-4, ordinary age
-  # bands month-weighted (licensing_ratios_2019.R centre_age_years()); NY
+  # bands month-weighted; NY
   # blends NYS, NYC rules by NYC child share. Home capacity: one adult,
   # mixed-age -- max preschool children w/ infant present. NYC own centre
-  # rules, NYS home rules. 2017 study = baseline/fallback; 2014/2017
-  # three/five-point comparisons via age_map.
+  # rules, NYS home rules.
   #
   # Params:
   #   - ratios (chr): csv w/ state, setting, age_group, children_per_staff
-  #   - age_map (chr): age_0..age_4 -> centre age_group in ratios;
-  #     NSECE_AGE_YEAR (reviewed 2019 file), NSECE_AGE_POINT (2017 file, 5
-  #     points), NSECE_AGE_BAND (2014 file)
+  #   - age_map (chr): age_0..age_4 -> centre age_group in ratios
+  #     (NSECE_AGE_YEAR)
   #   - home_share (dbl): licensed share of paid home-based children
   #
   # Returns: (tibble) state, centre, home -- indices

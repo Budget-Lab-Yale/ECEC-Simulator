@@ -481,79 +481,18 @@ staffing. `state_data/code/analyze_observed_staffing.R` writes the comparison to
 `state_data/out/observed_staffing_summary.txt`. The legal index below
 (`licensing_indices()`) remains a diagnostic.
 
-The legal-ratio index: for
-centres: required staff per child (1 ÷ licensed children per staff by age),
-averaged over ages 0–4 with the NSECE 2019 centre enrolment mix, relative to
-the PEP-weighted mean over the 50 states and DC. For homes: 1 ÷ licensed maximum children per family child care home,
-relative to the mean over states that license homes (1 where a state does
-not). Rules come from the reviewed October 1, 2019 audit in
-`resources/licensing/licensing_2019_evidence.csv`, with registered source hashes.
-The derived input is `resources/supply/licensing_ratios_reviewed_2019.csv`;
-the 2017 study remains the comparison baseline and fallback for unresolved rows.
-All 312 unweighted geography/setting/age records are reviewed, with no fallback
-currently used. There are 38 numerical differences from the 2017 input,
-including seven home values that replace missing baseline values.
-
-Center inputs come from each geography's ordinary age bands,
-`resources/licensing/licensing_2019_center_bands.csv` (0 to 60 months). The
-ordinary band is the default ratio for a child of that age, without opt-in
-groupings; where bands overlap, a month takes the band that starts latest at or
-before it. I month-weight each year of age: staff per child for age a is the
-mean of 1 ÷ ratio over months 12a to 12a + 11, so cut-offs inside a year
-(for example 18 months) are split. The audited points at 11, 18, 35, 36, and
-48 months must equal the band at that month. I weight the five age-year values
-by NSECE 2019 center-enrolled children: 426,000, 718,000, 1,010,000, 2,170,000,
-and 2,340,000 weighted children. The NY input blends New York State and NYC
-staff per child at NYC's share of New York children ages 0-4 (0.4647, PEP 2019).
-I normalize by the 2019 child-population-weighted mean over 50 states and DC.
-NYC is a separate output and is excluded from that mean because it is already
-inside NY. Current center indices range from 0.715 (GA) to 1.351 (ND).
-
-For homes I use one rule in every geography: **one adult, mixed-age**. The input
-is the maximum number of preschool children (ages 0-4, school-age-only additions
-excluded) that one adult may care for when an infant may be present. I never use
-a configuration that needs a second adult, and I never use a preschool-only
-configuration that excludes infants. NYC homes use the New York State rule.
-The reviewed configurations retain infant limits, own-child counting, and
-assistant alternatives in `resources/licensing/licensing_2019_home_configurations.csv`.
-This rule replaced seven earlier home inputs on 26 October: AR 16 to 8, KS 7 to 6,
-ME 8 to 6, MS 12 to 4, RI 8 to 4, VA 8 to 7, and WA 12 to 6. Nevada stays at 6;
-its source does not settle mixed groups with an infant. The national NSECE home
-anchor already counts respondent plus helpers. AR, RI, and WA's licensed
-two-adult configurations give the same staff per child as their one-adult inputs,
-so that sensitivity leaves their anchor prices unchanged; three adults at AR's 16
-raises AR's 2019 home-care anchor price by 26.1% after national renormalization.
-These are base-price sensitivities, not equilibrium results.
-`state_data/code/analyze_home_staffing.R` writes the scenario table without
-changing production inputs. Licensing applies only to licensed homes, so I blend
-the home index toward 1: home index = 0.257 x licensing index + 0.743, where 0.257
-is the licensed share of children ages 0-5 in paid home-based care (NSECE 2019
-home-based provider survey, `resources/supply/US_NSECE__home_licensed_share__2019.csv`).
-Current home indices range from 0.873 (SD) to 1.135 (AZ and RI); MS is 0.940.
-All 52 home inputs are now numeric; the neutral index remains a fallback for
-future unresolved unlicensed-home rows. Historical 2014/2017 and three/five-point
-comparisons in `state_data/out/licensing_ratio_change_*.csv` describe the old
-baseline, not current reviewed staffing.
-
-For a replacement home index, I would measure required adults per preschool child
-under common age compositions and provider categories, then normalize by the same
-2019 population-weighted state/DC mean. I would retain the national NSECE education
-mix and staffing anchor, which already include helpers. For configuration `k`, the
-raw score is `sum_k child_share_k * required_adults_gk / preschool_children_gk`.
-I would use the same child shares in every geography, exclude school-age-only places,
-and state the full-occupancy and resident-child assumptions. A mixed-age rule cannot
-be reconstructed by averaging the legal maxima for separate age groups.
-
-`review_home_staffing_inputs.R` writes all 52 capacity/configuration mappings and
-unresolved fields. Documented adult-count ranges are conditional on their recorded
-age compositions; they are not observed worker hours or exhaustive legal bounds.
-I have not promoted an age-adjusted index to production. The original national
-[methodology](https://budgetlab.yale.edu/research/budget-labs-early-childhood-education-and-care-model)
-uses provider-plus-helper headcounts divided by enrollment for home staffing and
-household net payments for home prices. `analyze_home_prices.R` therefore treats
-NDCP family-home market-rate prices as an external comparison, with fixed county
-and national age weights, not a target for fitting staffing. NDCP prices do set
-the local non-labour residual (below).
+The legal-ratio index, kept as a diagnostic: for centres, required staff per
+child (1 ÷ licensed children per staff by year of age 0–4, ordinary bands
+month-weighted), averaged with the NSECE 2019 centre enrolment mix and divided by
+the PEP-weighted mean over the 50 states and DC. For homes, 1 ÷ the maximum
+number of preschool children one adult may care for when an infant may be
+present, blended toward 1 by the licensed share 0.257. The rules are those in
+force on October 1, 2019, frozen in `resources/supply/licensing_ratios_reviewed_2019.csv`.
+The builder, the source register, the rule documents, and the legal home-capacity
+and home-price diagnostics were removed on 4 November 2026; commit f96978c holds
+them. NDCP family child care prices are compared with model home prices in
+`state_data/code/17_historical_price_validation.R`, and NDCP prices set the local
+non-labour residual (below).
 
 `per_unit_residual` is local. The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit

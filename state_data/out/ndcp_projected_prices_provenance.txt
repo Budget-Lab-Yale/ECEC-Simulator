@@ -1,0 +1,8 @@
+script: state_data/code/17_historical_price_validation.R; run at 2026-11-04 10:17:15
+macro: /nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026071916/baseline (historical.csv, projections.csv; local copy)
+run root: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611031504 (solver_results_*.txt; local copy)
+run root: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611031505 (solver_results_*.txt; local copy)
+run root: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611031506 (solver_results_*.txt; local copy)
+run root: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611031507 (solver_results_*.txt; local copy)
+run root: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611031508 (solver_results_*.txt; local copy)
+run root: /nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator/202611031509 (solver_results_*.txt; local copy)

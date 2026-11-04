@@ -1,4 +1,4 @@
-# Numerical contracts for annual state supply inputs and reviewed staffing.
+# Numerical contracts for annual state supply inputs.
 source('src/shared_functions/get_state_supply_year_factors.R')
 source('src/shared_functions/get_regional_price_parity.R')
 
@@ -17,16 +17,7 @@ stopifnot(max(abs(get_regional_price_parity(base$geo, 2019) - base$rpp_all_items
 stopifnot(inherits(tryCatch(get_regional_price_parity('NY', 2035), error = identity), 'error'))
 stopifnot(length(get_regional_price_parity(c('NY', 'NYC'), c(2019, 2024))) == 2)
 
-audit <- read.csv('state_data/out/licensing_2019_audit.csv', stringsAsFactors = FALSE)
-rules <- read.csv('resources/supply/licensing_ratios_reviewed_2019.csv', stringsAsFactors = FALSE)
-keys <- c('state', 'setting', 'age_group')
-joined <- merge(audit, rules, by = keys)   # home rows; centre rows are age years (test_state_staffing_inputs.R)
-reviewed <- joined$status.x %in% c('verified_archive', 'verified_history', 'verified_conditional')
-expected <- ifelse(reviewed, joined$verified_value, joined$baseline_value)
-stopifnot(nrow(joined) == 52, all(joined$setting == 'home'), all(joined$fallback == !reviewed),
-          sum(rules$setting == 'center' & rules$status == 'month_weighted_bands') == 260)
-stopifnot(isTRUE(all.equal(joined$children_per_staff, expected, check.attributes = FALSE)))
-cat('PASS: annual state wage anchors, carry-forward, missing-year guards, RPP vintage, reviewed/fallback staffing\n')
+cat('PASS: annual state wage anchors, carry-forward, missing-year guards, RPP vintage\n')
 
 # Controlled panel verifies geography-vs-US normalization and fixed-basket suppression.
 source('resources/supply/annual_wage_ratios.R')

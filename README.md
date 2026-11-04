@@ -220,25 +220,23 @@ The national run (no `state` column, default settings) is main's. State machiner
 | Input | Location | Description |
 |-------|----------|-------------|
 | Demand | `config/state/demand/<GEO>.csv` | Base-year 2019 annual hours by care type. Re-anchors the calibrated alpha matrices with a per-care-type contraction (`adjust_alpha_for_state.R`). |
-| Supply | `config/state/supply/<GEO>.yaml` | Same schema as `supply_2019.yaml`. State wages, staffing scaled by licensing ratios, and a local non-labor residual: local 2019 price (NDCP county prices at the NSECE national level; nearest NDCP year or NSECE region x urban density where NDCP has no price) minus local labor cost. Elasticities stay national. |
+| Supply | `config/state/supply/<GEO>.yaml` | Same schema as `supply_2019.yaml`. State wages, staffing scaled by NSECE observed staffing (region x urban density), and a local non-labor residual: local 2019 price (NDCP county prices at the NSECE national level; nearest NDCP year or NSECE region x urban density where NDCP has no price) minus local labor cost. Elasticities stay national. |
 | Employment | `config/state/employment/<GEO>.csv` | State employment growth in place of the national CBO path. |
 
 `state_data/code/00_build_demand_targets.R` writes the demand files, and `resources/supply/state_supply_params.R` writes the supply files. NYC households are selected by STATEFIP 36 and the five borough county FIPS (`config/substate_geographies.csv`), which needs an ACS pull with `COUNTYFIP`. A state run needs an interface that stores `STATEFIP`, `p0`, and child weights with the alpha matrices.
 
-The October 1, 2019 staffing-rule audit is documented in
-[state_data/README.md](state_data/README.md#staffing-rule-audit-october-1-2019).
-All 312 geography/setting/age records have historical-source review; 28 change
-a numerical input and none remain unresolved. `state_data/code/analyze_licensing_2019.py
---require-verified` checks sources and writes detail and coverage tables without
-changing production inputs.
+Staffing uses NSECE observed staffing by Census region and urban density. The
+October 1, 2019 legal ratios stay as a frozen diagnostic,
+`resources/supply/licensing_ratios_reviewed_2019.csv`; see
+[state_data/README.md](state_data/README.md#legal-staffing-ratios-diagnostic-only).
+The files that built and audited them were removed on 4 November 2026; commit
+f96978c holds them.
 
 Rebuild supply inputs with `Rscript resources/supply/00_update_state_supply.R`.
-It refreshes the source/hash audit before writing staffing inputs, then builds
-annual wages and all supply YAMLs. Set `PYTHON` to a working Python executable
-if it is absent from PATH. `--skip-annual-wages` reuses an existing annual panel.
-`state_supply_params.R --check` validates annual wage paths as well as staffing.
-`Rscript tests/test_state_staffing_inputs.R` independently checks the 312 reviewed
-records, population normalization, and all 52 saved YAML staffing payloads.
+It builds annual wages and all supply YAMLs. `--skip-annual-wages` reuses an
+existing annual panel. `state_supply_params.R --check` validates annual wage paths
+as well as staffing. `Rscript tests/test_state_staffing_inputs.R` checks the frozen
+legal ratios, population normalization, and all 52 saved YAML staffing payloads.
 `Rscript tests/test_state_orchestration.R` checks national delegation and state
 isolation across sequential, parallel, and finalization paths using small fixtures.
 Configured raw-data roots take precedence over repository resources, including
@@ -248,23 +246,7 @@ NY and NYC retain their own production calibration. The NY demand target is the
 NYC target plus a rest-of-state target built from the common-rank partition
 sidecar of `acs_p0_shares.R`, so NY minus NYC equals rest of state exactly; the
 NY/NYC diagnostic checks this and passes `--strict-additivity`.
-See `Rscript tests/test_nyc_partition.R`. Home-staffing scenarios are diagnostic
-only: `Rscript state_data/code/analyze_home_staffing.R` writes staffing and
-2019 anchor-price sensitivities. The national anchor already includes NSECE
-helpers; state capacity proxies don't encode required adult-count differences.
-`Rscript state_data/code/review_home_staffing_inputs.R` audits all 52 home inputs
-against documented configurations, retaining unresolved mappings explicitly.
-`Rscript state_data/code/analyze_home_prices.R` compares anchors with NDCP family-home
-prices using fixed county/age weights. The national home anchor uses household net
-payments; NDCP market-rate prices measure a different concept. These diagnostics
-do not select a staffing baseline or refit residuals. Regression checks:
-`Rscript tests/test_home_staffing_review.R`.
-Acquisition scratch text and download logs belong in git-ignored
-`state_data/work/licensing/`; source documents and evidence remain in their
-registered locations.
-Git preserves registered source snapshots byte-for-byte. Check their line-ending
-attributes with `python tests/test_source_snapshot_attributes.py` before committing
-new sources; publisher whitespace stays intact for source-hash verification.
+See `Rscript tests/test_nyc_partition.R`.
 
 ### Settings
 
@@ -356,13 +338,12 @@ dependencies:
 
 ## State supply input updates
 
-`resources/supply/00_update_state_supply.R` rebuilds state supply files using reviewed October 2019 staffing rules and annual wage ratios. National runs retain their existing supply inputs.
+`resources/supply/00_update_state_supply.R` rebuilds state supply files using NSECE observed staffing and annual wage ratios. National runs retain their existing supply inputs.
 
-1. Validate staffing source hashes: `python state_data/code/analyze_licensing_2019.py`.
-2. Acquire annual BEA/BLS data: `python resources/supply/acquire_annual_supply_data.py` (requires `lxml`). Store OEWS all-data ZIPs in `resources/bls_oews/` and BEA archives in `resources/bea/`. Download URLs and hashes are recorded in `resources/supply/annual_supply_sources.json`.
-3. Rebuild supply: `Rscript resources/supply/00_update_state_supply.R`. While annual BLS files are pending, explicitly pass `--skip-annual-wages` to retain 2019 wage anchors.
-4. Regenerate care-mix weights from the calibration interface, with `ECEC_URBAN_DENSITY=1`, `ECEC_INCOME_RANK=national_rpp`. The price comparison requires a `.provenance.txt` sidecar beside its p0-by-age input.
-5. Run `Rscript state_data/code/16_ndcp_model_prices.R`; run `Rscript state_data/code/17_historical_price_validation.R <macro_dir>` on a compute node for historical price validation. Historical comparisons hold 2019 county population and care-mix weights fixed.
+1. Acquire annual BEA/BLS data: `python resources/supply/acquire_annual_supply_data.py` (requires `lxml`). Store OEWS all-data ZIPs in `resources/bls_oews/` and BEA archives in `resources/bea/`. Download URLs and hashes are recorded in `resources/supply/annual_supply_sources.json`.
+2. Rebuild supply: `Rscript resources/supply/00_update_state_supply.R`. While annual BLS files are pending, explicitly pass `--skip-annual-wages` to retain 2019 wage anchors.
+3. Regenerate care-mix weights from the calibration interface, with `ECEC_URBAN_DENSITY=1`, `ECEC_INCOME_RANK=national_rpp`. The price comparison requires a `.provenance.txt` sidecar beside its p0-by-age input.
+4. Run `Rscript state_data/code/16_ndcp_model_prices.R`; run `Rscript state_data/code/17_historical_price_validation.R <macro_dir> [run_root ...]` for historical price validation of centres and paid homes (`ndcp_historical_*`, `ndcp_historical_home_*`). Historical comparisons hold 2019 county population and care-mix weights fixed. Optional run roots add a projected-year check: simulated equilibrium prices (`solver_results_<yr>.txt`) vs the latest NDCP year grown with CPI (`ndcp_projected_*`).
 
 Annual wage paths multiply each education group's 2019 wage by its local-to-national ratio change, in addition to national wage growth. The last observed ratio is carried forward; missing interior years stop the run. Annual all-items RPPs are available through `get_regional_price_parity()` for survey-year matching; the 2019 training ranks remain fixed. Non-labor residuals stay at their 2019 local values and grow with CPI. Staffing evidence and source status are recorded in `state_data/docs/SOURCES.csv` and the detailed licensing audit registry.
 
