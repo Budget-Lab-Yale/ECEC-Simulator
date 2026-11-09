@@ -273,12 +273,13 @@ run_acs_processing <- function() {
 
     # Add parent unit information
     if (is_nsece) {
-      # NSECE: respondent (parent 1) is primary caregiver by survey design
+      # NSECE: parent 2's sex inferred in 1a, so primary caregiver follows the
+      # ACS rule below
       rf_tmp <- rf_tmp %>%
         left_join(
           parent_units %>%
             select(hh_id, parent_unit_id, p.hhm_id1 = hhm_id1, p.hhm_id2 = hhm_id2,
-                   p.male1 = male1, p.hours1 = hours1, p.hours2 = hours2),
+                   p.male1 = male1, p.male2 = male2, p.hours1 = hours1, p.hours2 = hours2),
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         left_join(
@@ -317,22 +318,35 @@ run_acs_processing <- function() {
         region = factor(region)
       )
 
-    # Derive primary caregiver employment choice
+    # Derive primary caregiver employment choice and caregiver/partner ages.
+    # Ages are ordered caregiver first because parent 1 means different
+    # people in the two sources: the NSECE respondent (usually the mother)
+    # versus the lower ACS person number (usually the householder). Raw
+    # parent 1 / parent 2 ages would mismatch training and prediction.
     if (is_nsece) {
-      # NSECE: respondent (parent 1) is primary caregiver
+      # NSECE: same rule as ACS (mother in two-parent families), so the
+      # forest trains on the parent it is applied to. Parent 1 is the
+      # respondent, the father in about 28% of two-parent units (weighted);
+      # using the respondent here mismatched training and prediction.
+      # Parent 2's sex unknown -> parent 1, as before.
       rf_tmp <- rf_tmp %>%
         mutate(
-          hours_pc = p.hours1,
-          employment_choice_pc = derive_employment_choice(hours_pc)
+          primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
+          hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
+          employment_choice_pc = derive_employment_choice(hours_pc),
+          p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
+          p.age_partner = if_else(primary_caregiver == 1L, p.age2, p.age1)
         ) %>%
-        select(-hours_pc, -income)
+        select(-hours_pc, -income, -primary_caregiver, -p.male2)
     } else {
       # ACS: identify primary caregiver then derive employment choice
       rf_tmp <- rf_tmp %>%
         mutate(
           primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
           hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
-          employment_choice_pc = derive_employment_choice(hours_pc)
+          employment_choice_pc = derive_employment_choice(hours_pc),
+          p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
+          p.age_partner = if_else(primary_caregiver == 1L, p.age2, p.age1)
         ) %>%
         select(-income, -hours_pc)
     }
@@ -419,7 +433,8 @@ run_acs_processing <- function() {
       pivot_wider(
         id_cols = c(
           family_id, hh_id, parent_unit_id, n_children_original, child_category,
-          income_pctile, n_members, region, p.hhm_id2, p.age1, p.age2, p.male1, employment_choice_pc
+          income_pctile, n_members, region, p.hhm_id2, p.age1, p.age2, p.age_pc, p.age_partner,
+          p.male1, employment_choice_pc
         ),
         names_from  = child_index,
         values_from = all_of(pivot_cols),
@@ -528,7 +543,7 @@ run_acs_processing <- function() {
         AGE, SEX, MARST, RACE, HISPAN, EDUC,
         RELATE,
         SPLOC, MOMLOC, POPLOC, MOMLOC2, POPLOC2,
-        UHRSWORK, WKSWORK1, INCWAGE, INCBUS00,
+        UHRSWORK, WKSWORK1, EMPSTATD, INCWAGE, INCBUS00,
         census_serialno,
         tax_unit_id = tax_unit_id_corrected,
         tax_unit_id_legacy = TAXID,
@@ -639,14 +654,22 @@ run_acs_processing <- function() {
         male        = as.integer(SEX == 1),
         married     = as.integer(MARST %in% 1:2),
         hispanic    = as.integer(HISPAN != 0),
-        hours       = UHRSWORK,
-        weeks       = WKSWORK1,
+        # Employment is point-in-time: a person works only if at work in
+        # the reference week (EMPSTATD 10), matching the NSECE "did any work
+        # for pay last week" item the care-choice forest is trained on.
+        # Hours and weeks still come from the past 12 months (the ACS has no
+        # hours-last-week item) and are zeroed for people not at work.
+        # Earnings stay annual, and the hourly wage uses the annual measures
+        # so people not at work now keep a wage for counterfactual work.
+        at_work     = as.integer(EMPSTATD == 10),
+        hours       = if_else(at_work == 1L, as.numeric(UHRSWORK), 0),
+        weeks       = if_else(at_work == 1L, as.numeric(WKSWORK1), 0),
         wages       = if_else(INCWAGE  != 999999, INCWAGE,  0),
         se_earnings = if_else(INCBUS00 != 999999, INCBUS00, 0),
         earnings    = wages + se_earnings,
         hourly_earnings = if_else(
-          weeks > 0 & hours > 0 & earnings > 0,
-          earnings / (weeks * hours),
+          WKSWORK1 > 0 & UHRSWORK > 0 & earnings > 0,
+          earnings / (WKSWORK1 * UHRSWORK),
           NA
         )
       ) %>%
@@ -1098,16 +1121,17 @@ run_acs_processing <- function() {
 
       # Feature sets include 'region' (Census region: 1=NE, 2=MW, 3=S, 4=W)
       # employment_choice_pc captures primary caregiver employment status (none/pt/ft)
+      # Two-parent models use caregiver and partner ages, not parent 1 and 2
       feature_sets <- list(
         one_child = list(
           `0` = c('age', 'male', 'income_pctile', 'n_members', 'region'),
           `1` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc'),
-          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.age2', 'employment_choice_pc')
+          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc')
         ),
         two_child = list(
           `0` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'is_3plus'),
           `1` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc', 'is_3plus'),
-          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.age2', 'employment_choice_pc', 'is_3plus')
+          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc', 'is_3plus')
         )
       )
 
@@ -1245,6 +1269,8 @@ run_acs_processing <- function() {
               primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
+              p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
+              p.age_partner = if_else(primary_caregiver == 1L, p.age2, p.age1),
               region = factor(region)
             ) %>%
             select(-income, -hours_pc, -primary_caregiver)
@@ -1583,7 +1609,15 @@ run_acs_processing <- function() {
 
         hours_choice    = if_else(p_employment == 1, hours_pc, mean_hours),
         weeks_choice    = if_else(p_employment == 1, weeks_pc, mean_weeks),
-        earnings_choice = if_else(p_employment == 1, earnings_pc, hourly_earnings_pc * hours_choice * weeks_choice),
+        # Observed non-work has no caregiver earnings. Under the point-in-time
+        # rule this matters for caregivers not at work now who earned in the
+        # past 12 months; their annual earnings would otherwise be counted
+        # as income in the non-work choice.
+        earnings_choice = case_when(
+          p_employment == 1 & employment_choice == 'none' ~ 0,
+          p_employment == 1                               ~ earnings_pc,
+          TRUE                                            ~ hourly_earnings_pc * hours_choice * weeks_choice
+        ),
         earnings_delta = earnings_choice - earnings_pc,
 
         # Update hours/weeks/earnings for primary caregiver parent

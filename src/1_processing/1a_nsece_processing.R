@@ -308,7 +308,30 @@ run_nsece_processing <- function() {
             ) %>%
             select(hh_id = HH9_METH_CASEID, hhm_id1, male1),
           by = c('hh_id', 'hhm_id1')
-        )
+        ) %>%
+
+        # Parent 2's sex. The public file has the respondent's sex only, so
+        # infer the other parent's from household counts of mothers and
+        # fathers (HH9_HHCOMP_NUMMOTHER / NUMFATHER) when parent 1 is the
+        # respondent: respondent father + one father in the household +
+        # 1+ mothers -> parent 2 is a mother, and the reverse. NA otherwise.
+        # Needed so 1b can pick the mother as primary caregiver, as for ACS.
+        left_join(
+          nsece_hh %>%
+            select(hh_id     = HH9_METH_CASEID,
+                   n_mothers = HH9_HHCOMP_NUMMOTHER,
+                   n_fathers = HH9_HHCOMP_NUMFATHER),
+          by = 'hh_id'
+        ) %>%
+        mutate(
+          male2 = case_when(
+            is.na(hhm_id2) | n_mothers < 0 | n_fathers < 0  ~ NA_integer_,
+            male1 %in% 1 & n_fathers == 1 & n_mothers >= 1 ~ 0L,
+            male1 %in% 0 & n_mothers == 1 & n_fathers >= 1 ~ 1L,
+            TRUE                                           ~ NA_integer_
+          )
+        ) %>%
+        select(-n_mothers, -n_fathers)
 
       pu <- {
         labor_hi_cols     <- grep('^HH9_WST_PARCH_HI_[1-9]$',    names(nsece_hh), value = T)
@@ -339,6 +362,66 @@ run_nsece_processing <- function() {
 
           # ASSUMPTION: remove records (12 of them) with nonresponse
           filter(hhm_id > 0, hours >= 0)
+
+        # Align who counts as working with the ACS, where a parent works if
+        # at work in the reference week. The calendar hours above count work,
+        # school, training and commuting last week, so they are not a pure
+        # work measure. Use survey item D1a ("Last week, did you do any work
+        # for pay?": 1 = yes, 2 = no, 3 = DK/refused) instead:
+        #   - did not work for pay (school or training only): zero hours
+        #   - worked but no calendar hours (about 6% of second earners with
+        #     a child under 5): hours drawn from working parents with the
+        #     same earner rank, so the part-time / full-time split is kept
+        #   - D1a missing or DK/refused: calendar hours as before
+        work_cols <- grep('^HH9_D1A_WORK_[1-9]$', names(nsece_hh), value = T)
+
+        worked_last_week <- nsece_hh %>%
+          select(hh_id = HH9_METH_CASEID, all_of(work_cols)) %>%
+          mutate(across(all_of(work_cols), as.integer)) %>%
+          pivot_longer(
+            cols         = -hh_id,
+            names_to     = 'hhm_id',
+            names_prefix = 'HH9_D1A_WORK_',
+            values_to    = 'worked'
+          ) %>%
+          mutate(hhm_id = as.integer(hhm_id)) %>%
+          filter(worked %in% c(1L, 2L))
+
+        # One record per parent (a parent appears once per child)
+        parent_hours <- parent_labor_supply %>%
+          group_by(hh_id, hhm_id) %>%
+          summarise(hours = first(hours), earner = first(earner), .groups = 'drop') %>%
+          left_join(worked_last_week, by = c('hh_id', 'hhm_id'))
+
+        donors <- parent_hours %>%
+          filter(worked %in% 1L, hours > 0)
+
+        parent_hours <- withr::with_seed(random_seed_base + 7, {
+          parent_hours %>%
+            group_by(earner) %>%
+            mutate(
+              donor_hours = sample(donors$hours[donors$earner == first(earner)], n(), replace = TRUE),
+              hours_adj = case_when(
+                worked %in% 2L              ~ 0,
+                worked %in% 1L & hours == 0 ~ donor_hours,
+                TRUE                        ~ hours
+              )
+            ) %>%
+            ungroup()
+        })
+
+        cat('NSECE parents: worked last week but zero calendar hours (imputed):',
+            sum(parent_hours$worked %in% 1L & parent_hours$hours == 0),
+            '| did not work but positive calendar hours (set to zero):',
+            sum(parent_hours$worked %in% 2L & parent_hours$hours > 0), '\n')
+
+        parent_labor_supply <- parent_labor_supply %>%
+          left_join(
+            parent_hours %>% select(hh_id, hhm_id, hours_adj),
+            by = c('hh_id', 'hhm_id')
+          ) %>%
+          mutate(hours = hours_adj) %>%
+          select(-hours_adj)
 
         # Add labor supply information to parent units table
         pu <- pu %>%
