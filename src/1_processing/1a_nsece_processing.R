@@ -390,6 +390,18 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
             male1 %in% 1 & n_fathers == 1 & n_mothers >= 1 ~ 0L,
             male1 %in% 0 & n_mothers == 1 & n_fathers >= 1 ~ 1L,
             TRUE                                           ~ NA_integer_
+          ),
+
+          # Lone parent who isn't the respondent: sex unknown in public file,
+          # 1b would drop unit (13% / 16% of 2019 / 2024 single-parent child
+          # weight, about half with grandparent respondent). All counted
+          # parents in household one sex -> that sex (67% / 71% of dropped
+          # weight); else mother, 80-84% of single parents kept. Respondent
+          # sex other/refused stays NA (dropped).
+          male1 = case_when(
+            !is.na(male1) | hhm_id1 == 1 | !is.na(hhm_id2) ~ male1,
+            n_fathers >= 1 & n_mothers == 0                ~ 1L,
+            TRUE                                           ~ 0L
           )
         ) %>%
         select(-n_mothers, -n_fathers)
@@ -2279,7 +2291,8 @@ fill_censored_rates <- function(nsece_cb, nsece_year, nsece_root) {
     fit <- glm(high ~ profit + pubsch + hs + pk + subs + log_fte + region + density + other_pct + no_other,
                family = quasibinomial(), data = tr, weights = w / mean(w))
     ft <- censored_cell_features(nsece_cb, cens)
-    cens$side <- if_else(predict(fit, newdata = ft, type = 'response') >= 0.5, 'high', 'low')
+    cens$p_high <- predict(fit, newdata = ft, type = 'response')
+    cens$side   <- if_else(cens$p_high >= 0.5, 'high', 'low')
     cat('  Censored rates, side model on 2024 (', nrow(tr), ' cells): weighted in-sample accuracy ',
         round(100 * weighted.mean((fitted(fit) >= 0.5) == (tr$high == 1), tr$w), 1), '%\n', sep = '')
   }
@@ -2291,6 +2304,18 @@ fill_censored_rates <- function(nsece_cb, nsece_year, nsece_root) {
     ca   <- cens %>% filter(age == a)
     ok   <- !is.na(r) & r > 0 & r <= 2000
     ok[ca$row] <- FALSE
+
+    # 2019: rates 4+ SD from age mean (raw scale, unweighted) left out of fit
+    # only -- 2024 NORC re-imputes time unit of such rates (2024 center user
+    # guide, CB-508), 2019 file has no such step; w/ them in, 2019 fit misses
+    # band inside high cut by 11-20%, w/out within ~3% as 2024 (scratch test
+    # 2026-11-10). Rates themselves unchanged.
+    if (nsece_year == 2019) {
+      z  <- (r - mean(r[ok])) / sd(r[ok])
+      out <- ok & abs(z) >= 4
+      ok[out] <- FALSE
+      cat('  Censored-rate fit, ', a, ': ', sum(out), ' rates 4+ SD from mean left out of fit\n', sep = '')
+    }
     x    <- log(r[ok]); wx <- w[ok]
 
     if (nsece_year == 2024) {
@@ -2305,13 +2330,20 @@ fill_censored_rates <- function(nsece_cb, nsece_year, nsece_root) {
       mu <- est[1]; s <- exp(est[2])
       cut <- ca$cut
     } else {
-      t  <- nrow(ca) / 2 / (sum(ok) + nrow(ca))
+      # Weighted tail shares from side-model probabilities: center weights
+      # put more censored mass in low tail (2019 7.3-8.4% low, 3.0-3.7% high;
+      # 2024 observed 6.6-8.5% / 2.7-4.0%), not half each
+      wc   <- w[ca$row]
+      t_lo <- sum(wc * (1 - ca$p_high)) / (sum(wx) + sum(wc))
+      t_hi <- sum(wc * ca$p_high) / (sum(wx) + sum(wc))
       p  <- seq(0.08, 0.92, by = 0.02)
-      pb <- (p - t) / (1 - 2 * t)
+      pb <- (p - t_lo) / (1 - t_lo - t_hi)
       keep <- pb > 0.005 & pb < 0.995
       qq <- lm(wq(x, wx, pb[keep]) ~ qnorm(p[keep]))
       mu <- unname(coef(qq)[1]); s <- unname(coef(qq)[2])
-      cut <- if_else(ca$side == 'low', exp(mu + s * qnorm(t)), exp(mu + s * qnorm(1 - t)))
+      cut <- if_else(ca$side == 'low', exp(mu + s * qnorm(t_lo)), exp(mu + s * qnorm(1 - t_hi)))
+      cat('  Censored-rate tail shares, ', a, ': low ', round(100 * t_lo, 1), '%, high ',
+          round(100 * t_hi, 1), '% (center weights)\n', sep = '')
     }
     fill <- tail_mean(mu, s, cut, ca$side)
     nsece_cb[[col]][ca$row] <- fill
