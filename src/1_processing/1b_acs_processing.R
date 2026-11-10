@@ -725,13 +725,15 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         married     = as.integer(MARST %in% 1:2),
         hispanic    = as.integer(HISPAN != 0),
         # Employment is point-in-time: a person works only if at work in
-        # the reference week (EMPSTATD 10), matching the NSECE "did any work
-        # for pay last week" item the care-choice forest is trained on.
+        # the reference week (EMPSTATD 10 civilian, 14 armed forces), matching
+        # the NSECE "did any work for pay last week" item the care-choice
+        # forest is trained on -- its prompt includes military work. Has a
+        # job, not at work (12, 15) stays not working, as in the NSECE.
         # Hours and weeks still come from the past 12 months (the ACS has no
         # hours-last-week item) and are zeroed for people not at work.
         # Earnings stay annual, and the hourly wage uses the annual measures
         # so people not at work now keep a wage for counterfactual work.
-        at_work     = as.integer(EMPSTATD == 10),
+        at_work     = as.integer(EMPSTATD %in% c(10, 14)),
         hours       = if_else(at_work == 1L, as.numeric(UHRSWORK), 0),
         weeks       = if_else(at_work == 1L, as.numeric(WKSWORK1), 0),
         wages       = if_else(INCWAGE  != 999999, INCWAGE,  0),

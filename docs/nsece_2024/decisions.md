@@ -65,7 +65,7 @@ Report: `calendar_and_work_hours.md`.
 
 ## Decision 3: parents with missing work hours
 
-Status: decided on 28 October (crosswalk mismatch item 3). The fill is always on for 2024; it is no longer an option. It draws donors by earner rank and hourly wage band.
+Status: decided and in the code (28 October, revised by Anna on 6 November; crosswalk mismatch item 3). The fill is always on, in both years. A 2024 parent with no hours record but an own adult calendar takes the calendar's hours. Every other parent who worked last week without hours draws a donor of the same earner rank, child's weekly care hours, household income quintile, wage band, region, and urban density. The 28 October rule (earner rank and wage band) reversed the link between parents' full-time work and their child's care hours.
 
 Parents whose calendar has a missing block (survey code −10) are dropped before the step that fills in hours from similar workers, so they are coded as not working. Extending that step to them gives (review runs):
 
@@ -75,14 +75,14 @@ Parents whose calendar has a missing block (survey code −10) are dropped befor
 | Single parents | 64.5% | 68.0% | 68.6% |
 | Partners | 84.9% | 89.8% | 90.3% |
 
-The same fix would move 2019 employment by 0.4 to 0.7 points; the option applies to 2024 only. A related choice is which week defines employment for typical-week households: taking it from typical-week hours rather than the "worked last week" answer gives 61.1 percent instead of 62.2 for primary caregivers.
+The fill now applies to 2019 too (36 parents with no hours record who worked last week). A related choice is which week defines employment for typical-week households: taking it from typical-week hours rather than the "worked last week" answer gives 61.1 percent instead of 62.2 for primary caregivers.
 
 Report: `calendar_and_work_hours.md`.
 
 
 ## Decision 4: how to build center prices
 
-Status: partly decided. Weekly rates above $2,000 are set to missing in both years (decided and in the code on 28 October; crosswalk mismatch item 2). Deleting the 2024 censoring caps, as the 2019 file did, is open (mismatch item 4; it is the first part of the `supply` option).
+Status: decided and in the code. Weekly rates above $2,000 are set to missing in both years (28 October; crosswalk mismatch item 2). Censored rates are filled in both years with the lognormal mean beyond the cut (Anna, 6 November; mismatch item 4). This replaces the first part of the `supply` option, which deleted the 2024 caps.
 
 Both public files censor posted rates at the 5th and 95th percentiles within each reported time unit. The 2019 file deletes the censored rates; the 2024 file sets each one to the cap value. The review found 40 posted 2019 rates above $50 an hour left in the data (38 of them at an age with enrollment, in 32 of the model's center-by-age-bin records); since 28 October the model sets weekly rates above $2,000 to missing in both years. Treating both years the same way (review runs):
 
@@ -143,7 +143,7 @@ Deleting only the 2024 cap values, the 2019 rule, gives −$0.25 (crosswalk mism
 
 Home-based workers. Status: decided and in the code. Home-based enrollment and workers now carry provider weights (`hb_weight`) in both years (crosswalk, Home-based labor totals).
 
-Administrative-data centers. Status: decided for free centers, open for paying ones. Free admin centers join Unpaid Center-Based with their own staff count, in both years. Paying admin centers are in no sector (crosswalk mismatch item 5). Tested 2026-10-29: a Low or High fit on region, size, and community context beats the fixed 72/28 split in 2019 but not in 2024, where the price is withheld. Recommendation: the fixed split for 2024, each center's own price for 2019 (most 2019 paying admin centers carry one). Still open.
+Administrative-data centers. Status: decided and in the code (Anna, 2026-11-06). Supply uses no admin staff: admin centers are dropped from every sector in both years, free and paying alike, so the Unpaid ratios come from interviewed centers and `L_0` excludes admin children. This replaces the 2026-10-27 rule that put free admin centers in Unpaid with their own staff count. A check on 2026-11-09 found that neither center size nor age mix explains why admin centers report fewer staff per child than interviewed public-school centers (crosswalk mismatch item 7). The placement tests for paying admin centers (crosswalk mismatch item 5) and the staff-count rules (mismatch item 7) no longer apply to the code.
 
 Market response. Under the review's 2024 parameters, 10 percent more paid center hours raises care wages about 2 to 3 percent and the low-price price 2.4 percent, against 1.6 percent in 2019. No option broke the equilibrium solver.
 
@@ -152,7 +152,7 @@ Report: `supply_side.md`.
 
 ## Decision 8: the calibration year and ACS pairing
 
-Status: the pairing is decided (27 October): the model pairs the 2024 NSECE with the 2024 ACS. Whether to use the 2023 ACS for now, or to make 2024 tax units and AGI, is open (crosswalk Open item 3). The 2024 ACS file is `raw_data/ACS/v1/2024/ipums_usa.csv` (config key `ACS-2024`). IPUMS has not released `TAXID`, `ADJGINC`, or the SPM variables for 2024, so `1b` stops for 2024 unless a tax-unit crosswalk file sits beside the ACS file. The calibration year is a setting (`--nsece-year`; see the README section "Calibration year").
+Status: the pairing is decided (27 October): the model pairs the 2024 NSECE with the 2024 ACS. On 9 November Anna decided to build our own 2024 tax units and AGI rather than use the 2023 ACS (crosswalk Open item 3), as a stand-in until John Iselin's ACS tax-unit file arrives. A first builder made it from ACS income (now replaced; in commit `d89994c`). With all income items (IPUMS extracts 37 and 38) and the school test for students, on 2019 its units match the Census crosswalk for 91.5% of parents of children under 5, and 98.3% fall in the same AGI decile as IPUMS `ADJGINC` (crosswalk Open item 3 has the validation). Later the same day Anna chose the Affordability-Index tax units and AGI (John Iselin's code, full chain already run for 2019 and 2024) for 2024 runs instead; the 2024 smoke test passes on them. `src/misc/make_tax_unit_crosswalk.R` converts his files to the crosswalk; `--check` reports when they change. Their AGI averages 14% above `ADJGINC` on 2019, so whether 2019 also switches is open. Also on 9 November: `1b` counts armed forces at work as working (crosswalk, ACS employment: armed forces at work). The 2024 ACS file is `raw_data/ACS/v1/2024/ipums_usa.csv` (config key `ACS-2024`). IPUMS has not released `TAXID`, `ADJGINC`, or the SPM variables for 2024, so `1b` stops for 2024 unless a tax-unit crosswalk file sits beside the ACS file. The calibration year is a setting (`--nsece-year`; see the README section "Calibration year").
 
 
 ## How much care choices changed with the population held fixed

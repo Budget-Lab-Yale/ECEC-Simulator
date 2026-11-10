@@ -24,9 +24,8 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
 
-  # Missing-hours fill always on for 2024 (approved 2026-10-28, crosswalk
-  # mismatch item 3); other treatments optional, 2024 survey only
-  use_2024_hours   <- nsece_year == 2024
+  # Optional treatments, 2024 survey only (missing-hours fill always on, both
+  # years -- see parent units below)
   use_2024_weights <- nsece_year == 2024 && 'weights' %in% nsece_2024_options
   use_2024_supply  <- nsece_year == 2024 && 'supply'  %in% nsece_2024_options
   if (nsece_year == 2024) {
@@ -424,8 +423,8 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
 
           # ASSUMPTION: remove records w/ nonresponse -- code -10 (missing
           # calendar block) in 11 / 1 / 5 child loops (HRS_TOT_PHI / PLO,
-          # PARCH_HI) in 2019, 412 / 417 / 363 in 2024; 'hours' option fills
-          # these parents below
+          # PARCH_HI) in 2019, 412 / 417 / 363 in 2024; missing-hours fill
+          # below gives these parents hours
           filter(hhm_id > 0, hours >= 0)
 
         # Align who counts as working with the ACS, where a parent works if
@@ -435,8 +434,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         # for pay?": 1 = yes, 2 = no, 3 = DK/refused) instead:
         #   - did not work for pay (school or training only): zero hours
         #   - worked but no calendar hours (about 6% of second earners with
-        #     a child under 5): hours drawn from working parents with the
-        #     same earner rank, so the part-time / full-time split is kept
+        #     a child under 5): donor hours (missing-hours fill below)
         #   - D1a missing or DK/refused: calendar hours as before
         work_cols <- grep('^HH9_D1A_WORK_[0-9]+$', names(nsece_hh), value = T)
 
@@ -452,56 +450,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           mutate(hhm_id = as.integer(hhm_id)) %>%
           filter(worked %in% c(1L, 2L))
 
-        # One record per parent (a parent appears once per child)
-        parent_hours <- parent_labor_supply %>%
-          group_by(hh_id, hhm_id) %>%
-          summarise(hours = first(hours), earner = first(earner), .groups = 'drop') %>%
-          left_join(worked_last_week, by = c('hh_id', 'hhm_id'))
-
-        donors <- parent_hours %>%
-          filter(worked %in% 1L, hours > 0)
-
-        parent_hours <- withr::with_seed(random_seed_base + 7, {
-          parent_hours %>%
-            group_by(earner) %>%
-            mutate(
-              donor_hours = sample(donors$hours[donors$earner == first(earner)], n(), replace = TRUE),
-              hours_adj = case_when(
-                worked %in% 2L              ~ 0,
-                worked %in% 1L & hours == 0 ~ donor_hours,
-                TRUE                        ~ hours
-              )
-            ) %>%
-            ungroup()
-        })
-
-        cat('NSECE parents: worked last week but zero calendar hours (imputed):',
-            sum(parent_hours$worked %in% 1L & parent_hours$hours == 0),
-            '| did not work but positive calendar hours (set to zero):',
-            sum(parent_hours$worked %in% 2L & parent_hours$hours > 0), '\n')
-
-        parent_labor_supply <- parent_labor_supply %>%
-          left_join(
-            parent_hours %>% select(hh_id, hhm_id, hours_adj),
-            by = c('hh_id', 'hhm_id')
-          ) %>%
-          mutate(hours = hours_adj) %>%
-          select(-hours_adj)
-
-        # Add labor supply information to parent units table
-        pu <- pu %>%
-          left_join(
-            parent_labor_supply %>%
-              select(hh_id, child_id, hhm_id1 = hhm_id, hours1 = hours),
-            by = c('hh_id', 'child_id', 'hhm_id1')
-          ) %>%
-          left_join(
-            parent_labor_supply %>%
-              select(hh_id, child_id, hhm_id2 = hhm_id, hours2 = hours),
-            by = c('hh_id', 'child_id','hhm_id2')
-          )
-
-        # Add parent wages
+        # Parent wages (also a donor-cell trait below)
         wage_cols  <- grep('^HH9_D3D_WAGE_TC_[0-9]+$', names(nsece_hh), value = T)
         unit_cols  <- grep('^HH9_D3D_UNIT_[0-9]+$',    names(nsece_hh), value = T)
 
@@ -537,87 +486,161 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           ) %>%
           select(hh_id, hhm_id, pay, pay_unit)
 
-        # 2024 missing-hours fill (always on for 2024): donor rule above sees only
-        # parents with a valid hours record. In 2024 the survey blanks both
-        # parents' hours (code -10) when either has a missing block in the
-        # weekly calendar, and leaves some typical-week parents' hours blank,
-        # so about 4% of parents of young children who said they worked last
-        # week are left with no hours and count as not employed. Extend the
-        # rule to them: a parent with no hours record who said yes to D1a
-        # gets hours drawn from working parents of the same earner rank and
-        # hourly wage band (<$15, $15-25, $25-40, $40+, no wage) -- filled
-        # parents earn less than donors (38% w/o wage vs 18%), so an
-        # earner-rank-only draw gives them donors' higher-wage hours. Rank
-        # unknown when record blank: mothers in two-parent units draw from
-        # second earners, everyone else from first earners. Parent who said
-        # no gets zero. One draw per parent, own random stream -- draws above
-        # unchanged.
-        if (use_2024_hours) {
-          wage_band <- function(pay) {
-            case_when(
-              is.na(pay) ~ 'none',
-              pay < 15   ~ '<15',
-              pay < 25   ~ '15-25',
-              pay < 40   ~ '25-40',
-              TRUE       ~ '40+'
-            )
-          }
+        # One record per parent (a parent appears once per child)
+        parent_hours <- parent_labor_supply %>%
+          group_by(hh_id, hhm_id) %>%
+          summarise(hours = first(hours), earner = first(earner), .groups = 'drop') %>%
+          left_join(worked_last_week, by = c('hh_id', 'hhm_id'))
 
-          band_donors <- donors %>%
-            left_join(wages %>% select(hh_id, hhm_id, pay), by = c('hh_id', 'hhm_id')) %>%
-            mutate(band = wage_band(pay))
+        # Missing work hours, both years (Anna, 2026-11-06; crosswalk mismatch
+        # item 3). Parents who said yes to D1a but have zero calendar hours, or
+        # no hours record (2024 blanks both parents' hours, code -10, when
+        # either has a missing calendar block; some typical-week parents never
+        # answer), get hours; parents who said no get zero.
+        #   1. 2024 calendar households, no record: own adult calendar (blocks
+        #      coded work / school / training x 15 min; a missing block takes
+        #      own work share at same time of day on observed days). Reproduces
+        #      NORC's hours for all 3,857 complete calendars.
+        #   2. Everyone else: donor hours from parents who worked last week w/
+        #      positive hours, same cell of earner rank, child's weekly
+        #      non-parental care hours (0 / 1-19 / 20-34 / 35+), household
+        #      income quintile, hourly wage band, region, urban density; keys
+        #      dropped from the end until >= 5 donors (draw_donor_hours()).
+        # Why these cells: filled parents' children mostly have no non-parental
+        # care (54-81% vs 33% of donors); earner-rank or rank x wage draws
+        # reversed the full-time gap between children in 35+ hours of care and
+        # none (true +7.5 / +10.8 points 2019 / 2024, drawn -5.9 / -2.6) and
+        # halved the income gap. These cells keep both; care type, parent
+        # count, child age, questionnaire version add nothing (masked test,
+        # scratch 2026-11-06).
+        hh_traits <- nsece_hh %>%
+          transmute(hh_id = HH9_METH_CASEID, hh_weight = HH9_METH_WEIGHT, income = HH9_ECON_INCOME_ANNUAL,
+                    region = if_else(HH9_REGION > 0, as.integer(HH9_REGION), 0L),
+                    urban  = if_else(HH9_COMM_URBAN_DENSITY > 0, as.integer(HH9_COMM_URBAN_DENSITY), 0L))
+        care_cols <- grep('^HHC9_NPC_HRSWEEK_TOC[123458]_[1-9]$', names(nsece_hh), value = T)   # regular ECE types
+        child_care <- nsece_hh %>%
+          select(hh_id = HH9_METH_CASEID, all_of(care_cols)) %>%
+          pivot_longer(-hh_id, names_to = 'child_id', names_pattern = '_([1-9])$',
+                       names_transform = as.integer, values_to = 'h') %>%
+          group_by(hh_id, child_id) %>%
+          summarise(care_hours = sum(pmax(h, 0, na.rm = TRUE)), .groups = 'drop')
 
-          missing_hours <- bind_rows(
-            pu %>%
-              filter(is.na(hours1), !is.na(hhm_id1)) %>%
-              transmute(hh_id, hhm_id = hhm_id1,
-                        earner = if_else(n_parents == 2 & male1 %in% 0, 'secondary', 'primary')),
-            pu %>%
-              filter(is.na(hours2), !is.na(hhm_id2)) %>%
-              transmute(hh_id, hhm_id = hhm_id2,
-                        earner = if_else(male2 %in% 0, 'secondary', 'primary'))
-          ) %>%
-            distinct(hh_id, hhm_id, .keep_all = TRUE) %>%
-            arrange(hh_id, hhm_id) %>%
-            inner_join(worked_last_week, by = c('hh_id', 'hhm_id')) %>%
-            left_join(wages %>% select(hh_id, hhm_id, pay), by = c('hh_id', 'hhm_id')) %>%
-            mutate(band = wage_band(pay))
+        parent_traits <- bind_rows(
+          pu %>% transmute(hh_id, child_id, hhm_id = hhm_id1,
+                           earner_guess = if_else(n_parents == 2 & male1 %in% 0, 'secondary', 'primary')),
+          pu %>% filter(!is.na(hhm_id2)) %>%
+            transmute(hh_id, child_id, hhm_id = hhm_id2, earner_guess = if_else(male2 %in% 0, 'secondary', 'primary'))
+        ) %>%
+          left_join(children %>% select(hh_id, child_id, age_months), by = c('hh_id', 'child_id')) %>%
+          left_join(child_care, by = c('hh_id', 'child_id')) %>%
+          # Focal child: parent's youngest
+          group_by(hh_id, hhm_id) %>%
+          slice_min(age_months, n = 1, with_ties = FALSE) %>%
+          ungroup() %>%
+          left_join(hh_traits, by = 'hh_id') %>%
+          left_join(wages %>% select(hh_id, hhm_id, pay), by = c('hh_id', 'hhm_id')) %>%
+          left_join(parent_hours %>% select(hh_id, hhm_id, earner), by = c('hh_id', 'hhm_id')) %>%
+          mutate(
+            earner = coalesce(earner, earner_guess),
+            care   = cut(coalesce(care_hours, 0), c(-Inf, 0, 19.999, 34.999, Inf), labels = c('0', '1-19', '20-34', '35+')),
+            band   = case_when(is.na(pay) ~ 'none', pay < 15 ~ '<15', pay < 25 ~ '15-25', pay < 40 ~ '25-40', TRUE ~ '40+')
+          )
+        pos  <- parent_traits %>% filter(!is.na(income), income > 0)
+        cuts <- wtd.quantile(pos$income, pos$hh_weight, c(0.2, 0.4, 0.6, 0.8))
+        parent_traits <- parent_traits %>%
+          mutate(incq = if_else(is.na(income) | income <= 0, 'q0',
+                                paste0('q', findInterval(income, cuts, left.open = TRUE) + 1))) %>%
+          select(hh_id, hhm_id, earner, care, incq, band, region, urban)
+        cell_keys <- c('earner', 'care', 'incq', 'band', 'region', 'urban')
 
-          # sample() on a length-1 vector draws from 1:x -- index instead
-          missing_hours <- withr::with_seed(random_seed_base + 8, {
-            missing_hours %>%
-              group_by(earner, band) %>%
-              mutate(
-                donor_hours = {
-                  pool <- band_donors$hours[band_donors$earner == first(earner) & band_donors$band == first(band)]
-                  pool[sample.int(length(pool), n(), replace = TRUE)]
-                },
-                hours_fill  = if_else(worked %in% 1L, donor_hours, 0)
-              ) %>%
-              ungroup()
-          })
+        donors <- parent_hours %>%
+          filter(worked %in% 1L, hours > 0) %>%
+          select(hh_id, hhm_id, hours) %>%
+          inner_join(parent_traits, by = c('hh_id', 'hhm_id'))
 
-          cat('  Option hours: parents with no hours record given hours from D1a:',
-              nrow(missing_hours), '(worked last week, donor hours:', sum(missing_hours$worked %in% 1L),
-              '| did not work, zero hours:', sum(missing_hours$worked %in% 2L), ')\n')
-          cat('    donors by earner rank x wage band (min cell):',
-              min(table(band_donors$earner, band_donors$band)), '\n')
-
-          pu <- pu %>%
-            left_join(
-              missing_hours %>% select(hh_id, hhm_id1 = hhm_id, fill1 = hours_fill),
-              by = c('hh_id', 'hhm_id1')
-            ) %>%
-            left_join(
-              missing_hours %>% select(hh_id, hhm_id2 = hhm_id, fill2 = hours_fill),
-              by = c('hh_id', 'hhm_id2')
-            ) %>%
-            mutate(
-              hours1 = coalesce(hours1, fill1),
-              hours2 = if_else(is.na(hhm_id2), hours2, coalesce(hours2, fill2))
-            ) %>%
-            select(-fill1, -fill2)
+        # Recipients: zero calendar hours (record kept) and no record at all
+        no_record <- parent_traits %>%
+          anti_join(parent_hours, by = c('hh_id', 'hhm_id')) %>%
+          inner_join(worked_last_week, by = c('hh_id', 'hhm_id'))
+        if (nsece_year == 2024) {
+          cal <- parent_calendar_hours(estimation_info$paths$NSECE, nsece_settings)
+          no_record <- no_record %>% left_join(cal, by = c('hh_id', 'hhm_id'))
+        } else {
+          no_record <- no_record %>% mutate(cal_hours = NA_real_)
         }
+        use_cal <- no_record$worked %in% 1L & !is.na(no_record$cal_hours) & no_record$cal_hours > 0
+        need <- bind_rows(
+          parent_hours %>% filter(worked %in% 1L, hours == 0) %>% select(hh_id, hhm_id) %>%
+            inner_join(parent_traits, by = c('hh_id', 'hhm_id')),
+          no_record %>% filter(worked %in% 1L, !use_cal) %>% select(hh_id, hhm_id, all_of(cell_keys))
+        )
+        drawn <- withr::with_seed(random_seed_base + 7, draw_donor_hours(need, donors, cell_keys))
+        need$donor_hours <- as.numeric(drawn)
+
+        parent_hours <- parent_hours %>%
+          left_join(need %>% select(hh_id, hhm_id, donor_hours), by = c('hh_id', 'hhm_id')) %>%
+          mutate(hours_adj = case_when(
+            worked %in% 2L              ~ 0,
+            worked %in% 1L & hours == 0 ~ donor_hours,
+            TRUE                        ~ hours
+          ))
+        missing_hours <- no_record %>%
+          left_join(need %>% select(hh_id, hhm_id, donor_hours), by = c('hh_id', 'hhm_id')) %>%
+          mutate(hours_fill = case_when(
+            worked %in% 2L                    ~ 0,
+            worked %in% 1L & cal_hours %in% 0 ~ donor_hours,
+            worked %in% 1L & !is.na(cal_hours) ~ cal_hours,
+            worked %in% 1L                    ~ donor_hours
+          ))
+
+        cat('NSECE parents: worked last week but zero calendar hours (donor hours):',
+            sum(parent_hours$worked %in% 1L & parent_hours$hours == 0),
+            '| did not work but positive calendar hours (set to zero):',
+            sum(parent_hours$worked %in% 2L & parent_hours$hours > 0), '\n')
+        cat('  No hours record: worked last week', sum(no_record$worked %in% 1L), '(own calendar:', sum(use_cal),
+            '| donor:', sum(no_record$worked %in% 1L & !use_cal), ') | did not work, zero hours:',
+            sum(no_record$worked %in% 2L), '\n')
+        cat('  Donor cells (', paste(cell_keys, collapse = ' x '), '), recipients by keys dropped: ',
+            paste(names(table(attr(drawn, 'dropped'))), table(attr(drawn, 'dropped')), sep = ':', collapse = ' '),
+            '\n', sep = '')
+
+        parent_labor_supply <- parent_labor_supply %>%
+          left_join(
+            parent_hours %>% select(hh_id, hhm_id, hours_adj),
+            by = c('hh_id', 'hhm_id')
+          ) %>%
+          mutate(hours = hours_adj) %>%
+          select(-hours_adj)
+
+        # Add labor supply information to parent units table
+        pu <- pu %>%
+          left_join(
+            parent_labor_supply %>%
+              select(hh_id, child_id, hhm_id1 = hhm_id, hours1 = hours),
+            by = c('hh_id', 'child_id', 'hhm_id1')
+          ) %>%
+          left_join(
+            parent_labor_supply %>%
+              select(hh_id, child_id, hhm_id2 = hhm_id, hours2 = hours),
+            by = c('hh_id', 'child_id','hhm_id2')
+          )
+
+        # Child row w/out hours: parent's own hours from another child's record
+        # (records are per child), else no-record fill -- own calendar, donor,
+        # or zero (above)
+        parent_fill <- bind_rows(
+          parent_hours %>% select(hh_id, hhm_id, h = hours_adj),
+          missing_hours %>% select(hh_id, hhm_id, h = hours_fill)
+        ) %>%
+          filter(!is.na(h))
+        pu <- pu %>%
+          left_join(parent_fill %>% rename(hhm_id1 = hhm_id, fill1 = h), by = c('hh_id', 'hhm_id1')) %>%
+          left_join(parent_fill %>% rename(hhm_id2 = hhm_id, fill2 = h), by = c('hh_id', 'hhm_id2')) %>%
+          mutate(
+            hours1 = coalesce(hours1, fill1),
+            hours2 = if_else(is.na(hhm_id2), hours2, coalesce(hours2, fill2))
+          ) %>%
+          select(-fill1, -fill2)
 
         # Add wage info
         pu %>%
@@ -981,15 +1004,14 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   # Administrative-data centers (CB9_METH_DATA_SOURCE = 2: public-school
   # programs built from administrative records, 483 in 2019, 1,141 in 2024)
   # have no prices, classroom data, or workforce data -- their workforce
-  # records are empty placeholders. Set aside here, out of price medians,
-  # classroom, workforce paths; free ones rejoin Unpaid Center-Based below
-  # w/ own staff count (admin_unpaid). Dropping them would give public-school
-  # programs interviewed-center staffing: 0.17-0.23 staff per FTE child
-  # vs their 0.11-0.14 (check 08).
+  # records are empty placeholders. Dropped from every sector, both years
+  # (Anna, 2026-11-06): their only staff item is a total count NORC imputed
+  # for 623 of 1,141 in 2024, so supply uses no admin staff. Unpaid ratios
+  # come from interviewed centers; L_0 excludes admin children.
   # See docs/nsece_2019_to_2024_crosswalk.md, Administrative-data centers.
-  nsece_cb_admin <- nsece_cb %>% filter(CB9_METH_DATA_SOURCE %in% 2)
-  nsece_cb       <- nsece_cb %>% filter(!(CB9_METH_DATA_SOURCE %in% 2))
-  cat('  Administrative-data centers set aside for Unpaid Center-Based:', nrow(nsece_cb_admin), '\n')
+  n_admin  <- sum(nsece_cb$CB9_METH_DATA_SOURCE %in% 2)
+  nsece_cb <- nsece_cb %>% filter(!(CB9_METH_DATA_SOURCE %in% 2))
+  cat('  Administrative-data centers dropped from supply:', n_admin, '\n')
 
   # 2019 centers answering "don't know" to whether families pay (FAMPAY = 3):
   # NORC flags every age -8 ("no families pay"), which 1a reads as free. They
@@ -1009,44 +1031,23 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   # Weekly posted rates above $2,000 ($50/hr at 40 hours): unit errors --
   # monthly or yearly amounts entered as weekly (38 cells w/ enrollment in
   # 2019, up to $146,000; 8 in 2024). Sector prices are means, so they lift
-  # the 2019 High-priced residual $1.40. Set to -2 (missing), both years.
-  # Crosswalk mismatch item 2.
+  # the 2019 High-priced residual $1.40. Set to -20 (own missing code -- 2019
+  # -2 stays NORC's censoring code, filled below), both years. Crosswalk
+  # mismatch item 2.
   for (rate_age in c('INF', '2YR', '3YR', '4YR')) {
     rate_col <- paste0('CB9_STDRATE_WKLY_', rate_age)
     too_high <- !is.na(nsece_cb[[rate_col]]) & nsece_cb[[rate_col]] > 2000
     cat('  Weekly rates above $2,000 set to missing,', rate_age, ':', sum(too_high), '\n')
-    nsece_cb[[rate_col]] <- if_else(too_high, -2, nsece_cb[[rate_col]])
+    nsece_cb[[rate_col]] <- if_else(too_high, -20, nsece_cb[[rate_col]])
   }
 
-  # Optional 2024 treatment 'supply', part 1: NORC censors posted rates at
-  # 5th, 95th percentile of each pay unit (hourly, weekly, monthly, ...), per
-  # age. 2019 file deletes them (code -2, missing below); 2024 file sets each
-  # to its unit's cap value, no flag (2019 user's guide p. 317; 2024 p.
-  # CB-508). Pay unit not in public file, but caps show as pile-ups of one
-  # exact value -- same rule as NORC, per age: most frequent value below 15th
-  # percentile, above 85th percentile, separately for monthly amounts (rate x
-  # 4.34524 a whole dollar) and others -> four caps. Positive weekly rates
-  # equal to one of them set to -2. Crosswalk mismatch item 4 (run 24_caps2:
-  # 253, 309, 346, 360 of 2,460-3,805 rates per age; L_0 -8.0%, -7.4%).
-  if (use_2024_supply) {
-    for (rate_age in c('INF', '2YR', '3YR', '4YR')) {
-      rate_col <- paste0('CB9_STDRATE_WKLY_', rate_age)
-      rate     <- nsece_cb[[rate_col]]
-      positive <- !is.na(rate) & rate > 0
-      v        <- round(rate[positive], 2)
-      q        <- quantile(v, c(0.15, 0.85))
-      tab      <- table(v)
-      vals     <- as.numeric(names(tab))
-      month    <- abs(vals * 4.34524 - round(vals * 4.34524)) < 0.05
-      pick     <- function(sel) if (any(sel)) vals[sel][which.max(tab[sel])] else numeric(0)
-      caps     <- c(pick(vals < q[1] & !month), pick(vals > q[2] & !month),
-                    pick(vals < q[1] &  month), pick(vals > q[2] &  month))
-      trimmed  <- positive & round(rate, 2) %in% caps
-      cat('  Option supply: ', rate_age, ' censoring caps found: $', paste(caps, collapse = ' / $'),
-          ' per week; set to missing (', sum(trimmed), ' of ', sum(positive), ')\n', sep = '')
-      nsece_cb[[rate_col]] <- if_else(trimmed, -2, rate)
-    }
-  }
+  # NORC censors posted rates at 5th, 95th percentile of each pay unit, per
+  # age: 2019 deletes them (-2), 2024 sets them to the cap value. Both years:
+  # each censored rate gets lognormal mean beyond its cut, so cell keeps its
+  # sector (low tail Low-priced, high tail High-priced) instead of dropping
+  # out (2019) or pricing at the cap (2024). Replaces option 'supply' part 1
+  # (2024 caps deleted). Anna, 2026-11-06; crosswalk mismatch item 4.
+  nsece_cb <- fill_censored_rates(nsece_cb, nsece_year, estimation_info$paths$NSECE)
 
   supply_params <- {
 
@@ -1083,9 +1084,9 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
             STDRATE_WKLY  == -1 ~ 'MISS',
             STDRATE_WKLY  == -2 ~ 'MISS',
             # Any other reserve code (e.g. 2024 -9, no rate / no family pays)
-            # is not a price. None reaches this line in the 2019 or 2024
-            # public files (src/misc/nsece_2024_checks/06_supply_checks.py),
-            # but a negative value here would be read as a price.
+            # is not a price. Only -20 (over $2,000, above) reaches this line
+            # in the 2019 or 2024 public files (src/misc/nsece_2024_checks/
+            # 06_supply_checks.py); a negative value here would be read as a price.
             STDRATE_WKLY  <   0 ~ 'MISS',
             T                   ~ 'OK'
           ),
@@ -1409,91 +1410,6 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
             round(center_inputs$ba_ratio[k], 4), ', residual ', round(center_inputs$residual[k], 2), '\n', sep = '')
       }
     }
-
-    # Administrative-data centers where no family pays (rate flag -8, as for
-    # interviewed centers) join Unpaid Center-Based, both years. Staff come
-    # from their own total staff count (CB9_STAFF_TYPE_TOTAL_NUM, only staff
-    # item 2024 admin records carry; NORC imputed it for 623 of 1,141). In
-    # 2019 that count equals their 0-5 classroom staff (178 records w/ both).
-    # Headcount -> FTE, BA split: from interviewed public-school teachers and
-    # assistants (no admin source for either). Centers w/o valid count take
-    # the admin staff per FTE child. Admin centers where families pay have
-    # no price, stay out of every sector, as before.
-    admin_unpaid <- {
-      ages <- c('INF', '1YR', '2YR', '3YR', '4YR', '5YR')
-      n    <- nrow(nsece_cb_admin)
-      col  <- function(x) if (x %in% names(nsece_cb_admin)) as.numeric(nsece_cb_admin[[x]]) else rep(NA_real_, n)
-
-      flag_cols <- grep('^CB9_B1_3A_AGERATE_(INF|2YR|3YR|4YR)_R$', names(nsece_cb_admin), value = T)
-      free      <- rowSums(as.matrix(nsece_cb_admin[flag_cols]) == -8, na.rm = T) > 0
-
-      # FTE enrollment under 6 -- by age where file has it (2019; full-time
-      # share unknown counts part time, as 1a's age-bin rule), else total
-      # 0-5 enrollment w/ full-time share from ADMIN_ care items (2024)
-      fte_by_age <- rep(0, n)
-      for (age in ages) {
-        enrl <- col(paste0('CB9_ENRL_', age))
-        ft   <- col(paste0('CB9_ENRL_FT_', age))
-        enrl <- if_else(!is.na(enrl) & enrl > 0, enrl, 0)
-        s    <- if_else(!is.na(ft) & ft >= 0, ft / 100, 0)
-        fte_by_age <- fte_by_age + enrl * (s + 0.5 * (1 - s))
-      }
-      full <- col('CB9_ADMIN_FULLTIME_CARE')
-      part <- col('CB9_ADMIN_PARTTIME_CARE')
-      s    <- case_when(
-        full %in% 1 & part %in% 2 ~ 1,
-        full %in% 2 & part %in% 1 ~ 0,
-        TRUE                      ~ 0.5
-      )
-      total <- col('CB9_ENRL_0TO5')
-      fte   <- case_when(
-        fte_by_age > 0               ~ fte_by_age,
-        !is.na(total) & total > 0    ~ total * (s + 0.5 * (1 - s)),
-        TRUE                         ~ 0
-      )
-
-      staff <- col('CB9_STAFF_TYPE_TOTAL_NUM')
-      w     <- nsece_cb_admin$CB9_METH_WEIGHT
-      keep  <- free & fte > 0
-      valid <- keep & !is.na(staff) & staff >= 0
-      staff_per_fte <- sum((staff * w)[valid]) / sum((fte * w)[valid])
-      fte_total     <- sum((fte * w)[keep])
-
-      pub_workers <- processed_wf %>%
-        filter(
-          id %in% nsece_cb$CB9_METH_CASEID[nsece_cb$CB9_METH_PUBSCHFLAG %in% 1],
-          role %in% 1:2,
-          !is.na(college),
-          !is.na(ft)
-        )
-      ft_factor <- weighted.mean(pub_workers$ft, pub_workers$worker_weight)
-      ba_share  <- weighted.mean(pub_workers$college, pub_workers$ft * pub_workers$worker_weight)
-      staff_fte <- staff_per_fte * ft_factor * fte_total
-
-      cat('  Administrative-data centers in Unpaid Center-Based:', sum(keep), 'of', n,
-          '(staff count valid for', sum(valid), ')\n')
-      cat('    FTE children:', round(fte_total), '| staff per FTE child:', round(staff_per_fte * ft_factor, 4),
-          '(headcount', round(staff_per_fte, 4), 'x FTE factor', round(ft_factor, 3), ') | BA share:',
-          round(ba_share, 3), '\n')
-
-      c(enrollment_fte = fte_total, ba = staff_fte * ba_share, no_ba = staff_fte * (1 - ba_share))
-    }
-
-    # Pool admin centers into Unpaid row: ratios become staff-weighted
-    # averages; enrollment_fte (-> hours_by_sector, L_0) gains their FTE children
-    center_inputs <- center_inputs %>%
-      mutate(
-        is_unpaid      = ecec_choice == 'Unpaid Center-Based',
-        ba_ratio       = if_else(is_unpaid, (ba_ratio * enrollment_fte + admin_unpaid['ba']) /
-                                            (enrollment_fte + admin_unpaid['enrollment_fte']), ba_ratio),
-        no_ba_ratio    = if_else(is_unpaid, (no_ba_ratio * enrollment_fte + admin_unpaid['no_ba']) /
-                                            (enrollment_fte + admin_unpaid['enrollment_fte']), no_ba_ratio),
-        ba             = if_else(is_unpaid, ba + admin_unpaid['ba'], ba),
-        no_ba          = if_else(is_unpaid, no_ba + admin_unpaid['no_ba'], no_ba),
-        enrollment_fte = if_else(is_unpaid, enrollment_fte + admin_unpaid['enrollment_fte'], enrollment_fte),
-        labor_cost     = wage_rates['ba'] * ba_ratio + wage_rates['no_ba'] * no_ba_ratio
-      ) %>%
-      select(-is_unpaid)
 
     home_inputs <- {
       # Get price from household side (we lack sufficient info to do an enrollment-
@@ -2013,7 +1929,8 @@ get_nsece_year_settings <- function(nsece_year) {
         household = '39466-0005-Data.tsv',
         center    = '39466-0002-Data.tsv',
         home      = '39466-0003-Data.tsv',
-        workforce = '39466-0001-Data.tsv'
+        workforce = '39466-0001-Data.tsv',
+        calendar  = '39466-0004-Data.tsv'   # weekly child + adult calendars, 15-min blocks
       ),
       center_price_cut = 6.86,
       harmonize        = list(
@@ -2209,4 +2126,293 @@ harmonize_nsece_2024_home <- function(nsece_hb) {
         TRUE                           ~ as.numeric(HB9_STAFF_EDUC_PRCNT_4YR)
       )
     )
+}
+
+
+
+RATE_AGES <- c('INF', '2YR', '3YR', '4YR')
+
+
+
+find_censored_rates <- function(nsece_cb, nsece_year) {
+
+  #----------------------------------------------------------------------------
+  # Censored posted weekly rates per center x rate age. 2019: NORC code -2.
+  # 2024: rate equal to a cap. Caps not flagged, but show as pile-ups of one
+  # exact value -- per age, most frequent value below 15th percentile, above
+  # 85th percentile, separately for monthly amounts (rate x 4.34524 whole
+  # dollar) and others -> four caps (low, high, low monthly, high monthly).
+  # Cap value = the cell's cut, side known from which cap.
+  #
+  # Params:
+  #   - nsece_cb (df): center file, 2019-style names, admin centers dropped
+  #   - nsece_year (int): 2019 or 2024
+  #
+  # Returns: (tibble) row, age, side ('low' / 'high', NA in 2019), cut ($/wk, NA in 2019)
+  #----------------------------------------------------------------------------
+
+  bind_rows(lapply(RATE_AGES, function(a) {
+    rate <- nsece_cb[[paste0('CB9_STDRATE_WKLY_', a)]]
+    if (nsece_year == 2019) {
+      i <- which(rate %in% -2)
+      return(tibble(row = i, age = a, side = NA_character_, cut = NA_real_))
+    }
+    positive <- !is.na(rate) & rate > 0
+    v     <- round(rate[positive], 2)
+    q     <- quantile(v, c(0.15, 0.85))
+    tab   <- table(v)
+    vals  <- as.numeric(names(tab))
+    month <- abs(vals * 4.34524 - round(vals * 4.34524)) < 0.05
+    pick  <- function(sel) if (any(sel)) vals[sel][which.max(tab[sel])] else NA_real_
+    caps  <- c(pick(vals < q[1] & !month), pick(vals > q[2] & !month),
+               pick(vals < q[1] &  month), pick(vals > q[2] &  month))
+    k <- match(round(rate, 2), caps)
+    i <- which(positive & !is.na(k))
+    tibble(row = i, age = a, side = if_else(k[i] %in% c(1, 3), 'low', 'high'), cut = rate[i])
+  }))
+}
+
+
+
+censored_cell_features <- function(nsece_cb, cens) {
+
+  #----------------------------------------------------------------------------
+  # Center traits + own other-age rate position for each censored cell --
+  # inputs to the tail-side model (which tail a censored rate is in).
+  # Other-age position: mean over the center's uncensored rates at other ages
+  # (positive, <= $2,000) of their rank among all uncensored rates at that age.
+  #
+  # Params:
+  #   - nsece_cb (df): center file
+  #   - cens (tibble): find_censored_rates() output
+  #
+  # Returns: (tibble) cens + profit, pubsch, hs, pk, subs, log_fte, region,
+  #   density, other_pct (0.5 when none), no_other, w
+  #----------------------------------------------------------------------------
+
+  flag <- function(x) as.numeric(!is.na(x) & x == 1)
+  ages <- c('INF', '1YR', '2YR', '3YR', '4YR', '5YR')
+  enrl <- sapply(ages, function(a) pmax(nsece_cb[[paste0('CB9_ENRL_', a)]], 0, na.rm = TRUE))
+  ft   <- sapply(ages, function(a) {
+    f <- nsece_cb[[paste0('CB9_ENRL_FT_', a)]]
+    if_else(!is.na(f) & f >= 0, f / 100, 0)
+  })
+  fte  <- rowSums(enrl * ft + 0.5 * enrl * (1 - ft))
+
+  body <- lapply(setNames(RATE_AGES, RATE_AGES), function(a) {
+    r <- nsece_cb[[paste0('CB9_STDRATE_WKLY_', a)]]
+    ok <- !is.na(r) & r > 0 & r <= 2000
+    ok[cens$row[cens$age == a]] <- FALSE
+    list(ok = ok, sorted = sort(r[ok]), r = r)
+  })
+  other_pct <- mapply(function(i, a) {
+    p <- sapply(setdiff(RATE_AGES, a), function(b) {
+      x <- body[[b]]
+      if (x$ok[i]) findInterval(x$r[i], x$sorted, left.open = TRUE) / length(x$sorted) else NA_real_
+    })
+    if (all(is.na(p))) NA_real_ else mean(p, na.rm = TRUE)
+  }, cens$row, cens$age)
+
+  d <- nsece_cb$CB9_COMM_URBAN_DENSITY
+  cens %>%
+    mutate(
+      profit    = flag(nsece_cb$CB9_A8_PROFIT_R2[row]),
+      pubsch    = flag(nsece_cb$CB9_METH_PUBSCHFLAG[row]),
+      hs        = flag(nsece_cb$CB9_F15_CHILD_FUND_HS_IND[row]),
+      pk        = flag(nsece_cb$CB9_F16_CHILD_FUND_PK_IND[row]),
+      subs      = flag(nsece_cb$CB9_RVNU_SUBS_PAST_YR[row]),
+      log_fte   = log(fte[row] + 1),
+      region    = factor(nsece_cb$CB9_REGION[row], levels = 1:4),
+      density   = factor(if_else(d[row] %in% 1:3, as.integer(d[row]), 0L), levels = 0:3),
+      no_other  = as.numeric(is.na(other_pct)),
+      other_pct = coalesce(other_pct, 0.5),
+      w         = nsece_cb$CB9_METH_WEIGHT[row]
+    )
+}
+
+
+
+fill_censored_rates <- function(nsece_cb, nsece_year, nsece_root) {
+
+  #----------------------------------------------------------------------------
+  # Replaces each NORC-censored posted weekly rate w/ the lognormal mean
+  # beyond its cut, per rate age. Body = uncensored positive rates <= $2,000,
+  # center weights (lognormal QQ R2 0.983-0.992 by age, both years; one mode).
+  #
+  # 2024: censored (Tobit) lognormal MLE w/ known caps; side + cut from cap.
+  # 2019: censored share known (-2 count), side not. Lognormal from QQ fit of
+  #   body w/ half of censored share in each tail; cuts = fitted quantiles at
+  #   those shares. Side from logit fit on 2024 censored cells (traits,
+  #   region, urban density, other-age position): w/out density, 88% of 2024
+  #   sides right in 5-fold CV vs 70% always-low (scratch test 2026-11-06;
+  #   crosswalk item 4); in-sample 87.9% w/ density.
+  # Low-tail mean < every age-bin median, high-tail mean > it in both years,
+  # so cell lands in Low- / High-priced by the usual median rule.
+  #
+  # Params:
+  #   - nsece_cb (df): center file, 2019-style names, admin centers dropped
+  #   - nsece_year (int): 2019 or 2024
+  #   - nsece_root (chr): NSECE raw folder (2019 run reads 2024 center file)
+  #
+  # Returns: (df) nsece_cb w/ censored rates filled
+  #----------------------------------------------------------------------------
+
+  tail_mean <- function(mu, s, cut, side) {
+    z <- (log(cut) - mu) / s
+    m <- exp(mu + s^2 / 2)
+    if_else(side == 'low', m * pnorm(z - s) / pnorm(z),
+            m * pnorm(z - s, lower.tail = FALSE) / pnorm(z, lower.tail = FALSE))
+  }
+  wq <- function(x, w, p) {
+    o <- order(x); x <- x[o]; cw <- cumsum(w[o]) / sum(w)
+    sapply(p, function(pp) x[which(cw >= pp)[1]])
+  }
+
+  cens <- find_censored_rates(nsece_cb, nsece_year)
+
+  # 2019 side: logit on 2024 censored cells, sides known
+  if (nsece_year == 2019) {
+    cb24 <- read_nsece_file(nsece_root, get_nsece_year_settings(2024), 'center') %>%
+      filter(!(CB9_METH_DATA_SOURCE %in% 2))
+    tr <- censored_cell_features(cb24, find_censored_rates(cb24, 2024)) %>%
+      mutate(high = as.numeric(side == 'high'))
+    fit <- glm(high ~ profit + pubsch + hs + pk + subs + log_fte + region + density + other_pct + no_other,
+               family = quasibinomial(), data = tr, weights = w / mean(w))
+    ft <- censored_cell_features(nsece_cb, cens)
+    cens$side <- if_else(predict(fit, newdata = ft, type = 'response') >= 0.5, 'high', 'low')
+    cat('  Censored rates, side model on 2024 (', nrow(tr), ' cells): weighted in-sample accuracy ',
+        round(100 * weighted.mean((fitted(fit) >= 0.5) == (tr$high == 1), tr$w), 1), '%\n', sep = '')
+  }
+
+  for (a in RATE_AGES) {
+    col  <- paste0('CB9_STDRATE_WKLY_', a)
+    r    <- nsece_cb[[col]]
+    w    <- nsece_cb$CB9_METH_WEIGHT
+    ca   <- cens %>% filter(age == a)
+    ok   <- !is.na(r) & r > 0 & r <= 2000
+    ok[ca$row] <- FALSE
+    x    <- log(r[ok]); wx <- w[ok]
+
+    if (nsece_year == 2024) {
+      lo <- ca %>% filter(side == 'low'); hi <- ca %>% filter(side == 'high')
+      nll <- function(p) {
+        s <- exp(p[2])
+        -(sum(wx * dnorm(x, p[1], s, log = TRUE)) +
+            sum(w[lo$row] * pnorm(log(lo$cut), p[1], s, log.p = TRUE)) +
+            sum(w[hi$row] * pnorm(log(hi$cut), p[1], s, lower.tail = FALSE, log.p = TRUE)))
+      }
+      est <- optim(c(weighted.mean(x, wx), log(sd(x))), nll)$par
+      mu <- est[1]; s <- exp(est[2])
+      cut <- ca$cut
+    } else {
+      t  <- nrow(ca) / 2 / (sum(ok) + nrow(ca))
+      p  <- seq(0.08, 0.92, by = 0.02)
+      pb <- (p - t) / (1 - 2 * t)
+      keep <- pb > 0.005 & pb < 0.995
+      qq <- lm(wq(x, wx, pb[keep]) ~ qnorm(p[keep]))
+      mu <- unname(coef(qq)[1]); s <- unname(coef(qq)[2])
+      cut <- if_else(ca$side == 'low', exp(mu + s * qnorm(t)), exp(mu + s * qnorm(1 - t)))
+    }
+    fill <- tail_mean(mu, s, cut, ca$side)
+    nsece_cb[[col]][ca$row] <- fill
+    cat('  Censored rates filled, ', a, ': ', sum(ca$side == 'low'), ' low (mean $',
+        round(mean(fill[ca$side == 'low']) / 40, 2), '/hr), ', sum(ca$side == 'high'), ' high (mean $',
+        round(mean(fill[ca$side == 'high']) / 40, 2), '/hr); lognormal mu ', round(mu, 3),
+        ' sigma ', round(s, 3), '\n', sep = '')
+  }
+  nsece_cb
+}
+
+
+
+draw_donor_hours <- function(recipients, donors, keys, min_donors = 5) {
+
+  #----------------------------------------------------------------------------
+  # One donor draw per recipient from donors in the same cell of keys; keys
+  # dropped from the end until the cell has >= min_donors. Uses the global
+  # RNG stream -- caller sets the seed.
+  #
+  # Params:
+  #   - recipients (df): one row per parent to fill, w/ keys
+  #   - donors (df): parents w/ hours and keys
+  #   - keys (chr): cell variables, most important first
+  #   - min_donors (int): smallest usable cell
+  #
+  # Returns: (num) donor hours per recipient; attr 'dropped' = keys dropped
+  #----------------------------------------------------------------------------
+
+  out     <- rep(NA_real_, nrow(recipients))
+  dropped <- rep(NA_integer_, nrow(recipients))
+  todo    <- seq_len(nrow(recipients))
+  for (L in length(keys):1) {
+    rk    <- do.call(paste, c(lapply(keys[1:L], function(k) recipients[[k]]), sep = '|'))
+    dk    <- do.call(paste, c(lapply(keys[1:L], function(k) donors[[k]]), sep = '|'))
+    pools <- split(donors$hours, dk)
+    size  <- unname(lengths(pools)[rk[todo]])
+    ok    <- todo[!is.na(size) & size >= min_donors]
+    for (g in unique(rk[ok])) {
+      i <- ok[rk[ok] == g]
+      p <- pools[[g]]
+      out[i] <- p[sample.int(length(p), length(i), replace = TRUE)]   # index: sample() on length-1 draws 1:x
+    }
+    dropped[ok] <- length(keys) - L
+    todo <- setdiff(todo, ok)
+    if (!length(todo)) break
+  }
+  if (length(todo)) {
+    out[todo]     <- donors$hours[sample.int(nrow(donors), length(todo), replace = TRUE)]
+    dropped[todo] <- length(keys)
+  }
+  attr(out, 'dropped') <- dropped
+  out
+}
+
+
+
+parent_calendar_hours <- function(nsece_root, nsece_settings) {
+
+  #----------------------------------------------------------------------------
+  # 2024 weekly work-related hours per parent from the adult calendar
+  # (HH4_ADCAL_Y_Z: member Y, 15-min block Z = 1..672, Monday 12:00am first).
+  # Codes 1 work, 2 school, 3 training count (as NORC's WST hours do); 0
+  # none; 4 missing; -2 no calendar (typical-week version), 8 skipped
+  # section D, 9 no member -> no calendar for that member. Missing block
+  # takes member's own share of work-related blocks at same time of day on
+  # observed days (masked test: abs error ~10 h vs ~15 h for any donor
+  # rule). All 672 missing -> NA.
+  #
+  # Params:
+  #   - nsece_root (chr): NSECE raw folder
+  #   - nsece_settings (list): get_nsece_year_settings(2024)
+  #
+  # Returns: (tibble) hh_id, hhm_id, cal_hours, cal_missing_blocks
+  #----------------------------------------------------------------------------
+
+  path <- file.path(nsece_root, nsece_settings$folder, nsece_settings$files$calendar)
+  hdr  <- names(fread(path, nrows = 0))
+  ad   <- grep('^HH4_ADCAL_[0-9]+_[0-9]+$', hdr, value = TRUE)
+  cal  <- fread(path, select = c('HH4_METH_CASEID', ad))
+  t_of <- ((1:672) - 1) %% 96 + 1
+
+  bind_rows(lapply(sort(unique(as.integer(sub('^HH4_ADCAL_([0-9]+)_.*', '\\1', ad)))), function(y) {
+    cols <- paste0('HH4_ADCAL_', y, '_', 1:672)
+    if (!all(cols %in% ad)) return(NULL)
+    m     <- as.matrix(cal[, ..cols])
+    valid <- rowSums(m >= 0 & m <= 4, na.rm = TRUE) == 672
+    m     <- m[valid, , drop = FALSE]
+    if (!nrow(m)) return(NULL)
+    work  <- m >= 1 & m <= 3
+    miss  <- m == 4
+    fill  <- rep(0, nrow(m))
+    for (t in 1:96) {
+      idx   <- which(t_of == t)
+      n_obs <- rowSums(!miss[, idx, drop = FALSE])
+      share <- if_else(n_obs > 0, rowSums(work[, idx, drop = FALSE]) / n_obs, 0)
+      fill  <- fill + rowSums(miss[, idx, drop = FALSE]) * share
+    }
+    n_miss <- rowSums(miss)
+    tibble(hh_id = cal$HH4_METH_CASEID[valid], hhm_id = y,
+           cal_hours = if_else(n_miss == 672, NA_real_, (rowSums(work) + fill) / 4),
+           cal_missing_blocks = n_miss)
+  }))
 }

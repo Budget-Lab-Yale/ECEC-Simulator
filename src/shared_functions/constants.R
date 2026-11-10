@@ -69,7 +69,10 @@ OASI_TAX_RATE     <- 0.062   # Old-Age and Survivors Insurance rate (6.2%)
 # 2019: the 2019 NSECE with the 2019 ACS (the default).
 # 2024: the 2024 NSECE with the 2024 ACS. 2024 extract (config key ACS-2024)
 #       lacks IPUMS tax-unit (TAXID, ADJGINC) and SPM variables -- not yet
-#       released; 1b stops, names them. 2023 ACS deliberately not used as a
+#       released. 1b reads own tax units from tax_unit_crosswalk_2024.csv
+#       beside ipums_usa.csv (Affordability-Index units, AGI via
+#       src/misc/make_tax_unit_crosswalk.R), stops
+#       w/o it; SPM poverty output off. 2023 ACS deliberately not used as a
 #       stand-in.
 #------------------------------------------------------------------------------
 
@@ -82,15 +85,13 @@ NSECE_ACS_YEAR_PAIRS <- c(
 
 # Optional data treatments for the 2024 NSECE (--nsece-2024-options). Each is
 # off by default and has no effect when the 2019 survey is used. The former
-# 'hours' option (missing-hours fill) is always on for 2024 since 2026-10-28;
-# config.R still accepts the name and drops it.
+# 'hours' option (missing-hours fill) is always on in both years; config.R
+# still accepts the name and drops it.
 #   weights: child weights of children under 5 raked to the March 2024 CPS
 #            share of children by mother's work status and family type
-#   supply:  2024 posted center rates equal to NORC's censoring caps (5th /
-#            95th percentile of each pay unit, found per age as pile-ups
-#            of one exact value) set to missing, as 2019 file deleted
-#            them (crosswalk mismatch item 4); center staffing from
-#            directors' staff counts instead of workforce file
+#   supply:  center staffing from directors' staff counts instead of
+#            workforce file. Censored rates now filled in both years by
+#            fill_censored_rates() (crosswalk mismatch item 4), no option
 NSECE_2024_OPTIONS <- c('weights', 'supply')
 
 

@@ -877,6 +877,8 @@ finalize_simulation <- function(sim_ctx) {
           agi_levels <- c('$0-10k', '$10-25k', '$25-50k', '$50-75k', '$75-100k',
             '$100-150k', '$150-200k', '$200-250k', '$250-500k', '$500k+')
           parent_age_levels <- c('Under 25', '25-29', '30-34', '35-39', '40+')
+          race_eth_levels <- c('Hispanic', 'White', 'Black', 'Asian or Pacific Islander', 'Other or multiple')
+          educ_levels <- c('Less than high school', 'High school', 'Some college', 'Bachelor\'s or more')
 
           tables <- list(
             list('Overall', 'overall', 'Group'),
@@ -885,7 +887,9 @@ finalize_simulation <- function(sim_ctx) {
             list('Distributional Impact by AGI Group', 'agi_group', 'AGI Group', agi_levels, strip_prefix),
             list('By Marital Status', 'marital', 'Status'),
             list('By Number of Children', 'n_children', 'Children'),
-            list('By Parent Age', 'parent_age', 'Parent Age', parent_age_levels, strip_prefix)
+            list('By Parent Age', 'parent_age', 'Parent Age', parent_age_levels, strip_prefix),
+            list('By Parent Race and Ethnicity', 'race_ethnicity', 'Race/Ethnicity', race_eth_levels, strip_prefix),
+            list('By Parent Education', 'parent_education', 'Education', educ_levels, strip_prefix)
           )
           for (tbl in tables) {
             tbl_data <- dist_data %>% filter(dimension == tbl[[2]]) %>% select(any_of(dist_cols))

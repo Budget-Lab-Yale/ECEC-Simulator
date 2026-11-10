@@ -1204,6 +1204,7 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
               per_weight1, per_weight2,
               n_children_original,
               age1, age2, married1, primary_caregiver,
+              race1, race2, hispanic1, hispanic2, educ1, educ2,
               baseline_agi = agi,
               baseline_net_income = net_income,
               baseline_gross_ecec_cost = gross_ecec_cost,
@@ -1450,7 +1451,11 @@ aggregate_all_groups <- function(all_families, agi_percentile_cutoffs = NULL) {
     aggregate_by_group(all_families, 'n_children', 'n_children_group'),
 
     # Parent age
-    aggregate_by_group(all_families, 'parent_age', 'parent_age_group')
+    aggregate_by_group(all_families, 'parent_age', 'parent_age_group'),
+
+    # Primary caregiver race/ethnicity and education
+    aggregate_by_group(all_families, 'race_ethnicity', 'race_eth_group'),
+    aggregate_by_group(all_families, 'parent_education', 'educ_group')
   )
 
   return(results)
@@ -1541,14 +1546,16 @@ assign_demographic_groups <- function(df) {
 
   #----------------------------------------------------------------------------
   # Assigns families to marital status, number of children, and primary
-  # caregiver age groups for distributional analysis
+  # caregiver age, race/ethnicity, education groups for distributional
+  # analysis. Race/ethnicity: Hispanic (HISPAN != 0) first, else IPUMS RACE.
+  # Education: IPUMS EDUC general codes (6 = grade 12, 10 = 4 years college).
   #
   # Params:
   #   - df (df): Family data with married1, n_children_original, age1, age2,
-  #       primary_caregiver columns
+  #       race1, race2, hispanic1, hispanic2, educ1, educ2, primary_caregiver
   #
   # Returns: (df) Input df with marital_group, n_children_group,
-  #     parent_age_group columns added
+  #     parent_age_group, race_eth_group, educ_group columns added
   #----------------------------------------------------------------------------
 
   df <- df %>%
@@ -1571,9 +1578,29 @@ assign_demographic_groups <- function(df) {
         pc_age < 35  ~ '3_30-34',
         pc_age < 40  ~ '4_35-39',
         TRUE         ~ '5_40+'
+      ),
+
+      # Primary caregiver race/ethnicity
+      pc_race     = if_else(primary_caregiver == 1, race1, race2),
+      pc_hispanic = if_else(primary_caregiver == 1, hispanic1, hispanic2),
+      race_eth_group = case_when(
+        pc_hispanic == 1      ~ '1_Hispanic',
+        pc_race == 1          ~ '2_White',
+        pc_race == 2          ~ '3_Black',
+        pc_race %in% c(4:6)   ~ '4_Asian or Pacific Islander',
+        TRUE                  ~ '5_Other or multiple'
+      ),
+
+      # Primary caregiver education
+      pc_educ = if_else(primary_caregiver == 1, educ1, educ2),
+      educ_group = case_when(
+        pc_educ <= 5  ~ '1_Less than high school',
+        pc_educ == 6  ~ '2_High school',
+        pc_educ <= 9  ~ '3_Some college',
+        TRUE          ~ '4_Bachelor\'s or more'
       )
     ) %>%
-    select(-pc_age)
+    select(-pc_age, -pc_race, -pc_hispanic, -pc_educ)
 
   return(df)
 }

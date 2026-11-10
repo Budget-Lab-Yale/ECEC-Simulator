@@ -30,11 +30,11 @@ Sector wages (Open item 2). The original model uses one wage pair for every sect
 
 Reweighting (Open item 4). The original model does not reweight: it uses the NSECE weights as given. John's `weights` option rakes the 2024 child weights to an outside benchmark of mothers' employment by family type. The NSECE is off from the CPS in opposite directions in the two years: 53.6% of mothers working in 2019 against 57.1%, and 64.3% in 2024 against 59.6%. Reweighting only 2024 would treat the years differently. The consistent choices are to reweight both years or neither. The 2024 targets can be the March 2024 CPS or the 2024 ACS.
 
-Censored rates (mismatch item 4). NORC hides extreme posted rates to limit disclosure, by censoring them at the 5th and 95th percentile of each time unit and age. The 2019 file deletes them (code −2). `1a` reads −2 as a missing price, so the cell has no sector, and its children and staff leave the sector rows and `L_0`. The 2024 file replaces each one with the cap value, and `1a` uses it as a real price. The choice is whether to delete the 2024 caps, as 2019 does. The caps are real rates cut to the cap value, so deleting also removes usable information. It lowers 2024 `L_0` by about 8%.
+Censored rates (mismatch item 4). NORC hides extreme posted rates to limit disclosure, by censoring them at the 5th and 95th percentile of each time unit and age. The 2019 file deletes them (code −2). `1a` reads −2 as a missing price, so the cell has no sector, and its children and staff leave the sector rows and `L_0`. The 2024 file replaces each one with the cap value. Decided by Anna on 2026-11-06: `1a` fills each censored rate in both years with the lognormal mean beyond its cut, so the cell keeps its sector (mismatch item 4 has the method and results).
 
-Administrative-data centers (mismatch item 5). These are programs built from administrative records, mostly public-school programs, with no price and no workforce data. In the original model, the ones where no family pays (2019 rate flag −8, which `main` reads as free) already sit in the Unpaid sector's enrollment, but with no staff, because they have no workforce records. That makes Unpaid staff per FTE child too low: 0.0517 for staff without a BA in 2019, against 0.0550 with their own staff counts. This branch gives them their own staff count in both years (469 of 483 centers in 2019, 930 of 1,141 in 2024). The ones where families pay sit outside every sector in both years: 13 centers in 2019 and 179 in 2024 (3.0% of interviewed Low- plus High-priced FTE enrollment). The 2024 file withholds their price. Most 2019 ones carry a posted rate (6,413 of 6,762 FTE children), but `1a` sets all admin centers aside before pricing. The choice is where the paying ones belong: outside, in Low-priced, split between Low and High, or, for 2019, by their own price. A fit on region, size, and community context gave no gain over the fixed split in 2024 (mismatch item 5).
+Administrative-data centers (mismatch item 5). These are programs built from administrative records, mostly public-school programs, with no price and no workforce data. In the original model, the ones where no family pays (2019 rate flag −8, which `main` reads as free) already sit in the Unpaid sector's enrollment, but with no staff, because they have no workforce records. That makes Unpaid staff per FTE child too low: 0.0517 for staff without a BA in 2019, against 0.0556 with admin centers dropped. Decided by Anna on 2026-11-06: supply uses no admin staff. `1a` drops every admin center from supply in both years, free and paying alike, so the Unpaid ratios come from interviewed centers and `L_0` excludes admin children. This replaces the 2026-10-27 rule, which gave free admin centers their own staff count. The children in admin programs still enter the household side through their parents' reports. The placement tests for paying admin centers (mismatch item 5) are kept as a record only.
 
-NORC's imputed staff counts (mismatch item 7). In 2019, 403 of the 469 free admin centers have a valid staff count; for the 178 records that also carry director items, the count equals the reported classroom staff, so the 2019 counts look reported. The 2019 center file has no imputation flag for the staff count (the 2024 file has `CB4_ADMIN_STAFF_IMP`), and the 2019 user's guide says the administrative data came from district, state, and federal sources, with no imputation of staff counts (checked 2026-10-29 by searching the guide for imputation and reading section 4.2). In 2024, NORC imputed the count for 578 of the 930 free admin centers (enrollment times a district ratio, or 0.11 where no center in the district reported). For large centers that is too high. The code uses NORC's count in both years. The choice is whether to keep it or replace it with an estimate by center size.
+NORC's imputed staff counts (mismatch item 7). In 2019, 403 of the 469 free admin centers have a valid staff count; for the 178 records that also carry director items, the count equals the reported classroom staff, so the 2019 counts look reported. The 2019 center file has no imputation flag for the staff count (the 2024 file has `CB4_ADMIN_STAFF_IMP`), and the 2019 user's guide says the administrative data came from district, state, and federal sources, with no imputation of staff counts (checked 2026-10-29 by searching the guide for imputation and reading section 4.2). In 2024, NORC imputed the count for 578 of the 930 free admin centers (enrollment times a district ratio, or 0.11 where no center in the district reported). For large centers that is too high. Closed on 2026-11-06: with admin centers dropped from supply, the code uses no admin staff count in either year.
 
 The `supply` option. John Ricco added it on 2026-10-17. It does two things: it deletes the 2024 censoring caps, and it measures center staffing from the director's staff count. The original model gets the first from the 2019 file and does not do the second (it uses the workforce file). So the answer to "should we turn it on" is split, and the two parts should be decided separately (see *John's optional 2024 treatments*).
 
@@ -84,7 +84,7 @@ Rule: `resp_male = 1 if RGENDER_1==1; 0 if RGENDER_2==1; NA otherwise` (the 2024
 | 3 | DK/Ref | — |
 
 Crosstab against `CB4_B1_3_FAMPAY` (2YR shown): −3 & FAMPAY=2 → 1,407 (= free); −3 & FAMPAY=−1 → 103 (missing); −8 → 1,141 admin centers.
-New FREE rule: `AGERATE == -3 & B1_3_FAMPAY == 2`. `1a` sets admin cases aside; free ones join Unpaid Center-Based (see *Administrative-data centers*).
+New FREE rule: `AGERATE == -3 & B1_3_FAMPAY == 2`. `1a` drops admin cases from supply (see *Administrative-data centers*).
 
 ### Center-based enrollment and staffing
 - `ENRL_*` now carries −8 (admin, 1,141) and −1 (DK). Summed directly, these give **negative enrollment**. `harmonize_nsece_2024_centers()` sets enrollment by age to 0 for both codes before the sum.
@@ -104,6 +104,23 @@ Without a recode, `n_workers = 1 + (−3)` would be wrong for every no-helper pr
 
 ### Workforce wage
 New codes −3 (not paid: volunteer/owner, 16) and −5 (not enough info, 34). They fall through to `ADMIN`. `recode_missing_admin_to_na()` sets both `ADMIN` and `MISS` to NA, and no later step reads `wage_status`, so these 50 workers leave the wage averages either way. No change is needed. −8 = admin-spawned (1,141) is unchanged in meaning.
+
+**Definitions** (2024 workforce questionnaire, section B, and user guide pp. WF-95 to WF-109; the 2019 wage has the same construction):
+
+| Variable | Item | Construction | What it leaves out |
+|---|---|---|---|
+| `WORK_WAGE` | B4_M: pay "before taxes and deductions" and its unit (hour, day, week, 2 weeks, month, year, other); 2024 adds the B4a confirmation | Converted to hourly with B1 hours per week, the center's days open per week, and its weeks open per year. Imputed when rate or unit is missing (`WORK_WAGE_IMP`). Top-coded: above the lowest cutoff of the worker's urbanicity, auspice, and education cells, set to the median of the top-coded pool | Benefits, employer payroll tax, extra payments |
+| `B12_OTHPAY` (2024 only) | "In addition to the regular payments you earn from this center, have you received any other payments for early care and education workers in the past 12 months?" Bonus, special service pay, performance award, training incentives, other money outside regular pay | Yes 2,366, no 3,859 (unweighted) | Source of the money: not limited to the center |
+| `B13_OTHPAY_AMT` (2024 only) | Total of those payments in the last 12 months, $0--$250,000 | Median $1,000, mean $1,948 (unweighted, n 2,083) | A 12-month total, not hourly |
+| `B11_WORK_MONTH_ECE` | Months of the last 12 worked "at this or another" ECE program | Mean 10.2 | Not limited to this center |
+| `WORK_HRS_CAT`, `WORK_FT` | B1 usual hours per week at this program | Six ranges in the public file (exact hours restricted); FT is 35 hours or more | |
+| `WORK_ROLE` | Role reported by the center respondent, not the worker | 1 aide or assistant, 2 teacher or lead teacher, 3 other | `1a` keeps 1 and 2 |
+| `CHAR_EDUC` | Highest level completed | 1 less than high school, 3 GED, 4 high school, 5 some college, 6 associate, 7 BA, 8 graduate (no code 2) | `1a`: BA = 7, 8 |
+
+`1a` sets the wage pair to the worker-weighted mean of `WORK_WAGE` for roles 1--2 by BA. Points still to settle (2026-11-09):
+- The mean is per worker, not per hour worked, so a part-time aide counts as much as a full-time teacher. Labor cost per child-hour argues for weighting by hours (worker weight × the FT factor used for staffing).
+- Extra pay can include public workforce money paid to the worker directly (state wage supplements, retention bonuses), which is not a provider cost. It belongs in worker compensation (labor supply) more clearly than in provider labor cost (the residual), and the survey cannot split the two.
+- Top-coding replaces the highest wages with a pool median, which lowers the BA mean most.
 
 ### Household labor
 - `D1A_WORK_X`: 3=DK in 2019 → −1 in 2024; −3 valid skip and −33 invalid skip are new. The code keeps only 1/2, so no change is needed beyond the loop size.
@@ -163,7 +180,10 @@ Brown, Gibbs, Mahoney and Ninan's model is already estimated on the 2024 NSECE. 
   regular care.
 - **Supply:** listed home-based providers only (the 2024 home-based guide advises against pooling listed and
   unlisted); center staffing ratios from the sampled classroom, FTE-adjusted.
-
+- **Demographics** (white paper section 2, footnote 5): a nested logit with preference shifters for Hispanic
+  ethnicity, mother's college education, single parent, and child age, on the employment nest, care type, and
+  care intensity. Household income comes from ACS cell means by mother's age, ethnicity, partner status, and
+  education. No other race groups, and none on the worker side.
 ## Base year → 2024: ACS (open)
 
 The 2024 NSECE is ready to use; the gap is on the ACS side.
@@ -190,12 +210,8 @@ The 2024 NSECE is ready to use; the gap is on the ACS side.
   2. **Wait** for Census and IPUMS.
   3. **Build 2024 tax units ourselves.** `Budget-Lab-Yale/Affordability-Index` (private repo) has an ACS tax-unit builder (`R/02_income/02_tax_units.R`, pointer method with qualifying-child and qualifying-relative rules). It builds its own units from the IPUMS household pointers (`SPLOC`, `MOMLOC`, `POPLOC`) and uses `TAXID` only as a benchmark, so it does not need the missing 2024 `TAXID`. Tax-Simulator cannot do this step: it computes tax on its own PUF-based tax units and has no ACS input.
      - Units, built 2026-10-29 (`ai-private` on Bouchet, jobs 31284243 for 2024 and 31284244 for 2023; spine and tax-unit stages only). 2024: 3,238,311 persons (unweighted) form 1,758,184 units. No unit spans two households, and every unit has one primary filer. 2023, the same code against IPUMS `TAXID`: 3,228,659 persons; the partitions agree exactly for 88.9% of persons. The builder makes 1,750,114 units against 1,796,379 for IPUMS. It splits IPUMS units for 269,068 persons and merges IPUMS units for 127,207. The builder is a different construction from the IPUMS one, and `1b` uses the IPUMS units in 2023.
-     - `1b` change, done 2026-10-29. `1b` reads `tax_unit_crosswalk_<year>.csv` beside `ipums_usa.csv` for any ACS year other than 2019 when the file exists (columns `serialno`, `sporder`, `tax_unit`, `agi`; `tax_unit` is a numeric id unique across households, `agi` is the unit's AGI on every member). It then needs no `TAXID` or `ADJGINC` in the ACS file. Each unit counts as one legacy fragment, so `reconstruct_tax_unit_agi()` returns the unit AGI unchanged. Without the file, the 2024 run still stops at the missing `TAXID` and `ADJGINC`, and the message names the file path. Tested on a toy file with both paths (no `TAXID` or `ADJGINC` columns, then IPUMS columns). Not run on real data: no 2024 crosswalk file exists yet.
-     - Plan for AGI, not started. The crosswalk file holds the builder's unit ID and an AGI computed from ACS income components.
-       1. Compute unit AGI from the ACS income components of the unit's members.
-       2. Run the same computation on the 2023 ACS and compare it with `ADJGINC`. Report the weighted mean difference, the share of units within $1,000, and the AGI percentile shift, since the donor match uses the AGI percentile.
-       3. Run it on 2024 and write the crosswalk.
-     - This AGI is a proxy. The ACS lacks most capital gains, tax-exempt interest, and several adjustments, so it will understate AGI at the top. The earlier plan required a real tax calculation on the units, through the Affordability-Index donor chain and Tax-Simulator, validated against `ADJGINC` and SOI. The donor chain is the larger piece of work, and its 2024 coverage depends on Tax-Data. Whether the proxy is good enough is decided by the 2023 comparison.
+     - `1b` change, done 2026-10-29. `1b` reads `tax_unit_crosswalk_<year>.csv` beside `ipums_usa.csv` for any ACS year other than 2019 when the file exists (columns `serialno`, `sporder`, `tax_unit`, `agi`; `tax_unit` is a numeric id unique across households, `agi` is the unit's AGI on every member). It then needs no `TAXID` or `ADJGINC` in the ACS file. Each unit counts as one legacy fragment, so `reconstruct_tax_unit_agi()` returns the unit AGI unchanged. Without the file, the 2024 run still stops at the missing `TAXID` and `ADJGINC`, and the message names the file path. Tested on a toy file with both paths (no `TAXID` or `ADJGINC` columns, then IPUMS columns). Run on real data on 2026-11-09: the 2024 smoke test passed with our crosswalk (Open item 5).
+     - Units and AGI come from the Affordability-Index full income chain (John Iselin's runs): units from its `tax_units` stage, AGI from PUF donor returns taxed by the pinned Tax-Simulator. `src/misc/make_tax_unit_crosswalk.R` converts them to the `1b` crosswalk. On 2026-11-09 this script replaced our own ACS-income builder, which is no longer used. The validation of both against the corrected 2019 Census crosswalk is in Open item 3.
      - SPM poverty output stays off until Census publishes the 2024 SPM file.
 - **Not a source:** `model_data/Tax-Data-Bridge/.../tax_units_2024.parquet` is the aged PUF (the same 220,896
   records every year), not ACS persons, so it can't supply ACS tax-unit IDs. It's the donor pool the model
@@ -212,6 +228,10 @@ The work sits on `feat/nsece-2024`, John's branch, which already held three of t
 ### Base year: 2024 ACS
 
 The model pairs the 2024 NSECE with the 2024 ACS. John's branch had paired it with the 2023 ACS and converted dollars to 2023; `NSECE_ACS_YEAR_PAIRS` now maps 2024 to 2024, so the dollar conversion factors are 1 (the conversion code in `get_nsece_dollar_conversion.R` stays for reuse). The 2024 ACS person file is on Bouchet at `raw_data/ACS/v1/2024/ipums_usa.csv` (IPUMS extract 36, `us2024a`, 3,422,888 person records, unweighted), named `ACS-2024` in `config/default_paths.yaml`; `1b` reads `ACS-<year>` when that key exists, else `ACS`. The file has no `TAXID` or `ADJGINC`. Where 2024 tax units and AGI come from is open (see *Base year → 2024: ACS* and Open item 3).
+
+### ACS employment: armed forces at work
+
+Decided by Anna on 2026-11-09. `1b` counts a parent as working if at work in the reference week, civilian or armed forces (`EMPSTATD` 10 or 14). Before, armed forces at work (14) counted as not working. They are 1.0% of parents of children under 5 in the 2019, 2023, and 2024 ACS (weighted). The share of these parents at work goes from 74.5% to 75.5% in 2019 and from 75.7% to 76.8% in 2024 (2026-11-09, `newitems1109/af.R` on Bouchet). The NSECE work item, D1a, tells respondents to include work in the military. Parents with a job but not at work (12, 2.2%–2.3%; 15, under 0.01%) stay not working, as in the NSECE, where D1a counts only paid work last week (1.6% of NSECE parents in 2019 and 0.8% in 2024 did no paid work last week but have a job). Students have no ACS employment status: a student with a job is at work, and a parent who only attends school or training gets zero NSECE work hours. The check `11_acs_mother_at_work.R`, which builds the reweighting targets, still uses `EMPSTATD == 10` so that it reproduces the review's figures.
 
 ### Don't-know cost → missing, for every care type
 
@@ -302,7 +322,20 @@ Staff counts in the administrative records (`08_admin_staffing.py`; staff per ch
 - The admin staff count is measured, not implied, so including the admin centers adds their own staff to `L_0` and their own enrollment to `hours_by_sector`. It does not assume that public-school programs staff like interviewed centers.
 - The admin records give no BA split. The interviewed public-school BA share is the nearest substitute.
 
-Decision on 2026-10-27 (it replaced an earlier decision to drop them in both years): include the admin centers in the Unpaid sector with their own staff count, in both years. `1a` does this as follows:
+Decision on 2026-11-06 (Anna): supply uses no admin staff. `1a` drops every admin center before the price medians, the classroom file, the workforce ratios, and the sector rows, in both years. Unpaid staff ratios come from interviewed centers, and `L_0` excludes admin children. The reason is that their only staff item is a total headcount with no BA split, and NORC imputed it for 623 of the 1,141 centers in 2024. The admin facts above stay as a record.
+
+Measured on 2026-11-06 (`1a` only, Bouchet jobs 32341414 to 32341417, runs `19_base`/`19_noadm` and `24_base`/`24_noadm`, base = the 2026-10-27 rule at `013b80d`):
+
+| | 2019 base → drop | 2024 base → drop |
+|---|---|---|
+| Unpaid no-BA staff per FTE child-hour | 0.0544 → 0.0556 | 0.0935 → 0.1060 |
+| Unpaid BA staff per FTE child-hour | 0.0624 → 0.0628 | 0.0759 → 0.0777 |
+| `L_0` no BA, billion staff-hours | 1.492 → 1.481 (−0.7%) | 1.872 → 1.848 (−1.3%) |
+| `L_0` BA, billion staff-hours | 0.603 → 0.588 (−2.4%) | 0.793 → 0.753 (−5.1%) |
+
+No other supply parameter and no care share changes.
+
+Superseded decision of 2026-10-27 (it had replaced an earlier decision to drop them): include the admin centers in the Unpaid sector with their own staff count, in both years. `1a` did this as follows:
 1. It sets the admin centers aside before the price medians, the classroom file, and the workforce ratios. They have no data for any of those.
 2. It keeps the admin centers where no family pays. It uses the same rule as for interviewed centers: a rate flag of −8. Admin centers where families pay have no price, so they stay out of every sector, as before.
 3. It computes their FTE enrollment under age 6. In 2019 it uses enrollment by age and the full-time share by age. In 2024 it uses total enrollment under 6 and the full-time share from `CB9_ADMIN_FULLTIME_CARE` and `CB9_ADMIN_PARTTIME_CARE` (full time only 100%, part time only 0%, else 50%).
@@ -360,7 +393,7 @@ Only the parents' hours records drop, not the children, and those parents are th
 `weights` and `supply` are off by default; `hours` was off until 2026-10-28. Sizes come from John's runs, summarized in `docs/nsece_2024/decisions.md`:
 - `hours` (always on for 2024 since 2026-10-28, no longer an option) fills in hours for parents with a −10 calendar block from similar workers, as the 2019 pipeline does for other gaps. 2024 employment of two-parent primary caregivers goes from 58.6% to 62.2%, single parents from 64.5% to 68.0%, and partners from 84.9% to 89.8%. Applying the same fix to 2019 moves 2019 employment by 0.4 to 0.7 points. The option now draws donors by earner rank and hourly wage band (mismatch item 3).
 - `weights` reweights 2024 child weights to the March 2024 CPS on mothers' employment by family type. It shrinks the 2019 to 2024 change in parent-only care from −6.7 points to between −2.2 and −3.5, and in any paid care from +4.2 to between +0.1 and +1.3. NSECE mothers' employment is 53.6% in 2019 and 64.3% in 2024, against 57.1% and 59.6% in the CPS.
-- `supply` (John Ricco, commit `fb56186`, 2026-10-17) does two things. It sets 2024 posted rates equal to NORC's censoring caps to missing, as the 2019 file deleted them. Since 2026-10-29 it finds the caps with the per-unit rule in mismatch item 4; John's version cut at the 5th and 95th percentiles across all pay units, which removes other rates. It also measures center staffing from the director's staff count instead of the workforce file. The original model has neither: its 2019 data arrive with the censored rates already deleted, and it measures staffing from the workforce file. Current figures are in Open item 4.
+- `supply` (John Ricco, commit `fb56186`, 2026-10-17) did two things. Its first part set 2024 posted rates equal to NORC's censoring caps to missing, as the 2019 file deleted them. Since 2026-11-06 that part is gone: `1a` fills the censored rates in both years instead (mismatch item 4). Its second part, still in the option, measures center staffing from the director's staff count instead of the workforce file. The original model has neither: its 2019 data arrive with the censored rates already deleted, and it measures staffing from the workforce file. Current figures are in Open item 4.
 - The calendar wording change (typical-week households) has no option. Every treatment John tried moves 2024 parent-only care by 1.2 points or less, except counting usual providers in both years, which also moves 2019 (52.6% to 47.9%).
 
 ### Other findings, not yet resolved
@@ -393,11 +426,36 @@ Measured on 2026-10-28 on the code of `7b12f29`: `09_definition_checks.py` on th
    - Fixed on 2026-10-28: the `hours` option now draws donors with the same earner rank and the same hourly wage band (under $15, $15–25, $25–40, $40 or more, no wage). The smallest donor cell has 270 parents. Weighted mean weekly hours of the filled parents against donors: first earners 44.7 against 43.9, second earners 35.1 against 35.9 (run `24_hours2`). Before the fix, two-parent fathers got 39.9. Within single wage bands the filled means differ from the donor means by up to 12.4 hours, because each band holds 5 to 61 filled parents; the draw is random, not biased.
    - Work rates do not change with the donor rule (hours above 0 either way): mothers in two-parent units 59.33% without `hours` and 63.18% with it. The hours enter `1b` and calibration only.
    - Approved and implemented on 2026-10-28: the fill is always on for 2024 and is no longer an option (`--nsece-2024-options hours` is accepted and ignored). It changes no care share and no supply parameter.
+   - Revised by Anna on 2026-11-06, both years, in `1a` (`parent_calendar_hours()`, `draw_donor_hours()`). The 2026-10-28 donor rules biased care choice. Masked test (scratch, parents w/ D1a yes and known hours, hours hidden and redrawn, 20 draws):
+     - Filled parents are unlike donors: their child has no non-parental care in 54% to 81% of cases, against 33% of donors (weighted).
+     - True full-time gap between parents whose child has 35+ hours of care and parents whose child has none: +7.5 points (2019), +10.8 (2024). Earner-rank draws give −6.3 and −5.8; earner rank × wage band −5.9 and −2.6. With earner rank × wage band, the income gap (top vs bottom quintile, true +10.9 and +10.5) falls to +1.5 and +5.1.
+     - Cells of earner rank, child's weekly care hours, income quintile, wage band, region, and urban density keep both gaps (+7.2 and +11.6; +10.8 and +12.3) and lower the hours error (14.3 vs 15.3 hours in 2019). Dropping one key at a time: care hours, income quintile, and wage band each matter; region helps in 2024; urban density matters little but is matched last; care type, parent count, child age, and questionnaire version add nothing and thin the cells.
+     - 2024 adult calendar file (`39466-0004`, codes 1 work, 2 school, 3 training, 4 missing per 15-minute block): blocks × 0.25 reproduce NORC's hours for all 3,857 complete calendars. A missing block takes the parent's own work share at the same time of day on other days; on complete calendars with a real missing pattern copied on, the error is about 10 hours, against about 15 for any donor rule.
+   - Rule: zero calendar hours with D1a yes → donor. No hours record: D1a no → 0; D1a yes → own calendar hours where positive (2024 calendar households), else donor. A child row without a record takes the parent's hours from another child's record first.
+   - Measured 2026-11-06 (`1a` only, runs `19_hrs`, `24_hrs` against `19_tail`, `24_tail`): 2019 donor hours for 469 zero-hours and 66 no-record parents, 164 no-record parents set to 0; 2024: 232 zero-hours donor, 187 own calendar, 191 no-record donor, 79 set to 0. Donor cells keep all six keys for 367 of 533 recipients (2019) and 289 of 423 (2024); 15 lose three or more. Work rates (hours above 0, household weights) 2019: one-parent fathers 84.43% → 86.63%, two-parent fathers 90.67% → 91.02%, one-parent mothers 51.33% → 51.85%, two-parent mothers 53.72% → 54.11%; 2024 unchanged. No care share or supply parameter changes.
 4. 2019 deletes the censored rates, 2024 keeps them at the cap.
    - Both years use one rule: each reported time unit (hourly, half-day, full-day, weekly, monthly, term, and so on) is censored at the 5th and 95th percentiles of the weekly rates in that unit, for each age. NORC does this "to limit disclosure". 2019 deletes the censored rates (code −2, "Trimmed Value"): 9.0% to 9.5% of positive rates per age. 2024 gives each one the exact cap value of its unit, with no flag (2024 center user's guide p. CB-508).
    - The 2024 caps are therefore visible as pile-ups of one value. Per age, the four largest are the weekly and the monthly caps. Age 3: $130 (115 rates) and $390 (106) per week; $69.04 (63) and $540.82 (62), which are $300 and $2,350 per month. These four hold 9.2% to 10.3% of 2024 positive rates per age, close to the 2019 share. Smaller pile-ups (for example $775 at age 3, 12 rates) are the caps of rarer units.
    - John's original `supply` trim cut at the 5th and 95th percentiles across all units, which removes 10.0% to 11.2% of 2024 rates but not the same rates as NORC. The option now uses the rule in the next bullet (2026-10-29).
-   - The rule (in the `supply` option since 2026-10-29): in 2024, set positive rates equal to the four caps of their age to missing (−2), as 2019 does. The rule finds the caps itself: per age, the most frequent value below the 15th and above the 85th percentile, separately for monthly amounts (rate × 4.34524 is a whole dollar) and for the others. Measured (run `24_caps2`, current code): the Low-priced residual goes from −$0.47 to −$0.25 per child-hour and the High-priced from $4.56 to $4.60. Low no-BA staff per FTE child goes from 0.2034 to 0.2010 and High from 0.1560 to 0.1513. `L_0` falls 8.0% (no BA) and 7.4% (BA), because centers without a price leave the sector rows, as the trimmed 2019 centers already do.
+   - Decided by Anna on 2026-11-06 and in `1a` (`fill_censored_rates()`), both years, always on: fill each censored rate instead of dropping it.
+     - The uncensored rates (positive, $2,000 a week or less) have one peak and fit a lognormal closely: quantile-fit R² 0.983 to 0.992 by age, against 0.91 to 0.95 for a normal in dollars.
+     - 2024: the caps are known, so a censored (Tobit) lognormal fit uses them. Each censored rate gets the lognormal mean beyond its own cap: below the low cap $2.10 to $2.99 per hour by age, above the high cap $14.48 to $17.29.
+     - 2019: only the count of censored rates is known. A quantile fit of the body puts half of that share in each tail, and the cuts are the fitted quantiles. The tail of each censored rate comes from a logit fit on the 1,268 censored 2024 rates, where the tail is known: center traits (for profit, public school, Head Start, public pre-K, subsidy revenue, log FTE size), region, urban density, and the center's own rates at other ages. In 5-fold cross-validation on 2024 (without urban density) it gets the tail right for 88% of rates, against 70% by always guessing low. Filled values: low tail $1.51 to $2.06 per hour, high tail $10.72 to $13.08.
+     - Every low-tail mean is below its age-bin median and every high-tail mean above it, so a filled cell lands in Low- or High-priced.
+     - The over-$2,000 rates now carry their own missing code (−20), so 2019 −2 means only NORC's censoring.
+     - This replaces the `supply` option's cap deletion.
+   - Measured 2026-11-06 (`1a` only, runs `19_tail` and `24_tail` against `19_noadm` and `24_noadm`; admin centers dropped in all four):
+
+     | | 2019 before → filled | 2024 before → filled |
+     |---|---|---|
+     | Low residual ($ per child-hour) | 0.47 → 0.17 | −0.47 → −0.56 |
+     | High residual | 3.32 → 3.68 | 4.56 → 4.83 |
+     | Low no-BA / BA staff per FTE child-hour | 0.1786 / 0.0350 → 0.1784 / 0.0375 | unchanged |
+     | High no-BA / BA | 0.1559 / 0.0758 → 0.1518 / 0.0760 | unchanged |
+     | `L_0` no BA / BA, billion staff-hours | 1.481 / 0.588 → 1.600 / 0.642 (+8.0% / +9.1%) | unchanged |
+
+     In 2024 the capped cells already had a sector, so only prices move. No care share changes in either year. In 2024 the fill makes the Low residual more negative, because low-tail centers are cheaper than the cap; the sector-wage choice (Open item 2) is the fix for that residual.
+   - Superseded rule (`supply` option, 2026-10-29 to 2026-11-06): in 2024, set positive rates equal to the four caps of their age to missing (−2), as 2019 does. The rule finds the caps itself: per age, the most frequent value below the 15th and above the 85th percentile, separately for monthly amounts (rate × 4.34524 is a whole dollar) and for the others. Measured (run `24_caps2`, current code): the Low-priced residual goes from −$0.47 to −$0.25 per child-hour and the High-priced from $4.56 to $4.60. Low no-BA staff per FTE child goes from 0.2034 to 0.2010 and High from 0.1560 to 0.1513. `L_0` falls 8.0% (no BA) and 7.4% (BA), because centers without a price leave the sector rows, as the trimmed 2019 centers already do.
    - Deleted rates drop their center-age cells, with their staff, from the sector rows in both years; in 2024 that is the 8% fall in `L_0`. `main` does the same in 2019.
    - Priced enrollment each year keeps (`10_fix_evidence.py` section I; interviewed centers where families pay, weighted FTE children by 1a age bin; a cell is priced if any rate in the bin is positive):
 
@@ -444,7 +502,7 @@ Measured on 2026-10-28 on the code of `7b12f29`: `09_definition_checks.py` on th
      The High-priced residual is not shown: these runs predate the $2,000 fix, which moved it ($4.60 became $4.56).
 
    - `L_0` gains the same staff under every placement. In 2019 every placement moves each ratio by less than 0.4% and `L_0` by 0.1% (runs `19_admlow`, `19_admhigh`, `19_admsplit`).
-   - Not decided; all three placements are test variants only. The price evidence puts 72% to 86% of comparable enrollment in Low, so Low and the split are the placements the evidence supports. They differ by $0.03 in the Low residual.
+   - Closed on 2026-11-06: admin centers are dropped from supply, so paying ones stay in no sector. All three placements were test variants only. The price evidence puts 72% to 86% of comparable enrollment in Low, so Low and the split are the placements the evidence supports. They differ by $0.03 in the Low residual.
 6. Free status is center-wide in both years, not by age.
    - The 2019 −8 flag is set for every age of a center, as FAMPAY is. 2024 has no by-age flag. The two years match, so no fix is needed.
 7. NORC imputed most 2024 admin staff counts.
@@ -469,7 +527,17 @@ Measured on 2026-10-28 on the code of `7b12f29`: `09_definition_checks.py` on th
      Runs `24_stbase`, `24_stflat`, `24_stcells`, `24_stloglog`, `24_streg`, and `24_stregs` (2026-10-29, current code, 352 reported centers in the fits). The first four reproduce the 2026-10-28 numbers exactly.
 
    - Which is more accurate: within the same size range, the reported centers imply fewer staff than NORC's counts for the large, full-time centers that make up most of the imputed group. So the flat reported ratio is the least accurate rule, and NORC's counts are probably too high. Region does not explain the gap (section J6): reported centers in regions 1 and 2 have about 0.06 staff per FTE child and in regions 3 and 4 about 0.13, and most imputed centers are in regions 1 and 4. A log-log fit with region gives 15,530 staff for the imputed centers (−27.8% against NORC; −17.1% for all 930), and with the full-time share as well 14,362 (−33.2%; −20.4%). Region 1 has only 18 reported centers, so its coefficient is uncertain. NORC used its 0.110 default for 75% to 92% of imputed centers in regions 1, 2, and 4, against 21% in region 3, so most imputed counts carry no local information.
-   - Not decided. The production code uses NORC's counts. The choice moves 2024 Unpaid staff per child by −2.8% to +0.8% for the rules with both ratios read, and `L_0` by +0.1% to −0.3% (no BA) and +0.2% to −1.0% (BA), including the region fits.
+   - Size and age, checked on 2026-11-09 (scratch `admin_size_1109.py` and `admin_age_1109.py`, `nsece_evidence/admin1109` on Bouchet; staff per FTE child 0–5, center weights; counts are unweighted centers). Admin centers serve only children 3 to 5 (no 2019 admin record has enrollment under 3). Neither size nor age mix explains their low ratio. In every size band, admin centers report 0.08–0.20 staff per FTE child, 36%–84% of the 0.18–0.45 classroom staff headcount at interviewed public-school centers that also serve only children 3 to 5:
+
+     | Enrolled 0–5 | 2019 admin, total count | 2019 interviewed public school, 3–5 only, classroom headcount | 2024 admin, reported count | 2024 interviewed public school, 3–5 only, classroom headcount |
+     |---|---|---|---|---|
+     | 0–19 | 0.161 (42) | 0.447 (117) | 0.199 (56) | 0.326 (102) |
+     | 20–39 | 0.135 (178) | 0.271 (186) | 0.147 (208) | 0.176 (126) |
+     | 40–79 | 0.099 (151) | 0.203 (211) | 0.109 (199) | 0.246 (133) |
+     | 80–159 | 0.083 (40) | 0.180 (79) | 0.115 (49) | 0.213 (83) |
+
+     The admin total count is comparable with interviewed classroom headcount, not with interviewed total staff (0.38–0.41, which includes staff outside the 0–5 classrooms): in 2019 the admin total equals the 0–5 classroom count. The data cannot tell whether admin programs staff more leanly or whether their counts leave out staff.
+   - Closed on 2026-11-06: admin centers are dropped from supply, so the code uses no admin staff count. When open, the choice moved 2024 Unpaid staff per child by −2.8% to +0.8% for the rules with both ratios read, and `L_0` by +0.1% to −0.3% (no BA) and +0.2% to −1.0% (BA), including the region fits.
 
 ### Open items
 
@@ -485,7 +553,43 @@ Measured on 2026-10-28 on the code of `7b12f29`: `09_definition_checks.py` on th
    | High no BA / BA | 0.1559 / 0.0758 | 0.1667 / 0.0592 | 0.1560 / 0.0752 | 0.1636 / 0.0685 |
    | `L_0` no BA / BA | | −1.4% / −3.3% | | −0.9% / +0.2% |
 
-3. 2024 tax units, AGI, and SPM (*Base year → 2024: ACS* has the detail). `1b` reads `raw_data/ACS/v1/2024/ipums_usa.csv` (extract 36, config key `ACS-2024`) and needs a tax-unit crosswalk beside it, because IPUMS has not released `TAXID`, `ADJGINC`, or the six SPM variables for 2024. Open question: pair the 2024 NSECE with the 2023 ACS, or make 2024 tax units and AGI. The units are built and the `1b` change is done; the AGI step and the crosswalk file are not.
+3. 2024 tax units, AGI, and SPM (*Base year → 2024: ACS* has the detail). `1b` reads `raw_data/ACS/v1/2024/ipums_usa.csv` (extract 36, config key `ACS-2024`) and needs a tax-unit crosswalk beside it, because IPUMS has not released `TAXID`, `ADJGINC`, or the six SPM variables for 2024. Decided by Anna on 2026-11-09: make our own 2024 tax units and AGI, not the 2023 ACS. The `1b` change is done. A first builder made the file from the household roster, ACS income, and IRS dependent tests. Later the same day the Affordability-Index converter replaced it in `src/misc/make_tax_unit_crosswalk.R` (see below); the builder is in commit `d89994c`. The builder's record follows. A first build on extract 36 (Bouchet job 32682313) had AGI from wages plus business income only, because extract 36 has no other income items; it is in `agr55/nsece_evidence/taxunit1109/`.
+
+   The same day I requested IPUMS extract 37 (2024): extract 36's variables plus `INCINVST`, `INCRETIR`, `INCSS`, `INCOTHER`, `INCTOT`, and `SCHOOL`. The builder now adds investment, retirement, and other income, and taxable Social Security by the IRS provisional-income rule, to AGI when the file has them. A 19--23-year-old counts as a student if `SCHOOL` says in school, and by an earnings test (under $15,000) when the file has no `SCHOOL`. The ACS other-income item includes some untaxed money, such as child support, and cannot be split. Extracts 37 and 38 (2019, the same items plus `TAXID` and `ADJGINC`) are in `agr55/nsece_evidence/taxunit1109/ipums/`.
+
+   Validation on 2019 against the corrected Census crosswalk and IPUMS `ADJGINC` (extract 38, job 32684861; earlier rules job 32682312; weighted unless unweighted):
+
+   | | Earnings only, earnings student test | All income, earnings student test | All income, school student test |
+   |---|---|---|---|
+   | Persons in the same unit as Census (unweighted) | 90.8% | 90.8% | 92.7% |
+   | Parents of a child under 5 in the same unit | 91.1% | 91.1% | 91.5% |
+   | Parents: AGI in the same decile | 87.7% | 98.3% | 98.3% |
+   | Parents: AGI within $1,000 | 83.4% | 99.3% | 99.3% |
+   | All persons: AGI in the same decile | 49.6% | 87.3% | 88.7% |
+   | Persons 65 and older: AGI in the same decile | 16.1% | 95.8% | 95.8% |
+   | Mean AGI, ours over Census, all persons | 0.881 | 1.019 | 1.018 |
+
+   The builder uses the last column. The final 2024 file, built from extract 37 on 2026-11-09, has 3,238,311 persons, 1,745,278 tax units, and 789,604 dependents (unweighted). It is in `agr55/nsece_evidence/taxunit1109/full/`, not yet in the shared ACS folder. Census's own units with earnings-only AGI put 87.6% of parents in the same decile, so the earnings-only gap came from the missing income items, not the units. Married spouses present share a unit in 100% of cases (Census 99.05%). Most persons we place in a different unit are adults 24--64 or children of the head. Other rule settings matched Census less well or the same (earnings student test, unweighted persons): students always dependents (89.7%), never dependents (90.5%), a $5,000 student earnings limit (90.6%), low-earning nonrelatives as dependents (88.5%), and dependents' income in AGI (90.8%; with all income it lowers parents in the same decile to 96.2%).
+
+   It is a stand-in: the same day, the team agreed that John Iselin's ACS processing for the affordability project (tax units, dependent-claiming rules, income adjustments) will supply the model's tax units, and he will send an intermediate 2023 or 2024 file. When it arrives, map it to the four columns above.
+
+   **Decided by Anna, 2026-11-09 (later the same day): 2024 runs use the Affordability-Index units and AGI** (`Budget-Lab-Yale/Affordability-Index`), not the builder above. John has run its full chain for both years: residence-partition tax units (`02_tax_units.R`, pointer method, `mother_first` claims) and AGI from Tax-Data donor returns run through the pinned Tax-Simulator (5 implicates). Outputs, read in place: `ji252/repos/Affordability-Index/data/interim/income/<year>/` (`tax_units_<year>.parquet`; `files/B_m<k>_<year>_federal.parquet`; 2019 run 2026-10-12, 2024 run 2026-10-31). `src/misc/make_tax_unit_crosswalk.R` writes the 1b crosswalk: each person's unit, and the unit's AGI as the mean over the 5 implicates of its primary return (dependents' own returns left out). With `--check`, it reports whether any of John's files is newer than the crosswalk. The 2024 file is `agr55/ai1109/out/full/tax_unit_crosswalk_2024.csv` (3,238,311 persons, 1,758,184 units), not yet in the shared ACS folder. The 2024 1% smoke test passed on it (job 32703540).
+
+   2019 check against the Census crosswalk and IPUMS `ADJGINC` (weighted unless unweighted):
+
+   | | Builder above, ACS AGI | Affordability-Index units, ACS AGI | Affordability-Index units and AGI |
+   |---|---|---|---|
+   | Persons in the same unit (unweighted) | 92.7% | 89.3% | 89.3% |
+   | Parents of a child under 5 in the same unit | 91.5% | 88.9% | 88.9% |
+   | Parents: AGI in the same decile | 98.3% | 98.6% | 69.1% |
+   | Parents: AGI within $1,000 | 99.3% | 99.4% | 21.7% |
+
+   The Affordability-Index AGI averages 14% above `ADJGINC` (parents and all persons). It is built from IRS donor returns aligned to IRS state totals; `ADJGINC` is a Census model on ACS income, so the gap is a difference of measure, not an error in either. A unit's AGI varies across the 5 implicates by a median standard deviation of $1,406 (2019) and $1,757 (2024); one implicate ranks units with a Spearman correlation of 0.97 against the mean. Open: 2019 still uses the Census crosswalk and `ADJGINC`, so the two years rank families on different AGI measures for the donor match. Switching 2019 too would make them consistent but changes 2019 results.
+
+   Provenance check, 2026-11-09 (`agr55/ai1109/prov.R`, `same.R`):
+   - All 10 federal files (2 years × 5 implicates, arm B) ran on Tax-Simulator `4818d7b`, the commit in `config/income/tax_simulator_pin.csv`, under baseline law. Filers are 88.1% (2019) and 86.6% (2024) of returns.
+   - The units are reproducible: the `tax_units` stage rerun on GitHub `main` (`1a3e512`) gives the same unit and the same role for every person in both years (3,087,291 and 3,238,311 persons).
+   - The ECEC runs use John's current federal files (2026-10-31 for 2024, 2026-10-12 for 2019) as they stand. Pipeline changes and reruns belong to the Affordability-Index repo; check them periodically with `--check`, and rebuild the crosswalk when John updates them.
 4. Decide whether to turn on John's `weights` and `supply` options (explained in *The open choices*; `hours` is now always on). Measured on 2026-10-29 on the current code (`1a` per option; children under 5, child weights, children with no care category in the denominator; runs `19_new`, `24_new`, `24_caps2`, `24_supply2`, `24_wcps`, `24_wacs`):
 
    | | 2019 | 2024 now | `supply` | `supply`, rate deletion only |
@@ -511,4 +615,4 @@ Measured on 2026-10-28 on the code of `7b12f29`: `09_definition_checks.py` on th
 
    - The ACS targets move 2024 less than the CPS targets, because the ACS puts more mothers at work (62.9%) than the CPS (59.6%). The ACS is the survey the model calibrates to. `weights` changes no supply parameter except the 2024 home-based residual. Among children with a care category, the shares the care-choice forest trains on, the CPS targets cut the fall in Parent Only from 7.2 to 4.6 points and the rise in any paid care from 4.5 to 3.5 points.
    - John's sizes in *John's optional 2024 treatments* above come from his runs on older settings.
-5. Run a 1% smoke test on 2024 (no `-d` or `-c`) once item 3 is resolved. The 2019 smoke test passed on the admin-center code (jobs 31007018 and 31007019), and again on 2026-10-29 with fixes 1 to 3 (jobs 31281999, 31282000, and 31282001). The ACS-path change (now in `02f1495`) was tested on its own (jobs 31132240 and 31132400).
+5. Run a 1% smoke test on 2024 (no `-d` or `-c`) once item 3 is resolved. On 2026-11-09 the 2019 smoke test passed end to end on the censored-rate fill, the new hours fill, and the admin drop (job 32680391, 8 min 42 s); its `1a` counts match the 2026-11-06 `1a` runs exactly. The 2024 run (job 32680393) matched in `1a` and stopped in `1b` at the missing tax-unit crosswalk. Rerun the same day with our earnings-only crosswalk, read from a private copy of the input folder (job 32683121): the 2024 smoke test passed end to end. `1b` read the own crosswalk and turned off the poverty output for lack of SPM variables. It passed again on the final crosswalk (all income items, school test; job 32687822, 6 min 30 s). The 2019 rerun with the armed-forces change also passed (job 32682315). Earlier, the 2019 smoke test passed on the admin-center code (jobs 31007018 and 31007019), and again on 2026-10-29 with fixes 1 to 3 (jobs 31281999, 31282000, and 31282001). The ACS-path change (now in `02f1495`) was tested on its own (jobs 31132240 and 31132400).
