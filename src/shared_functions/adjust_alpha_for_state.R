@@ -260,7 +260,7 @@ adjust_alpha_for_state <- function(alpha_data_by_type, state_hh_ids,
   # would undo care targets. Joint solve hits both in base year; yearly shifts
   # then carry only change since 2019.
   #
-  # Fails loudly on: zero base support for a targeted type, a state row w/out
+  # Stops with error on: zero base support for a targeted type, a state row w/out
   # caregiver group, and non-convergence within
   # STATE_DEMAND_CONTRACTION_MAX_ITER iterations.
   #

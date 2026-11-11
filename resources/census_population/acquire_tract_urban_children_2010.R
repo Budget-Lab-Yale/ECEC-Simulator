@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # acquire_tract_urban_children_2010.R -- 2010 Census tract urban / rural
 # population, children under 5, 50 states + DC (Census API, 2010 Decennial
-# SF1; key CENSUS_API_KEY from .Renviron). Feeds state child shares by NSECE community urban density
+# SF1; key CENSUS_API_KEY from .Renviron). Supplies state child shares by NSECE community urban density
 # (urban_density.R codes: 1 urban share >= 0.85, 2 0.30-0.85, 3 < 0.30).
 #
 # Variables: P002001 total, P002002 urban, P002005 rural; P012003 male under

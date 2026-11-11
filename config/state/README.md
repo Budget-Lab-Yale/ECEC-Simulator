@@ -2,7 +2,7 @@
 
 Optional per-state input files for state-level runs (runscript `state` column).
 Missing inputs fall back to national inputs, except a supply override requires
-a demand file: base-year labor is computed from re-anchored state demand.
+a demand file, because base-year labor is computed from re-anchored state demand.
 `<ST>` is an uppercase USPS abbreviation or sub-state code (e.g. `NYC`).
 Full design: `docs/state_level_analysis.md`.
 

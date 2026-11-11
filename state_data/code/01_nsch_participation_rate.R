@@ -53,7 +53,7 @@ POOLS <- list('2018-19' = c(2018, 2019), '2019-20' = c(2019, 2020),
 
 # Lonely strata. FIPSST x STRATUM gives two strata per state, both populated
 # in every wave -- no stratum lonely, option never fires. Set so a thinner
-# extract fails loudly, not silently.
+# extract stops with error, not silently.
 options(survey.lonely.psu = 'fail')
 
 

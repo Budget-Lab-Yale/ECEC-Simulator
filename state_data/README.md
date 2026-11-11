@@ -12,7 +12,7 @@ Rscript state_data/code/00_build_demand_targets.R --all            # build all 5
 Rscript state_data/code/00_build_demand_targets.R --all --check    # with invariants
 ```
 
-**State setup must run with `ECEC_URBAN_DENSITY=1`.** The simulator's urban
+State setup must run with `ECEC_URBAN_DENSITY=1`. The simulator's urban
 density switch turns on all state machinery: the NSECE community density
 tier threshold and tier-draw cells, region donor cells in the hours and
 paid-status draws, and RPP-adjusted income ranks (the care-choice forest has
@@ -27,7 +27,7 @@ the interface's alpha files record `0`. Alpha files with no record were built
 before the switch (2026-10-14) and count as `1`. Example:
 `ECEC_URBAN_DENSITY=1 Rscript state_data/cluster/acs_p0_shares.R <interface> <out.csv>`.
 
-**The method memos, `docs/methodology-MM-DD.pdf` (finished ones in `docs/archive/`), are the documents to read.** They
+The method memos, `docs/methodology-MM-DD.pdf` (finished ones in `docs/archive/`), are the documents to read. They
 say what every number means, where it comes from, and how solid it is. Finished
 memos (PDF) are in `docs/archive/`; the memo in progress and the .tex sources
 are kept outside git. This file is the map, and the record of every
@@ -100,7 +100,7 @@ checks home prices. Commit f96978c holds all of these files.
 ## What is built
 
 Fifty-two geographies: the 50 states, DC, and New York City. The memo
-describes five: **KY, NJ, NY, NYC, VA**. **Puerto Rico is not built.** NSCH
+describes five: KY, NJ, NY, NYC, and VA. The build does not include Puerto Rico. NSCH
 covers only the 50 states and DC, NSECE places Puerto Rico in no Census region,
 and the simulator's ACS households do not include it. Building it needs a participation rate, a region or a stand-in
 for one, a wage, and households. New York is all 62 counties, city
@@ -138,7 +138,7 @@ them in the order 1, 4, then 2, 3, and 5 together, then 6.
 3. **Informal care** — split by the **share model** (below).
 4. **Unpaid Center-Based** — each state's own **program counts**: public
    pre-K (CCD) + Head Start + Early Head Start, converted from funded slots to
-   enrolled children, less the Head Start the pre-K count already holds. CCD
+   enrolled children, minus the Head Start the pre-K count already holds. CCD
    misses community-based public
    pre-K, so pre-K is the larger of CCD and an all-settings count: NIEER Table
    2 state pre-K (no special education) for a state, the city's own DOE count
@@ -146,7 +146,7 @@ them in the order 1, 4, then 2, 3, and 5 together, then 6.
    (`nieer_prek_inputs()`; 19 geographies take it). The Head Start overlap matches the count taken:
    NIEER's share where NIEER reports one, and the 0.263 fallback otherwise.
 5. **Centers and homes** — split by the share model. The share model divides
-   step 1 less step 4 over the five other types, so steps 2, 3, and 5 come
+   step 1 minus step 4 over the five other types, so steps 2, 3, and 5 come
    out of one division.
 6. **Annual hours** = children × the simulator's 10/40 grid × 50, split
    part-time / full-time by the share model. Unpaid Center-Based takes the
@@ -154,7 +154,7 @@ them in the order 1, 4, then 2, 3, and 5 together, then 6.
    by program instead, as a sensitivity only (see "Program hours" under step
    4).
 
-**The share model.** Steps 2, 3, 5, and 6 take their shares from the
+The share model gives steps 2, 3, 5, and 6 their shares. It takes them from the
 simulator itself. `cluster/acs_p0_shares.R` sums the calibration's base-year
 choice probabilities (p0) over each geography's own ACS households, weighted by
 child weight: children 0–4 by care type and by 10 or 40 hours a week. So each
@@ -167,7 +167,7 @@ utility constant per care type until the state's base-year hours match it.
 With p0 shares, the file already carries the simulator's own mix, so the
 re-anchoring moves mainly the level (step 1) and Unpaid Center-Based (step 4).
 
-**Regional NSECE comparison.** `code/05_compare_nsece_shares.R` divides the
+The regional NSECE comparison, `code/05_compare_nsece_shares.R`, divides the
 same total and program count by regional NSECE shares instead, steps in number
 order (step 2 takes the regional formal share, step 4 takes the programs out
 of formal care, step 5 splits the rest of formal care). NSECE carries only
@@ -182,7 +182,7 @@ by region, 0.95% by type).
 Rscript state_data/code/05_compare_nsece_shares.R          # all 52 geographies
 ```
 
-**Sensitivity.** The build does not write an error interval for the NSCH
+The build does not write an error interval for the NSCH
 rate. A change in the rate does not move every row in proportion. Program
 counts stay fixed, and the other five types absorb the change. An error in a
 program count moves care between formal and informal, because the five other
@@ -225,8 +225,8 @@ code/16_ndcp_model_prices.R             diagnostic: model 2019 base posted centr
                                         weights (writes nothing the simulator reads)
 cluster/nsece_price_region_density.R    NSECE 2019 centre and home price by region x
                                         community urban density, design SEs, RSE rule;
-                                        fallback local price for IN and NM (feeds
-                                        resources/supply/ndcp_local_prices_2019.R)
+                                        diagnostic since 2026-11-06 (IN and NM now
+                                        take a predicted NDCP ratio, not this price)
 code/12_participation_bias.R            diagnostic: national non-parental share in NSECE,
                                         p0, NSCH, targets, and NHES; aligned NHES
                                         five-to-ten-hour ratio (prints only)
@@ -309,7 +309,7 @@ out/state_checks_<run>.csv              cluster/state_check_summary.sh on a run 
 
 ## Adding a geography
 
-`states.R` is **data, not logic**: one `geo_spec()` call per geography. Copy the closest existing one.
+`states.R` holds data, not logic, with one `geo_spec()` call per geography. Copy the closest existing one.
 
 1. Add to `states.R`: one `SPEC_<GEO> <- geo_spec(...)` call (helper in
    `00_build_demand_targets.R`) with `geo`, `name`, `fips`, `region`, and the
@@ -327,11 +327,11 @@ out/state_checks_<run>.csv              cluster/state_check_summary.sh on a run 
 
 A geography needs three things:
 
-- **A Census region**, which selects every NSECE constant.
-- **Program counts** for step 4 — public pre-K (CCD), Head Start, and Early
+- A Census region, which selects every NSECE constant.
+- Program counts for step 4 — public pre-K (CCD), Head Start, and Early
   Head Start (NIEER funded slots), hand-researched with a source next to each
   number.
-- **A measured non-parental rate** from NSCH `k6q20`, which covers all 51:
+- A measured non-parental rate from NSCH `k6q20`, which covers all 51:
 
 ```
 filter k6q20 in (1,2), sc_age_years <= 4, weight by fwc, subset fipsst
@@ -341,13 +341,13 @@ filter k6q20 in (1,2), sc_age_years <= 4, weight by fwc, subset fipsst
 
 `nonparental_rate` is not hand-researched -- it is the output of
 `01_nsch_participation_rate.R`, a single deterministic pass over raw data with
-no per-geography judgment call. Keeping a hand copy in `states.R` bought
-nothing but a second place for it to drift, so `load_spec()` reads it live,
+no per-geography judgment call. A hand copy in `states.R` would add
+only a second place for the value to drift, so `load_spec()` reads it live,
 after sourcing the state file: that geography's row of
 `out/nsch_participation_rate_base.csv` (`BASE_WAVE`, the 2016-19 pool). NYC
 has no NSCH records of its own, so `load_spec('NYC')` reads NY's row.
 
-The `out/` file ships committed, so a normal build never regenerates it.
+The `out/` file is committed, so a normal build never regenerates it.
 Rerun `01_nsch_participation_rate.R` only when the raw NSCH data changes.
 
 ## Sources
@@ -367,7 +367,7 @@ cluster/              scripts that derive a raw/ summary from cluster data
 - `SCOPE` is `US` for a national file, or the state's postal code. The
   file goes in the folder of its scope; `NYS_` and `NY_` files go in `raw/NY/`.
 - `content` is lowercase snake_case.
-- **`vintage` is the year the data describes, never the download date** — ISO
+- `vintage` is the year the data describes, never the download date; ISO
   where a month matters, a school year as `2018-19`.
 - Double underscores separate the fields, so the name parses back apart.
 
@@ -419,7 +419,7 @@ Rscript state_data/code/01_nsch_participation_rate.R
 # out/nsch_participation_rate_base.csv
 ```
 
-The error uses the **survey design** — strata `FIPSST × STRATUM`, PSU `HHID`,
+The error uses the survey design: strata `FIPSST × STRATUM`, PSU `HHID`,
 weight `FWC`, each state read as a domain of the national design.
 
 The 2019 file is the Census re-release (`nsch_2019e_topical`, 2024), all 51
@@ -427,10 +427,10 @@ states. An earlier copy held only six states; its 3,545 records match the
 re-release on every column the build reads, so no rate or error moved.
 
 The build pools the four pre-COVID waves, 2016-2019 (`BASE_WAVE` in
-`01_nsch_participation_rate.R`). One wave is about half noise: in 2019 the
+`01_nsch_participation_rate.R`). Sampling error makes up about half the spread in one wave: in 2019 the
 state rates spread 7.8 points (standard deviation) with a median design error
-of 5.8 points, so only 46% of the spread is real. The pool cuts the median
-error to 2.8 points (86% real). The four waves are flat -- state means 54.0,
+of 5.8 points, so only 46% of the spread reflects true differences between states. The pool cuts the median
+error to 2.8 points (86% true differences). The four waves are flat -- state means 54.0,
 54.5, 54.2, and 54.9% -- so the pool moves the level little (54.4% against
 54.9%). No pre-COVID window centred on 2019 exists: 2020-2022 were fielded
 through or after the pandemic (state means 48.2, 48.7, and 51.7%), and from
@@ -457,7 +457,7 @@ mix, and the weekly hours all come from the NSECE 2019 household file,
 child-weighted, by Census region. NSECE carries no state, so region is the
 finest geography it offers.
 
-**NSECE is not in this repository.** ICPSR 37941 is licensed and lives on the
+NSECE is not in this repository. ICPSR 37941 is licensed and lives on the
 cluster at `/nfs/roberts/project/pi_nrs36/shared/raw_data/NSECE/v1`. Pass
 `--nsece <dir>` or set `NSECE_ROOT`, and submit with `sbatch` — the file is
 117 MB and several thousand columns wide.
@@ -469,17 +469,17 @@ Rscript state_data/code/02_derive_nsece_constants.R --nsece <dir>
 It writes each constant with its unweighted record count to
 `out/nsece_constants.csv`, over two universes:
 
-- **Universe A** — every child 0–4 with a regular non-parental arrangement,
+- Universe A is every child 0–4 with a regular non-parental arrangement,
   NSECE's own five-hour screener. With reference-week hours only, it
   reproduced NSECE's published figures exactly; the counting rule below
-  moves it off them. **This is the universe the build uses**,
+  moves it off them. The build uses this universe,
   because the simulator sets no hours threshold of its own.
-- **Universe B** — the same children whose regular non-parental care totals at
+- Universe B is the same children whose regular non-parental care totals at
   least 10 hours a week, school excluded. This matches the NSCH threshold.
   `NSECE_UNIVERSE_RATIO` carries the NSCH rate from B up to A; B is otherwise
   used only for sensitivity.
 
-**Which arrangements count.** 02 and the simulator (1a) use the
+One rule sets which arrangements count. 02 and the simulator (1a) use the
 same rule. A provider with `HH9_REGCARE` = 1
 and positive reference-week hours counts. A type 8 (type unknown) row counts as
 Other. A payment amount the file does not hold takes an unpaid label. 02 and 1a
@@ -493,12 +493,12 @@ Home-Based falls below it, in all four regions (Northeast 6, Midwest 6, South
 `00_build_demand_targets.R` come from, and it arrives by hand because NSECE
 lives on the cluster. `check_constants_match_derivation.R` compares every constant back to
 its universe-A row, value and record count, so the pair cannot drift apart
-unnoticed. **Refresh the file whenever `02_derive_nsece_constants.R` is rerun.**
+unnoticed. Refresh the file whenever `02_derive_nsece_constants.R` is rerun.
 
 ### Program counts — step 4
 
-**Why step 4 uses program counts.** Public pre-K enrolment and Head Start
-funded slots are *published, state by state*, so this is the one care type
+Step 4 uses program counts because public pre-K enrolment and Head Start
+funded slots are published state by state, so this is the one care type
 whose count comes from a state source rather than from the share model.
 `program_children()` keeps only children who are in a center, are 0–4, and
 are counted once. `build_geo()` prints each line:
@@ -529,31 +529,31 @@ The counts are not a clean measure of the care type, and the memo says so:
 they measure enrolment and funded slots, not the primary arrangement (a pre-K
 child also in paid care is Center-Based), and they include part-day children
 under the 10-hour line. They are used anyway because being state-specific
-matters more here than being exactly on concept — this is the one care type
+matters more here than being exactly on concept; this is the one care type
 where a state source exists at all.
 
-**CCD — public pre-K.** Pre-K membership, school by school, summed by county,
-for 2018–19, on or near October 1. It counts a **grade**, not an age, so it
+The CCD count of public pre-K is membership, school by school, summed by county,
+for 2018–19, on or near October 1. It counts a grade, not an age, so it
 includes some five-year-olds (removed below, "Ages 0–4"), and it counts more
 than state pre-K programs alone — in Kentucky 28,465 against the 21,351 NIEER
 reports for the Kentucky Preschool Program, because the grade also holds
 district-funded places and preschool special education.
 
-- **California has no CCD pre-K rows** for 2018–19. Its pre-K count is NIEER's
+- California has no CCD pre-K rows for 2018–19. Its pre-K count is NIEER's
   State Preschool Program, 140,920 children. It excludes preschool special
   education (52,307), which CCD counts elsewhere. I leave out transitional
   kindergarten (104,694): TK is for children born 2 September to 2 December,
   so nearly every TK child is 5 by the middle of the year (NIEER CA page,
   printed p.58).
-- **Michigan reports no CCD pre-K count** for 2018–19: 1,064 of its 1,219 pre-K
+- Michigan reports no CCD pre-K count for 2018–19: 1,064 of its 1,219 pre-K
   school rows are flagged "Not reported", and the rest add up to 0. Its pre-K
   count is NIEER's: Great Start Readiness Program, 37,140 children (MI
   profile). GSRP includes community-based sites.
-- **Oregon (216) and Pennsylvania (8,655)** report every school, so their low
-  CCD counts are real — most of their state pre-K runs outside public schools.
+- Oregon (216) and Pennsylvania (8,655) report every school, so their low
+  CCD counts are real, because most of their state pre-K runs outside public schools.
 
-**NIEER — Head Start and Early Head Start.** Both figures are **funded
-enrollment slots**, which NIEER takes from ACF. They are not counts of unique
+NIEER's Head Start and Early Head Start figures are funded
+enrollment slots, which NIEER takes from ACF. They are not counts of unique
 children, and they are not observed by age. NIEER's methodology (*The
 State(s) of Head Start and Early Head Start*, 2023, methods note):
 
@@ -572,54 +572,54 @@ and DC) take their counts from the same three sources, read by the functions in
 Appendix B Head Start row (federal, AIAN, and Migrant and Seasonal slots, ages
 3 and 4), and the NIEER 2023 Early Head Start bar.
 
-**Slots to enrolled children.** The specs keep Head Start and Early Head Start
+The specs keep Head Start and Early Head Start
 as funded slots, as the sources print them; `program_children()` converts them
 with three national figures from the 2018–19 Head Start Program Information
 Report (PIR). No public source gives them by state: state PIR data is available
 only on request, which this build does not use.
 
-- **Pregnant women.** Early Head Start funded slots include slots for pregnant
+- Early Head Start funded slots include slots for pregnant
   women: 5,988 of 166,693 (3.6%), "Total Funded Pregnant Women" in the EHS
   Services Snapshot. The build removes that share from every state's EHS count.
-- **Enrolled children per funded slot.** Children enrolled at the end of the
-  program year are cumulative enrollment less the children who left and did not
+- Children enrolled at the end of the
+  program year are cumulative enrollment minus the children who left and did not
   re-enroll (Biennial Report to Congress FY2019, Appendix C, A.15, A.19, and
   A.20): Head Start 775,902 − 112,939, EHS children 230,069 − 76,419. The
   funded side is the HS and EHS snapshots (675,734 and 166,693 − 5,988), plus
   AIAN child slots (22,894 − 282). The AIAN snapshot gives one AIAN total, so I
   split it by the AIAN cumulative age mix (0–2: 6,433, 3–5: 18,648). The
-  result: **0.957 for Head Start, 0.923 for Early Head Start** (0.890 per EHS
+  result is 0.957 for Head Start and 0.923 for Early Head Start (0.890 per EHS
   funded slot, after the pregnant-women share). The split matters: all AIAN
   slots to one program gives Head Start 0.949 to 0.981 and EHS 0.838 to 0.956.
   The age split matches the program definitions the build uses (Head Start
   3 to kindergarten, EHS under 3).
-- **Rejected: cumulative over funded** (Head Start 1.12, EHS children 1.38).
+- The build rejects cumulative over funded (Head Start 1.12, EHS children 1.38).
   Cumulative enrollment counts the children who left and the children who took
   their places, so it is a flow over the year, not a count at one time.
-- **Rejected: KIDS COUNT table 9786** (Head Start enrollment by age). It is
+- The build rejects KIDS COUNT table 9786 (Head Start enrollment by age). It is
   cumulative, and it puts pregnant women in its 0-to-2 group.
 - The enrolled count is at the end of the program year. CCD counts children
   on or near October 1.
 
-**Center care only.** Head Start funds four program options. Two are not
+Head Start funds four program options. Two are not
 center care, so I remove them from both Head Start counts:
 
-- **Home-based option.** A home visitor comes once a week. The child stays in
+- In the home-based option, a home visitor comes once a week. The child stays in
   the parent's care. The child stays inside the NSCH total, in whatever care
   type the p0 mix gives.
-- **Family child care option.** The child is in a provider's home. The p0 mix
+- In the family child care option, the child is in a provider's home. The p0 mix
   places these children among the five other care types.
 
 National funded slots, 2018–19 Services Snapshots: Head Start 11,043
 home-based + 1,277 family child care of 675,734; Early Head Start 57,221 +
 5,722 of 166,693 − 5,988 pregnant women; AIAN 1,493 + 16, split by the AIAN
-age mix as above. The shares are **1.9% of Head Start and 38.0% of Early Head
-Start**. No public file gives the options by state. The center-based and
+age mix as above. The shares are 1.9% of Head Start and 38.0% of Early Head
+Start. No public file gives the options by state. The center-based and
 locally designed options stay. Childcare-partner centers (Appendix C A.10,
 48,006 positions, all programs) also stay: the child is in a center, and Head
 Start services carry no fee.
 
-**Ages 0–4.** The population is children 0–4. The pre-K grade and the Head
+The population is children 0–4. The pre-K grade and the Head
 Start 3–4 slots also hold children who turn 5 during the program year. I
 remove one national share per program: the NHES-ECPP 2019 share aged 5 or
 older on 31 December 2018 (`resources/nhes/`; children not yet in
@@ -633,7 +633,7 @@ gives the same answer before or after this step. Early Head Start has no
 five-year-olds (EHS snapshot). `check_constants_match_derivation.R` recomputes
 the NHES shares.
 
-**Head Start and pre-K can count the same children.** A state can fund pre-K
+Head Start and pre-K can count the same children. A state can fund pre-K
 places inside Head Start, and a district can run Head Start in a school. Step 4
 deducts the Head Start children that the pre-K figure already holds. The
 deduction is one share of a state's Head Start slots
@@ -641,7 +641,7 @@ deduction is one share of a state's Head Start slots
 
 *State of Preschool 2019*, Table 4 (p.28), gives 3- and 4-year-olds in pre-K
 plus special education, without and with Head Start, each child counted once.
-Appendix B Head Start less the Table 4 increment is the Head Start count in
+Appendix B Head Start minus the Table 4 increment is the Head Start count in
 state pre-K. Table 4 counts the overlap with state pre-K in every setting, and
 CCD counts public schools only, so the build uses a NIEER share only where it
 takes the all-settings count.
@@ -650,26 +650,26 @@ Eighteen states report an overlap in Table 4 (NY 11,136, MI 5,840, NJ 4,621,
 NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
 2,077, NE 1,946, AL 1,746, MS 931, CT 843, ME 800, KY 783, MD 436 slots).
 
-- **NIEER overlap share** (every other geography where the build takes the
+- NIEER overlap share (every other geography where the build takes the
   all-settings count and Table 4 marks an unduplicated count: AL, CT, GA, IA,
   MA, MD, NC, NJ, NY; NYC takes NY's). Same source and universe as the pre-K
   count.
-- **Fallback** (the other 40 geographies): 0.263, the Head Start-slot-weighted
+- Fallback (the other 40 geographies): 0.263, the Head Start-slot-weighted
   mean NIEER overlap share of those nine states (`pooled_overlap_share()`).
   It assumes overlap there is like overlap in the nine states.
 
-**Overlaps not removed.** Each needs a count that no held file gives:
+The build does not remove the following overlaps. Each needs a count that no held file gives:
 
-- **West Virginia collaborative pre-K.** WV CCD (15,479) is above all WV state
+- In West Virginia, WV CCD (15,479) is above all WV state
   pre-K (13,534), so CCD can hold the collaborative classrooms run by Head
   Start grantees. Table 4 reports 4,358 Head Start slots in WV pre-K; the
   own-school share covers 1,108. The rest, up to 3,250 slots, can be a double
   count. To remove it, I need a state count of Head Start children in WV
   district membership.
-- **Head Start children with an IEP.** 13.2% of Head Start children have an
+- 13.2% of Head Start children have an
   IEP (HS snapshot, 99,961). A district that serves such a child can enter
   the child in its pre-K membership. No file gives that count.
-- **Preschool special education with services only.** CCD's pre-K grade can
+- CCD's pre-K grade can
   hold children who get only itinerant services (for example, speech therapy)
   and are in no regular care arrangement. IDEA Table 12, fall 2018
   (`code/10_idea_preschool_special_education.R`), gives the size: 802,486
@@ -682,37 +682,37 @@ NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
   79,560 children 3-5, 4.3% of national Unpaid Center-Based children (FL
   12.6%, NJ 16.4%, NY 11.9% of their own). I do not add them: Table 12 has no
   age split, and many attend part-day.
-- **Paid care alongside the program.** A pre-K or Head Start child whose
+- A pre-K or Head Start child whose
   family also pays for a center is Center-Based under the primary-type rule.
   The program count puts the child in Unpaid Center-Based. Childcare-partner
   families who pay a subsidy copay for extra hours are the same case.
-- **Program hours.** Step 6 gives every Unpaid Center-Based child the
+- Step 6 gives every Unpaid Center-Based child the
   share model's hours: 1,557 hours a year per child nationally (about 31
   hours a week for 50 weeks). The programs run fewer hours.
   `code/14_program_hours_sensitivity.R` builds hours for each program from
   the step 4 net children (each child once), and writes
   `out/program_hours_sensitivity.csv`:
-  - **Usual weekly hours** come from NHES-ECPP 2019 (`CPHRS`, weight `FEWT`,
+  - Usual weekly hours come from NHES-ECPP 2019 (`CPHRS`, weight `FEWT`,
     per-day answers corrected -- see NHES-ECPP below): pre-K 23.3 (ages 3-4,
     354 records), Head Start 26.8 (ages 3-4, 214 records), and Early Head
     Start 29.0 (ages 0-2, 74 records). As reported, 19.3, 22.8, and 24.3. These are
     parent reports of usual hours, not an attendance rate. No public
     attendance rate exists at this vintage, so I keep scheduled hours as
     scheduled.
-  - **Scheduled weekly hours** for Head Start and Early Head Start come from
+  - Scheduled weekly hours for Head Start and Early Head Start come from
     the PIR 2018-19 center-based option mix (part-day 3.5 hours a day,
     full-day 6.5, full working day 10; 4 or 5 days a week): Head Start 29.2,
     Early Head Start 39.1. Pre-K has no enrolment-weighted schedule (NIEER
     prints program minimums), so pre-K uses the NHES hours.
-  - **Operating weeks**: pre-K 36 (a 180-day school year; 44 of 62 NIEER
+  - Operating weeks are pre-K 36 (a 180-day school year; 44 of 62 NIEER
     programs run a school year). Head Start and Early Head Start take 32
     weeks for part-day slots, 36 for other full-day slots, and 50 for
     full-calendar-year slots: Head Start 35.9, Early Head Start 40.8.
-  - **Result**, national Unpaid Center-Based hours against the build:
+  - National Unpaid Center-Based hours against the build:
     usual hours × 50 weeks -34.9% (-40.7% DC to -23.0% WY); usual hours ×
     operating weeks -52.8% (-56.9% to -43.4%); scheduled hours × operating
     weeks -46.9% (-52.5% to -26.2%).
-  - **Why not in the build.** The simulator holds each child at 10 or 40
+  - The build does not use these hours. The simulator holds each child at 10 or 40
     hours a week for 50 weeks, and re-anchoring moves one constant per care
     type. A lower hours target therefore reads as fewer Unpaid Center-Based
     children, not as shorter hours, against step 4's own count. The other
@@ -721,7 +721,7 @@ NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
     schedule mix is also national only, and the NHES Early Head Start cell
     is small. The gap says that p0 puts too many program children at 40
     hours; I record it here and do not change the build.
-- **Subsidised children with a $0 copay.** The opposite case: a CCDF child at
+- The opposite case is a CCDF child with a $0 copay at
   a priced center whose family pays nothing is Unpaid Center-Based demand, and
   the program count leaves the child out. CCDF ACF-801 FY2019
   (`code/09_ccdf_subsidy_children.R`, weight `A_FCHWT`) gives 218,276 such
@@ -731,11 +731,11 @@ NC 4,510, WV 4,358, GA 4,339, IL 4,041, TN 3,579, MA 2,834, DC 2,150, IA
   charge above the subsidy rate), CCDF also funds wraparound hours for pre-K
   and Head Start children, and the targets are already 33% above the NSECE
   unpaid-center count nationally.
-- **Five-year-olds by state.** One national share per program; state
+- The build uses one national share per program for five-year-olds; state
   kindergarten cutoffs differ (the South has more early cutoffs), and NYC is the
   only geography with a documented source rule.
 
-**The NYC share.** ACF's service-location file gives funded slots by site.
+ACF's service-location file gives funded slots by site.
 NYC's Head Start and Early Head Start counts are the city's shares of New York
 State slots at open sites in that file, applied to the 2018–19 NIEER state
 figures: 7,064 of 20,518 Head Start slots (program types 1, 3, 5) and 4,426 of
@@ -750,18 +750,18 @@ NSECE is 2019-only, licensed, and carries no state, so every behavioural share
 here is regional. I searched for a state source that can replace it. None of
 the public candidates can.
 
-**Every candidate is checked for a part-time / full-time marker first.** The
+The build checks every candidate for a part-time / full-time marker first. The
 simulator holds a child at 10 or 40 hrs/week and nothing between, so the build
 states its target on that cut. A source that cannot say which side a child sits
 on cannot feed the grid, whatever else it supplies — an hours source without
 the marker gives a mean, and a mean implies the wrong child count once it is
 placed on a two-point grid; a price source without it prices a part-time child
-at the full-time rate, and that error runs straight into the equilibrium,
+at the full-time rate, and that error carries into the equilibrium,
 because price drives it. Five of the 11 NSECE constants need the marker: the
 four hours constants and `price_band_share`. NSECE supplies the marker, cutting
 at 20 hrs/week, the same cut `1a_nsece_processing.R` uses.
 
-**Nothing public measures hours at state level.**
+No public source measures hours at state level.
 
 | Source | State? | Hours? | Verdict |
 |---|---|---|---|
@@ -773,13 +773,13 @@ at 20 hrs/week, the same cut `1a_nsece_processing.R` uses.
 | CCDF ACF-801 FY2019 (ICPSR 38677, held) | yes | yes (monthly hours) | subsidy children only (757,000 children 0-4, weighted); diagnostic in `code/09_` |
 | NSECE restricted-use (ICPSR 38445) | unconfirmed | yes | ICPSR does not document its geography; would need to ask |
 
-**SIPP — rejected.** SIPP identifies every state and asks about child care, but
+The build rejects SIPP. SIPP identifies every state and asks about child care, but
 it cannot replace the regional constants. In the pooled 2018–2023 public-use
 files, SIPP has no hours variable, its one price (`TPAYWK`) covers all of a
 parent's children together, and only 108 of the 306 state × care type cells
 (50 states and DC) reach 30 distinct children.
 
-**NDCP — rejected as the price source.** Prices in the build are wholly
+The build rejects NDCP as the price source. Prices in the build are wholly
 national. The DOL Women's Bureau National Database of Childcare Prices gives
 county prices by provider type and age, but every price is a full-time weekly
 price, so the build's 10-hour point has no NDCP price. Each state also defines
@@ -795,9 +795,9 @@ no state and no county, so it cannot give state values. State exists only in
 the IES restricted-use file, which needs a licence.
 
 NHES hours can be cut at any threshold, so NHES can measure the universe ratio
-that `NSECE_UNIVERSE_RATIO` carries (**1.0995**, universe A over universe B).
+that `NSECE_UNIVERSE_RATIO` carries (1.0995, universe A over universe B).
 
-**Per-day answers.** Some NHES parents give hours per day in the weekly-hours
+Some NHES parents give hours per day in the weekly-hours
 items (`RCHRS`, `NCHRS`, `CPHRS`). For example, 111 center records for
 children 0–4 report 8 hours a week on 5 days. I read an answer under 2 hours a
 day on 4 or more days as hours per day, and multiply it by the days
@@ -823,17 +823,17 @@ The evidence for this reading:
   20.8% and 22.8% for real short weeks (1–3 days, under 10 hours). Relative
   and non-relative care show the same pattern.
 
-- **Universe ratio.** As reported, NHES puts the five-hour universe at 1.194
+- As reported, NHES puts the five-hour universe at 1.194
   times the ten-hour one (`CAREHOURX`, summed per-arrangement hours give
-  1.194 too). Corrected, it is **1.077**, 2.0% below NSECE. The per-day answers
+  1.194 too). Corrected, it is 1.077, 2.0% below NSECE. The per-day answers
   made most of the old 11% gap: they put short weeks over the 5-hour line and
   under the 10-hour line. The build keeps the NSECE ratio.
-- **Part-time share.** Corrected NHES part-time shares agree with NSECE for
+- Corrected NHES part-time shares agree with NSECE for
   the three largest care types: paid center 27.3% against 24.5%, unpaid center
   28.9% against 31.3%, and other unpaid 27.1% against 27.0% (37.0%, 42.3%, and
   38.4% as reported). Other paid and paid home-based still differ by about 10
   points, in opposite directions, on 569 and 190 NHES records.
-- **NSECE long weeks.** Some NSECE parents report 168 hours a week for a
+- Some NSECE parents report 168 hours a week for a
   relative who cares for the child at home. Summed within the type, a few
   children reach more than 168 hours (24 child-type sums, all eight largest
   Other Unpaid). These rows are full-time on any reading, and 8 priced rows are
@@ -890,23 +890,23 @@ Rscript state_data/tests/test_supply_vs_nsece_cluster.R --nsece <dir> --est <int
 
 Run the local test first: the cluster test reads its legal-ratio table.
 
-**Run `check_outputs_are_current.R` first.** It is the only check that
+Run `check_outputs_are_current.R` first. It is the only check that
 compares the demand targets in `config/state/demand/` to the code. The other
 checks read the committed files as they are, so a stale file can pass them.
 
 ## Known traps
 
-- **Source files are read all-character and coerced explicitly.** Type guesses
+- The build reads source files as all-character and coerces them explicitly. Type guesses
   vary by locale and by which rows land first. `read_chr()` stops on a CSV row
   with more fields than the header, because that row can put one column's
   value in another.
-- **Use the pre-pandemic survey wave.** NSCH 2020 was fielded through the
+- Use the pre-pandemic survey wave. NSCH 2020 was fielded through the
   pandemic, and its care rates fall 5 to 18 points in KY, NJ, and VA.
-- **A non-ASCII literal in the code makes the build locale-dependent.** An R
+- A non-ASCII literal in the code makes the build locale-dependent. An R
   source file is only UTF-8 where the machine's native encoding is, so a
   non-ASCII literal can fail to match on a legacy codepage, and nothing errors.
   `check_sources_are_ascii.R` enforces ASCII.
-- **A name shadowed inside `summarise()` fails silently.** `summarise(x = sum(x),
+- A name shadowed inside `summarise()` fails silently. `summarise(x = sum(x),
   y = sum(x[flag]))` makes the second expression index a scalar, so a rate reads
   exactly 0% or exactly 100% and nothing errors. The same trap divides by a
   scalar: `summarise(w = sum(w), m = sum(x * w) / sum(w))` gives a mean that is

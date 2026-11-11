@@ -213,7 +213,7 @@ Not all columns are required. Simpler runscripts (e.g., `speed_test.csv`) can om
 
 Setting the `state` runscript column (USPS codes, semicolon-separated, e.g. `NY;CA`) runs the simulation for each geography instead of nationally. `NYC` can be named beside the states. `config/runscripts/state_targets_smoke.csv` runs KY, NJ, NY, and VA. `state_targets_all.csv` runs the 50 states, DC, and NYC. The full design is in `docs/state_level_analysis.md`, the method is in the memo `state_data/docs/methodology-<date>.pdf`, and the input builds are in [state_data/README.md](state_data/README.md).
 
-The national run (no `state` column, default settings) is main's. State machinery adds inputs and switches and changes nothing in it. Processing and calibration stay national. Households are filtered to the geography at simulation initialization, before any `--sim-sample` subsampling. Each geography solves its own equilibrium, summary tibbles gain a `state` column, and output goes to `simulation/{scenario_id}/states/<ST>/`. Run provenance is written to `metadata/state_analysis.yaml`.
+The national run (no `state` column, default settings) is main's. State machinery adds inputs and switches but does not change the national run. Processing and calibration stay national. Households are filtered to the geography at simulation initialization, before any `--sim-sample` subsampling. Each geography solves its own equilibrium, summary tibbles gain a `state` column, and output goes to `simulation/{scenario_id}/states/<ST>/`. Run provenance is written to `metadata/state_analysis.yaml`.
 
 ### State Inputs
 

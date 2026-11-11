@@ -3,7 +3,7 @@ select_geo_hh_ids <- function(households, geo, fips) {
   #----------------------------------------------------------------------------
   # Household ids for one run geography: state by STATEFIP, sub-state
   # (SUBSTATE_GEOGRAPHIES, constants.R) by STATEFIP + COUNTYFIP. Sub-state w/out
-  # countyfip fails loudly, never falls back to whole state.
+  # countyfip stops with error, never falls back to whole state.
   #
   # Params:
   #   - households (df): Simulation households, w/ statefip (+ countyfip)

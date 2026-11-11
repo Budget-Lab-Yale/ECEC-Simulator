@@ -58,7 +58,7 @@ A new optional runscript column: `state`.
   it, so **state runs require a freshly generated interface** (`-N/-A/-C`
   interfaces predating this feature cannot be used for state runs; national
   runs remain compatible with old interfaces).
-- **A sub-state run also needs `COUNTYFIP`** in the raw ACS pull, which ACS
+- A sub-state run also needs `COUNTYFIP` in the raw ACS pull, which ACS
   processing carries into `households` as `countyfip`. A NYC run on an
   interface without it stops at initialization; it never falls back to the
   whole state.
@@ -67,7 +67,7 @@ A new optional runscript column: `state`.
   `row_ids` keys). The state demand adjustment (§5) needs `p0`; recomputing
   it at simulation time would require rebuilding base-year systematic
   utility, which we avoid.
-- **A sub-state geography has its own alpha files**
+- A sub-state geography has its own alpha files
   (`alpha_<type>_2019_NYC.rds`, from `acs_enrollment[_joint]_2019_NYC.csv`)
   under the `national_rpp` income-rank scheme (§5, "Sub-state
   income ranks"). An interface without them runs NYC on the national alphas.
@@ -135,7 +135,7 @@ Other Unpaid,...
   groups onto the 7 non-parental `ecec_type` values from `CHILD_CARE_CHOICES`;
   **`Parent Only` is the numeraire** (its delta is 0, and its "hours" are
   residual by construction).
-- **Every group is a singleton except `Center-Based`**, which covers both
+- Every group is a singleton except `Center-Based`, which covers both
   `Low-Priced Center-Based` and `High-Priced Center-Based`. The tiers fall
   below or at/above a density-adjusted tier line for the Census region,
   community urban density, and age band (`1a_nsece_processing.R`, rule 6
@@ -145,7 +145,7 @@ Other Unpaid,...
   common shift keeps each family's odds between the tiers, but the aggregate
   split can still move as families reweight, so the model determines it.
 - All 6 rows are required. A file naming `Low-Priced Center-Based` or
-  `High-Priced Center-Based` is REJECTED -- it has invented a split.
+  `High-Priced Center-Based` is REJECTED because it invents a split.
 - **If the file is absent**: no adjustment — the state run uses filtered
   households with national alphas.
 
@@ -176,7 +176,7 @@ iterated to convergence (`max |log(H_target/H_model)| < tol`, with
 delta per targeted type and one target per type, the system is exactly
 identified.
 
-**Caregiver employment is solved in the same contraction.** Care and work go
+Caregiver employment is solved in the same contraction. Care and work go
 together in `p0`, so raising care to the targets alone also raises base-year
 employment above the forest rate (1.0 to 2.5 points on average by caregiver
 group in run 202610151655, `state_data/out/baseline_employment_state.csv`).
@@ -238,7 +238,7 @@ weekly hours with a 35-hour cutoff. State setup changes only the tier line
    price forest file, and the alpha files record the setting. 1b, 2a, 3a,
    and `load_substate_alpha()` stop when the run's setting differs from the
    interface's. A file with no record counts as `1` (built before the
-   switch on 2026-10-14). With `1`: one dollar does
+   switch on 2026-10-14). With `1`, the line reflects that one dollar does
    not buy the same care in a rural market and in a dense city. I set the
    line for region `r`, density `d`, and age band `a` to
    `m(r, a | d = 1) x M(d, a) / M(1, a)`: `m` is the regional median posted
@@ -319,7 +319,7 @@ How the NYC version is built:
    interface without the NYC files runs NYC on the national alphas and logs
    it. An NYC file built under a different scheme than the run stops. An
    NYC file with no scheme label, or built under `state` or `region`, also
-   stops: the interface must be recalibrated.
+   stops, and the interface must be recalibrated.
 4. **The demand build** (`state_data/cluster/acs_p0_shares.R`,
    `acs_p0_shares_by_age.R`) reads the NYC `p0` for the NYC rows when the
    NYC files exist, and the national `p0` otherwise (logged).
@@ -367,13 +367,13 @@ parameters for the state. Same schema as
 `<output_root>/estimation/supply/supply_2019.yaml`, which calibration writes
 (committed copy: `resources/supply/US_NSECE__national_supply_parameters__2019.yaml`):
 `labor_requirements`, `wages`, `labor_supply`, `elasticities`,
-`per_unit_residual`. The override is **all-or-nothing** — the simulator reads
+`per_unit_residual`. The override is **all-or-nothing**, so the simulator reads
 every block from the state file. The one exception is `labor_supply`: the state
 file does not hold it, and the simulator sets it from the state's base-year
 hours (below).
 
-**A state with a demand file needs its supply file, and the files are built
-rather than hand-written.** `resources/supply/state_supply_params.R` writes one
+A state with a demand file needs its supply file, and the files are built
+rather than hand-written. `resources/supply/state_supply_params.R` writes one
 per state from the committed national parameters and the state's demand
 targets.
 
@@ -384,16 +384,16 @@ w_market = w_0 * nominal_wage_factor * (L / L_0)^(1/e)
 ```
 
 with `L = colSums(L_req * Qd)`. In a state run `Qd` is state-sized, because the
-household filter leaves ACS weights alone. `L_0` comes from this parameter set —
+household filter leaves ACS weights alone. `L_0` comes from this parameter set,
 so without a state file it is the **national** figure, and the curve is
 evaluated at the state's *share* of national labour rather than at 1. A run of
-KY, NJ, NY and VA on 2026-09-24 measured the consequence: the ratio came out
+KY, NJ, NY and VA on 2026-09-24 showed the consequence. The ratio was
 0.021 to 0.084, Kentucky's no-BA wage solved at $6.40 against a base of $12.06,
 and the BA wage solved *below* the no-BA wage in every state, because its
-elasticity is 2 rather than 4 and the same ratio bites twice as hard.
+elasticity is 2 rather than 4 and the same ratio has twice the effect.
 
-So a state run re-bases `L_0` to the state. **The simulator computes it; the
-supply file does not hold it.** At state initialisation
+So a state run re-bases `L_0` to the state. The simulator computes it; the
+supply file does not hold it. At state initialisation
 (`3a_initialize_simulation.R`), `adjust_alpha_for_state()` returns the model's
 own base-year hours by supply sector at the solved deltas, and the simulator
 sets
@@ -414,7 +414,7 @@ demand file. A state run with `config/state/supply/<ST>.yaml` but no
 and `state_data/code/00_build_demand_targets.R`. A state with neither file runs
 on the national parameters.
 
-**`wages` come from BLS OES May 2019 childcare occupations.**
+`wages` come from BLS OES May 2019 childcare occupations.
 `resources/supply/oes_childcare_wage_ratios_2019.R` reads the OES state,
 national, and MSA files (extract in
 `resources/bls_oews/US_BLS_OEWS__childcare_occupation_wages__2019.csv`). OES is an
@@ -496,8 +496,8 @@ non-labour residual (below).
 
 `per_unit_residual` is local. The equilibrium solves
 `P_supply = unit_cost + delta_0 * cpi_factor`, so `delta_0` is a per-unit
-residual in **dollars** covering everything that is not labour — rent, food,
-insurance, administration, margin. Nationally, 1a sets it to the NSECE price
+residual in **dollars** covering everything that is not labour, such as rent, food,
+insurance, administration, and margin. Nationally, 1a sets it to the NSECE price
 minus the national labour cost (0.510055 low-price centre, 4.6145667 high-price
 centre, 2.8273432 paid home; unpaid centre stays unset). I set each geography's
 residual the same way: local 2019 price minus local labour cost
@@ -506,37 +506,49 @@ residual the same way: local 2019 price minus local labour cost
 1. **Local price.** `resources/supply/ndcp_local_prices_2019.R` writes
    `resources/supply/US_DOL_NDCP__local_care_prices__2019.csv`. It takes the NDCP
    2019 county median full-time weekly price (centre and family child care;
-   infant, toddler, and preschool), weights counties by Census PEP 2019 children
-   0-4, and weights age groups by the geography's p0 children in the setting.
-   NDCP gives the geography only. I keep the NSECE national level, because β
-   and ρ are calibrated at NSECE prices: each price is multiplied by one national
-   factor per setting (centre 1.080, home 1.366), then divided by 40.
+   infant, toddler, and preschool) and weights counties by Census PEP 2019
+   children 0-4. I build the local price the same way as the state wage: the
+   NSECE national price times the NDCP ratio of the geography to the US. Both
+   NDCP prices use the national p0 age mix of children in the setting, and the
+   US price is the child-weighted mean over all counties. The NSECE centre price
+   uses the national low/high tier mix (low tier 0.548 of p0 centre children,
+   50 states and DC). So the ratio moves with local prices only, not with a
+   geography's age or tier mix. I keep the NSECE national level, because β and
+   ρ are calibrated at NSECE prices: $5.45 per child-hour for centres and $5.51
+   for paid home care. NDCP ratios run from 0.51 (MS) to 1.94 (DC) for centres
+   and from 0.42 (MS) to 2.07 (DC) for home care. Before 2026-11-06, the NDCP
+   price used each geography's own age mix and one national level factor per
+   setting. The change moves local centre prices by −0.8% to +2.5% (median
+   +1.1%) and home prices by −1.1% to +1.3%.
 2. **Fallbacks.** A geography with no 2019 NDCP price takes the nearest NDCP year
    in 2016-2022, scaled by the national change in each age group's price (CO and
    DC 2022; NV 2016 and 2022 averaged; MS home 2018). IN and NM have no NDCP price
-   in 2016-2022. They take the NSECE region × community urban density price at
-   their 2010 child-under-5 mix by density
-   (`state_data/cluster/nsece_price_region_density.R`, output
-   `resources/supply/US_NSECE__price_region_density__2019.csv`; density mix from
-   `resources/census_population/US_Census__tract_urban_rural_children_under5__2010.csv`).
-   A cell is used when its design-based relative SE is 0.30 or less and it has at
-   least one design degree of freedom. Otherwise the cell takes the national
-   density price × region price / national price.
+   in any year, 2008-2022. Their NDCP ratio is predicted from the other 49 states:
+   log NDCP ratio regressed on log OEWS childcare wage ratios (no BA, BA) and log
+   BEA 2019 RPP, per setting (R² 0.774 centre, 0.731 home). Leave-one-out over
+   the 49 states, this predicts a state's ratio with mean absolute error 12.5%
+   (centre) and 12.0% (home). The NSECE region × urban density price used before
+   errs by 20.2% and 25.7%, region and urbanicity alone by 19.3% and 18.1%, and
+   the five most similar states in child care by 13.4% and 14.9%. Adding region,
+   urbanicity, or child-care traits to the wage and RPP model changes the error
+   by 0.5 points or less. Ratios: IN 0.791 (centre) and 0.800 (home), NM 0.775
+   and 0.760. The price then follows the formula above.
 3. **Centre.** One factor `m` multiplies both national centre residuals, so the
    p0 tier mix of local low and high prices equals the local centre price.
-   Factor range 0.021 (SD) to 1.992 (DC), median 0.963.
+   Factor range 0.118 (SD) to 2.554 (DC), median 0.942.
 4. **Home.** Home residual = local home price minus local home labour cost.
-   Factor on the national home residual 0.076 (MS) to 2.825 (DC), median 0.918.
+   Factor on the national home residual 0.014 (MS) to 2.783 (DC), median 0.903.
 5. **Guard.** The build stops if any residual is 0 or less.
 
 The 2019 model centre price therefore matches NDCP (at the NSECE level) by
-construction, except in IN and NM. `state_data/code/16_ndcp_model_prices.R`
+construction, except in IN and NM, whose ratio is predicted. `state_data/code/16_ndcp_model_prices.R`
 (definitions in its header, results in
 `state_data/out/ndcp_model_prices_summary.csv`) compares the local and national
 residuals on the same states and weights: 46 states with an NDCP 2019 price in
-all three centre age groups. Local: Pearson correlation 1.00, model mean / NDCP
-mean 1.080 (the NSECE level factor). National: Pearson correlation 0.85, ratio
-1.155. `state_supply_params.R --national-residual` restores the national value.
+all three centre age groups. Local: Pearson correlation 0.9997, model mean /
+NDCP mean 1.094 (child-weighted 1.093; the NSECE level over the NDCP level, at
+the national age mix). National: Pearson correlation 0.86, ratio 1.122 (child-
+weighted 1.082). `state_supply_params.R --national-residual` restores the national value.
 
 `elasticities` stay national (no-BA 4, BA 2). The national values are
 assumptions (Borowsky et al. 2022, NBER w30140, section 4.4); no state
@@ -559,7 +571,7 @@ Simulation-year employment targets are
   of those columns. The national file has none and keeps the
   `macro_projections` population weights.
 
-**The employment files are built, not hand-written.**
+The employment files are built, not hand-written.
 `resources/epop/state_epop_projections.R` writes one per state, DC, and NYC
 from each geography's own ACS employment rates and the national cell rates:
 
@@ -640,7 +652,7 @@ Calibration builds `alpha = log p0 - V` at the national supply prices. A
 state run prices care at the state's own wages and staffing. The §5
 contraction shifts the stored alpha with `p0` only, so a state's base year sits
 at national prices while its supply sits at state prices. The first simulated
-year then jumps by the gap. The default (`state`) rebuilds alpha at state prices first. `ECEC_STATE_ALPHA_PRICE=national` is the §5 contraction
+year then changes by the gap. The default (`state`) rebuilds alpha at state prices first. `ECEC_STATE_ALPHA_PRICE=national` is the §5 contraction
 on the stored alpha, unchanged. Adopted 15 October 2026. Evidence runs: 52 geographies, interface 202610151431, run 202610151654 (`national`) and 202610151655 (`state`). 2019-to-2026 change in the paid-center share of children 0-4 (expected probabilities; same numerator, denominator, and child weights both years; 50 states + DC, equal weight), `state_data/cluster/alpha_drift.R`, outputs and provenance in `state_data/out/alpha_drift_*`: `national` mean absolute change 3.13 points, range -9.79 (DC) to +5.42 (NC); `state` 0.34 points, range -0.86 (DC) to +0.89 (WV). Population-weighted mean absolute change 3.45 vs 0.31 points. Rebuilt 2026 sector hours match the solver within 3.4e-7 relative in every geography. Drift only, not accuracy against observed 2026 care.
 
 1. **Rebuild.** `reprice_alpha_to_supply()` (`reprice_alpha_to_state_supply.R`)

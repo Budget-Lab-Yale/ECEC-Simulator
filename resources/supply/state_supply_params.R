@@ -7,7 +7,7 @@
 # ACS weights), but L_0 national w/out override -- curve evaluated at state's
 # SHARE of national labour, not 1. KY, NJ, NY, VA run 2026-09-24: ratio 0.021
 # to 0.084, KY no-BA wage $6.40 vs base $12.06, BA wage BELOW no-BA in every
-# state (elasticity 2 vs 4 -- same ratio bites twice as hard).
+# state (elasticity 2 vs 4 -- same ratio has twice the effect).
 # config/state/supply/<ST>.yaml, when present, replaces whole parameter set
 # (parse_supply_params_yaml()) -- files carry national parameters w/ wages,
 # labor_requirements re-based to state.

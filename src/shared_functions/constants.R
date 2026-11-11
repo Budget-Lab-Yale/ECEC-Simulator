@@ -278,7 +278,7 @@ parent_geo <- function(geo) {
 # leaves a slow common-level mode Berry update walks down linearly: synthetic
 # six-target test converges in 1,147 iterations. Iterations cheap -- cap
 # generous, not tuned. A run needing thousands signals bad targets, so still
-# fails loudly.
+# stops with error.
 STATE_DEMAND_CONTRACTION_MAX_ITER <- 5000L
 
 

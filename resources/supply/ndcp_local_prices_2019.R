@@ -15,14 +15,24 @@
 # observed groups x national ratio (all groups / observed groups, national
 # age-group prices at geo's weights) -- missing age does not shift level.
 # Geo w/out any 2019 price: nearest NDCP year(s) 2016-2022 (ties averaged),
-# each age group x national 2019 / that-year price. No NDCP price 2016-2022
-# (IN, NM): NSECE region x urban density price (NSECE_CELLS, NSECE
-# level already) at geo's 2010 child-under-5 mix by density (density_mix()).
+# each age group x national 2019 / that-year price. No NDCP price in any year
+# 2008-2022 (IN, NM): ndcp_ratio imputed -- log NDCP ratio regressed on log
+# OEWS childcare wage ratios (no BA, BA) + log BEA 2019 RPP over the states w/
+# a ratio, per setting (leave-one-out mean abs error 12.5% centre, 12.0% home,
+# vs 20.2%, 25.7% for the earlier NSECE region x density price; scratch test
+# 2026-11-06). Same formula as other geos from there.
 #
 # Level: NSECE national price kept (beta, rho calibrated at NSECE prices) --
-# NDCP gives geography only. level = PEP-0-4-weighted mean over 50 states + DC
-# of NSECE national price at geo's own centre tier mix (home: NSECE home price)
-# / same-weighted mean NDCP price. target price = NDCP geo price x level / 40.
+# NDCP gives geography only, as OES does for wages (oes_childcare_wage_ratios_
+# 2019.R: w_0 = NSECE wage x state / national ratio, composition fixed at
+# national weights). target price = NSECE national price x ndcp_ratio, where
+# ndcp_ratio = NDCP geo price / NDCP US price, both at NATIONAL model age
+# weights (US = PEP-0-4-weighted county mean, 2019), NSECE centre price at
+# national tier mix (low-tier share of model centre children, 50 states +
+# DC), home: NSECE home price. Ratio moves w/ local prices only, not w/ geo's
+# age or tier mix (Anna, 2026-11-06). Before: NDCP geo price at geo's own age
+# weights x one level (NSECE price at each geo's tier mix / NDCP, both
+# child-weighted over states).
 #
 # Usage: Rscript resources/supply/ndcp_local_prices_2019.R
 #   writes resources/supply/US_DOL_NDCP__local_care_prices__2019.csv (+ .provenance.txt)
@@ -36,7 +46,8 @@ source('state_data/code/11_ndcp_price_comparison.R')
 NATIONAL <- file.path('resources', 'supply', 'US_NSECE__national_supply_parameters__2019.yaml')
 OUT      <- file.path('resources', 'supply', 'US_DOL_NDCP__local_care_prices__2019.csv')
 TRACTS   <- file.path('resources', 'census_population', 'US_Census__tract_urban_rural_children_under5__2010.csv')
-NSECE_CELLS <- file.path('resources', 'supply', 'US_NSECE__price_region_density__2019.csv')   # state_data/cluster/nsece_price_region_density.R
+WAGES    <- file.path('resources', 'supply', 'state_childcare_wage_ratios_oes.csv')   # oes_childcare_wage_ratios_2019.R
+RPP      <- file.path('resources', 'bea', 'US_BEA__regional_price_parities_all_items__2019.csv')
 YEARS    <- 2016:2022   # nearest-year fallback window
 # Census region (NSECE CB9 / HH9 _REGION: 1 Northeast, 2 Midwest, 3 South, 4 West)
 REGION_OF <- c(CT = 1, ME = 1, MA = 1, NH = 1, RI = 1, VT = 1, NJ = 1, NY = 1, PA = 1,
@@ -110,9 +121,10 @@ geo_prices <- function(setting, weights, pep) {
               ndcp_years = paste(unique(na.omit(ndcp_years)), collapse = ';'),
               obs   = sum((w * p)[!is.na(p)]) / sum(w[!is.na(p)]),
               ratio = sum(w * p_us) / sum(w) / (sum((w * p_us)[!is.na(p)]) / sum(w[!is.na(p)])),
+              us_week = sum(w * p_us) / sum(w),
               .groups = 'drop') %>%
     mutate(ndcp_week = ifelse(age_groups_observed > 0, obs * ratio, NA_real_)) %>%
-    select(geo, ndcp_week, age_groups_observed, ndcp_years)
+    select(geo, ndcp_week, us_week, age_groups_observed, ndcp_years)
 }
 
 
@@ -160,40 +172,48 @@ main <- function() {
   pn <- national_prices()
   pep <- read_csv(PEP_FILE, col_types = cols(.default = 'c')) %>%
     transmute(fips = paste0(STATE, COUNTY), state = as.integer(STATE), kids0_4 = as.numeric(TOT_POP))
-  kids <- pep %>% mutate(geo = names(STATE_POSTAL_TO_FIPS)[match(state, STATE_POSTAL_TO_FIPS)]) %>%
-    group_by(geo) %>% summarise(kids = sum(kids0_4), .groups = 'drop')
   ag <- bind_rows(lapply(names(AGE_GROUPS), function(a) tibble(age = AGE_GROUPS[[a]]$ages, age_group = a)))
   p0 <- read_csv(P0_FILE, show_col_types = FALSE) %>% filter(kindergarten == 0) %>% inner_join(ag, by = 'age')
 
   out <- bind_rows(lapply(names(SETTING_TYPES), function(s) {
-    wt <- p0 %>% filter(ecec_type %in% SETTING_TYPES[[s]]) %>% group_by(geo, age_group) %>%
+    cs <- p0 %>% filter(ecec_type %in% SETTING_TYPES[[s]])
+    # National age weights (50 states + DC), same for every geo
+    nat_w <- cs %>% filter(geo %in% names(STATE_POSTAL_TO_FIPS)) %>% group_by(age_group) %>%
       summarise(w = sum(children), .groups = 'drop')
+    wt <- tidyr::crossing(geo = unique(cs$geo), nat_w)
     tier <- p0 %>% filter(ecec_type %in% SETTING_TYPES$center) %>% group_by(geo) %>%
       summarise(low_tier_share = sum(children[ecec_type == 'Low-Priced Center-Based']) / sum(children),
                 .groups = 'drop')
-    g <- geo_prices(s, wt, pep %>% select(fips, kids0_4)) %>% left_join(tier, by = 'geo') %>%
-      mutate(setting = s,
-             nsece_hourly = if (s == 'center') low_tier_share * pn['low'] + (1 - low_tier_share) * pn['high']
-                            else unname(pn['home']))
-    st <- g %>% filter(geo %in% names(STATE_POSTAL_TO_FIPS), !is.na(ndcp_week)) %>% inner_join(kids, by = 'geo')
-    level <- weighted.mean(st$nsece_hourly, st$kids) / weighted.mean(st$ndcp_week / 40, st$kids)
-    g %>% mutate(nsece_level = level, target_price = ndcp_week * level / 40,
-                 source = ifelse(is.na(ndcp_week), NA_character_, paste0('ndcp_', gsub(';', '_', ndcp_years))))
+    cn <- p0 %>% filter(ecec_type %in% SETTING_TYPES$center, geo %in% names(STATE_POSTAL_TO_FIPS))
+    nat_low <- sum(cn$children[cn$ecec_type == 'Low-Priced Center-Based']) / sum(cn$children)
+    nsece_national <- if (s == 'center') nat_low * pn['low'] + (1 - nat_low) * pn['high'] else pn['home']
+    geo_prices(s, wt, pep %>% select(fips, kids0_4)) %>% left_join(tier, by = 'geo') %>%
+      mutate(setting = s, nsece_national = unname(nsece_national), ndcp_ratio = ndcp_week / us_week,
+             target_price = nsece_national * ndcp_ratio,
+             source = ifelse(is.na(ndcp_week), NA_character_, paste0('ndcp_', gsub(';', '_', ndcp_years))))
   })) %>%
-    select(geo, setting, ndcp_week, age_groups_observed, ndcp_years, low_tier_share, nsece_level, target_price, source) %>%
+    select(geo, setting, ndcp_week, us_week, ndcp_ratio, age_groups_observed, ndcp_years, low_tier_share,
+           nsece_national, target_price, source) %>%
     arrange(setting, geo)
 
-  # No NDCP price 2016-2022: NSECE region x urban density price at geo's child mix
-  mix <- density_mix()
-  nsece <- read_csv(NSECE_CELLS, show_col_types = FALSE) %>% filter(region > 0, density > 0)
+  # No NDCP price in any year (IN, NM): ndcp_ratio from OEWS wage ratios + RPP
+  wr <- read_csv(WAGES, show_col_types = FALSE) %>% select(geo = state, educ_group, wage_ratio) %>%
+    tidyr::pivot_wider(names_from = educ_group, values_from = wage_ratio)
+  rp <- read_csv(RPP, show_col_types = FALSE) %>% filter(bea_geography == 'state') %>%
+    select(geo, rpp = rpp_all_items_2019)
+  x <- out %>% left_join(wr, by = 'geo') %>% left_join(rp, by = 'geo')
   miss <- which(is.na(out$target_price))
-  for (i in miss) {
-    m <- mix %>% filter(geo == out$geo[i])
-    cell <- nsece %>% filter(setting == out$setting[i], region == REGION_OF[[parent_geo_postal(out$geo[i])]])
-    out$target_price[i] <- sum(m$share * cell$price_used[match(m$density, cell$density)])
-    out$source[i] <- 'nsece_region_density'
+  for (s in unique(out$setting[miss])) {
+    fit_rows <- x$setting == s & x$geo %in% names(STATE_POSTAL_TO_FIPS) & !is.na(x$ndcp_ratio)
+    fit <- lm(log(ndcp_ratio) ~ log(no_ba) + log(ba) + log(rpp), data = x[fit_rows, ])
+    i <- miss[out$setting[miss] == s]
+    out$ndcp_ratio[i]   <- exp(predict(fit, newdata = x[i, ]))
+    out$target_price[i] <- out$nsece_national[i] * out$ndcp_ratio[i]
+    out$source[i]       <- 'imputed_oews_rpp'
+    cat(s, ': ndcp_ratio imputed for', paste(out$geo[i], collapse = ', '), '--',
+        paste(round(out$ndcp_ratio[i], 3), collapse = ', '), '(R2', round(summary(fit)$r.squared, 3),
+        'over', sum(fit_rows), 'states)\n')
   }
-  cat('NSECE region x density fallback:', paste(out$setting[miss], out$geo[miss], collapse = ', '), '\n')
 
   geos <- c(names(STATE_POSTAL_TO_FIPS), names(SUBSTATE_GEOGRAPHIES))
   for (s in names(SETTING_TYPES)) {
@@ -203,7 +223,7 @@ main <- function() {
     }
   }
   write_csv(out, OUT)
-  inputs <- c(NDCP_FILE, PEP_FILE, P0_FILE, NATIONAL, TRACTS, NSECE_CELLS)
+  inputs <- c(NDCP_FILE, PEP_FILE, P0_FILE, NATIONAL, WAGES, RPP)
   writeLines(c('script: resources/supply/ndcp_local_prices_2019.R',
                paste('run at:', format(Sys.time(), '%Y-%m-%d %H:%M:%S %Z')),
                paste0('input md5: ', unname(tools::md5sum(inputs)), '  ', inputs)),

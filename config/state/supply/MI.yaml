@@ -20,9 +20,9 @@ elasticities:
   ba: 2.0
 per_unit_residual:
   unpaid_center_based: .na.real
-  low_price_center_based: 0.3359539321360883
-  high_price_center_based: 3.0394405073359794
-  paid_home_based: 2.5730557915946068
+  low_price_center_based: 0.3492929142712308
+  high_price_center_based: 3.1601208707727135
+  paid_home_based: 2.5569124408771771
 wage_path:
 - year: 2019
   no_ba: 1.0

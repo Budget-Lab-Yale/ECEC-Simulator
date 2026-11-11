@@ -1,8 +1,8 @@
 script: resources/supply/ndcp_local_prices_2019.R
-run at: 2026-11-02 17:15:04 EST
+run at: 2026-11-06 15:46:19 EST
 input md5: ef1b0b9731808915d550a16841bccc6a  resources/ndcp/US_DOL__national_database_childcare_prices_county__2008-2022.xlsx
 input md5: 99bef65b1b0ab00a5f3fdfe6a4c98d42  resources/census_population/US_PEP__population_children_age_0_4_by_county__2019.csv
 input md5: a90886dd4638f789facb2451e3fcf9ab  resources/acs/US_ACS__p0_children_by_care_type_hours_age__2019.csv
 input md5: 1c2a9b231659749fda499192bfa18b67  resources/supply/US_NSECE__national_supply_parameters__2019.yaml
-input md5: e7586162833db4cdd0326b44cd2785e5  resources/census_population/US_Census__tract_urban_rural_children_under5__2010.csv
-input md5: 7dbea496b40c4f60ea120efd40f5f4a2  resources/supply/US_NSECE__price_region_density__2019.csv
+input md5: 7661f34b1ccaeb7ff0eb336cdd0d15fb  resources/supply/state_childcare_wage_ratios_oes.csv
+input md5: a067b4bbaad1cb69d7c4cdfb78e2f112  resources/bea/US_BEA__regional_price_parities_all_items__2019.csv
