@@ -4,7 +4,7 @@
 1a_nsece_processing.R hard-codes $4.75/hr as the line between low- and high-priced center care.
 Borowsky et al. (2022, NBER w30140) define it as the median hourly expenditure on the youngest
 child in the 2019 NSECE: total fees paid / total hours of paid care, over providers with positive
-fees. Some details are not pinned down in the paper, so this script computes the plausible
+fees. Some details are not specified in the paper, so this script computes the plausible
 variants on 2019, to see which reproduces $4.75, and the same variants on 2024:
 
   providers   all paid providers, or paid center care only (TYPEOFCARE_AGG = 4)

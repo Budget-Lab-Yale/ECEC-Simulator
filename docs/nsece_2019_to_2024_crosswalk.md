@@ -156,7 +156,7 @@ Primary care of children under 5 in each year, from the current `1a` (child weig
 Findings:
 - The supply side splits by **age-bin** medians (2024: $7.00 / $5.94 / $5.25 for 0–1 / 2–3 / 4–5 vs 2019 $5.00 /
   $4.44 / $4.00), while the household side uses one cutoff. That inconsistency predates 2024.
-- **K-8 is 0% of under-5s in both years**, so transitional kindergarten is not leaking into the K-8 type.
+- K-8 is 0% of under-5s in both years, so transitional kindergarten does not fall into the K-8 type.
 - `TYPEOFCARE_AGG` = 8 (setting unknown) rose from 0.5% to 2.2% of regular arrangements; these land in Other.
   Type 5 (other organizational ECE) fell from 8.7% to 5.5%.
 - Before 2026-10-28, in both years, a center arrangement with DK payment (−1) was treated as **unpaid** (cost
@@ -188,24 +188,24 @@ Brown, Gibbs, Mahoney and Ninan's model is already estimated on the 2024 NSECE. 
 
 The 2024 NSECE is ready to use; the gap is on the ACS side.
 
-- **What's on Bouchet.** `ACS: '/raw_data/ACS/v1/2023'` in `config/default_paths.yaml` actually holds a **2019**
+- On Bouchet, `ACS: '/raw_data/ACS/v1/2023'` in `config/default_paths.yaml` holds a **2019**
   IPUMS extract (`YEAR = 2019`). The lab's shared 2024 extracts (`raw_data/ACS/acs_common_v2/us2024a`, `us2024c`;
   fixed-width + DDI, not the `ipums_usa.csv` the code reads) have every person variable `1b` uses **except
   `TAXID`, `ADJGINC`, `SPMFAMUNIT`, `SPMTHRESH`, `SPMTOTRES`, `SPMCHXPNS`, `SPMWKXPNS`, `SPMCAPXPNS`.**
   The same shared extracts carry all eight for 2009–2019 and 2021–2023.
-- **Why they're missing.** IPUMS takes them from Census's ACS SPM research file, released separately from the
+- IPUMS takes them from Census's ACS SPM research file, released separately from the
   ACS microdata. A direct IPUMS API request for them on `us2024a` was rejected ("not available in any of the
   samples currently selected"). Census's ACS SPM research-file page lists 2009–2019 and 2021–2023 (page dated
   April 2025); no 2024 file. IPUMS said in December 2025 that it expected the 2024 SPM variables in the first
   half of 2026; as of 2026-10-27 they are not out and there is no date.
   ([Census ACS SPM research files](https://www.census.gov/data/datasets/time-series/demo/supplemental-poverty-measure/acs-research-files.html),
   [IPUMS forum](https://forum.ipums.org/t/spm-variables-in-2024-acs/6898))
-- **What each one feeds.**
+- Each variable feeds a different step.
   - `TAXID`: the tax units that the Tax-Simulator donor match and taxes are computed on. (`main` also replaces it
     with a corrected Census crosswalk built from `raw_data/Census-ACS-SPM/v1/2019`, which exists only for 2019.)
   - `ADJGINC`: baseline AGI and the AGI percentile used in the donor match.
   - `SPM*`: only the SPM poverty-impact output. `1b` already skips that output when the variables are absent.
-- **Options.**
+- Options:
   1. **Use the 2023 ACS** (the 2024 NSECE would then pair with a 2023 ACS; `1b` runs unchanged). Open question: use the 2023 ACS, or make 2024 tax units (option 3). The 2023 ACS keeps the IPUMS `TAXID` and `ADJGINC`, but mixes 2023 incomes and demographics with the 2024 survey. The 2023 tax units cannot be attached to 2024 persons: `TAXID` links persons inside one ACS sample, and the 2023 and 2024 samples hold different people.
   2. **Wait** for Census and IPUMS.
   3. **Build 2024 tax units ourselves.** `Budget-Lab-Yale/Affordability-Index` (private repo) has an ACS tax-unit builder (`R/02_income/02_tax_units.R`, pointer method with qualifying-child and qualifying-relative rules). It builds its own units from the IPUMS household pointers (`SPLOC`, `MOMLOC`, `POPLOC`) and uses `TAXID` only as a benchmark, so it does not need the missing 2024 `TAXID`. Tax-Simulator cannot do this step: it computes tax on its own PUF-based tax units and has no ACS input.
@@ -573,7 +573,7 @@ Measured on 2026-10-28 on the code of `7b12f29`: `09_definition_checks.py` on th
 
    It is a stand-in: the same day, the team agreed that John Iselin's ACS processing for the affordability project (tax units, dependent-claiming rules, income adjustments) will supply the model's tax units, and he will send an intermediate 2023 or 2024 file. When it arrives, map it to the four columns above.
 
-   **Decided by Anna, 2026-11-09 (later the same day): 2024 runs use the Affordability-Index units and AGI** (`Budget-Lab-Yale/Affordability-Index`), not the builder above. John has run its full chain for both years: residence-partition tax units (`02_tax_units.R`, pointer method, `mother_first` claims) and AGI from Tax-Data donor returns run through the pinned Tax-Simulator (5 implicates). Outputs, read in place: `ji252/repos/Affordability-Index/data/interim/income/<year>/` (`tax_units_<year>.parquet`; `files/B_m<k>_<year>_federal.parquet`; 2019 run 2026-10-12, 2024 run 2026-10-31). `src/misc/make_tax_unit_crosswalk.R` writes the 1b crosswalk: each person's unit, and the unit's AGI as the mean over the 5 implicates of its primary return (dependents' own returns left out). With `--check`, it reports whether any of John's files is newer than the crosswalk. The 2024 file is `agr55/ai1109/out/full/tax_unit_crosswalk_2024.csv` (3,238,311 persons, 1,758,184 units), not yet in the shared ACS folder. The 2024 1% smoke test passed on it (job 32703540).
+   Decided by Anna, 2026-11-09 (later the same day): 2024 runs use the Affordability-Index units and AGI (`Budget-Lab-Yale/Affordability-Index`), not the builder above. John has run its full chain for both years: residence-partition tax units (`02_tax_units.R`, pointer method, `mother_first` claims) and AGI from Tax-Data donor returns run through the pinned Tax-Simulator (5 implicates). Outputs, read in place: `ji252/repos/Affordability-Index/data/interim/income/<year>/` (`tax_units_<year>.parquet`; `files/B_m<k>_<year>_federal.parquet`; 2019 run 2026-10-12, 2024 run 2026-10-31). `src/misc/make_tax_unit_crosswalk.R` writes the 1b crosswalk: each person's unit, and the unit's AGI as the mean over the 5 implicates of its primary return (dependents' own returns left out). With `--check`, it reports whether any of John's files is newer than the crosswalk. The 2024 file is `agr55/ai1109/out/full/tax_unit_crosswalk_2024.csv` (3,238,311 persons, 1,758,184 units), not yet in the shared ACS folder. The 2024 1% smoke test passed on it (job 32703540).
 
    2019 check against the Census crosswalk and IPUMS `ADJGINC` (weighted unless unweighted):
 
