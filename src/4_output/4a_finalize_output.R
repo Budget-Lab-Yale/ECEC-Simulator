@@ -40,7 +40,8 @@ finalize_simulation <- function(sim_ctx) {
     df <- fiscal_cost_df %>%
       arrange(year)
 
-    count_cols <- c('n_children_weighted', 'n_parent_units_weighted')
+    count_cols <- c('n_children_weighted', 'n_parent_units_weighted',
+                    'calendar_year_phase_in_factor')
     all_cols <- names(df)
     numeric_cols <- all_cols[sapply(df, is.numeric)]
     blend_cols <- setdiff(numeric_cols, c('year', count_cols))
@@ -50,6 +51,78 @@ finalize_simulation <- function(sim_ctx) {
       rename(fiscal_year = year)
 
     return(result)
+  }
+
+
+  parent_fiscal_cols <- c(
+    'total_parent_earnings', 'total_medicare_taxable_earnings',
+    'total_oasi_taxable_earnings', 'total_income_tax_and_policy_credit_revenue',
+    'total_employee_payroll_revenue', 'total_employer_payroll_revenue'
+  )
+
+  has_parent_fiscal_base <- function(df) {
+    present <- parent_fiscal_cols %in% names(df)
+    if (any(present) && !all(present)) {
+      stop('Incomplete parent fiscal base columns: ',
+           paste(parent_fiscal_cols[!present], collapse = ', '))
+    }
+    if (!any(present)) return(FALSE)
+    if (any(!is.finite(as.matrix(df[, parent_fiscal_cols])))) {
+      stop('Non-finite parent fiscal base values')
+    }
+    TRUE
+  }
+
+  compute_parental_income_deltas <- function(sf, bf, budget, phase_lookup) {
+    # Budget already contains the canonical mechanical and phased tax changes.
+    # Mechanical tax-policy changes belong to income tax/policy credits;
+    # employment-driven earnings and payroll are phased in together.
+    baseline <- bf %>% select(year, all_of(parent_fiscal_cols)) %>%
+      rename_with(~ paste0(.x, '_baseline'), all_of(parent_fiscal_cols))
+    d <- sf %>% select(year, all_of(parent_fiscal_cols)) %>%
+      left_join(baseline, by = 'year') %>%
+      left_join(phase_lookup, by = 'year') %>%
+      left_join(budget %>% select(year, mechanical_tax_change,
+                                  behavioral_tax_change, total_tax_change), by = 'year') %>%
+      mutate(phase_in_factor = replace_na(phase_in_factor, 1))
+    d <- d %>% mutate(
+      full_parent_earnings_change = total_parent_earnings - total_parent_earnings_baseline,
+      full_medicare_taxable_earnings_change = total_medicare_taxable_earnings -
+        total_medicare_taxable_earnings_baseline,
+      full_oasi_taxable_earnings_change = total_oasi_taxable_earnings -
+        total_oasi_taxable_earnings_baseline,
+      full_income_tax_and_policy_credit_change = total_income_tax_and_policy_credit_revenue -
+        total_income_tax_and_policy_credit_revenue_baseline,
+      full_employee_payroll_change = total_employee_payroll_revenue -
+        total_employee_payroll_revenue_baseline,
+      full_employer_payroll_change = total_employer_payroll_revenue -
+        total_employer_payroll_revenue_baseline,
+      parent_earnings_change = phase_in_factor * full_parent_earnings_change,
+      medicare_taxable_earnings_change = phase_in_factor * full_medicare_taxable_earnings_change,
+      oasi_taxable_earnings_change = phase_in_factor * full_oasi_taxable_earnings_change,
+      behavioral_employee_payroll_change = phase_in_factor * full_employee_payroll_change,
+      behavioral_employer_payroll_change = phase_in_factor * full_employer_payroll_change,
+      behavioral_income_tax_and_policy_credit_change = behavioral_tax_change -
+        behavioral_employee_payroll_change - behavioral_employer_payroll_change,
+      total_employee_payroll_change = if_else(is.na(mechanical_tax_change),
+        full_employee_payroll_change, behavioral_employee_payroll_change),
+      total_employer_payroll_change = if_else(is.na(mechanical_tax_change),
+        full_employer_payroll_change, behavioral_employer_payroll_change),
+      total_income_tax_and_policy_credit_change = total_tax_change -
+        total_employee_payroll_change - total_employer_payroll_change
+    )
+    full_tax <- sf$total_tax_revenue - bf$total_tax_revenue[match(sf$year, bf$year)]
+    residual <- full_tax - (d$full_income_tax_and_policy_credit_change +
+      d$full_employee_payroll_change + d$full_employer_payroll_change)
+    if (any(!is.finite(residual)) || any(abs(residual) > 1e-8)) {
+      stop('Budget delta parent tax-component identity failed')
+    }
+    d %>% select(year, calendar_year_phase_in_factor = phase_in_factor,
+      starts_with('full_'), parent_earnings_change, medicare_taxable_earnings_change,
+      oasi_taxable_earnings_change, behavioral_income_tax_and_policy_credit_change,
+      behavioral_employee_payroll_change, behavioral_employer_payroll_change,
+      total_income_tax_and_policy_credit_change, total_employee_payroll_change,
+      total_employer_payroll_change)
   }
 
 
@@ -83,8 +156,21 @@ finalize_simulation <- function(sim_ctx) {
       }
     }
     if (nrow(summaries$fiscal_cost) > 0) {
-      fwrite(convert_to_fiscal_year(summaries$fiscal_cost),
-             file.path(output_dir, 'budget_effect.csv'), na = 'NA')
+      fiscal_levels <- convert_to_fiscal_year(summaries$fiscal_cost)
+      fwrite(fiscal_levels, file.path(output_dir, 'budget_effect.csv'), na = 'NA')
+      parental_income_cols <- c(
+        'fiscal_year', 'total_parent_earnings',
+        'total_medicare_taxable_earnings', 'total_oasi_taxable_earnings',
+        'total_income_tax_and_policy_credit_revenue',
+        'total_employee_payroll_revenue', 'total_employer_payroll_revenue',
+        'total_tax_revenue', 'n_parent_units_weighted', 'n_children_weighted'
+      )
+      if (has_parent_fiscal_base(summaries$fiscal_cost)) {
+        fwrite(fiscal_levels %>% select(all_of(parental_income_cols)),
+               file.path(output_dir, 'parental_income.csv'), na = 'NA')
+      } else {
+        warning('Skipping parental_income.csv for legacy fiscal summary: ', scenario_id)
+      }
     }
   }
 
@@ -275,7 +361,7 @@ finalize_simulation <- function(sim_ctx) {
       pil <- tibble(year = unique(d$year), phase_in_factor = 1)
     }
 
-    d %>%
+    budget_deltas <- d %>%
       left_join(pil, by = 'year') %>%
       mutate(
         phase_in_factor = replace_na(phase_in_factor, 1),
@@ -349,6 +435,11 @@ finalize_simulation <- function(sim_ctx) {
             mechanical_budget_effect, behavioral_budget_effect)
         }
       }
+    if (detailed && has_parent_fiscal_base(sf) && has_parent_fiscal_base(bf)) {
+      parent_deltas <- compute_parental_income_deltas(sf, bf, budget_deltas, pil)
+      budget_deltas <- left_join(budget_deltas, parent_deltas, by = 'year')
+    }
+    budget_deltas
   }
 
 
@@ -1301,7 +1392,29 @@ finalize_simulation <- function(sim_ctx) {
           detailed = TRUE
         )
         if (!is.null(bd)) {
-          fwrite(convert_to_fiscal_year(bd), file.path(delta_output_dir, 'budget_effect.csv'), na = 'NA')
+          bd_fiscal_year <- convert_to_fiscal_year(bd)
+          fwrite(bd_fiscal_year, file.path(delta_output_dir, 'budget_effect.csv'), na = 'NA')
+          parental_income_cols <- c(
+            'fiscal_year', 'calendar_year_phase_in_factor',
+            'full_parent_earnings_change', 'parent_earnings_change',
+            'full_medicare_taxable_earnings_change',
+            'medicare_taxable_earnings_change',
+            'full_oasi_taxable_earnings_change', 'oasi_taxable_earnings_change',
+            'full_income_tax_and_policy_credit_change',
+            'full_employee_payroll_change', 'full_employer_payroll_change',
+            'behavioral_income_tax_and_policy_credit_change',
+            'behavioral_employee_payroll_change',
+            'behavioral_employer_payroll_change',
+            'total_income_tax_and_policy_credit_change',
+            'total_employee_payroll_change', 'total_employer_payroll_change',
+            'total_tax_change', 'n_children_weighted'
+          )
+          if ('parent_earnings_change' %in% names(bd_fiscal_year)) {
+            fwrite(bd_fiscal_year %>% select(all_of(parental_income_cols)),
+                   file.path(delta_output_dir, 'parental_income.csv'), na = 'NA')
+          } else {
+            warning('Skipping parental_income.csv deltas for legacy fiscal summaries: ', scenario_id)
+          }
         }
       }
 

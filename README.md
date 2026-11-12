@@ -67,6 +67,21 @@ Rscript src/main.R --help
 
 Percentage-type employer subsidies additionally need equilibrium wages in the source run's `supply_<year>.yaml`, which older runs predate.
 
+### Parental earnings and tax components
+
+New simulations write `parental_income.csv` alongside fiscal levels and deltas.
+It reports parental earnings, taxable payroll bases, income tax and policy
+credits, and both payroll shares. Existing single-draw archives can be exported
+without rerunning the model:
+
+```sh
+Rscript --vanilla src/4_output/extract_parental_income_archive.R \
+  --run-root=/path/to/ecec-run --output-dir=/path/to/new-export \
+  --fiscal-years=2026:2055
+```
+
+See [definitions, archive requirements, and tests](docs/parental_income_export.md).
+
 ## Project Structure
 
 ```
