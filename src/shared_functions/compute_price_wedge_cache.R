@@ -73,8 +73,7 @@ compute_price_wedge_cache <- function(parent_units, children, households, qrf_mo
 
   cache_df <- cache_df %>%
     mutate(
-      income_pctile = cut(baseline_agi, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
-        as.character() %>% as.integer(),
+      income_pctile = assign_income_pctile(baseline_agi, income_pctiles),
       region_factor = factor(region, levels = qrf_models$center_low_price$region_levels)
     )
 

@@ -316,6 +316,16 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         arrange(hh_id, hhm_id, child_id)
     }
 
+    # Household size unknown (HHCOMP_MEMBERS = -1: 18 households in 2019, none
+    # in 2024) -> roster count (adults + children under 13), as ACS counts
+    # persons. Model read -1 as household of -1 people. Roster count equals
+    # HHCOMP_MEMBERS in every household w/ valid code (8,558 in 2019, 6,403
+    # in 2024). Harris's input audit (Anna, 2026-11-12).
+    households <- households %>%
+      left_join(household_members %>% count(hh_id, name = 'n_roster'), by = 'hh_id') %>%
+      mutate(n_members = if_else(!is.na(n_members) & n_members >= 0, as.numeric(n_members), as.numeric(n_roster))) %>%
+      select(-n_roster)
+
     parent_units <- {
       parch_cols <- grep('^HH9_PARCH_[1-9]_[0-9]+$', names(nsece_hh), value = T)
 
@@ -768,6 +778,9 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           subsidy_weekly    = HH9_SUBSIDY
         ) %>%
 
+        # 2019 only: care-type coding to 2024 rules (item C17)
+        { if (nsece_year == 2019) recode_2019_center_coding(., children) else . } %>%
+
         # Status handling; add CARELOC and PRIORREL
         {
           status_cols <- list(
@@ -1016,14 +1029,17 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   # Administrative-data centers (CB9_METH_DATA_SOURCE = 2: public-school
   # programs built from administrative records, 483 in 2019, 1,141 in 2024)
   # have no prices, classroom data, or workforce data -- their workforce
-  # records are empty placeholders. Dropped from every sector, both years
-  # (Anna, 2026-11-06): their only staff item is a total count NORC imputed
-  # for 623 of 1,141 in 2024, so supply uses no admin staff. Unpaid ratios
-  # come from interviewed centers; L_0 excludes admin children.
+  # records are empty placeholders. Set aside here, out of price medians,
+  # classroom, workforce paths; rejoin supply below w/ own staff count
+  # (admin_supply): free ones Unpaid Center-Based, paying ones Low/High by
+  # split; 2024 imputed counts refit (Anna, 2026-11-12, memo of
+  # 2026-11-13). Dropping them would give public-school
+  # programs interviewed-center staffing: 0.17-0.23 staff per FTE child
+  # vs their 0.11-0.14 (check 08).
   # See docs/nsece_2019_to_2024_crosswalk.md, Administrative-data centers.
-  n_admin  <- sum(nsece_cb$CB9_METH_DATA_SOURCE %in% 2)
-  nsece_cb <- nsece_cb %>% filter(!(CB9_METH_DATA_SOURCE %in% 2))
-  cat('  Administrative-data centers dropped from supply:', n_admin, '\n')
+  nsece_cb_admin <- nsece_cb %>% filter(CB9_METH_DATA_SOURCE %in% 2)
+  nsece_cb       <- nsece_cb %>% filter(!(CB9_METH_DATA_SOURCE %in% 2))
+  cat('  Administrative-data centers set aside (rejoin supply below):', nrow(nsece_cb_admin), '\n')
 
   # 2019 centers answering "don't know" to whether families pay (FAMPAY = 3):
   # NORC flags every age -8 ("no families pay"), which 1a reads as free. They
@@ -1423,6 +1439,170 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
       }
     }
 
+    # Administrative-data centers (public-school programs mostly, 0.11-0.14
+    # staff per FTE child vs 0.17-0.23 for interviewed centers) join supply,
+    # both years: free ones (no family pays) Unpaid Center-Based; paying ones
+    # (179 in 2024, 13 in 2019) Low/High, split by FTE share of interviewed
+    # paying public-school centers in each (72/28 in 2024) -- no price in
+    # 2024 file, so price-based sector unknown; 2019 uses same rule. Paying
+    # ones add enrollment, staff only, not price. Don't-know payment (32 in
+    # 2024) stays out, as for interviewed centers.
+    # Staff come from own total staff count (CB9_STAFF_TYPE_TOTAL_NUM, only
+    # staff item 2024 admin records carry). In 2019 that count equals their
+    # 0-5 classroom staff (178 records w/ both), no imputation flag. In 2024
+    # NORC imputed it for 623 of 1,141 (CB9_ADMIN_STAFF_IMP = 1: enrollment x
+    # district ratio, 0.11 where no district center reported) -- too high for
+    # large centers. Those counts refit: weighted least squares of log(staff
+    # per child 0-5) on 0-5 headcount bins (0/20/40/80/160) + funding items
+    # (federal funds, state funds, funding-source mix, state/local pre-K
+    # source; all admin records carry them), fit on admin centers w/ count
+    # from records (IMP = 0), smearing retransform. Refit total 5% below
+    # NORC's (size alone -11%). Funding best single addition (adjusted R2
+    # 0.14 -> 0.18); each category in both record, imputed groups. No region
+    # term -- 18 of 518 record counts in Northeast vs 178 of 623 imputed.
+    # Adding all other items (region, poverty density, payment, full-time
+    # share, race shares, hours, ages) moves total to -24% / -36%, leaning
+    # on items where imputed programs differ from record ones (checks
+    # admin_refit.py, admin_refit2.py, admin_groups2.py; memo 2026-11-13).
+    # Headcount -> FTE, BA split: from teachers and assistants of interviewed
+    # public-school centers w/ same payment status (free: FAMPAY = 2, group
+    # free admin programs most resemble -- in 2019 all children 3-5 vs 97%;
+    # BA share 68.5% 2019, 69.6% 2024; paying: FAMPAY = 1). No admin source
+    # for either. Centers w/o valid count take group's staff per FTE child.
+    admin_supply <- {
+      ages <- c('INF', '1YR', '2YR', '3YR', '4YR', '5YR')
+      n    <- nrow(nsece_cb_admin)
+      col  <- function(x) if (x %in% names(nsece_cb_admin)) as.numeric(nsece_cb_admin[[x]]) else rep(NA_real_, n)
+
+      flag_cols <- grep('^CB9_B1_3A_AGERATE_(INF|2YR|3YR|4YR)_R$', names(nsece_cb_admin), value = T)
+      flags     <- as.matrix(nsece_cb_admin[flag_cols])
+      free      <- rowSums(flags == -8, na.rm = T) > 0
+      paying    <- !free & (rowSums(flags == 1 | flags == 2, na.rm = T) > 0 | col('CB9_B1_3_FAMPAY') %in% 1)
+
+      # FTE enrollment under 6 -- by age where file has it (2019; full-time
+      # share unknown counts part time, as 1a's age-bin rule), else total
+      # 0-5 enrollment w/ full-time share from ADMIN_ care items (2024)
+      fte_by_age  <- rep(0, n)
+      head_by_age <- rep(0, n)
+      for (age in ages) {
+        enrl <- col(paste0('CB9_ENRL_', age))
+        ft   <- col(paste0('CB9_ENRL_FT_', age))
+        enrl <- if_else(!is.na(enrl) & enrl > 0, enrl, 0)
+        s    <- if_else(!is.na(ft) & ft >= 0, ft / 100, 0)
+        fte_by_age  <- fte_by_age + enrl * (s + 0.5 * (1 - s))
+        head_by_age <- head_by_age + enrl
+      }
+      full <- col('CB9_ADMIN_FULLTIME_CARE')
+      part <- col('CB9_ADMIN_PARTTIME_CARE')
+      s    <- case_when(
+        full %in% 1 & part %in% 2 ~ 1,
+        full %in% 2 & part %in% 1 ~ 0,
+        TRUE                      ~ 0.5
+      )
+      total <- col('CB9_ENRL_0TO5')
+      fte   <- case_when(
+        fte_by_age > 0               ~ fte_by_age,
+        !is.na(total) & total > 0    ~ total * (s + 0.5 * (1 - s)),
+        TRUE                         ~ 0
+      )
+
+      staff <- col('CB9_STAFF_TYPE_TOTAL_NUM')
+      w     <- nsece_cb_admin$CB9_METH_WEIGHT
+
+      # 2024: refit NORC-imputed staff counts (2019 file has no flag)
+      imp <- col('CB9_ADMIN_STAFF_IMP')
+      if (any(imp %in% 1)) {
+        kids   <- if_else(!is.na(total) & total >= 0, total, head_by_age)
+        # Factor w/ first level as base; codes outside levels -> base
+        lvl    <- function(x, levels) factor(if_else(x %in% levels, x, levels[1]), levels = levels)
+        fit_df <- tibble(
+          staff = staff,
+          kids  = kids,
+          w     = w,
+          size  = cut(kids, c(0, 20, 40, 80, 160, Inf), right = F),
+          fed   = lvl(col('CB9_RVNU_GOVT_FEDERAL'), c(2, 1)),
+          state = lvl(col('CB9_RVNU_GOVT_STATE'), c(2, 1)),
+          mix   = lvl(col('CB9_RVNU_CENTER_FUND_COMBO'), c(2, 4, 6, 8, 7)),
+          pk    = lvl(col('CB9_RVNU_PK_STATE_LOC'), c(3, 1, 2, -1))
+        )
+        fit_rows <- imp %in% 0 & !is.na(staff) & staff > 0 & kids > 0 & w > 0
+        fit      <- lm(log(staff / kids) ~ size + fed + state + mix + pk, data = fit_df[fit_rows, ], weights = w)
+        smear    <- weighted.mean(exp(residuals(fit)), fit_df$w[fit_rows])
+        refit    <- imp %in% 1 & kids > 0
+        new_staff <- kids[refit] * exp(predict(fit, newdata = fit_df[refit, ])) * smear
+        cat('  Administrative-data staff counts refit (NORC-imputed):', sum(refit), 'of', sum(imp %in% 1),
+            '| fit on', sum(fit_rows), 'from records | weighted total vs NORC:',
+            sprintf('%+.1f%%', 100 * (sum(new_staff * w[refit]) / sum(staff[refit] * w[refit]) - 1)), '\n')
+        staff[refit] <- new_staff
+      }
+
+      # Totals for one payment group: FTE children, BA / no-BA staff FTE
+      group_totals <- function(in_group, fampay, label) {
+        keep  <- in_group & fte > 0
+        valid <- keep & !is.na(staff) & staff >= 0
+        staff_per_fte <- sum((staff * w)[valid]) / sum((fte * w)[valid])
+        fte_total     <- sum((fte * w)[keep])
+        pub_workers <- processed_wf %>%
+          filter(
+            id %in% nsece_cb$CB9_METH_CASEID[nsece_cb$CB9_METH_PUBSCHFLAG %in% 1 & nsece_cb$CB9_B1_3_FAMPAY %in% fampay],
+            role %in% 1:2,
+            !is.na(college),
+            !is.na(ft)
+          )
+        ft_factor <- weighted.mean(pub_workers$ft, pub_workers$worker_weight)
+        ba_share  <- weighted.mean(pub_workers$college, pub_workers$ft * pub_workers$worker_weight)
+        staff_fte <- staff_per_fte * ft_factor * fte_total
+        cat('  Administrative-data centers,', label, ':', sum(keep), 'of', n, '(staff count valid for', sum(valid), ')\n')
+        cat('    FTE children:', round(fte_total), '| staff per FTE child:', round(staff_per_fte * ft_factor, 4),
+            '(headcount', round(staff_per_fte, 4), 'x FTE factor', round(ft_factor, 3), ') | BA share:',
+            round(ba_share, 3), '\n')
+        c(enrollment_fte = fte_total, ba = staff_fte * ba_share, no_ba = staff_fte * (1 - ba_share))
+      }
+
+      # Low share of paying admin programs: FTE share of interviewed paying
+      # public-school centers in Low-priced sector
+      pay_pub <- processed_centers %>%
+        filter(
+          id %in% nsece_cb$CB9_METH_CASEID[nsece_cb$CB9_METH_PUBSCHFLAG %in% 1 & nsece_cb$CB9_B1_3_FAMPAY %in% 1],
+          ecec_choice %in% c('Low-Priced Center-Based', 'High-Priced Center-Based')
+        )
+      low_share <- with(pay_pub, sum((enrollment_fte * center_weight)[ecec_choice == 'Low-Priced Center-Based']) /
+                                 sum(enrollment_fte * center_weight))
+
+      free_tot <- group_totals(free,   2, 'free -> Unpaid Center-Based')
+      pay_tot  <- if (any(paying & fte > 0)) group_totals(paying, 1, 'families pay -> Low/High') else
+        c(enrollment_fte = 0, ba = 0, no_ba = 0)
+      cat('    Paying admin programs split', sprintf('%.1f%% Low / %.1f%% High', 100 * low_share, 100 * (1 - low_share)),
+          '(interviewed paying public-school FTE)\n')
+
+      list(
+        'Unpaid Center-Based'      = free_tot,
+        'Low-Priced Center-Based'  = pay_tot * low_share,
+        'High-Priced Center-Based' = pay_tot * (1 - low_share)
+      )
+    }
+
+    # Pool admin centers into sector rows: ratios become staff-weighted
+    # averages; enrollment_fte (-> hours_by_sector, L_0) gains their FTE
+    # children; prices unchanged; residual recomputed from new labor cost
+    add <- function(sector, item) {
+      sapply(sector, function(s) if (s %in% names(admin_supply)) admin_supply[[s]][[item]] else 0)
+    }
+    center_inputs <- center_inputs %>%
+      mutate(
+        add_fte        = add(ecec_choice, 'enrollment_fte'),
+        add_ba         = add(ecec_choice, 'ba'),
+        add_no_ba      = add(ecec_choice, 'no_ba'),
+        ba_ratio       = (ba_ratio * enrollment_fte + add_ba) / (enrollment_fte + add_fte),
+        no_ba_ratio    = (no_ba_ratio * enrollment_fte + add_no_ba) / (enrollment_fte + add_fte),
+        ba             = ba + add_ba,
+        no_ba          = no_ba + add_no_ba,
+        enrollment_fte = enrollment_fte + add_fte,
+        labor_cost     = wage_rates['ba'] * ba_ratio + wage_rates['no_ba'] * no_ba_ratio,
+        residual       = if_else(price > 0, price - labor_cost, NA)
+      ) %>%
+      select(-add_fte, -add_ba, -add_no_ba)
+
     home_inputs <- {
       # Get price from household side (we lack sufficient info to do an enrollment-
       # weighted average on this side)
@@ -1689,8 +1869,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           by = c('hh_id', 'parent_unit_id')
         ) %>%
         mutate(
-          income_pctile = cut(income, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
-            as.character() %>% as.integer(),
+          income_pctile = assign_income_pctile(income, income_pctiles),
           region = factor(region),
           child_age = age
         )
@@ -2051,8 +2230,8 @@ harmonize_nsece_2024_centers <- function(nsece_cb) {
   #    pile-ups, see crosswalk mismatch item 4).
   # 3. Administrative-data cases (CB4_METH_DATA_SOURCE = 2) are left as they
   #    are here (enrollment by age -8 -> 0 below); run_nsece_processing()
-  #    sets them aside and adds free ones to Unpaid Center-Based from their
-  #    total 0-5 enrollment and total staff count.
+  #    sets them aside, adds free ones to Unpaid Center-Based, paying ones to
+  #    Low/High, from total 0-5 enrollment and total staff count.
   # 4. Enrollment by age unknown (-1, 1-2% of centers per age): set to 0, so
   #    the center does not count at that age. Full-time share unknown (-4):
   #    set to the enrollment-weighted mean share for that age.
@@ -2157,7 +2336,7 @@ find_censored_rates <- function(nsece_cb, nsece_year) {
   # Cap value = the cell's cut, side known from which cap.
   #
   # Params:
-  #   - nsece_cb (df): center file, 2019-style names, admin centers dropped
+  #   - nsece_cb (df): center file, 2019-style names, admin centers set aside
   #   - nsece_year (int): 2019 or 2024
   #
   # Returns: (tibble) row, age, side ('low' / 'high', NA in 2019), cut ($/wk, NA in 2019)
@@ -2262,7 +2441,7 @@ fill_censored_rates <- function(nsece_cb, nsece_year, nsece_root) {
   # so cell lands in Low- / High-priced by the usual median rule.
   #
   # Params:
-  #   - nsece_cb (df): center file, 2019-style names, admin centers dropped
+  #   - nsece_cb (df): center file, 2019-style names, admin centers set aside
   #   - nsece_year (int): 2019 or 2024
   #   - nsece_root (chr): NSECE raw folder (2019 run reads 2024 center file)
   #
@@ -2447,4 +2626,82 @@ parent_calendar_hours <- function(nsece_root, nsece_settings) {
            cal_hours = if_else(n_miss == 672, NA_real_, (rowSums(work) + fill) / 4),
            cal_missing_blocks = n_miss)
   }))
+}
+
+
+
+recode_2019_center_coding <- function(providers, children, seed = 76) {
+
+  #----------------------------------------------------------------------------
+  # Puts 2019 care-type coding on 2024 rules. 2024 item C17 (kind of single
+  # activity a provider offers) moved some arrangements NORC would code 5
+  # (other organizational) to 4 (center-based) or 6 (K-8). 2019 file has no
+  # C17, so no record-level recode exists. OPRE raises its 2019 estimates of
+  # any center use 7.2% under 3, 8.7% ages 3-5 (2024 household book of
+  # tables, Appendix B). Here: per age band, children 0-5 w/ regular type-5
+  # arrangement, no regular type-4 one, drawn at random w/ probability set so
+  # expected weighted share w/ any center use rises by OPRE factor; drawn
+  # children's regular type-5 arrangements recoded 4, then priced and sorted
+  # into center sectors like any center arrangement. Draws use own seed;
+  # global RNG state restored, so later draws in 1a/1b unchanged.
+  #
+  # Params:
+  #   - providers (df): child x provider rows w/ hh_id, child_id, regular,
+  #       type_raw (raw codes, before status handling)
+  #   - children (df): hh_id, child_id, age_months, child_weight
+  #   - seed (int): seed for draws (default 76)
+  #
+  # Returns: (df) providers w/ type_raw recoded for drawn children
+  #----------------------------------------------------------------------------
+
+  factors <- c('under 3' = 1.072, '3 to 5' = 1.087)
+
+  kids <- providers %>%
+    group_by(hh_id, child_id) %>%
+    summarise(
+      center = any(regular %in% 1 & type_raw %in% 4),
+      other5 = any(regular %in% 1 & type_raw %in% 5),
+      .groups = 'drop'
+    )
+  kids <- children %>%
+    filter(age_months < 72) %>%
+    select(hh_id, child_id, age_months, child_weight) %>%
+    left_join(kids, by = c('hh_id', 'child_id')) %>%
+    mutate(
+      center = coalesce(center, F),
+      other5 = coalesce(other5, F),
+      band   = if_else(age_months < 36, 'under 3', '3 to 5')
+    ) %>%
+    arrange(hh_id, child_id)
+
+  # Own RNG stream; restore global state after
+  old_seed <- if (exists('.Random.seed', envir = globalenv())) get('.Random.seed', envir = globalenv()) else NULL
+  set.seed(seed)
+  kids$u <- runif(nrow(kids))
+  if (is.null(old_seed)) rm('.Random.seed', envir = globalenv()) else assign('.Random.seed', old_seed, envir = globalenv())
+
+  kids <- kids %>%
+    group_by(band) %>%
+    mutate(
+      eligible = other5 & !center,
+      p        = pmin((factors[band[1]] - 1) * sum(child_weight * center) / sum(child_weight * eligible), 1),
+      move     = eligible & u < p
+    ) %>%
+    ungroup()
+
+  cat('  2019 care-type coding to 2024 rules (C17): any center use, children 0-5\n')
+  for (b in names(factors)) {
+    k <- kids %>% filter(band == b)
+    W <- sum(k$child_weight)
+    cat('    ', b, ': ', round(100 * sum(k$child_weight * k$center) / W, 1), '% -> ',
+        round(100 * sum(k$child_weight * (k$center | k$move)) / W, 1), '% (OPRE factor ', factors[b],
+        '; type-5-only children ', round(100 * sum(k$child_weight * k$eligible) / W, 1),
+        '%, draw probability ', round(k$p[1], 3), ', children recoded ', sum(k$move), ')\n', sep = '')
+  }
+
+  moved <- kids %>% filter(move) %>% select(hh_id, child_id) %>% mutate(.move = T)
+  providers %>%
+    left_join(moved, by = c('hh_id', 'child_id')) %>%
+    mutate(type_raw = if_else(coalesce(.move, F) & regular %in% 1 & type_raw %in% 5, 4, type_raw)) %>%
+    select(-.move)
 }

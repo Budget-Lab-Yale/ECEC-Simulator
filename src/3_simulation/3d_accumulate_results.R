@@ -1204,7 +1204,7 @@ aggregate_year_distributional_impact <- function(baseline_result, policy_result,
               per_weight1, per_weight2,
               n_children_original,
               age1, age2, married1, primary_caregiver,
-              race1, race2, hispanic1, hispanic2, educ1, educ2,
+              race1, race2, hispanic1, hispanic2, educ1, educ2, educd1, educd2,
               baseline_agi = agi,
               baseline_net_income = net_income,
               baseline_gross_ecec_cost = gross_ecec_cost,
@@ -1552,7 +1552,7 @@ assign_demographic_groups <- function(df) {
   #
   # Params:
   #   - df (df): Family data with married1, n_children_original, age1, age2,
-  #       race1, race2, hispanic1, hispanic2, educ1, educ2, primary_caregiver
+  #       race1, race2, hispanic1, hispanic2, educ1, educ2, educd1, educd2, primary_caregiver
   #
   # Returns: (df) Input df with marital_group, n_children_group,
   #     parent_age_group, race_eth_group, educ_group columns added
@@ -1591,16 +1591,19 @@ assign_demographic_groups <- function(df) {
         TRUE                  ~ '5_Other or multiple'
       ),
 
-      # Primary caregiver education
-      pc_educ = if_else(primary_caregiver == 1, educ1, educ2),
+      # Primary caregiver education. Detailed code (EDUCD) moves 12th grade
+      # w/ no diploma (61) to less than high school, < 1 yr college (65) to
+      # some college -- ACS groups then match NSECE within 2 points
+      pc_educ  = if_else(primary_caregiver == 1, educ1, educ2),
+      pc_educd = if_else(primary_caregiver == 1, educd1, educd2),
       educ_group = case_when(
-        pc_educ <= 5  ~ '1_Less than high school',
-        pc_educ == 6  ~ '2_High school',
-        pc_educ <= 9  ~ '3_Some college',
+        pc_educ <= 5 | pc_educd %in% 61         ~ '1_Less than high school',
+        pc_educ == 6 & !(pc_educd %in% 65)      ~ '2_High school',
+        pc_educ <= 9                            ~ '3_Some college',
         TRUE          ~ '4_Bachelor\'s or more'
       )
     ) %>%
-    select(-pc_age, -pc_race, -pc_hispanic, -pc_educ)
+    select(-pc_age, -pc_race, -pc_hispanic, -pc_educ, -pc_educd)
 
   return(df)
 }

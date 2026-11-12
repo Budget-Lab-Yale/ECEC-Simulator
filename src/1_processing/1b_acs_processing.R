@@ -321,8 +321,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         by = 'hh_id'
       ) %>%
       mutate(
-        income_pctile = cut(income, c(-Inf, income_pctiles, Inf), labels = 1:100) %>%
-          as.character() %>% as.integer(),
+        income_pctile = assign_income_pctile(income, income_pctiles),
         region = factor(region)
       )
 
@@ -608,7 +607,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         HHINCOME,
         REGION,
         PERNUM, PERWT,
-        AGE, SEX, MARST, RACE, HISPAN, EDUC,
+        AGE, SEX, MARST, RACE, HISPAN, EDUC, EDUCD,
         RELATE,
         SPLOC, MOMLOC, POPLOC, MOMLOC2, POPLOC2,
         UHRSWORK, WKSWORK1, EMPSTATD, INCWAGE, INCBUS00,
@@ -749,7 +748,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         hh_id, hhm_id, child_id, tax_unit_id, tax_unit_id_legacy, per_weight = PERWT,
         age = AGE, male, married,
         race = RACE, hispanic,
-        educ = EDUC,
+        educ = EDUC, educd = EDUCD,
         hours, weeks, earnings, hourly_earnings
       ) %>%
       arrange(hh_id, hhm_id)
@@ -842,13 +841,14 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         hhm_id1, hhm_id2,
         tax_unit_id1, tax_unit_id2,
         per_weight1, per_weight2,
-        age1, male1, married1, race1, hispanic1, educ1,
-        age2, male2, married2, race2, hispanic2, educ2,
+        age1, male1, married1, race1, hispanic1, educ1, educd1,
+        age2, male2, married2, race2, hispanic2, educ2, educd2,
         hours1, weeks1, earnings1, hourly_earnings1,
         hours2, weeks2, earnings2, hourly_earnings2
       ) %>%
-      # Filter out parent units where any parent is under 18
-      filter(age1 >= 18 & (is.na(age2) | age2 >= 18)) %>%
+      # Parent units w/ parent under 18 kept (Anna, 2026-11-12) -- NSECE
+      # training data keep them (0.29% of NSECE children under 5, 2024);
+      # ACS side previously dropped them
       arrange(hh_id)
 
 
@@ -1336,8 +1336,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
               by = 'hh_id'
             ) %>%
             mutate(
-              income_pctile = cut(income, c(-Inf, acs_income_pctiles, Inf), labels = 1:100) %>%
-                as.character() %>% as.integer(),
+              income_pctile = assign_income_pctile(income, acs_income_pctiles),
               primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
