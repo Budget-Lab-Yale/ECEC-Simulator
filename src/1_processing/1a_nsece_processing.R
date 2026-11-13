@@ -381,11 +381,21 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           by = c('hh_id', 'hhm_id1')
         ) %>%
 
-        # Parent 2's sex. The public file has the respondent's sex only, so
-        # infer the other parent's from household counts of mothers and
-        # fathers (HH9_HHCOMP_NUMMOTHER / NUMFATHER) when parent 1 is the
-        # respondent: respondent father + one father in the household +
-        # 1+ mothers -> parent 2 is a mother, and the reverse. NA otherwise.
+        # Sex of parents who aren't the respondent. Public file has the
+        # respondent's sex only, plus household counts of mothers and fathers
+        # (HH9_HHCOMP_NUMMOTHER / NUMFATHER; negative = missing). One rule for
+        # every parent w/o a known sex (Anna, 2026-11-13, after Harris flagged
+        # mismatched rules -- old code imputed lone non-respondent parents,
+        # left two-parent units w/ no respondent parent NA (1b drops them),
+        # gave partner a sex only when counts were exact):
+        #   - parent 1 (lone parent, or neither parent the respondent):
+        #     fathers only in household -> male; else female (80-84% of single
+        #     parents w/ known sex are mothers). Lone non-respondent parents:
+        #     13% / 16% of 2019 / 2024 single-parent child weight, about half
+        #     w/ grandparent respondent; two-parent units w/o respondent
+        #     parent: 1.1% / 1.6% of children under 5
+        #   - parent 2: opposite sex of parent 1 if household counts any parent
+        #     of that sex (or counts missing), else same sex
         # Needed so 1b can pick the mother as primary caregiver, as for ACS.
         left_join(
           nsece_hh %>%
@@ -395,23 +405,17 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           by = 'hh_id'
         ) %>%
         mutate(
-          male2 = case_when(
-            is.na(hhm_id2) | n_mothers < 0 | n_fathers < 0  ~ NA_integer_,
-            male1 %in% 1 & n_fathers == 1 & n_mothers >= 1 ~ 0L,
-            male1 %in% 0 & n_mothers == 1 & n_fathers >= 1 ~ 1L,
-            TRUE                                           ~ NA_integer_
-          ),
-
-          # Lone parent who isn't the respondent: sex unknown in public file,
-          # 1b would drop unit (13% / 16% of 2019 / 2024 single-parent child
-          # weight, about half with grandparent respondent). All counted
-          # parents in household one sex -> that sex (67% / 71% of dropped
-          # weight); else mother, 80-84% of single parents kept. Respondent
-          # sex other/refused stays NA (dropped).
+          n_mothers = if_else(n_mothers < 0, NA, n_mothers),
+          n_fathers = if_else(n_fathers < 0, NA, n_fathers),
           male1 = case_when(
-            !is.na(male1) | hhm_id1 == 1 | !is.na(hhm_id2) ~ male1,
-            n_fathers >= 1 & n_mothers == 0                ~ 1L,
-            TRUE                                           ~ 0L
+            !is.na(male1)                      ~ male1,
+            n_fathers >= 1 & n_mothers %in% 0  ~ 1L,
+            TRUE                               ~ 0L
+          ),
+          male2 = case_when(
+            is.na(hhm_id2)                     ~ NA_integer_,
+            male1 == 1L                        ~ if_else(n_mothers %in% 0, 1L, 0L),
+            TRUE                               ~ if_else(n_fathers %in% 0, 0L, 1L)
           )
         ) %>%
         select(-n_mothers, -n_fathers)
@@ -501,7 +505,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
               pay_unit == 2 ~ pay / 8,           # per day -> 8 hrs
               pay_unit == 3 ~ pay / 40,          # per week -> 40 hrs
               pay_unit == 4 ~ pay / 80,          # bi-weekly -> 80 hrs
-              pay_unit == 5 ~ pay / (2000 / 12), # per month -> 2080/12
+              pay_unit == 5 ~ pay / (2080 / 12), # per month -> 2080/12 (was 2000/12, 2026-11-13)
               pay_unit == 6 ~ pay / 2080,        # per year -> 2080 hrs
               TRUE ~ NA
             )

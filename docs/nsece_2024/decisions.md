@@ -159,7 +159,15 @@ Status: the pairing is decided (27 October): the model pairs the 2024 NSECE with
 
 Status: decided (10 November). The public file gives the sex of the respondent only. When a child's lone parent is another adult, `1a` left the parent's sex missing and `1b` dropped the household from care-choice training. These are 13% (2019) and 16% (2024) of single-parent child weight. In about half of them the respondent is a grandparent. They are larger (5.2 to 5.5 members against 4.0 to 4.1), have higher income, and use more relative care and less low-price center care than the single parents kept.
 
-Anna chose to keep them. `1a` now takes the parent's sex from the household counts of mothers and fathers (`HHCOMP_NUMMOTHER`, `HHCOMP_NUMFATHER`) when all counted parents are one sex, which covers 67% (2019) and 71% (2024) of the dropped child weight. The others are set to mother, the sex of 80% to 84% of the single parents kept. Respondents whose sex is other or refused, and parents with no age, stay dropped. The checks are on the cluster under `agr55/nsece_evidence/defs1110/` (`taskc.R`).
+Anna chose to keep them. `1a` now takes the parent's sex from the household counts of mothers and fathers (`HHCOMP_NUMMOTHER`, `HHCOMP_NUMFATHER`) when all counted parents are one sex, which covers 67% (2019) and 71% (2024) of the dropped child weight. The others are set to mother, the sex of 80% to 84% of the single parents kept. Parents with no age stay dropped. The checks are on the cluster under `agr55/nsece_evidence/defs1110/` (`taskc.R`).
+
+On 13 November, after Harris noted that the rules did not match, `1a` uses one rule for every parent whose sex the file does not give. Before, a lone parent who was not the respondent got a sex from the counts, but a two-parent unit in which neither parent was the respondent kept no sex and `1b` dropped it, and a respondent's partner got a sex only when the counts were exact. The rule now is:
+
+1. The respondent keeps the respondent's sex.
+2. Any other first parent is male if the household counts only fathers, and female otherwise. A respondent whose sex is other or refused is treated the same way.
+3. The second parent is the opposite sex of the first if the household counts a parent of that sex, or if the counts are missing. Otherwise the second parent is the same sex as the first.
+
+The change keeps two-parent units in which neither parent is the respondent: 1.1% (2019) and 1.6% (2024) of children under 5, weighted, which `1b` used to drop. It also gives a sex to the partners whose counts were not exact (1.8% and 1.9%) and to respondents whose sex is other or refused (0.1% and 0.2%). The checks are on the cluster under `agr55/nsece_evidence/mtg1113/` (`checks_1113.R`, section B).
 
 
 ## How much care choices changed with the population held fixed
