@@ -128,7 +128,7 @@ Report: `prices.md`.
 
 ## Decision 7: the supply side
 
-Negative non-labor cost at low-price centers. Status: open (crosswalk Open item 2, sector wages). In 2024 the low-price sector's labor cost exceeds its price; the residual is −$0.47 per child-hour. Options measured in the review:
+Negative non-labor cost at low-price centers. Status: decided (16 November): the model keeps one wage pair for all centers and accepts the negative residual, which carries the differences between sectors into model results. Sector wages are not used (crosswalk Open item 2). In 2024 the low-price sector's labor cost exceeds its price; the residual is −$0.47 per child-hour. Options measured in the review:
 
 | Option | Low-price non-labor cost, 2024 |
 |---|---|

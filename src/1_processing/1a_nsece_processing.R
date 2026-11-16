@@ -2642,16 +2642,22 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
   # (other organizational) to 4 (center-based) or 6 (K-8). 2019 file has no
   # C17, so no record-level recode exists. OPRE raises its 2019 estimates of
   # any center use 7.2% under 3, 8.7% ages 3-5 (2024 household book of
-  # tables, Appendix B). Here: per age band, children 0-5 w/ regular type-5
-  # arrangement, no regular type-4 one, drawn at random w/ probability set so
-  # expected weighted share w/ any center use rises by OPRE factor; drawn
+  # tables, Appendix B) -- upper bound: 2024 C17-movable arrangements imply
+  # 1.075 / 1.086. Here: per age band, children 0-5 w/ regular type-5
+  # arrangement, no regular type-4 one, drawn at random; expected weighted
+  # share w/ any center use rises by OPRE factor. Draw probability matched to
+  # weekly hours (Anna, 2026-11-16): children's type-5 hours grouped <10,
+  # 10-19, 20-34, 35+; chance per group set so recoded children's expected
+  # hours-group mix equals 2024 C17-moved children's (hours_target). Uniform
+  # draw gave 23.3 h/week, 49.7% at 20+ vs target 28.5 h, 69.7% (masked
+  # comparison of 5 draw rules, scratch mtg1113/checks_1116b.R). Drawn
   # children's regular type-5 arrangements recoded 4, then priced and sorted
   # into center sectors like any center arrangement. Draws use own seed;
   # global RNG state restored, so later draws in 1a/1b unchanged.
   #
   # Params:
   #   - providers (df): child x provider rows w/ hh_id, child_id, regular,
-  #       type_raw (raw codes, before status handling)
+  #       type_raw (raw codes, before status handling), hours (weekly)
   #   - children (df): hh_id, child_id, age_months, child_weight
   #   - seed (int): seed for draws (default 76)
   #
@@ -2660,11 +2666,18 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
 
   factors <- c('under 3' = 1.072, '3 to 5' = 1.087)
 
+  # 2024 children w/ a C17-moved arrangement (TOC 4/6, C17 = 5 or 10):
+  # child-weighted shares by weekly hours in those arrangements
+  # (scratch mtg1113/checks_1116c.R)
+  hours_target <- c('<10' = 0.1738, '10-19' = 0.1290, '20-34' = 0.3002, '35+' = 0.3970)
+  hours_group  <- function(h) as.character(cut(h, c(-Inf, 9.999, 19.999, 34.999, Inf), labels = names(hours_target)))
+
   kids <- providers %>%
     group_by(hh_id, child_id) %>%
     summarise(
       center = any(regular %in% 1 & type_raw %in% 4),
       other5 = any(regular %in% 1 & type_raw %in% 5),
+      hours5 = sum(pmax(hours[regular %in% 1 & type_raw %in% 5], 0, na.rm = TRUE)),
       .groups = 'drop'
     )
   kids <- children %>%
@@ -2674,6 +2687,8 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
     mutate(
       center = coalesce(center, F),
       other5 = coalesce(other5, F),
+      hours5 = coalesce(hours5, 0),
+      hgroup = hours_group(hours5),
       band   = if_else(age_months < 36, 'under 3', '3 to 5')
     ) %>%
     arrange(hh_id, child_id)
@@ -2685,11 +2700,19 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
   if (is.null(old_seed)) rm('.Random.seed', envir = globalenv()) else assign('.Random.seed', old_seed, envir = globalenv())
 
   kids <- kids %>%
+    mutate(eligible = other5 & !center) %>%
     group_by(band) %>%
     mutate(
-      eligible = other5 & !center,
-      p        = pmin((factors[band[1]] - 1) * sum(child_weight * center) / sum(child_weight * eligible), 1),
-      move     = eligible & u < p
+      target_w = (factors[band[1]] - 1) * sum(child_weight * center),
+      pool_w   = sum(child_weight * eligible)
+    ) %>%
+    group_by(band, hgroup) %>%
+    mutate(group_share = sum(child_weight * eligible) / pool_w) %>%
+    group_by(band) %>%
+    mutate(
+      s    = if_else(eligible & group_share > 0, unname(hours_target[hgroup]) / group_share, 0),
+      p    = scale_draw_prob(s, child_weight, target_w[1]),
+      move = eligible & u < p
     ) %>%
     ungroup()
 
@@ -2697,10 +2720,13 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
   for (b in names(factors)) {
     k <- kids %>% filter(band == b)
     W <- sum(k$child_weight)
+    e <- k %>% filter(eligible)
     cat('    ', b, ': ', round(100 * sum(k$child_weight * k$center) / W, 1), '% -> ',
         round(100 * sum(k$child_weight * (k$center | k$move)) / W, 1), '% (OPRE factor ', factors[b],
         '; type-5-only children ', round(100 * sum(k$child_weight * k$eligible) / W, 1),
-        '%, draw probability ', round(k$p[1], 3), ', children recoded ', sum(k$move), ')\n', sep = '')
+        '%, children recoded ', sum(k$move), '; expected hours of recoded ',
+        round(sum(e$child_weight * e$p * e$hours5) / sum(e$child_weight * e$p), 1), ' a week, ',
+        round(100 * sum(e$child_weight * e$p * (e$hours5 >= 20)) / sum(e$child_weight * e$p), 1), '% at 20+)\n', sep = '')
   }
 
   moved <- kids %>% filter(move) %>% select(hh_id, child_id) %>% mutate(.move = T)
@@ -2708,4 +2734,28 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
     left_join(moved, by = c('hh_id', 'child_id')) %>%
     mutate(type_raw = if_else(coalesce(.move, F) & regular %in% 1 & type_raw %in% 5, 4, type_raw)) %>%
     select(-.move)
+}
+
+
+
+scale_draw_prob <- function(s, w, target) {
+
+  #----------------------------------------------------------------------------
+  # Draw probabilities proportional to s, scaled so expected drawn weight
+  # equals target: p = min(1, c * s), c solved by root finding. Target above
+  # weight w/ s > 0 -> p = 1 wherever s > 0 (drawn weight falls short).
+  #
+  # Params:
+  #   - s (num): relative chance per record (0 = never drawn)
+  #   - w (num): record weights
+  #   - target (num): expected drawn weight
+  #
+  # Returns: (num) draw probability per record
+  #----------------------------------------------------------------------------
+
+  if (sum(w[s > 0]) <= target) return(as.numeric(s > 0))
+  f <- function(c) sum(w * pmin(1, c * s)) - target
+  hi <- 1
+  while (f(hi) < 0) hi <- hi * 2
+  pmin(1, uniroot(f, c(0, hi), tol = 1e-12)$root * s)
 }

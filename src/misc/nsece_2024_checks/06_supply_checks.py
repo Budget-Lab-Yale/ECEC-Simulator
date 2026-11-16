@@ -11,7 +11,7 @@ functions) and reports:
      against dropping admin cases from both sides ('drop').
   C. Center supply inputs by sector (price, labor ratios, labor cost, residual), and
      the low-price residual under alternatives: drop admin, trim 2024 posted rates at
-     the 5th/95th percentiles as 2019 did, sector-specific wages.
+     the 5th/95th percentiles as 2019 did.
   D. Home-based labor inputs and the labor stock L_0, unweighted (as 1a) and weighted.
 
 Usage (on Bouchet, from the repo root):
@@ -198,11 +198,11 @@ def workers(wf, cb):
     return out
 
 
-def center_inputs(cells, wk, sector_wages=False):
+def center_inputs(cells, wk):
     sel = [x for x in wk if x['role'] in (1, 2) and x['college'] is not None and x['wage'] is not None]
     wages = {k: sum(x['wage'] * x['w'] for x in sel if x['college'] == k) / sum(x['w'] for x in sel if x['college'] == k)
              for k in (0, 1)}
-    lab = collections.Counter(); swage = collections.defaultdict(lambda: [0.0, 0.0])
+    lab = collections.Counter()
     for x in wk:
         cell = cells.get((x['id'], x['bin']))
         if x['role'] not in (1, 2) or x['bin'] is None or not cell or cell['sector'] is None \
@@ -211,8 +211,6 @@ def center_inputs(cells, wk, sector_wages=False):
         s = cell['sector']
         lab[(s, 'ba')] += x['college'] * x['ft'] * x['w']
         lab[(s, 'no_ba')] += (1 - x['college']) * x['ft'] * x['w']
-        if x['wage'] is not None:
-            swage[(s, x['college'])][0] += x['wage'] * x['w']; swage[(s, x['college'])][1] += x['w']
     res = {}
     for s in SECTORS:
         by_bin = {}
@@ -225,10 +223,9 @@ def center_inputs(cells, wk, sector_wages=False):
         fte = sum(d[2] for d in by_bin.values())
         price = sum((d[0] / d[1]) * d[2] for d in by_bin.values() if d[1] > 0) / fte
         ba, no_ba = lab[(s, 'ba')] / fte, lab[(s, 'no_ba')] / fte
-        wv = {k: (swage[(s, k)][0] / swage[(s, k)][1]) if sector_wages and swage[(s, k)][1] else wages[k] for k in (0, 1)}
-        cost = wv[1] * ba + wv[0] * no_ba
+        cost = wages[1] * ba + wages[0] * no_ba
         res[s] = dict(price=price, fte=fte, ba=ba, no_ba=no_ba, cost=cost,
-                      resid=price - cost if price > 0 else None, w_ba=wv[1], w_no=wv[0])
+                      resid=price - cost if price > 0 else None)
     return res, wages
 
 
@@ -317,19 +314,16 @@ def main():
 
         # C. center inputs
         P('## C. center supply inputs (hourly $, staff per FTE child)')
-        variants = [('1a as written (admin impute in 2024)', prep('impute'), False),
-                    ('admin dropped from both sides', prep('drop'), False)]
+        variants = [('1a as written (admin impute in 2024)', prep('impute')),
+                    ('admin dropped from both sides', prep('drop'))]
         if year == '2024':
-            variants.append(('admin dropped + 2019-style rate trim', trim_rates(prep('drop')), False))
-        variants.append(('admin dropped + sector-specific wages', prep('drop'), True))
-        for label, cbv, sw in variants:
+            variants.append(('admin dropped + 2019-style rate trim', trim_rates(prep('drop'))))
+        for label, cbv in variants:
             cl, _ = centers(cbv, guard_negative=True)
-            res, wages = center_inputs(cl, wk, sector_wages=sw)
+            res, wages = center_inputs(cl, wk)
             P(f'  [{label}]')
             P(f'    wages (all centers): no BA ${wages[0]:.2f}  BA ${wages[1]:.2f}')
             P('    ' + fmt(res))
-            if sw:
-                P('    sector wages: ' + '  '.join(f"{s} noBA ${r['w_no']:.2f} BA ${r['w_ba']:.2f}" for s, r in res.items()))
 
         # D. home-based
         cl, _ = centers(prep('drop'), guard_negative=True)
