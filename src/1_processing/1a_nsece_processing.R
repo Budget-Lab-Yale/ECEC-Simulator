@@ -2644,16 +2644,22 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
   # any center use 7.2% under 3, 8.7% ages 3-5 (2024 household book of
   # tables, Appendix B) -- upper bound: 2024 C17-movable arrangements imply
   # 1.075 / 1.086. Here: per age band, children 0-5 w/ regular type-5
-  # arrangement, no regular type-4 one, drawn at random; expected weighted
-  # share w/ any center use rises by OPRE factor. Draw probability matched to
-  # weekly hours (Anna, 2026-11-16): children's type-5 hours grouped <10,
-  # 10-19, 20-34, 35+; chance per group set so recoded children's expected
-  # hours-group mix equals 2024 C17-moved children's (hours_target). Uniform
-  # draw gave 23.3 h/week, 49.7% at 20+ vs target 28.5 h, 69.7% (masked
-  # comparison of 5 draw rules, scratch mtg1113/checks_1116b.R). Drawn
-  # children's regular type-5 arrangements recoded 4, then priced and sorted
-  # into center sectors like any center arrangement. Draws use own seed;
-  # global RNG state restored, so later draws in 1a/1b unchanged.
+  # arrangement, no regular type-4 one, eligible. Band target weight =
+  # (OPRE factor - 1) x weighted children w/ center use, split across type-5
+  # weekly hours groups (<10, 10-19, 20-34, 35+) by 2024 C17-moved children's
+  # hours mix (hours_target). Per band x hours group, eligible children taken
+  # in random order until drawn weight reaches group target; child crossing
+  # target kept w/ prob = remaining weight / own weight (fixed_total_draw).
+  # Group w/ eligible weight below target takes all (no reallocation; not hit
+  # in 2019). Fixed totals (Anna, 2026-11-16) replace coin flips at matched
+  # rates: same hours mix, factor per draw within ~0.01 of OPRE vs up to
+  # 0.025 (500 draws; 5th-95th pct under 3 1.063-1.080 vs 1.050-1.097).
+  # Uniform coin flips gave 23.3 h/week, 49.7% at 20+ vs target 28.5 h,
+  # 69.7%; 2024-fit logit matched payment, missed hours (scratch
+  # mtg1113/checks_1116b.R, rf1116/c17v.R). Drawn children's regular type-5
+  # arrangements recoded 4, then priced and sorted into center sectors like
+  # any center arrangement. Draws use own seed; global RNG state restored,
+  # so later draws in 1a/1b unchanged.
   #
   # Params:
   #   - providers (df): child x provider rows w/ hh_id, child_id, regular,
@@ -2697,22 +2703,17 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
   old_seed <- if (exists('.Random.seed', envir = globalenv())) get('.Random.seed', envir = globalenv()) else NULL
   set.seed(seed)
   kids$u <- runif(nrow(kids))
+  kids$v <- runif(nrow(kids))
   if (is.null(old_seed)) rm('.Random.seed', envir = globalenv()) else assign('.Random.seed', old_seed, envir = globalenv())
 
   kids <- kids %>%
     mutate(eligible = other5 & !center) %>%
     group_by(band) %>%
+    mutate(target_w = (factors[band[1]] - 1) * sum(child_weight * center)) %>%
+    group_by(band, hgroup, eligible) %>%
     mutate(
-      target_w = (factors[band[1]] - 1) * sum(child_weight * center),
-      pool_w   = sum(child_weight * eligible)
-    ) %>%
-    group_by(band, hgroup) %>%
-    mutate(group_share = sum(child_weight * eligible) / pool_w) %>%
-    group_by(band) %>%
-    mutate(
-      s    = if_else(eligible & group_share > 0, unname(hours_target[hgroup]) / group_share, 0),
-      p    = scale_draw_prob(s, child_weight, target_w[1]),
-      move = eligible & u < p
+      group_target = target_w * unname(hours_target[hgroup]),
+      move         = if (eligible[1]) fixed_total_draw(child_weight, u, v, group_target[1]) else FALSE
     ) %>%
     ungroup()
 
@@ -2720,13 +2721,14 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
   for (b in names(factors)) {
     k <- kids %>% filter(band == b)
     W <- sum(k$child_weight)
-    e <- k %>% filter(eligible)
+    m <- k %>% filter(move)
     cat('    ', b, ': ', round(100 * sum(k$child_weight * k$center) / W, 1), '% -> ',
-        round(100 * sum(k$child_weight * (k$center | k$move)) / W, 1), '% (OPRE factor ', factors[b],
-        '; type-5-only children ', round(100 * sum(k$child_weight * k$eligible) / W, 1),
-        '%, children recoded ', sum(k$move), '; expected hours of recoded ',
-        round(sum(e$child_weight * e$p * e$hours5) / sum(e$child_weight * e$p), 1), ' a week, ',
-        round(100 * sum(e$child_weight * e$p * (e$hours5 >= 20)) / sum(e$child_weight * e$p), 1), '% at 20+)\n', sep = '')
+        round(100 * sum(k$child_weight * (k$center | k$move)) / W, 1), '% (factor ',
+        round(sum(k$child_weight * (k$center | k$move)) / sum(k$child_weight * k$center), 4),
+        ', OPRE ', factors[b], '; type-5-only children ', round(100 * sum(k$child_weight * k$eligible) / W, 1),
+        '%, children recoded ', nrow(m), '; recoded hours ',
+        round(weighted.mean(m$hours5, m$child_weight), 1), ' a week, ',
+        round(100 * sum(m$child_weight * (m$hours5 >= 20)) / sum(m$child_weight), 1), '% at 20+)\n', sep = '')
   }
 
   moved <- kids %>% filter(move) %>% select(hh_id, child_id) %>% mutate(.move = T)
@@ -2738,24 +2740,30 @@ recode_2019_center_coding <- function(providers, children, seed = 76) {
 
 
 
-scale_draw_prob <- function(s, w, target) {
+fixed_total_draw <- function(w, u, v, target) {
 
   #----------------------------------------------------------------------------
-  # Draw probabilities proportional to s, scaled so expected drawn weight
-  # equals target: p = min(1, c * s), c solved by root finding. Target above
-  # weight w/ s > 0 -> p = 1 wherever s > 0 (drawn weight falls short).
+  # Draws records in random order until drawn weight reaches target. Records
+  # taken by ascending u while cumulative weight <= target; record crossing
+  # target kept w/ prob (target - weight taken) / own weight, via v. Drawn
+  # weight within one record of target, equal to it in expectation. Total
+  # weight <= target -> all drawn.
   #
   # Params:
-  #   - s (num): relative chance per record (0 = never drawn)
   #   - w (num): record weights
-  #   - target (num): expected drawn weight
+  #   - u (num): uniform draws, set order
+  #   - v (num): uniform draws, decide crossing record
+  #   - target (num): drawn weight
   #
-  # Returns: (num) draw probability per record
+  # Returns: (lgl) drawn flag per record
   #----------------------------------------------------------------------------
 
-  if (sum(w[s > 0]) <= target) return(as.numeric(s > 0))
-  f <- function(c) sum(w * pmin(1, c * s)) - target
-  hi <- 1
-  while (f(hi) < 0) hi <- hi * 2
-  pmin(1, uniroot(f, c(0, hi), tol = 1e-12)$root * s)
+  if (sum(w) <= target) return(rep(TRUE, length(w)))
+  o    <- order(u)
+  cw   <- cumsum(w[o])
+  take <- logical(length(w))
+  take[o[cw <= target]] <- TRUE
+  i    <- o[which(cw > target)[1]]
+  if (v[i] < (target - sum(w[take])) / w[i]) take[i] <- TRUE
+  take
 }
