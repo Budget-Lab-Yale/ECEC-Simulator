@@ -520,10 +520,13 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   # (serialno, sporder, tax_unit, agi -- same columns as the 2019 corrected
   # crosswalk below, but tax_unit is a numeric id unique across households and
   # agi is unit AGI repeated on every member). Used for ACS years where IPUMS
-  # lacks TAXID, ADJGINC (2024: Census SPM file not out). One legacy fragment
-  # per unit, so reconstruct_tax_unit_agi() returns unit AGI unchanged.
+  # lacks TAXID, ADJGINC (2024: Census SPM file not out), and for 2019 when
+  # present -- takes priority over Census corrected crosswalk, so both years
+  # can use Affordability-Index units, AGI (Anna, 2026-11-16). 2019 ACS folder
+  # w/ own crosswalk: dependency ACS-2019 in default_paths.yaml. One legacy
+  # fragment per unit, so reconstruct_tax_unit_agi() returns unit AGI unchanged.
   own_crosswalk_path <- file.path(acs_dir, paste0('tax_unit_crosswalk_', acs_year, '.csv'))
-  use_own_units      <- acs_year != 2019 && file.exists(own_crosswalk_path)
+  use_own_units      <- file.exists(own_crosswalk_path)
 
   # Tax units, AGI from IPUMS TAXID, ADJGINC outside 2019 (no corrected
   # crosswalk) -- not yet released for 2024 -- unless an own crosswalk exists
@@ -2067,8 +2070,65 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   rm(acs_raw, acs_raw_for_spm, acs_sampled)
 
   #-------------------------------------------
+  # Care of children w/o parent unit (fixed demand)
+  #-------------------------------------------
+
+  # Children under 5 w/ no parent in household stay outside choice model
+  # (no parent to choose work, care). Their care held at baseline, added to
+  # market demand when prices clear (Anna, 2026-11-17; simulation side:
+  # compute_no_parent_demand()). Rule: NSECE care shares of no-parent
+  # children by single year of age, child weights; age w/ fewer than 5
+  # records takes all-age shares. Holdout test (cluster
+  # agr55/nsece_evidence/npcv1117, 10 folds x 50): market child-hours
+  # within 2% both years; 1b care forest +32% in 2024, donors matched on
+  # income or region -9% to -20%.
+  no_parent_care_shares <- {
+    is_np <- function(x) is.na(x) | as.character(x) %in% c('', 'NA')
+    np_children <- as_tibble(processed_nsece_hh$children) %>%
+      filter(age < 5, is_np(parent_unit_id)) %>%
+      inner_join(
+        as_tibble(processed_nsece_hh$enrollment) %>%
+          select(hh_id, child_id, ecec_choice, ecec_hours_choice),
+        by = c('hh_id', 'child_id')
+      ) %>%
+      filter(!is.na(ecec_choice), ecec_choice != '', !is.na(ecec_hours_choice), ecec_hours_choice != '')
+
+    if (nrow(np_children) == 0) {
+      stop('No NSECE children under 5 w/o parent unit w/ a care category; cannot build no_parent_care_shares.')
+    }
+
+    all_age <- np_children %>%
+      count(ecec_choice, ecec_hours_choice, wt = child_weight, name = 'w') %>%
+      mutate(share = w / sum(w)) %>%
+      select(-w)
+    n_by_age <- np_children %>% count(age, name = 'n')
+
+    shares <- map_dfr(0:4, function(a) {
+      if (sum(n_by_age$n[n_by_age$age == a]) < 5) return(all_age %>% mutate(age = a))
+      np_children %>%
+        filter(age == a) %>%
+        count(ecec_choice, ecec_hours_choice, wt = child_weight, name = 'w') %>%
+        mutate(share = w / sum(w), age = a) %>%
+        select(-w)
+    }) %>%
+      select(age, ecec_choice, ecec_hours_choice, share)
+
+    # Shares sum to 1 within each age
+    stopifnot(all(abs(tapply(shares$share, shares$age, sum) - 1) < 1e-8))
+    cat('  No-parent children under 5 (NSECE, unweighted):', nrow(np_children),
+        '| care shares by age written for fixed demand\n')
+    shares
+  }
+
+  #-------------------------------------------
   # Write ACS data to disk (file names carry the ACS year)
   #-------------------------------------------
+
+  fwrite(
+    no_parent_care_shares,
+    file.path(estimation_info$paths$data, paste0('no_parent_care_shares_', acs_year, '.csv')),
+    na = 'NA'
+  )
 
   c('households', 'household_members', 'parent_units', 'children', 'tax_units',
     'enrollment', 'enrollment_joint') %>%

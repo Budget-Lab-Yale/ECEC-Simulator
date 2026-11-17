@@ -1456,18 +1456,20 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
     # 0-5 classroom staff (178 records w/ both), no imputation flag. In 2024
     # NORC imputed it for 623 of 1,141 (CB9_ADMIN_STAFF_IMP = 1: enrollment x
     # district ratio, 0.11 where no district center reported) -- too high for
-    # large centers. Those counts refit: weighted least squares of log(staff
-    # per child 0-5) on 0-5 headcount bins (0/20/40/80/160) + funding items
+    # large centers. Those counts refit (Anna, 2026-11-17): random forest
+    # (ranger, as model's other forests; 300 trees, leaf 10, center weights)
+    # of log(staff per child 0-5) on log 0-5 enrollment, funding items
     # (federal funds, state funds, funding-source mix, state/local pre-K
-    # source; all admin records carry them), fit on admin centers w/ count
-    # from records (IMP = 0), smearing retransform. Refit total 5% below
-    # NORC's (size alone -11%). Funding best single addition (adjusted R2
-    # 0.14 -> 0.18); each category in both record, imputed groups. No region
-    # term -- 18 of 518 record counts in Northeast vs 178 of 623 imputed.
-    # Adding all other items (region, poverty density, payment, full-time
-    # share, race shares, hours, ages) moves total to -24% / -36%, leaning
-    # on items where imputed programs differ from record ones (checks
-    # admin_refit.py, admin_refit2.py, admin_groups2.py; memo 2026-11-13).
+    # source), community poverty density, urban density; fit on admin
+    # centers w/ count from records (IMP = 0), out-of-bag smearing
+    # retransform. Holdout tests (cluster agr55/nsece_evidence/admincv1116,
+    # 10 folds x 20, held-out programs reweighted to look like imputed ones):
+    # error 0.53 in log staff per child vs 0.57 log size alone; reweighted
+    # total +2% (bootstrap SE 7%); refit total 11% below NORC's. Replaces
+    # 2026-11-12 least-squares fit on size bins + funding -- overstated
+    # reweighted total by 10% (SE 6%, too high in 98% of draws). No region
+    # -- 18 of 518 record counts in Northeast vs 178 of 623 imputed; forests
+    # on every item overstate reweighted total by ~7%.
     # Headcount -> FTE, BA split: from teachers and assistants of interviewed
     # public-school centers w/ same payment status (free: FAMPAY = 2, group
     # free admin programs most resemble -- in 2019 all children 3-5 vs 97%;
@@ -1519,21 +1521,27 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         kids   <- if_else(!is.na(total) & total >= 0, total, head_by_age)
         # Factor w/ first level as base; codes outside levels -> base
         lvl    <- function(x, levels) factor(if_else(x %in% levels, x, levels[1]), levels = levels)
+        # Factor of codes; missing -> own level
+        cat_f  <- function(x) factor(if_else(is.na(x), -99, x))
         fit_df <- tibble(
-          staff = staff,
-          kids  = kids,
-          w     = w,
-          size  = cut(kids, c(0, 20, 40, 80, 160, Inf), right = F),
-          fed   = lvl(col('CB9_RVNU_GOVT_FEDERAL'), c(2, 1)),
-          state = lvl(col('CB9_RVNU_GOVT_STATE'), c(2, 1)),
-          mix   = lvl(col('CB9_RVNU_CENTER_FUND_COMBO'), c(2, 4, 6, 8, 7)),
-          pk    = lvl(col('CB9_RVNU_PK_STATE_LOC'), c(3, 1, 2, -1))
+          lk      = log(pmax(kids, 1)),
+          fed     = lvl(col('CB9_RVNU_GOVT_FEDERAL'), c(2, 1)),
+          state   = lvl(col('CB9_RVNU_GOVT_STATE'), c(2, 1)),
+          mix     = lvl(col('CB9_RVNU_CENTER_FUND_COMBO'), c(2, 4, 6, 8, 7)),
+          pk      = lvl(col('CB9_RVNU_PK_STATE_LOC'), c(3, 1, 2, -1)),
+          poverty = cat_f(col('CB9_COMM_POVERTY_DENSITY')),
+          urban   = cat_f(col('CB9_COMM_URBAN_DENSITY'))
         )
-        fit_rows <- imp %in% 0 & !is.na(staff) & staff > 0 & kids > 0 & w > 0
-        fit      <- lm(log(staff / kids) ~ size + fed + state + mix + pk, data = fit_df[fit_rows, ], weights = w)
-        smear    <- weighted.mean(exp(residuals(fit)), fit_df$w[fit_rows])
-        refit    <- imp %in% 1 & kids > 0
-        new_staff <- kids[refit] * exp(predict(fit, newdata = fit_df[refit, ])) * smear
+        fit_rows <- imp %in% 0 & !is.na(staff) & staff > 0 & !is.na(kids) & kids > 0 & !is.na(w) & w > 0
+        y        <- log(staff[fit_rows] / kids[fit_rows])
+        fit      <- ranger(
+          y = y, x = as.data.frame(fit_df[fit_rows, ]), case.weights = w[fit_rows],
+          num.trees = 300, min.node.size = 10, seed = 1117, num.threads = 1
+        )
+        oob      <- !is.na(fit$predictions)
+        smear    <- weighted.mean(exp(y[oob] - fit$predictions[oob]), w[fit_rows][oob])
+        refit    <- imp %in% 1 & !is.na(kids) & kids > 0
+        new_staff <- kids[refit] * exp(predict(fit, data = as.data.frame(fit_df[refit, ]), num.threads = 1)$predictions) * smear
         cat('  Administrative-data staff counts refit (NORC-imputed):', sum(refit), 'of', sum(imp %in% 1),
             '| fit on', sum(fit_rows), 'from records | weighted total vs NORC:',
             sprintf('%+.1f%%', 100 * (sum(new_staff * w[refit]) / sum(staff[refit] * w[refit]) - 1)), '\n')

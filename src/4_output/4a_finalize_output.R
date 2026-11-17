@@ -794,11 +794,13 @@ finalize_simulation <- function(sim_ctx) {
             if (is.null(df) || nrow(df) == 0) return(invisible(NULL))
             header_top <- c(group_header, 'Families', 'Base Income',
               'Avg $ Change', '', '', '% of AGI', '', '', '% Gain', '', '',
-              '% Lose', '', '', 'ECEC Burden Level', '', '', '', 'Employment Rate', '', '')
+              '% Lose', '', '', 'ECEC Burden Level', '', '', 'Employment Rate', '', '')
+            # Burden level: baseline, mechanical, total only -- welfare effect a
+            # money measure w/ no cost-based burden (3d never computes one)
             header_bottom <- c('', '', '',
               'Mechanical', 'Welfare', 'Total', 'Mechanical', 'Welfare', 'Total',
               'Mechanical', 'Welfare', 'Total', 'Mechanical', 'Welfare', 'Total',
-              'Baseline', 'Mechanical', 'Welfare', 'Total', 'Baseline', 'Policy', 'pp Change')
+              'Baseline', 'Mechanical', 'Total', 'Baseline', 'Policy', 'pp Change')
             n_cols <- length(header_top)
             write_cell(dist_sheet, section_title, dist_current_row, 1, styles$title)
             dist_current_row <<- dist_current_row + 2
@@ -815,7 +817,7 @@ finalize_simulation <- function(sim_ctx) {
               writeData(wb, dist_sheet, t(header_bottom), startRow = dist_current_row + 1, startCol = 1, colNames = FALSE)
               addStyle(wb, dist_sheet, styles$header, rows = dist_current_row:(dist_current_row + 1), cols = 1:n_cols, gridExpand = TRUE)
               for (mc in list(1, 2, 3)) mergeCells(wb, dist_sheet, cols = mc, rows = dist_current_row:(dist_current_row + 1))
-              for (mc in list(4:6, 7:9, 10:12, 13:15, 16:19, 20:22)) mergeCells(wb, dist_sheet, cols = mc, rows = dist_current_row)
+              for (mc in list(4:6, 7:9, 10:12, 13:15, 16:18, 19:21)) mergeCells(wb, dist_sheet, cols = mc, rows = dist_current_row)
               dist_current_row <<- dist_current_row + 2
               for (i in 1:nrow(year_data)) {
                 rd <- year_data[i, ]
@@ -837,14 +839,13 @@ finalize_simulation <- function(sim_ctx) {
                   list(rd$frac_total_loss, 15, styles$percent),
                   list(rd$avg_baseline_ecec_burden_level, 16, styles$percent),
                   list(rd$avg_mechanical_ecec_burden_level, 17, styles$percent),
-                  list(rd$avg_welfare_ecec_burden_level, 18, styles$percent),
-                  list(rd$avg_total_ecec_burden_level, 19, styles$percent)
+                  list(rd$avg_total_ecec_burden_level, 18, styles$percent)
                 )
                 for (cs in col_specs) write_cell(dist_sheet, cs[[1]], dist_current_row, cs[[2]], cs[[3]])
                 if ('baseline_employment_rate' %in% names(rd)) {
-                  write_cell(dist_sheet, rd$baseline_employment_rate, dist_current_row, 20, styles$percent)
-                  write_cell(dist_sheet, rd$policy_employment_rate, dist_current_row, 21, styles$percent)
-                  write_cell(dist_sheet, rd$pp_employment_change, dist_current_row, 22, styles$pct_pp)
+                  write_cell(dist_sheet, rd$baseline_employment_rate, dist_current_row, 19, styles$percent)
+                  write_cell(dist_sheet, rd$policy_employment_rate, dist_current_row, 20, styles$percent)
+                  write_cell(dist_sheet, rd$pp_employment_change, dist_current_row, 21, styles$pct_pp)
                 }
                 dist_current_row <<- dist_current_row + 1
               }
@@ -859,7 +860,7 @@ finalize_simulation <- function(sim_ctx) {
             'frac_mechanical_gain', 'frac_welfare_gain', 'frac_total_gain',
             'frac_mechanical_loss', 'frac_welfare_loss', 'frac_total_loss',
             'avg_baseline_ecec_burden_level', 'avg_mechanical_ecec_burden_level',
-            'avg_welfare_ecec_burden_level', 'avg_total_ecec_burden_level',
+            'avg_total_ecec_burden_level',
             'baseline_employment_rate', 'policy_employment_rate', 'pp_employment_change')
 
           strip_prefix <- function(x) {
@@ -900,7 +901,7 @@ finalize_simulation <- function(sim_ctx) {
 
           setColWidths(wb, dist_sheet, cols = 1, widths = 18)
           setColWidths(wb, dist_sheet, cols = 2:3, widths = 13)
-          setColWidths(wb, dist_sheet, cols = 4:22, widths = 12)
+          setColWidths(wb, dist_sheet, cols = 4:21, widths = 12)
         }
       }
 

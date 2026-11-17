@@ -73,6 +73,12 @@ prepare_year_context <- function(sim_base_hh, macro_projections, base_supply_par
   supply_params$cpi_factor <- get_cpi_growth_factor(macro_projections, aging_base_year, year)
   cpi_chain_factor_2019 <- get_chained_cpi_growth_factor(macro_projections, aging_base_year, year)
 
+  # Fixed demand of children under 5 w/o parent unit (outside choice model),
+  # aged child weights; added to Qd in run_scenario()
+  supply_params$Qd_fixed <- compute_no_parent_demand(aged_hh$children, sim_base_hh$no_parent_care_shares)
+  cat('  Fixed demand, children w/o parent unit (million child-hours):',
+      paste(sprintf('%.1f', supply_params$Qd_fixed / 1e6), collapse = ' / '), '\n')
+
   # -- Assertions: growth factors are economically plausible ----
   # CPI and wages grow over time. If these are <= 1.0 for years after the
   # base year, either the wrong base year was passed, or macro_projections

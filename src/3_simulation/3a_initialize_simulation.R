@@ -113,6 +113,18 @@ initialize_simulation <- function() {
     }), table_names)
     sim_base_hh <- compact(sim_base_hh)
 
+    # Care shares of children w/o parent unit (fixed demand; see
+    # compute_no_parent_demand()). Shares table -- no hh_id, so sub-sampling
+    # below leaves it whole. Interfaces built before 2026-11-17 lack it ->
+    # no fixed demand, w/ warning.
+    no_parent_shares_path <- file.path(base_path, paste0('no_parent_care_shares_', acs_base_year, '.csv'))
+    if (file.exists(no_parent_shares_path)) {
+      sim_base_hh$no_parent_care_shares <- tibble(fread(no_parent_shares_path))
+    } else {
+      cat('Warning: no-parent care shares not found (', no_parent_shares_path, ');\n',
+          '  children w/o parent unit add no demand. Rerun 1b for this interface to include them.\n', sep = '')
+    }
+
     # Read SPM data files (optional - for poverty analysis)
     spm_units_path <- file.path(base_path, paste0('acs_spm_units_', acs_base_year, '.csv'))
     pu_spm_xwalk_path <- file.path(base_path, paste0('acs_pu_spm_xwalk_', acs_base_year, '.csv'))

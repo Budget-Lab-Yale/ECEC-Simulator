@@ -11,7 +11,7 @@ They read the raw public-use files directly and don't touch the simulator's pipe
 | `03_dk_costs_and_calendar_gaps.py` | Do "don't know" center costs look like free care or missing amounts? How many parent hours records does the −10 calendar-gap code blank? |
 | `04_admin_centers.py` | What are the administrative-data center cases, and how do they enter the sector labor ratios in each year? |
 | `05_price_cutoff.py` | What recipe reproduces the $4.75 low/high center cutoff on 2019, and what does it give on 2024 ($6.86, now set per year in `1a`)? |
-| `06_supply_checks.py` | Do negative posted-rate codes reach a price? How do the admin-center treatments, wages, and home-based weights change the sector labor ratios and `L_0`? |
+| `06_supply_checks.py` | Do negative posted-rate codes reach a price? How do the admin-center treatments and home-based weights change the sector labor ratios and `L_0`? (Sector wages left this script on 2026-11-16, when the model kept one wage pair.) |
 | `07_admin_family_pay.py` | How many administrative-data centers fall in each family-pay group, and how much enrollment do they hold? |
 | `08_admin_staffing.py` | Do administrative-data centers carry director staff counts, and how many staff per child do they report against interviewed centers? |
 | `09_definition_checks.py` | Do the 2019 and 2024 free-center rules agree? How are posted rates censored, and how many rates above $50 per hour remain? Do imputed and reported admin staff counts differ? How much enrollment do admin centers outside every sector hold? |

@@ -1240,6 +1240,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
           Qd <- Qd + Qd_i
         }
       }
+      # Fixed demand of children w/o parent unit (outside choice model)
+      if (!is.null(supply_params$Qd_fixed)) Qd <- Qd + supply_params$Qd_fixed
 
       stage <- 'aggregate:Qd'
       if (any(!is.finite(Qd)) || any(Qd < 0)) {
@@ -1451,6 +1453,8 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
                                                           policy_transfer = do_transfer_policy)
         }
       }
+      # Fixed demand of children w/o parent unit (outside choice model)
+      if (!is.null(supply_params$Qd_fixed)) Qd_candidate <- Qd_candidate + supply_params$Qd_fixed
 
       # Compute supply-side residual gaps at candidate solution
       supply_candidate <- compute_supply_residuals(P_candidate, Qd_candidate, supply_params, do_supply_policy)
