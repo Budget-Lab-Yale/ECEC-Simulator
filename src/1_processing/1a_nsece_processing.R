@@ -1465,7 +1465,8 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
     # retransform. Holdout tests (cluster agr55/nsece_evidence/admincv1116,
     # 10 folds x 20, held-out programs reweighted to look like imputed ones):
     # error 0.53 in log staff per child vs 0.57 log size alone; reweighted
-    # total +2% (bootstrap SE 7%); refit total 11% below NORC's. Replaces
+    # total +2% (bootstrap SE 7%); refit total 9.2% below NORC's in model run
+    # (seed 1117; 11% in holdout runs). Replaces
     # 2026-11-12 least-squares fit on size bins + funding -- overstated
     # reweighted total by 10% (SE 6%, too high in 98% of draws). No region
     # -- 18 of 518 record counts in Northeast vs 178 of 623 imputed; forests
