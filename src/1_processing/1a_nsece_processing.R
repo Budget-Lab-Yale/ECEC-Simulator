@@ -4,7 +4,7 @@
 # and price heterogeneity model training. Called from main.R.
 
 
-run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = character(0)) {
+run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = character(0), stanford_wedges = TRUE) {
 
   #----------------------------------------------------------------------------
   # Processes NSECE data: household demand data, supply parameters,
@@ -20,6 +20,8 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   #   - nsece_2024_options (chr): optional 2024 data treatments, any of
   #       NSECE_2024_OPTIONS ('weights', 'supply'; see constants.R).
   #       Ignored for 2019. Default none.
+  #   - stanford_wedges (lgl): apply STANFORD_WAGE_MULTIPLIERS to staff
+  #       ratios, both survey years. Default TRUE.
   #
   # Returns: nothing (side effects only)
   #----------------------------------------------------------------------------
@@ -28,6 +30,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   # years -- see parent units below)
   use_2024_weights <- nsece_year == 2024 && 'weights' %in% nsece_2024_options
   use_2024_supply  <- nsece_year == 2024 && 'supply'  %in% nsece_2024_options
+  use_cal_forest   <- nsece_year == 2024  # calendar forest, always on for 2024 (Anna, 2026-11-19)
   if (nsece_year == 2024) {
     cat('2024 NSECE options:',
         if (length(nsece_2024_options) == 0) 'none' else paste(nsece_2024_options, collapse = ', '), '\n')
@@ -191,7 +194,16 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           ),
           resp_partner = if_else(HH9_RSPOUSEPARTNER_LOOP < 0, NA, HH9_RSPOUSEPARTNER_LOOP),
           # Census region: 1=Northeast, 2=Midwest, 3=South, 4=West
-          region = HH9_REGION
+          region = HH9_REGION,
+          # Care reported for a calendar week (2019: all; 2024: QUEXVERSION
+          # 1). Typical-week care is filled per child below, so sibling-pair
+          # measures use calendar households only (1b sibling_tie_rate)
+          calendar = if ('HH9_METH_QUEXVERSION' %in% names(.)) as.integer(HH9_METH_QUEXVERSION %in% 1) else 1L,
+          # Grandparent of a child under 13 in household (care-forest input,
+          # 1b builds ACS match). 5-fold CV (archive npcg1123 gpfeat.R): cuts
+          # paid-care error for children whose parent did not answer 9.0 -> 7.2
+          # pts (2024), 8.4 -> 7.7 (2019); Brier 0.674 -> 0.669, 0.610 -> 0.604
+          gp = as.integer(as.numeric(HH9_HHCOMP_RELATIONS_GPARENT) %in% 1)
         ) %>%
         select(
           hh_id        = HH9_METH_CASEID,
@@ -201,7 +213,9 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           region,
           resp_male,
           resp_has_partner,
-          resp_partner
+          resp_partner,
+          calendar,
+          gp
         )
     }
 
@@ -345,21 +359,35 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         arrange(hh_id, child_id, hhm_id) %>%
         select(hh_id, child_id, hhm_id) %>%
 
-        # Create parent IDs
+        # Family holds at most two parents. Child w/ 3+ flagged parents (0.4%
+        # of children under 5, 2024): keep respondent + respondent's spouse/
+        # partner (RSPOUSEPARTNER_LOOP) when both flagged, else two listed first
+        # (Anna, 2026-11-23)
+        left_join(
+          nsece_hh %>%
+            select(hh_id = HH9_METH_CASEID, any_of(c(sp_loop = 'HH9_RSPOUSEPARTNER_LOOP'))),
+          by = 'hh_id'
+        ) %>%
+        { if ('sp_loop' %in% names(.)) . else mutate(., sp_loop = NA_integer_) } %>%
         group_by(hh_id, child_id) %>%
+        filter(
+          n() <= 2 |
+            !(any(hhm_id == 1) & any(hhm_id == sp_loop[1])) |
+            hhm_id %in% c(1, sp_loop[1])
+        ) %>%
+        slice_head(n = 2) %>%
+
+        # Create parent IDs
         mutate(
           parent_index = dense_rank(hhm_id)
         ) %>%
+        select(-sp_loop) %>%
         pivot_wider(
           names_from   = parent_index,
           names_prefix = 'hhm_id',
           values_from  = hhm_id
         ) %>%
         ungroup() %>%
-
-        # ASSUMPTION: Drop nonsense parent units with more than 2 people (0.3% of cases)
-        # (any_of: a survey year need not contain a child with 3 or 4 flagged parents)
-        select(-any_of(paste0('hhm_id', 3:13))) %>%
         mutate(
           parent_unit_id = if_else(
             is.na(hhm_id2),
@@ -382,21 +410,31 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         ) %>%
 
         # Sex of parents who aren't the respondent. Public file has the
-        # respondent's sex only, plus household counts of mothers and fathers
-        # (HH9_HHCOMP_NUMMOTHER / NUMFATHER; negative = missing). One rule for
-        # every parent w/o a known sex (Anna, 2026-11-13, after Harris flagged
-        # mismatched rules -- old code imputed lone non-respondent parents,
-        # left two-parent units w/ no respondent parent NA (1b drops them),
-        # gave partner a sex only when counts were exact):
-        #   - parent 1 (lone parent, or neither parent the respondent):
-        #     fathers only in household -> male; else female (80-84% of single
-        #     parents w/ known sex are mothers). Lone non-respondent parents:
-        #     13% / 16% of 2019 / 2024 single-parent child weight, about half
-        #     w/ grandparent respondent; two-parent units w/o respondent
-        #     parent: 1.1% / 1.6% of children under 5
-        #   - parent 2: opposite sex of parent 1 if household counts any parent
-        #     of that sex (or counts missing), else same sex
-        # Needed so 1b can pick the mother as primary caregiver, as for ACS.
+        # respondent's sex only. Per child, MOMSCH_<child> says whether the
+        # child's own mother lives in household (1-7 yes, 9 no, -7 unknown);
+        # household counts of mothers, fathers (HH9_HHCOMP_NUMMOTHER /
+        # NUMFATHER; negative = missing) cover everyone in household. Rule
+        # (Anna, 2026-11-23; replaces count-only rule of 2026-11-13):
+        #   - parent who is respondent: respondent's sex
+        #   - child has no mother (MOMSCH 9): parents w/o known sex fathers
+        #   - child has mother, one parent: that parent mother
+        #   - child has mother, two parents, neither respondent: mother drawn
+        #     at random w/ the mother share of similar known couples -- cell
+        #     = age gap band x which parent has most work hours
+        #     (WST_PARCH_HI); known couples = respondent father + MOMSCH
+        #     mother, or respondent mother + household father, each counted
+        #     in both orientations. Picking most likely parent per cell is
+        #     right for 81% of known couples (younger parent 72%, fewer hours
+        #     75-76%); draw keeps each cell's mother mix (Anna, 2026-11-23).
+        #     Other parent opposite sex unless household counts no fathers
+        #   - respondent father, child has mother: other parent mother
+        #   - MOMSCH unknown, or respondent mother: household counts --
+        #     parent w/o known sex father only if household has fathers, no
+        #     mothers; second parent opposite sex unless household counts no
+        #     parent of that sex
+        # MOMSCH matches respondent's sex for every child w/ a responding
+        # parent (2019, 2024). Needed so 1b can pick mother as primary
+        # caregiver, as for ACS.
         left_join(
           nsece_hh %>%
             select(hh_id     = HH9_METH_CASEID,
@@ -404,21 +442,93 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
                    n_fathers = HH9_HHCOMP_NUMFATHER),
           by = 'hh_id'
         ) %>%
+        left_join(
+          nsece_hh %>%
+            select(hh_id = HH9_METH_CASEID, matches('^HH9_MOMSCH_[1-9]$')) %>%
+            pivot_longer(-hh_id, names_to = 'child_id', names_prefix = 'HH9_MOMSCH_',
+                         names_transform = as.integer, values_to = 'momsch'),
+          by = c('hh_id', 'child_id')
+        ) %>%
+        left_join(
+          nsece_hh %>%
+            select(hh_id = HH9_METH_CASEID, matches('^HH9_HHM_AGE_[0-9]+$')) %>%
+            pivot_longer(-hh_id, names_to = 'hhm', names_prefix = 'HH9_HHM_AGE_',
+                         names_transform = as.integer, values_to = 'p_age') %>%
+            mutate(p_age = suppressWarnings(as.numeric(p_age))),
+          by = c('hh_id', 'hhm_id1' = 'hhm')
+        ) %>%
+        rename(p_age1 = p_age) %>%
+        left_join(
+          nsece_hh %>%
+            select(hh_id = HH9_METH_CASEID, matches('^HH9_HHM_AGE_[0-9]+$')) %>%
+            pivot_longer(-hh_id, names_to = 'hhm', names_prefix = 'HH9_HHM_AGE_',
+                         names_transform = as.integer, values_to = 'p_age') %>%
+            mutate(p_age = suppressWarnings(as.numeric(p_age))),
+          by = c('hh_id', 'hhm_id2' = 'hhm')
+        ) %>%
+        rename(p_age2 = p_age) %>%
+        left_join(
+          nsece_hh %>%
+            select(hh_id = HH9_METH_CASEID, matches('^HH9_WST_PARCH_HI_[1-9]$')) %>%
+            pivot_longer(-hh_id, names_to = 'child_id', names_prefix = 'HH9_WST_PARCH_HI_',
+                         names_transform = as.integer, values_to = 'hi_mem'),
+          by = c('hh_id', 'child_id')
+        ) %>%
         mutate(
           n_mothers = if_else(n_mothers < 0, NA, n_mothers),
           n_fathers = if_else(n_fathers < 0, NA, n_fathers),
+          has_mom   = case_when(momsch %in% 1:7 ~ 1L, momsch %in% 9 ~ 0L, TRUE ~ NA_integer_),
+          resp_known = !is.na(male1),
+          # cell of a two-parent couple, from parent 1's side
+          gap_band = cut(p_age1 - p_age2, c(-Inf, -6, -3, -1, 0, 2, 5, Inf)),
+          hi_side  = case_when(hi_mem %in% hhm_id1 ~ 'p1', hi_mem %in% hhm_id2 ~ 'p2', TRUE ~ 'unknown'),
           male1 = case_when(
-            !is.na(male1)                      ~ male1,
-            n_fathers >= 1 & n_mothers %in% 0  ~ 1L,
-            TRUE                               ~ 0L
-          ),
+            resp_known                                                ~ male1,
+            has_mom %in% 0L                                           ~ 1L,
+            has_mom %in% 1L & is.na(hhm_id2)                          ~ 0L,
+            has_mom %in% 1L                                           ~ NA_integer_,  # drawn below
+            n_fathers >= 1 & n_mothers %in% 0                         ~ 1L,
+            TRUE                                                      ~ 0L
+          )
+        ) %>%
+        {
+          # Mother share of known couples by cell, both orientations
+          known <- filter(., !is.na(hhm_id2), resp_known, p_age1 > 0, p_age2 > 0,
+                          (male1 %in% 1L & has_mom %in% 1L) | (male1 %in% 0L & n_fathers %in% 1:99)) %>%
+            transmute(gap = p_age1 - p_age2, hi_side, mom_p1 = male1 == 0L)
+          both <- bind_rows(known, known %>% mutate(gap = -gap, mom_p1 = !mom_p1,
+                                                    hi_side = recode(hi_side, p1 = 'p2', p2 = 'p1'))) %>%
+            mutate(gap_band = cut(gap, c(-Inf, -6, -3, -1, 0, 2, 5, Inf)))
+          cell <- both %>% group_by(gap_band, hi_side) %>% summarise(p_mom1 = mean(mom_p1), .groups = 'drop')
+          out <- left_join(., cell, by = c('gap_band', 'hi_side')) %>%
+            mutate(p_mom1 = coalesce(p_mom1, 0.5),
+                   u      = withr::with_seed(random_seed_base + 1123, runif(n())),
+                   male1  = if_else(is.na(male1), as.integer(u >= p_mom1), male1)) %>%
+            select(-u) %>%
+            select(-p_mom1)
+          cat('  Parent sex: mother drawn from similar known couples for', sum(is.na(.$male1)), 'children (',
+              nrow(known), 'known couples)\n')
+          out
+        } %>%
+        mutate(
           male2 = case_when(
             is.na(hhm_id2)                     ~ NA_integer_,
+            has_mom %in% 0L                    ~ 1L,
+            has_mom %in% 1L & male1 == 1L      ~ 0L,
             male1 == 1L                        ~ if_else(n_mothers %in% 0, 1L, 0L),
             TRUE                               ~ if_else(n_fathers %in% 0, 0L, 1L)
           )
         ) %>%
-        select(-n_mothers, -n_fathers)
+        {
+          # Check vs MOMSCH: child w/ a mother in household should have a
+          # mother among its (at most two) kept parents
+          miss <- sum(.$has_mom %in% 1L & .$male1 %in% 1L & !(.$male2 %in% 0L), na.rm = TRUE)
+          cat('  Parent sex: children w/ mother in household (MOMSCH) but no kept parent a mother:', miss,
+              'of', sum(.$has_mom %in% 1L), '\n')
+          .
+        } %>%
+        select(-n_mothers, -n_fathers, -momsch, -has_mom, -resp_known, -p_age1, -p_age2,
+               -hi_mem, -gap_band, -hi_side)
 
       pu <- {
         labor_hi_cols     <- grep('^HH9_WST_PARCH_HI_[1-9]$',    names(nsece_hh), value = T)
@@ -459,7 +569,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         # work measure. Use survey item D1a ("Last week, did you do any work
         # for pay?": 1 = yes, 2 = no, 3 = DK/refused) instead:
         #   - did not work for pay (school or training only): zero hours
-        #   - worked but no calendar hours (about 6% of second earners with
+        #   - worked but no calendar hours (about 6% of lower-ranked earners, WST_..._LO, with
         #     a child under 5): donor hours (missing-hours fill below)
         #   - D1a missing or DK/refused: calendar hours as before
         work_cols <- grep('^HH9_D1A_WORK_[0-9]+$', names(nsece_hh), value = T)
@@ -694,6 +804,36 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         relocate(parent_unit_id, .after = child_id)
     }
 
+    # Caregiver work for children w/o parent (feeds no_parent_care_dist in
+    # 1b). Caregiver = guardian named in PRGCH_X_Y (code 2; respondent if among
+    # them, else lowest member), else respondent (hhm 1). cg_works = worked for
+    # pay last week (D1A 1); NA for children w/ parent. Holdout (archive
+    # npcg1123): care distribution by caregiver work beats one by age on paid care
+    # within work, income groups both years (Anna, 2026-11-23)
+    children <- {
+      prg_cols <- grep('^HH9_PRGCH_[0-9]+_[0-9]+$', names(nsece_hh), value = TRUE)
+      d1a_cols <- grep('^HH9_D1A_WORK_[0-9]+$', names(nsece_hh), value = TRUE)
+      guard <- nsece_hh %>%
+        select(hh_id = HH9_METH_CASEID, all_of(prg_cols)) %>%
+        mutate(across(all_of(prg_cols), as.integer)) %>%
+        pivot_longer(-hh_id, names_to = c('child_id', 'hhm'), names_pattern = 'HH9_PRGCH_([0-9]+)_([0-9]+)',
+                     names_transform = as.integer, values_to = 'v') %>%
+        filter(v %in% 2L) %>%
+        group_by(hh_id, child_id) %>%
+        summarise(cg_hhm = if (any(hhm == 1L)) 1L else as.integer(min(hhm)), .groups = 'drop')
+      d1a <- nsece_hh %>%
+        select(hh_id = HH9_METH_CASEID, all_of(d1a_cols)) %>%
+        mutate(across(all_of(d1a_cols), as.integer)) %>%
+        pivot_longer(-hh_id, names_to = 'cg_hhm', names_prefix = 'HH9_D1A_WORK_',
+                     names_transform = as.integer, values_to = 'd1a')
+      children %>%
+        left_join(guard, by = c('hh_id', 'child_id')) %>%
+        mutate(cg_hhm = if_else(is.na(parent_unit_id), coalesce(cg_hhm, 1L), NA_integer_)) %>%
+        left_join(d1a, by = c('hh_id', 'cg_hhm')) %>%
+        mutate(cg_works = if_else(is.na(cg_hhm), NA_integer_, as.integer(d1a %in% 1L))) %>%
+        select(-cg_hhm, -d1a)
+    }
+
     # Count children under 5 per parent unit and create child_category
     child_counts <- children %>%
       filter(age < 5) %>%
@@ -863,6 +1003,18 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           )
         )
 
+      # Child-calendar hours w/ each rostered provider (2024 calendar
+      # households; NA otherwise). Feeds non-regular fallback below.
+      providers <- providers %>%
+        left_join(
+          if (!is.null(nsece_settings$files$calendar)) {
+            child_calendar_provider_hours(estimation_info$paths$NSECE, nsece_settings)
+          } else {
+            tibble(hh_id = numeric(0), child_id = integer(0), provider_id = integer(0), cal_hrs = numeric(0))
+          },
+          by = c('hh_id', 'child_id', 'provider_id')
+        )
+
       # ---- Child-level overlay ('Parent only' + hours buckets) ---------------
       # Priority ranking for primary care assignment when child has multiple arrangements.
       # Center-based care (including unpaid programs like Head Start/pre-K) ranks above
@@ -899,6 +1051,23 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
             ) %>%
             group_by(ecec_choice) %>%
             summarise(hours = sum(hours), .groups = 'drop')
+
+          # No regular arrangement -> non-regular rostered provider w/ 5+
+          # child-calendar hours counts, at its calendar hours (Anna,
+          # 2026-11-23). 2024 calendar Parent Only children under 5 w/ a
+          # working primary caregiver: 22-27% of hours w/ all parents away
+          # are w/ a rostered provider; half of those not regular, nearly all
+          # Other Unpaid (archive npcg1123 pocal.R, poprov.R)
+          if (nrow(category_hours) == 0 && 'cal_hrs' %in% names(prov)) {
+            category_hours <- prov %>%
+              filter(
+                regular == 0,
+                !is.na(ecec_choice),
+                cal_hrs >= 5
+              ) %>%
+              group_by(ecec_choice) %>%
+              summarise(hours = sum(cal_hrs), .groups = 'drop')
+          }
 
           if (nrow(category_hours) > 0) {
 
@@ -998,6 +1167,129 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
            'join has likely broken; inspect the household roster processing.')
     }
 
+    # Calendar forest, 2024 (Anna, 2026-11-19; always on). Typical-week children under 5 (HH9_METH_QUEXVERSION 2, 3)
+    # take care category x hours class (Parent Only, < 20, 20+ weekly hrs)
+    # drawn from probability forest fit on calendar children (1): age,
+    # poverty group (HH9_POV_RATIO_TC), family, primary caregiver's D1a,
+    # region; child weights. Hours = class's weighted mean among calendar
+    # children. Provider rows (prices) unchanged. Holdout evidence:
+    # crosswalk, John's optional 2024 treatments.
+    enrollment_out <- enrollment_data$enrollment
+    if (use_cal_forest) {
+      hh_cal <- nsece_hh %>%
+        transmute(
+          hh_id    = HH9_METH_CASEID,
+          calendar = HH9_METH_QUEXVERSION %in% 1,
+          pov      = case_when(
+            is.na(HH9_POV_RATIO_TC) | HH9_POV_RATIO_TC < 0 ~ '5: income missing',
+            HH9_POV_RATIO_TC < 1 ~ '1', HH9_POV_RATIO_TC < 2 ~ '2', HH9_POV_RATIO_TC < 4 ~ '3', TRUE ~ '4'
+          ),
+          region   = as.character(HH9_REGION)
+        )
+      d1a_cols <- grep('^HH9_D1A_WORK_[0-9]+$', names(nsece_hh), value = T)
+      d1a <- nsece_hh %>%
+        select(hh_id = HH9_METH_CASEID, all_of(d1a_cols)) %>%
+        mutate(across(all_of(d1a_cols), as.integer)) %>%
+        pivot_longer(-hh_id, names_to = 'hhm_pc', names_prefix = 'HH9_D1A_WORK_', values_to = 'd1a') %>%
+        mutate(hhm_pc = as.integer(hhm_pc))
+      # Primary caregiver -- same rule as 1b get_primary_caregiver(): mother;
+      # same-sex couple -> parent w/ fewer work hours, tie or missing -> parent 1
+      pc <- parent_units %>%
+        mutate(
+          same_sex = !is.na(hhm_id2) & (male1 == male2) %in% TRUE,
+          h1       = coalesce(as.numeric(hours1), 0),
+          h2       = coalesce(as.numeric(hours2), 0)
+        ) %>%
+        transmute(
+          hh_id, parent_unit_id,
+          family = if_else(is.na(hhm_id2), 'one parent', 'two parents'),
+          hhm_pc = as.integer(case_when(same_sex & h2 < h1                ~ hhm_id2,
+                                        same_sex                          ~ hhm_id1,
+                                        !is.na(hhm_id2) & male1 %in% 0L ~ hhm_id1,
+                                        !is.na(hhm_id2) & male2 %in% 0L ~ hhm_id2,
+                                        TRUE                            ~ hhm_id1))
+        ) %>%
+        left_join(d1a, by = c('hh_id', 'hhm_pc'))
+      kids <- children %>%
+        filter(age < 5) %>%
+        select(hh_id, child_id, parent_unit_id, age, child_weight) %>%
+        inner_join(enrollment_out, by = c('hh_id', 'child_id')) %>%
+        filter(!is.na(ecec_choice), !is.na(child_weight), child_weight > 0) %>%
+        left_join(hh_cal, by = 'hh_id') %>%
+        left_join(pc, by = c('hh_id', 'parent_unit_id')) %>%
+        mutate(
+          family = coalesce(family, 'no parent identified'),
+          pc_d1a = case_when(d1a %in% 1L ~ 'worked', d1a %in% 2L ~ 'did not work', TRUE ~ 'unknown or no parent'),
+          cls    = if_else(ecec_choice == 'Parent Only', 'Parent Only_none',
+                           paste0(ecec_choice, if_else(hours >= 20, '_20+', '_<20'))),
+          across(c(age, pov, family, pc_d1a, region), ~ factor(as.character(.x)))
+        )
+      tr <- kids %>% filter(calendar)
+      te <- kids %>% filter(!calendar)
+      if (nrow(te) > 0) {
+        fit <- ranger(
+          y = factor(tr$cls), x = as.data.frame(tr[, c('age', 'pov', 'family', 'pc_d1a', 'region')]),
+          num.trees = 500, min.node.size = 10, mtry = 5, probability = TRUE,
+          case.weights = tr$child_weight, seed = 1119, num.threads = 1
+        )
+        p <- predict(fit, data = as.data.frame(te[, c('age', 'pov', 'family', 'pc_d1a', 'region')]),
+                     num.threads = 1)$predictions
+
+        # Siblings drawn jointly (Anna, 2026-11-23). Per-child draws cut same
+        # care in typical-week sibling pairs from 72% to 29% (2024). Tie rate
+        # from calendar pairs (two youngest per family), as 1b
+        # sibling_tie_rate: rho = (obs - exp) / (1 - exp), exp from class
+        # shares by age. Family ties w/ prob rho -> one class for all its
+        # children under 5, drawn from mean of their probabilities; else each
+        # child draws own. Keeps each child's expected class shares.
+        fam_key <- function(d) paste(d$hh_id, coalesce(as.character(d$parent_unit_id), 'np'))
+        tie_rho <- {
+          age_sh <- tr %>% count(age, cls, wt = child_weight, name = 's') %>%
+            group_by(age) %>% mutate(s = s / sum(s)) %>% ungroup()
+          pr <- tr %>% mutate(fam = fam_key(tr)) %>% arrange(fam, age, child_id) %>%
+            group_by(fam) %>% filter(n() >= 2) %>%
+            summarise(a1 = age[1], a2 = age[2], c1 = cls[1], c2 = cls[2],
+                      w = (child_weight[1] + child_weight[2]) / 2, .groups = 'drop')
+          if (nrow(pr) == 0) 0 else {
+            e_i <- mapply(function(x, y) {
+              s1 <- age_sh %>% filter(age == x); s2 <- age_sh %>% filter(age == y)
+              sum(s1$s * s2$s[match(s1$cls, s2$cls)], na.rm = TRUE)
+            }, as.character(pr$a1), as.character(pr$a2))
+            e <- weighted.mean(e_i, pr$w); o <- weighted.mean(pr$c1 == pr$c2, pr$w)
+            max(0, min(1, (o - e) / (1 - e)))
+          }
+        }
+        set.seed(1119)
+        draw <- colnames(p)[apply(p, 1, function(r) sample.int(length(r), 1, prob = r))]
+        fam <- fam_key(te)
+        for (g in unique(fam[duplicated(fam)])) {
+          i <- which(fam == g)
+          if (runif(1) < tie_rho) draw[i] <- colnames(p)[sample.int(ncol(p), 1, prob = colMeans(p[i, , drop = FALSE]))]
+        }
+        cat('  Typical-week fill: sibling tie rate', round(tie_rho, 3), 'from calendar pairs |',
+            sum(duplicated(fam)), 'typical-week siblings drawn jointly\n')
+        class_hours <- tr %>%
+          group_by(cls) %>%
+          summarise(hours = weighted.mean(hours, child_weight), .groups = 'drop')
+        new <- te %>%
+          transmute(hh_id, child_id, cls = draw) %>%
+          left_join(class_hours, by = 'cls') %>%
+          mutate(
+            ecec_choice       = sub('_(none|<20|20\\+)$', '', cls),
+            ecec_hours_choice = case_when(grepl('_none$', cls) ~ 'none', grepl('_<20$', cls) ~ 'pt', TRUE ~ 'ft'),
+            hours             = if_else(ecec_hours_choice == 'none', 0, hours)
+          ) %>%
+          select(hh_id, child_id, ecec_choice, hours, ecec_hours_choice)
+        po <- function(d, w) 100 * sum(w[d$ecec_choice == 'Parent Only']) / sum(w)
+        cat('  calendar_forest: typical-week children under 5 re-drawn:', nrow(te), '(calendar donors', nrow(tr),
+            ') | their Parent Only share', sprintf('%.1f%% -> %.1f%%', po(te, te$child_weight),
+                                                     po(new, te$child_weight[match(paste(new$hh_id, new$child_id),
+                                                                                    paste(te$hh_id, te$child_id))])), '\n')
+        enrollment_out <- enrollment_out %>%
+          rows_update(new, by = c('hh_id', 'child_id'))
+      }
+    }
+
     # Return as list
     list(
       households         = households,
@@ -1005,7 +1297,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
       children           = children,
       parent_units       = parent_units,
       providers          = enrollment_data$providers,
-      enrollment         = enrollment_data$enrollment
+      enrollment         = enrollment_out
     )
   }
 
@@ -1029,6 +1321,27 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
   nsece_cb <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'center')
   nsece_hb <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'home')
   nsece_wf <- read_nsece_file(estimation_info$paths$NSECE, nsece_settings, 'workforce')
+
+  # Home-based staff hours for FTE staffing (Anna, 2026-11-23; as Stanford
+  # white paper sec. 3.3). Owner = weekly hours open (Mon-Fri HRSOPEN, cap
+  # 60). Hours per helper = midpoints of STAFF_PRCNT_UNDER10HRS / OVER30HRS
+  # buckets (5, 20, 40 h). NA where not reported -- filled w/ weighted means
+  # of listed providers in home_inputs. Listed providers: owner ~49 h, helper
+  # ~24 h (2024); staff per child vs headcount -4% no BA, -2% BA (2024),
+  # -6%, -1% (2019) (archive npcg1123 hbfte.R)
+  hb_hours <- {
+    open_cols <- grep('^HB9_HRSOPEN_R_(MON|TUE|TUES|WED|THU|THURS|FRI)$', names(nsece_hb), value = TRUE)
+    oh <- as.matrix(as.data.frame(lapply(nsece_hb[open_cols], as.numeric)))
+    oh[!is.finite(oh) | oh < 0] <- NA
+    u10 <- as.numeric(nsece_hb$HB9_STAFF_PRCNT_UNDER10HRS)
+    o30 <- as.numeric(nsece_hb$HB9_STAFF_PRCNT_OVER30HRS)
+    tibble(
+      hb_id      = nsece_hb$HB9_METH_CASEID,
+      own_hrs    = if_else(rowSums(!is.na(oh)) > 0, pmin(60, rowSums(oh, na.rm = TRUE)), NA_real_),
+      helper_hrs = if_else(u10 >= 0 & o30 >= 0 & u10 + o30 <= 100,
+                           (u10 * 5 + (100 - u10 - o30) * 20 + o30 * 40) / 100, NA_real_)
+    )
+  }
 
   # Administrative-data centers (CB9_METH_DATA_SOURCE = 2: public-school
   # programs built from administrative records, 483 in 2019, 1,141 in 2024)
@@ -1618,7 +1931,10 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
 
     home_inputs <- {
       # Get price from household side (we lack sufficient info to do an enrollment-
-      # weighted average on this side)
+      # weighted average on this side). Total paid / total hours, child weights
+      # (Anna, 2026-11-19) -- mean of each arrangement's hourly price rose 38%
+      # 2019-2024 (SE 25 pts), driven by high hourly prices on short part-time
+      # arrangements; ratio of totals +18% (SE 16 pts), near CPI-U +23%.
       price_home <- processed_nsece_hh$children %>%
         left_join(
           processed_nsece_hh$providers,
@@ -1629,7 +1945,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
           age < 5,
           net_hourly_cost_status == 'OK'
         ) %>%
-        summarise(price = weighted.mean(net_hourly_cost, child_weight)) %>%
+        summarise(price = sum(net_weekly_cost * child_weight) / sum(hours * child_weight)) %>%
         pull()
 
       nsece_hb %>%
@@ -1659,12 +1975,20 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         # Testing confirmed adding explicit paid==1 filter changes ratios by <1%.
         filter(listed_source == 2) %>%
 
-        # Derive variables
+        # FTE staff (hb_hours above): (owner hours + helpers x hours per
+        # helper) / 40, split by BA. Unreported hours -> weighted mean.
+        left_join(hb_hours, by = 'hb_id') %>%
         mutate(
-          n_helpers = if_else(n_helpers == -2, 0, n_helpers),
-          n_workers = 1 + n_helpers,
-          n_ba      = as.integer(resp_college >= 6) + n_helpers * helpers_pct_college / 100,
-          n_no_ba   = n_workers - n_ba
+          n_helpers  = if_else(n_helpers == -2, 0, n_helpers),
+          pct_ba     = pmax(helpers_pct_college, 0) / 100,
+          own_ba     = as.integer(resp_college >= 6),
+          own_hrs    = coalesce(own_hrs, weighted.mean(own_hrs, hb_weight, na.rm = TRUE)),
+          helper_hrs = if_else(n_helpers > 0,
+                               coalesce(helper_hrs, weighted.mean(helper_hrs[n_helpers > 0],
+                                                                  (hb_weight * n_helpers)[n_helpers > 0], na.rm = TRUE)),
+                               0),
+          n_ba       = (own_ba * own_hrs + n_helpers * pct_ba * helper_hrs) / 40,
+          n_no_ba    = ((1 - own_ba) * own_hrs + n_helpers * (1 - pct_ba) * helper_hrs) / 40
         ) %>%
 
         # Get weighted totals. Provider weights make the home-based labor
@@ -1697,6 +2021,56 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
         )
     }
 
+    # Stanford labor-cost multipliers (STANFORD_WAGE_MULTIPLIERS, on by
+    # default). Unit labor cost = multiplier x payroll; staff ratios, L_0 stay
+    # in worker hours. Base-year prices unchanged -- residual absorbs change.
+    # Home-based multiplier per
+    # education group = owner/helper mix of listed providers (provider
+    # weights, same filters as home_inputs).
+    if (stanford_wedges) {
+      m <- STANFORD_WAGE_MULTIPLIERS
+      hb_mix <- nsece_hb %>%
+        filter(HB9_METH_SAMPLE_SOURCE == 2, HB9_ENRL_TOTAL >= 0, HB9_CAREER_EDUC > 0, HB9_H2_NUMHELP > -4,
+               HB9_STAFF_EDUC_PRCNT_4YR != -1, HB9_STAFF_EDUC_PRCNT_4YR != -3) %>%
+        mutate(n_helpers = if_else(HB9_H2_NUMHELP == -2, 0, HB9_H2_NUMHELP),
+               pct_ba    = pmax(HB9_STAFF_EDUC_PRCNT_4YR, 0) / 100,
+               own_ba    = as.numeric(HB9_CAREER_EDUC >= 6),
+               w         = HB9_METH_WEIGHT,
+               hb_id     = HB9_METH_CASEID) %>%
+        # Mix by hours, as staffing is FTE (hb_hours, same fills)
+        left_join(hb_hours, by = 'hb_id') %>%
+        mutate(own_hrs    = coalesce(own_hrs, weighted.mean(own_hrs, w, na.rm = TRUE)),
+               helper_hrs = if_else(n_helpers > 0,
+                                    coalesce(helper_hrs, weighted.mean(helper_hrs[n_helpers > 0],
+                                                                       (w * n_helpers)[n_helpers > 0], na.rm = TRUE)),
+                                    0)) %>%
+        summarise(owner_no_ba  = sum(w * (1 - own_ba) * own_hrs),
+                  owner_ba     = sum(w * own_ba * own_hrs),
+                  helper_no_ba = sum(w * n_helpers * (1 - pct_ba) * helper_hrs),
+                  helper_ba    = sum(w * n_helpers * pct_ba * helper_hrs))
+      # [[ ]] drops names -- m['x'] inside c(no_ba = ...) renames to 'no_ba.x'
+      m_hb <- with(hb_mix, c(
+        no_ba = (m[['hb_owner']] * owner_no_ba + m[['hb_helper']] * helper_no_ba) / (owner_no_ba + helper_no_ba),
+        ba    = (m[['hb_owner']] * owner_ba    + m[['hb_helper']] * helper_ba)    / (owner_ba    + helper_ba)
+      ))
+      if (any(!is.finite(m_hb)) || any(m_hb < m[['hb_owner']] | m_hb > m[['hb_helper']])) {
+        stop('Stanford home-based multiplier outside [owner, helper] range: ', paste(round(m_hb, 4), collapse = ', '))
+      }
+      # Multipliers on cost only -- staff ratios stay in worker hours, so labor
+      # demand, L_0, payroll subsidies count workers (Stanford white paper
+      # sec. 2.2; Anna, 2026-11-23, replaces ratio restatement of 2026-11-20)
+      restate <- function(d, m_no_ba, m_ba) d %>% mutate(
+        mult_no_ba  = m_no_ba,
+        mult_ba     = m_ba,
+        labor_cost  = wage_rates['ba'] * ba_ratio * m_ba + wage_rates['no_ba'] * no_ba_ratio * m_no_ba,
+        residual    = if_else(price > 0, price - labor_cost, NA)
+      )
+      center_inputs <- restate(center_inputs, m[['center']], m[['center']])
+      home_inputs   <- restate(home_inputs, m_hb[['no_ba']], m_hb[['ba']])
+      cat('  Stanford labor-cost multipliers: centers', m[['center']], '| home-based no BA', round(m_hb[['no_ba']], 3),
+          ', BA', round(m_hb[['ba']], 3), '\n')
+    }
+
 
     #-----------------------------------
     # Construct supply parameter output
@@ -1714,6 +2088,14 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
       select(no_ba = no_ba_ratio, ba = ba_ratio) %>%
       as.matrix()
     rownames(L_req) <- sector_order
+
+    # Labor cost multipliers (1 w/o stanford_wedges); unit labor cost =
+    # (L_req * M) %*% w, see get_labor_cost_matrix()
+    if (!'mult_no_ba' %in% names(inputs)) inputs <- inputs %>% mutate(mult_no_ba = 1, mult_ba = 1)
+    M <- inputs %>%
+      select(no_ba = mult_no_ba, ba = mult_ba) %>%
+      as.matrix()
+    rownames(M) <- sector_order
 
     # Extract per-unit residual (delta_0 = price - unit_labor_cost)
     delta_0 <- inputs %>%
@@ -1744,6 +2126,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
     list(
       year    = nsece_year,
       L_req   = L_req,
+      M       = M,
       w       = wage_rates,
       L       = L_0,
       e       = e,
@@ -1760,7 +2143,7 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
     supply_params$year    <- base_year
     supply_params$w       <- supply_params$w / dollar_conversion$wage_factor
     supply_params$delta_0 <- supply_params$delta_0 / dollar_conversion$cpi_factor
-    labor_cost_base       <- as.vector(supply_params$L_req %*% supply_params$w)
+    labor_cost_base       <- as.vector(get_labor_cost_matrix(supply_params) %*% supply_params$w)
     supply_params$prices  <- if_else(
       is.na(supply_params$delta_0),
       supply_params$prices / dollar_conversion$cpi_factor,
@@ -1776,6 +2159,12 @@ run_nsece_processing <- function(nsece_year = 2019, nsece_2024_options = charact
 
       labor_requirements = setNames(lapply(1:4, function(i) {
         list(no_ba = supply_params$L_req[i, 1], ba = supply_params$L_req[i, 2])
+      }), c('unpaid_center_based', 'low_price_center_based',
+           'high_price_center_based', 'paid_home_based')),
+
+      # Labor cost multipliers (cost per hour of pay); staffing above in worker hours
+      labor_cost_multipliers = setNames(lapply(1:4, function(i) {
+        list(no_ba = supply_params$M[i, 1], ba = supply_params$M[i, 2])
       }), c('unpaid_center_based', 'low_price_center_based',
            'high_price_center_based', 'paid_home_based')),
 
@@ -2478,11 +2867,15 @@ fill_censored_rates <- function(nsece_cb, nsece_year, nsece_root) {
   if (nsece_year == 2019) {
     cb24 <- read_nsece_file(nsece_root, get_nsece_year_settings(2024), 'center') %>%
       filter(!(CB9_METH_DATA_SOURCE %in% 2))
+    # Rate age + other_pct x no_other (Anna, 2026-11-23): repeated 5-fold CV
+    # on 2024 v2 cells -- accuracy 87.7% vs 87.5% w/o age, mean error in
+    # high-tail share by age 0.6 vs 2.9 pts (archive gc1123 / nr1120 side_cv.R)
     tr <- censored_cell_features(cb24, find_censored_rates(cb24, 2024)) %>%
-      mutate(high = as.numeric(side == 'high'))
-    fit <- glm(high ~ profit + pubsch + hs + pk + subs + log_fte + region + density + other_pct + no_other,
+      mutate(high = as.numeric(side == 'high'), age = factor(age, levels = RATE_AGES))
+    fit <- glm(high ~ profit + pubsch + hs + pk + subs + log_fte + region + density + other_pct * no_other + age,
                family = quasibinomial(), data = tr, weights = w / mean(w))
-    ft <- censored_cell_features(nsece_cb, cens)
+    ft <- censored_cell_features(nsece_cb, cens) %>%
+      mutate(age = factor(age, levels = RATE_AGES))
     cens$p_high <- predict(fit, newdata = ft, type = 'response')
     cens$side   <- if_else(cens$p_high >= 0.5, 'high', 'low')
     cat('  Censored rates, side model on 2024 (', nrow(tr), ' cells): weighted in-sample accuracy ',
@@ -2589,6 +2982,42 @@ draw_donor_hours <- function(recipients, donors, keys, min_donors = 5) {
   }
   attr(out, 'dropped') <- dropped
   out
+}
+
+
+
+child_calendar_provider_hours <- function(nsece_root, nsece_settings) {
+
+  #----------------------------------------------------------------------------
+  # 2024 weekly hours each child spent w/ each rostered provider, from the
+  # child calendar (HH4_CHCAL_R_X_Z: child X, 15-min block Z = 1..672; value
+  # k = 1..6 -> non-parent provider k, same numbering as the provider roster
+  # -- calendar top provider = roster top provider for 97.6% of children w/
+  # counted care, archive npcg1123 pomatch.R). Typical-week households (-2)
+  # give no rows.
+  #
+  # Params:
+  #   - nsece_root (chr): NSECE raw folder
+  #   - nsece_settings (list): get_nsece_year_settings(2024)
+  #
+  # Returns: (tibble) hh_id, child_id, provider_id, cal_hrs (> 0 only)
+  #----------------------------------------------------------------------------
+
+  path <- file.path(nsece_root, nsece_settings$folder, nsece_settings$files$calendar)
+  hdr  <- names(fread(path, nrows = 0))
+  chc  <- grep('^HH4_CHCAL_R_[0-9]+_[0-9]+$', hdr, value = TRUE)
+  cal  <- fread(path, select = c('HH4_METH_CASEID', chc))
+
+  bind_rows(lapply(1:9, function(x) {
+    cols <- paste0('HH4_CHCAL_R_', x, '_', 1:672)
+    if (!all(cols %in% chc)) return(NULL)
+    m <- as.matrix(cal[, ..cols])
+    bind_rows(lapply(1:6, function(k) {
+      tibble(hh_id = cal$HH4_METH_CASEID, child_id = x, provider_id = k,
+             cal_hrs = rowSums(m == k, na.rm = TRUE) / 4)
+    }))
+  })) %>%
+    filter(cal_hrs > 0)
 }
 
 

@@ -113,18 +113,6 @@ initialize_simulation <- function() {
     }), table_names)
     sim_base_hh <- compact(sim_base_hh)
 
-    # Care shares of children w/o parent unit (fixed demand; see
-    # compute_no_parent_demand()). Shares table -- no hh_id, so sub-sampling
-    # below leaves it whole. Interfaces built before 2026-11-17 lack it ->
-    # no fixed demand, w/ warning.
-    no_parent_shares_path <- file.path(base_path, paste0('no_parent_care_shares_', acs_base_year, '.csv'))
-    if (file.exists(no_parent_shares_path)) {
-      sim_base_hh$no_parent_care_shares <- tibble(fread(no_parent_shares_path))
-    } else {
-      cat('Warning: no-parent care shares not found (', no_parent_shares_path, ');\n',
-          '  children w/o parent unit add no demand. Rerun 1b for this interface to include them.\n', sep = '')
-    }
-
     # Read SPM data files (optional - for poverty analysis)
     spm_units_path <- file.path(base_path, paste0('acs_spm_units_', acs_base_year, '.csv'))
     pu_spm_xwalk_path <- file.path(base_path, paste0('acs_pu_spm_xwalk_', acs_base_year, '.csv'))
@@ -247,8 +235,22 @@ initialize_simulation <- function() {
         supply_yaml_data$labor_requirements[[s]]$ba)
     }))
 
+    # Labor cost multipliers (added 2026-11-23). Absent -> older file w/
+    # multipliers folded into staffing; M stays NULL, L_req used for cost
+    M <- NULL
+    if (!is.null(supply_yaml_data$labor_cost_multipliers)) {
+      M <- do.call(rbind, lapply(sector_keys, function(s) {
+        c(supply_yaml_data$labor_cost_multipliers[[s]]$no_ba,
+          supply_yaml_data$labor_cost_multipliers[[s]]$ba)
+      }))
+    } else {
+      cat('  Note: supply file has no labor_cost_multipliers -- multipliers (if any) are in staffing,',
+          'so labor demand and payroll subsidies count cost hours. Rerun 1a to separate them.\n')
+    }
+
     base_supply_params <- list(
       L_req   = L_req,
+      M       = M,
       w       = c(supply_yaml_data$wages$no_ba, supply_yaml_data$wages$ba),
       L       = c(supply_yaml_data$labor_supply$no_ba, supply_yaml_data$labor_supply$ba),
       e       = c(supply_yaml_data$elasticities$no_ba, supply_yaml_data$elasticities$ba),

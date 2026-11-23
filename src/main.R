@@ -60,6 +60,7 @@ if (interactive()) {
   slurm_year_index         <- NULL  # 1-based index into years vector
   fiscal_npv               <- F  # Requires Tax-Simulator data
   disable_price_wedge      <- F  # Set to TRUE to disable price heterogeneity
+  disable_stanford_wedges  <- F  # Set to TRUE to drop Stanford labor-cost multipliers
   disable_employment_targeting <- F  # Set to TRUE to skip employment targeting
   calib_target1_name       <- 'part_cost'  # First calibration target elasticity
   calib_target1_value      <- NULL         # Value (NULL = use default)
@@ -262,7 +263,7 @@ interfaces <- resolve_interface_hierarchy(nsece_interface, acs_interface, calibr
 
 if (is.null(interfaces$nsece)) {
   cat('No NSECE interface specified. Generating NSECE estimation data with interface', time_stamp, '\n')
-  run_nsece_processing(nsece_year, nsece_2024_options)
+  run_nsece_processing(nsece_year, nsece_2024_options, stanford_wedges = !disable_stanford_wedges)
 } else {
   cat('Copying NSECE data from interface', interfaces$nsece, '\n')
   copy_interface('nsece', interfaces$nsece, time_stamp)

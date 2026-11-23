@@ -673,6 +673,12 @@ run_calibration <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         weights_ei <- (calibration_df$per_weight1 +
                     coalesce(calibration_df$per_weight2, calibration_df$per_weight1)) / 2
 
+        # Caregiver units (no parent; caregiver's work held at observed) out
+        # of elasticity targets -- weight 0; alpha still computed for them
+        if ('caregiver_unit' %in% names(calibration_df)) {
+          weights_ei[calibration_df$caregiver_unit %in% 1L] <- 0
+        }
+
         # Working choices mask
         n_children_ei <- if (n_choices_ei == 45) 1 else 2
         working_choices_ei <- get_working_choice_mask(n_children_ei)
@@ -1820,8 +1826,17 @@ run_calibration <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     supply_params_yaml$labor_requirements$paid_home_based$ba
   ), nrow = 4, byrow = TRUE)
 
+  # Labor cost multipliers (absent in supply files before 2026-11-23 -> 1)
+  sector_keys <- c('unpaid_center_based', 'low_price_center_based', 'high_price_center_based', 'paid_home_based')
+  M <- NULL
+  if (!is.null(supply_params_yaml$labor_cost_multipliers)) {
+    M <- do.call(rbind, lapply(sector_keys, function(s) {
+      c(supply_params_yaml$labor_cost_multipliers[[s]]$no_ba, supply_params_yaml$labor_cost_multipliers[[s]]$ba)
+    }))
+  }
+
   wages <- c(supply_params_yaml$wages$no_ba, supply_params_yaml$wages$ba)
-  unit_costs <- as.vector(L_req %*% wages)
+  unit_costs <- as.vector(get_labor_cost_matrix(list(L_req = L_req, M = M)) %*% wages)
 
   delta_0 <- c(
     0,  # Unpaid center (free)
@@ -1953,6 +1968,7 @@ run_calibration <- function(nsece_year = DEFAULT_NSECE_YEAR) {
           id_cols = c(hh_id, parent_unit_id, pseudofamily_id,
                       n_children, n_children_original, child_category, n_parents,
                       per_weight1, per_weight2, primary_caregiver, employment_observed,
+                      any_of('caregiver_unit'),
                       starts_with('child_id.'), starts_with('child_age.'),
                       starts_with('child_weight.')),
           names_from = employment_choice,

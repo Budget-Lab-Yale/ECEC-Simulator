@@ -92,7 +92,16 @@ NSECE_ACS_YEAR_PAIRS <- c(
 #   supply:  center staffing from directors' staff counts instead of
 #            workforce file. Censored rates now filled in both years by
 #            fill_censored_rates() (crosswalk mismatch item 4), no option
+# The calendar forest (typical-week children's care from calendar children)
+# is always on for 2024; config.R accepts the old name 'calendar_forest'
+# and drops it.
 NSECE_2024_OPTIONS <- c('weights', 'supply')
+
+# Stanford Childcare Model employer labor-cost multipliers (white paper Oct
+# 2026, sec 2.2): cost = multiplier x wage. Centers 1.25 (fringe benefits),
+# home-based helpers 1.1 (payroll tax), home-based owners 0.8 (self-employment
+# discount). On by default, both survey years; --no-stanford-wedges turns off.
+STANFORD_WAGE_MULTIPLIERS <- c(center = 1.25, hb_helper = 1.1, hb_owner = 0.8)
 
 
 

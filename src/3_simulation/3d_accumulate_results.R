@@ -382,6 +382,10 @@ aggregate_year_employment <- function(result, year) {
     has_secondary <- 'hours_secondary' %in% names(pu_df)
     has_baseline_probs <- all(c('p_employment.pt', 'p_employment.ft') %in% names(pu_df))
 
+    # Caregiver units (no parent; caregiver's work held at observed) are not
+    # parents -- out of parental employment
+    if ('pc_group' %in% names(pu_df)) pu_df <- pu_df %>% filter(is.na(pc_group) | pc_group != 'caregiver')
+    if (nrow(pu_df) == 0) return(tibble())
     parent_data <- pu_df %>%
       mutate(
         is_single_parent = is.na(per_weight2) | is.na(male2),

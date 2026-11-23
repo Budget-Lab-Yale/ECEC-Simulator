@@ -215,20 +215,25 @@ compute_supply_residuals <- function(P, Qd, supply_params, policy_supply = ident
   # This flows through to lower unit costs -> lower equilibrium prices -> higher demand.
   # Fiscal cost = hours * L_req * subsidy_rate (computed in fiscal_cost.R)
   #
+  # Subsidy base = payroll (L_req, worker hours); unit cost = labor cost
+  # (L_req * M, see get_labor_cost_matrix()) -- 25% payroll credit pays 25%
+  # of wages, not of benefits (Anna, 2026-11-23).
+  #
   # NOTE: supply_params$employer_subsidy is assumed to already be in current-year
   # dollars (same units as w), and is applied only to supply_params$employer_subsidy_sectors.
 
+  LC <- get_labor_cost_matrix(supply_params)
+
   if (!is.null(supply_params$employer_subsidy_pct)) {
-    # Percentage-based subsidy: effective wage = w * (1 - pct)
+    # Percentage-based subsidy: pct of payroll
     pct <- supply_params$employer_subsidy_pct
     employer_subsidy_sectors <- supply_params$employer_subsidy_sectors
     if (is.null(employer_subsidy_sectors)) {
       employer_subsidy_sectors <- seq_len(nrow(supply_params$L_req))
     }
 
-    w_effective <- w * (1 - pct)
-    unit_cost_unsubsidized <- as.vector(supply_params$L_req %*% w)
-    unit_cost_subsidized <- as.vector(supply_params$L_req %*% w_effective)
+    unit_cost_unsubsidized <- as.vector(LC %*% w)
+    unit_cost_subsidized <- unit_cost_unsubsidized - as.vector(supply_params$L_req %*% (w * pct))
     unit_cost <- unit_cost_unsubsidized
     unit_cost[employer_subsidy_sectors] <- unit_cost_subsidized[employer_subsidy_sectors]
   } else if (!is.null(supply_params$employer_subsidy)) {
@@ -241,22 +246,22 @@ compute_supply_residuals <- function(P, Qd, supply_params, policy_supply = ident
       employer_subsidy_sectors <- seq_len(nrow(supply_params$L_req))
     }
 
-    # Effective wage for cost calculation (floored at small positive to avoid negative)
-    w_effective <- pmax(w - supply_params$employer_subsidy, 0.01)
+    # Subsidy per worker hour, capped so effective wage stays >= 0.01
+    subsidy_eff <- pmin(supply_params$employer_subsidy, w - 0.01)
 
     # Apply subsidy only to covered sectors; uncovered sectors use unsubsidized wages.
-    unit_cost_unsubsidized <- as.vector(supply_params$L_req %*% w)
-    unit_cost_subsidized <- as.vector(supply_params$L_req %*% w_effective)
+    unit_cost_unsubsidized <- as.vector(LC %*% w)
+    unit_cost_subsidized <- unit_cost_unsubsidized - as.vector(supply_params$L_req %*% subsidy_eff)
     unit_cost <- unit_cost_unsubsidized
     unit_cost[employer_subsidy_sectors] <- unit_cost_subsidized[employer_subsidy_sectors]
   } else {
-    unit_cost <- as.vector(supply_params$L_req %*% w)
+    unit_cost <- as.vector(LC %*% w)
   }
 
 
   # -- Step 3: Unit cost ----
 
-  # Unit labor cost by sector: c[s] = sum_l (L_req[s,l] * w_l), with optional
+  # Unit labor cost by sector: c[s] = sum_l (L_req[s,l] * M[s,l] * w_l), with optional
   # employer subsidy applied only to covered sectors (see Step 2c).
 
 
@@ -1240,8 +1245,6 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
           Qd <- Qd + Qd_i
         }
       }
-      # Fixed demand of children w/o parent unit (outside choice model)
-      if (!is.null(supply_params$Qd_fixed)) Qd <- Qd + supply_params$Qd_fixed
 
       stage <- 'aggregate:Qd'
       if (any(!is.finite(Qd)) || any(Qd < 0)) {
@@ -1368,6 +1371,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
     }
 
     yaml_data$year <- year
+    if (!is.null(supply_params$M)) yaml_data$labor_cost_multipliers <- setNames(lapply(seq_along(sectors), function(i) list(no_ba = supply_params$M[i, 1], ba = supply_params$M[i, 2])), sectors)
 
     supply_dir %>%
       file.path(paste0('supply_', year, '.yaml')) %>%
@@ -1453,8 +1457,6 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
                                                           policy_transfer = do_transfer_policy)
         }
       }
-      # Fixed demand of children w/o parent unit (outside choice model)
-      if (!is.null(supply_params$Qd_fixed)) Qd_candidate <- Qd_candidate + supply_params$Qd_fixed
 
       # Compute supply-side residual gaps at candidate solution
       supply_candidate <- compute_supply_residuals(P_candidate, Qd_candidate, supply_params, do_supply_policy)
@@ -2079,6 +2081,7 @@ run_scenario <- function(scenario_info, supply_params, demand_params, parent_uni
       }
 
       yaml_data$year <- year
+      if (!is.null(supply_params$M)) yaml_data$labor_cost_multipliers <- setNames(lapply(seq_along(sectors), function(i) list(no_ba = supply_params$M[i, 1], ba = supply_params$M[i, 2])), sectors)
 
       yaml_data$equilibrium_prices <- setNames(
         as.list(result$prices),

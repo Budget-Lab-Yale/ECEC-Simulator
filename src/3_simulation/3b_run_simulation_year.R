@@ -856,6 +856,11 @@ prepare_parent_units <- function(parent_units, children, households, donor_pool,
     parent_units_joined <- parent_units_joined %>% mutate(married2 = NA_integer_)
   }
 
+  # Interfaces built before 2026-11-19 have no caregiver units
+  if (!('caregiver_unit' %in% names(parent_units_joined))) {
+    parent_units_joined <- parent_units_joined %>% mutate(caregiver_unit = 0L)
+  }
+
   # Compute primary caregiver group for employment targeting
   # pc_male: 1 if primary caregiver is male, 0 if female
   # pc_age: age of primary caregiver
@@ -874,7 +879,10 @@ prepare_parent_units <- function(parent_units, children, households, donor_pool,
         pc_age < 45 ~ '35_45',
         TRUE ~ '45plus'
       ),
-      pc_group = paste0(if_else(pc_male == 1, 'M', 'F'), '_', pc_age_bin)
+      pc_group = paste0(if_else(pc_male == 1, 'M', 'F'), '_', pc_age_bin),
+      # Caregiver units (no parent; work held at observed): own group, outside
+      # EMPLOYMENT_TARGETING_GROUPS -- no targeting, no shift, not in rates
+      pc_group = if_else(caregiver_unit %in% 1L, 'caregiver', pc_group)
     )
 
   # -- Assertions: pre-pivot data integrity ----
@@ -904,7 +912,7 @@ prepare_parent_units <- function(parent_units, children, households, donor_pool,
                   age1, age2, married1, married2,
                   race1, race2, hispanic1, hispanic2, educ1, educ2, educd1, educd2,
                   tax_unit_id1, tax_unit_id2, filing_status1, filing_status2,
-                  hours_secondary, oasi_tax_max, region,
+                  hours_secondary, oasi_tax_max, region, any_of('caregiver_unit'),
                   starts_with('child_id.'), starts_with('child_age.'), starts_with('child_weight.'),
                   starts_with('child_tax_unit.')),
       names_from  = employment_choice,

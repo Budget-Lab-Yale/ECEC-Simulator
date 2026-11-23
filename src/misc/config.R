@@ -37,6 +37,7 @@ parse_args <- function() {
   slurm_year_index        <- NULL  # 1-based index into years vector
   fiscal_npv              <- FALSE # Requires Tax-Simulator data
   disable_price_wedge     <- FALSE # If TRUE, set all price wedges to 1.0 (no heterogeneity)
+  disable_stanford_wedges <- FALSE # If TRUE, no Stanford labor-cost multipliers (STANFORD_WAGE_MULTIPLIERS)
   disable_employment_targeting <- FALSE # If TRUE, skip employment targeting in equilibrium
   reference_interface     <- NULL  # If set, produce regression delta CSVs vs this prior run
   calib_target1_name      <- 'part_cost'  # First calibration target elasticity
@@ -167,6 +168,12 @@ parse_args <- function() {
         cat('Note: --nsece-2024-options hours is always on for 2024 and no longer an option; ignored.\n')
         nsece_2024_options <- setdiff(nsece_2024_options, 'hours')
       }
+      # 'calendar_forest' is always on for 2024 now -- accept the old name, drop it
+      if ('calendar_forest' %in% nsece_2024_options) {
+        cat('Note: --nsece-2024-options calendar_forest is always on for 2024 and no longer an option; ignored.
+')
+        nsece_2024_options <- setdiff(nsece_2024_options, 'calendar_forest')
+      }
       unknown_options <- setdiff(nsece_2024_options, NSECE_2024_OPTIONS)
       if (length(unknown_options) > 0) {
         stop(paste('Error: unknown --nsece-2024-options value(s):', paste(unknown_options, collapse = ', '),
@@ -176,6 +183,9 @@ parse_args <- function() {
       reference_interface <- consume_arg('--reference')
     } else if (arg == '--no-price-wedge') {
       disable_price_wedge <- TRUE
+      i <- i + 1
+    } else if (arg == '--no-stanford-wedges') {
+      disable_stanford_wedges <- TRUE
       i <- i + 1
     } else if (arg == '--no-employment-targeting') {
       disable_employment_targeting <- TRUE
@@ -218,6 +228,7 @@ parse_args <- function() {
     slurm_year_index        = slurm_year_index,
     fiscal_npv              = fiscal_npv,
     disable_price_wedge     = disable_price_wedge,
+    disable_stanford_wedges = disable_stanford_wedges,
     disable_employment_targeting = disable_employment_targeting,
     reference_interface     = reference_interface,
     calib_target1_name      = calib_target1_name,
@@ -306,6 +317,8 @@ print_usage <- function() {
   cat('                              Produces regression.csv per common scenario in totals/\n')
   cat('  --no-price-wedge            Disable price wedge heterogeneity (set all wedges to 1.0)\n')
   cat('                              Useful for testing or isolating price heterogeneity effects\n')
+  cat('  --no-stanford-wedges        Drop Stanford labor-cost multipliers (on by default: wage x1.25\n')
+  cat('                              at centers, x1.1 home-based helpers, x0.8 home-based owners)\n')
   cat('  --no-employment-targeting   Disable employment targeting in equilibrium solver\n')
   cat('                              Skips solving for employment-shift deltas\n')
   cat('  --help, -h                  Show this help message\n')
@@ -595,6 +608,7 @@ save_run_metadata <- function() {
     slurm_year_index         = null_or_val(slurm_year_index),
     fiscal_npv               = fiscal_npv,
     disable_price_wedge      = exist_or_default('disable_price_wedge', FALSE),
+    disable_stanford_wedges  = exist_or_default('disable_stanford_wedges', FALSE),
     calib_target1_name       = exist_or_default('calib_target1_name', 'part_cost'),
     calib_target1_value      = if (exists('calib_target1_value') && !is.null(calib_target1_value)) calib_target1_value else 'default',
     calib_target2_name       = exist_or_default('calib_target2_name', 'hours_income'),

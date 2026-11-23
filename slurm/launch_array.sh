@@ -73,6 +73,8 @@ while [[ $# -gt 0 ]]; do
       R_FLAGS="${R_FLAGS} --calib-target2-value $2"; shift 2 ;;
     --no-price-wedge)
       R_FLAGS="${R_FLAGS} --no-price-wedge"; shift ;;
+    --no-stanford-wedges)
+      R_FLAGS="${R_FLAGS} --no-stanford-wedges"; shift ;;
     --no-employment-targeting)
       R_FLAGS="${R_FLAGS} --no-employment-targeting"; shift ;;
     --mem)

@@ -40,21 +40,30 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   # Local helpers (used multiple times below)
   #---------------------------------------------------------------------------
 
-  get_primary_caregiver <- function(hhm_id2, male1, male2) {
+  get_primary_caregiver <- function(hhm_id2, male1, male2, hours1 = NA, hours2 = NA) {
 
     #--------------------------------------------------------------------------
-    # Identify primary caregiver: mother in two-parent families, parent 1
-    # otherwise. Returns 1L or 2L indicating which parent is primary.
+    # Identify primary caregiver: mother in two-parent families; same-sex
+    # couple -> parent w/ fewer weekly work hours (Anna, 2026-11-23; parent
+    # who works less is mother in ~75% of NSECE couples w/ known sexes), tie
+    # or hours missing -> parent 1; single parent -> parent 1. Returns 1L or
+    # 2L indicating which parent is primary.
     #
     # Params:
     #   - hhm_id2 (int): Household member ID for parent 2 (NA if single-parent)
     #   - male1 (int): Sex indicator for parent 1 (0 = female, 1 = male)
     #   - male2 (int): Sex indicator for parent 2 (0 = female, 1 = male)
+    #   - hours1, hours2 (num): weekly work hours of parent 1, 2 (optional)
     #
     # Returns: (int) 1L or 2L indicating the primary caregiver parent index
     #--------------------------------------------------------------------------
 
+    same_sex <- !is.na(hhm_id2) & (male1 == male2) %in% TRUE
+    h1 <- coalesce(as.numeric(hours1), 0)
+    h2 <- coalesce(as.numeric(hours2), 0)
     case_when(
+      same_sex & h2 < h1           ~ 2L,
+      same_sex                     ~ 1L,
       !is.na(hhm_id2) & male1 == 0 ~ 1L,
       !is.na(hhm_id2) & male2 == 0 ~ 2L,
       !is.na(hhm_id2)              ~ 1L,
@@ -146,7 +155,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       )
   }
 
-  fit_heckman <- function(data, suffix, include_married) {
+  fit_heckman <- function(data, suffix, include_married, fit_rows = NULL) {
 
     #--------------------------------------------------------------------------
     # Fit a Heckman two-step selection model for hourly earnings imputation.
@@ -158,6 +167,8 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     #   - suffix (chr): Parent column suffix ('1' or '2')
     #   - include_married (logical): Whether to include marital status in
     #     the selection equation
+    #   - fit_rows (lgl vec): Rows to fit on (NULL = all); fitted values
+    #     cover all rows
     #
     # Returns: (list) With elements 'model' (sampleSelection object) and
     #   'fitted_values' (num vec of predicted hourly earnings in levels)
@@ -191,8 +202,8 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     model <- selection(
       selection = selection_formula,
       outcome   = log_hourly_earnings ~ poly(age, 2) + male + hispanic + as.factor(race) + as.factor(educ),
-      data      = model_data,
-      weights   = model_data$per_weight,
+      data      = if (is.null(fit_rows)) model_data else model_data[fit_rows, ],
+      weights   = if (is.null(fit_rows)) model_data$per_weight else model_data$per_weight[fit_rows],
       method    = 'ml'
     )
 
@@ -259,13 +270,20 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     #   - is_nsece (logical): Whether the data source is NSECE (default FALSE)
     #
     # Returns: (list) With elements 'one_child' and 'two_child', each a named
-    #   list by parent count ('0', '1', '2') of prepared dataframes
+    #   list by parent count ('1', '2') of prepared dataframes
     #--------------------------------------------------------------------------
 
     # Start with children
     rf_tmp <- children %>%
       select(hh_id, child_id, parent_unit_id, child_weight, age, male) %>%
       filter(age < 5)
+
+    # ACS: every child under 5 has a parent unit (parent or caregiver). One w/o
+    # would fall out of both forest groups unseen -- no no-parent forest
+    if (!is_nsece && any(is.na(rf_tmp$parent_unit_id))) {
+      stop(source_label, ': ', sum(is.na(rf_tmp$parent_unit_id)), ' children under 5 have no parent unit. ',
+           'Check caregiver_links in run_acs_processing() (caregiver rule should cover every child).')
+    }
 
     # Add enrollment info (NSECE only - ACS children don't have observed enrollment)
     if (is_nsece && !is.null(enrollment)) {
@@ -317,7 +335,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     # Add household characteristics
     rf_tmp <- rf_tmp %>%
       left_join(
-        households %>% select(hh_id, income, n_members, region),
+        households %>% select(hh_id, income, n_members, region, gp),
         by = 'hh_id'
       ) %>%
       mutate(
@@ -338,7 +356,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       # Parent 2's sex unknown -> parent 1, as before.
       rf_tmp <- rf_tmp %>%
         mutate(
-          primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
+          primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2, p.hours1, p.hours2),
           hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
           employment_choice_pc = derive_employment_choice(hours_pc),
           p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
@@ -349,7 +367,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       # ACS: identify primary caregiver then derive employment choice
       rf_tmp <- rf_tmp %>%
         mutate(
-          primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
+          primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2, p.hours1, p.hours2),
           hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
           employment_choice_pc = derive_employment_choice(hours_pc),
           p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
@@ -440,7 +458,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       pivot_wider(
         id_cols = c(
           family_id, hh_id, parent_unit_id, n_children_original, child_category,
-          income_pctile, n_members, region, p.hhm_id2, p.age1, p.age2, p.age_pc, p.age_partner,
+          income_pctile, n_members, gp, region, p.hhm_id2, p.age1, p.age2, p.age_pc, p.age_partner,
           p.male1, employment_choice_pc
         ),
         names_from  = child_index,
@@ -460,15 +478,15 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         mutate(is_3plus = as.integer(n_children_original >= 3))
     }
 
-    # Filter to complete cases with valid region
+    # Filter to complete cases with valid region. No no-parent group: NSECE
+    # no-parent children feed no_parent_care_dist, ACS ones get caregiver
+    # (run 202611201524: 0 ACS children under 5 w/o parent unit)
     one_child_split <- list(
-      `0` = one_child %>% filter(is.na(parent_unit_id), !is.na(region)),
       `1` = one_child %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
       `2` = one_child %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
     )
     two_child_split <- list(
-      `0` = two_child_wide %>% filter(is.na(parent_unit_id), !is.na(region)),
-      `1` = two_child_wide %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
+      `1` =two_child_wide %>% filter(!is.na(parent_unit_id), is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(region)),
       `2` = two_child_wide %>% filter(!is.na(parent_unit_id), !is.na(p.hhm_id2), !is.na(p.male1), !is.na(p.age1), !is.na(p.age2), !is.na(region))
     )
 
@@ -527,6 +545,19 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   # fragment per unit, so reconstruct_tax_unit_agi() returns unit AGI unchanged.
   own_crosswalk_path <- file.path(acs_dir, paste0('tax_unit_crosswalk_', acs_year, '.csv'))
   use_own_units      <- file.exists(own_crosswalk_path)
+
+  # Grandparent caregivers: grandparent_caregivers_<year>.csv beside
+  # ipums_usa.csv (IPUMS USA SERIAL, PERNUM, GCRESPON -- grandparent
+  # responsible for most basic needs of own grandchildren in household;
+  # 1 no, 2 yes). Feeds caregiver rule below. Absent -> householder rule only.
+  gc_path <- file.path(acs_dir, paste0('grandparent_caregivers_', acs_year, '.csv'))
+  gc_resp <- if (file.exists(gc_path)) {
+    cat('  Grandparent caregiver file:', gc_path, '\n')
+    fread(gc_path, select = c('SERIAL', 'PERNUM', 'GCRESPON')) %>% tibble()
+  } else {
+    cat('  Warning: no grandparent caregiver file (', gc_path, '); caregiver = householder\n', sep = '')
+    NULL
+  }
 
   # Tax units, AGI from IPUMS TAXID, ADJGINC outside 2019 (no corrected
   # crosswalk) -- not yet released for 2024 -- unless an own crosswalk exists
@@ -594,6 +625,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         .
       } %>%
       filter(GQ == 1 | GQ == 2) %>%
+      { if (is.null(gc_resp)) mutate(., GCRESPON = NA_integer_) else left_join(., gc_resp, by = c('SERIAL', 'PERNUM')) } %>%
       mutate(census_serialno = as.numeric(CBSERIAL) - acs_year * 1e9) %>%
       left_join(taxid_crosswalk, by = c('census_serialno', 'PERNUM')) %>%
       # Without a crosswalk the IPUMS TAXID is the tax unit. Own units: legacy
@@ -611,7 +643,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         REGION,
         PERNUM, PERWT,
         AGE, SEX, MARST, RACE, HISPAN, EDUC, EDUCD,
-        RELATE,
+        RELATE, GCRESPON,
         SPLOC, MOMLOC, POPLOC, MOMLOC2, POPLOC2,
         UHRSWORK, WKSWORK1, EMPSTATD, INCWAGE, INCBUS00,
         census_serialno,
@@ -698,6 +730,38 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
         .groups   = 'drop'
       )
 
+    # Grandparent of a child 12 and under in household (gp, care-forest input;
+    # matches NSECE HHCOMP_RELATIONS_GPARENT; Anna, 2026-11-23): a child's
+    # linked parent has a linked parent in household, child is householder's
+    # grandchild (RELATE 9), or child's parent is householder/spouse and
+    # householder's parent or parent-in-law (RELATE 5, 6) present. ACS 2024
+    # children under 5 w/ a parent: 14.1% (NSECE 13%; archive npcg1123 gpacs.R).
+    households <- {
+      locs <- c('MOMLOC', 'POPLOC', 'MOMLOC2', 'POPLOC2')
+      par_of <- acs %>%
+        select(hh_id, PERNUM, all_of(locs)) %>%
+        pivot_longer(all_of(locs), values_to = 'par') %>%
+        filter(!is.na(par), par > 0) %>%
+        distinct(hh_id, PERNUM, par)
+      kid_par <- par_of %>%
+        semi_join(acs %>% filter(AGE <= 12) %>% select(hh_id, PERNUM), by = c('hh_id', 'PERNUM'))
+      has_par <- par_of %>% distinct(hh_id, par = PERNUM)
+      head_sp <- acs %>% filter(RELATE %in% c(1, 2)) %>% select(hh_id, par = PERNUM)
+      gp_hh <- bind_rows(
+        kid_par %>% semi_join(has_par, by = c('hh_id', 'par')) %>% distinct(hh_id),
+        acs %>% filter(AGE <= 12, RELATE == 9) %>% distinct(hh_id),
+        kid_par %>%
+          semi_join(head_sp, by = c('hh_id', 'par')) %>%
+          semi_join(acs %>% filter(RELATE %in% c(5, 6)) %>% distinct(hh_id), by = 'hh_id') %>%
+          distinct(hh_id)
+      ) %>%
+        distinct(hh_id) %>%
+        mutate(gp = 1L)
+      households %>%
+        left_join(gp_hh, by = 'hh_id') %>%
+        mutate(gp = coalesce(gp, 0L))
+    }
+
 
     #--------------------------
     # Children (age <= 12 only)
@@ -773,12 +837,114 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       filter(!is.na(parent_hhm_id) & parent_hhm_id > 0) %>%
       arrange(hh_id, child_id, which_parent)
 
+    # Inferred mother for great-grandchildren (Anna, 2026-11-23). ACS has no
+    # great-grandchild code -- great-grandchild recorded as grandchild (RELATE
+    # 9), mother as grandchild too, and IPUMS never links grandchild to
+    # grandchild (0 of 2024 grandchildren under 5). Unlinked grandchild w/
+    # exactly one woman grandchild 15-45 yrs older -> she is mother; 2+
+    # candidates or a grandparent reporting responsibility -> caregiver rule.
+    # ACS 2024 under 5: ~32,000 children weighted (archive npcg1123 ggc.R).
+    inferred_mothers <- {
+      gp_resp_hh <- acs %>% filter(GCRESPON %in% 2L, AGE >= 18) %>% distinct(hh_id)
+      kids <- acs %>%
+        filter(AGE <= 12, RELATE == 9) %>%
+        select(hh_id, child_id = PERNUM, child_age = AGE) %>%
+        anti_join(child_parents_long %>% distinct(hh_id, child_id), by = c('hh_id', 'child_id')) %>%
+        anti_join(gp_resp_hh, by = 'hh_id')
+      women <- acs %>%
+        filter(RELATE == 9, SEX == 2, AGE >= 18) %>%
+        select(hh_id, mom = PERNUM, mom_age = AGE)
+      kids %>%
+        inner_join(women, by = 'hh_id', relationship = 'many-to-many') %>%
+        filter(mom_age - child_age >= 15, mom_age - child_age <= 45) %>%
+        group_by(hh_id, child_id) %>%
+        filter(n() == 1) %>%
+        ungroup() %>%
+        transmute(hh_id, child_id, which_parent = 'MOMLOC_INFERRED', parent_hhm_id = as.numeric(mom))
+    }
+    cat('  Grandchildren 12 and under linked to an inferred mother (unweighted):', nrow(inferred_mothers), '\n')
+    child_parents_long <- child_parents_long %>%
+      mutate(parent_hhm_id = as.numeric(parent_hhm_id)) %>%
+      bind_rows(inferred_mothers) %>%
+      arrange(hh_id, child_id, which_parent)
+
+    # Caregiver for children w/o parent in household (meeting of 2026-11-18;
+    # Anna, 2026-11-19, 2026-11-23). ACS names no caregiver -- gives each
+    # person's relationship to householder only, plus GCRESPON (grandparent
+    # responsible for own grandchildren in household). Order:
+    #   1. grandparent w/ GCRESPON = 2 in household -> that grandparent
+    #      (householder if among them, else lowest PERNUM)
+    #   2. otherwise householder, any age (Anna, 2026-11-23: a 16-year-old
+    #      householder can care for a child). In ACS 2024 households where a
+    #      grandparent reports being caregiver (3,249), householder is that
+    #      caregiver 87.6% of the time; 5-fold CV of data-based pickers --
+    #      cell average 88.1%, random forest 87.8%, conditional logit 87.6%,
+    #      donor 85.3% -- does no better (archive gc1123 cgpred2.R)
+    # Caregiver matters only via income (tax unit -> taxes, eligibility).
+    # Caregiver treated like a father -- own work held at observed, only
+    # children's care chosen (caregiver_unit = 1). Caregiver already a parent
+    # in household -> child joins that unit.
+    caregiver_links <- {
+      householder <- acs %>%
+        filter(PERNUM == 1) %>%
+        transmute(hh_id, hh_adult = 1L)
+      resp_gp <- acs %>%
+        filter(GCRESPON %in% 2L, AGE >= 18) %>%
+        group_by(hh_id) %>%
+        summarise(gp_pernum = if (any(PERNUM == 1)) 1L else as.integer(min(PERNUM)), .groups = 'drop')
+      acs %>%
+        filter(AGE <= 12) %>%
+        select(hh_id, child_id = PERNUM, RELATE) %>%
+        anti_join(child_parents_long %>% distinct(hh_id, child_id), by = c('hh_id', 'child_id')) %>%
+        left_join(householder, by = 'hh_id') %>%
+        left_join(resp_gp, by = 'hh_id') %>%
+        mutate(
+          caregiver_tier = case_when(
+            !is.na(gp_pernum) ~ 'responsible grandparent',
+            hh_adult %in% 1L  ~ 'householder',
+            TRUE              ~ 'none (dropped)'
+          ),
+          parent_hhm_id = case_when(
+            caregiver_tier == 'responsible grandparent' ~ gp_pernum,
+            caregiver_tier == 'none (dropped)'          ~ NA_integer_,
+            TRUE                                        ~ 1L
+          )
+        )
+    }
+    cat('  Children 12 and under w/o parent in household, by caregiver (unweighted):',
+        paste(names(table(caregiver_links$caregiver_tier)), table(caregiver_links$caregiver_tier),
+              collapse = ', '), '\n')
+    # Caregiver who is a parent: child takes parents of caregiver's first child
+    parent_sets <- {
+      links <- child_parents_long %>% distinct(hh_id, child_id, parent_hhm_id)
+      links %>%
+        group_by(hh_id, caregiver = parent_hhm_id) %>%
+        summarise(first_child = min(child_id), .groups = 'drop') %>%
+        inner_join(links, by = c('hh_id', 'first_child' = 'child_id'), relationship = 'many-to-many') %>%
+        select(hh_id, caregiver, set_hhm_id = parent_hhm_id)
+    }
+    child_parents_long <- child_parents_long %>%
+      bind_rows(
+        caregiver_links %>%
+          filter(!is.na(parent_hhm_id)) %>%
+          select(hh_id, child_id, caregiver = parent_hhm_id) %>%
+          left_join(parent_sets %>% mutate(caregiver = as.integer(caregiver)),
+                    by = c('hh_id', 'caregiver'), relationship = 'many-to-many') %>%
+          transmute(
+            hh_id, child_id,
+            which_parent  = if_else(is.na(set_hhm_id), 'CAREGIVER', 'CAREGIVER_JOIN'),
+            parent_hhm_id = as.numeric(coalesce(as.integer(set_hhm_id), caregiver))
+          )
+      ) %>%
+      arrange(hh_id, child_id, which_parent)
+
     # For each child, collapse to at most 2 unique parents and make a unit id
     parent_units_core <- child_parents_long %>%
       group_by(hh_id, child_id) %>%
       summarise(
         hhm_id1 = sort(unique(parent_hhm_id))[1],
         hhm_id2 = sort(unique(parent_hhm_id))[2],
+        is_cg   = all(which_parent == 'CAREGIVER'),
         .groups = 'drop'
       ) %>%
       mutate(
@@ -801,6 +967,13 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       relocate(tax_unit_id, .after = parent_unit_id) %>%
       arrange(hh_id, child_id)
 
+    # Children w/ no parent unit -- none expected, since every household has
+    # a householder to act as caregiver; kept as a check
+    no_unit <- is.na(children$parent_unit_id)
+    cat('  Children 12 and under w/ no parent unit, dropped:', sum(no_unit), 'records,',
+        round(sum(children$child_weight[no_unit])), 'weighted\n')
+    children <- children[!no_unit, ]
+
     # Count children under 5 per parent unit and create child_category
     child_counts <- children %>%
       filter(age < 5) %>%
@@ -814,9 +987,13 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       )
 
     # Deduplicate parent_units to one row per unique parent unit per hh
+    # caregiver_unit = 1: no child in unit has parent in household
     parent_units_core <- parent_units_core %>%
+      group_by(hh_id, parent_unit_id) %>%
+      mutate(caregiver_unit = as.integer(all(is_cg))) %>%
+      ungroup() %>%
       distinct(hh_id, parent_unit_id, .keep_all = TRUE) %>%
-      select(-child_id) %>%
+      select(-child_id, -is_cg) %>%
       left_join(child_counts, by = c('hh_id', 'parent_unit_id')) %>%
       arrange(hh_id, parent_unit_id)
 
@@ -840,7 +1017,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       ) %>%
       select(
         hh_id, parent_unit_id,
-        n_parents, n_children_original, child_category,
+        n_parents, n_children_original, child_category, caregiver_unit,
         hhm_id1, hhm_id2,
         tax_unit_id1, tax_unit_id2,
         per_weight1, per_weight2,
@@ -992,7 +1169,9 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       )
 
     # Fit Heckman models for parent 1 (all) and parent 2 (couples only)
-    heckman_model1 <- fit_heckman(parent_units_enhanced, '1', include_married = TRUE)
+    # Fit on parents only -- caregiver units (no parent) predicted, not fit
+    heckman_model1 <- fit_heckman(parent_units_enhanced, '1', include_married = TRUE,
+                                  fit_rows = !(parent_units_enhanced$caregiver_unit %in% 1L))
     heckman_model2 <- fit_heckman(
       parent_units_enhanced %>% filter(!is.na(hhm_id2)),
       '2', include_married = FALSE
@@ -1051,7 +1230,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     #--------------------------------------------------------------------------
 
     employment_states <- c('none', 'pt', 'ft')
-    parent_keys <- c('0', '1', '2')
+    parent_keys <- c('1', '2')
 
     # One-child families: predict for each employment state
     one_child_by_emp <- map(employment_states, function(emp_state) {
@@ -1064,13 +1243,9 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
           return(tibble())
         }
 
-        if (parent_count == '0') {
-          predictions <- predict(model, data = data)$predictions
-        } else {
-          data_cf <- data %>%
-            mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
-          predictions <- predict(model, data = data_cf)$predictions
-        }
+        data_cf <- data %>%
+          mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
+        predictions <- predict(model, data = data_cf)$predictions
 
         as.data.frame(predictions) %>%
           tibble() %>%
@@ -1116,13 +1291,9 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
           return(tibble())
         }
 
-        if (parent_count == '0') {
-          predictions <- predict(model, data = data)$predictions
-        } else {
-          data_cf <- data %>%
-            mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
-          predictions <- predict(model, data = data_cf)$predictions
-        }
+        data_cf <- data %>%
+          mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
+        predictions <- predict(model, data = data_cf)$predictions
 
         as.data.frame(predictions) %>%
           tibble() %>%
@@ -1154,6 +1325,114 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       one_child = one_child_wide,
       two_child = two_child_wide
     )
+  }
+
+
+  #-------------------------------------------
+  # Care of children w/o parent in household
+  #-------------------------------------------
+
+  # Care distribution of caregiver units (care only, see caregiver_links; applied
+  # in ecec_result below). Rule (Anna, 2026-11-23): NSECE care distribution of
+  # no-parent children by caregiver work (cg_works from 1a -- guardian, else
+  # respondent, worked for pay last week), child weights; cell w/ fewer than
+  # 5 records takes pooled shares. Holdout (archive npcg1123, 10 folds x 50):
+  # care-hours mix off by 0.9 (2019), 1.3 (2024) points vs 1.4, 2.4 by age;
+  # paid-care error within work, income groups 2.1, 0.8 vs 12.7, 2.6. Forests
+  # (no-parent, one-parent w/ respondent as parent) 4 to 22 points;
+  # logits, donors bias paid hours 3% to 12% (npcv1117, npcg1123).
+  # Calendar households only: 1a's typical-week fill redraws these children
+  # from forest of parent families, reversing work split (2024: paid 89.9% vs
+  # 0.0%, 10 records each; calendar 7.0% vs 14.8%; archive cgflip.R)
+  no_parent_care_dist <- {
+    is_np <- function(x) is.na(x) | as.character(x) %in% c('', 'NA')
+    cal_hh_np <- as_tibble(processed_nsece_hh$households) %>%
+      filter(if ('calendar' %in% names(.)) calendar %in% 1L else TRUE) %>%
+      distinct(hh_id)
+    np_children <- as_tibble(processed_nsece_hh$children) %>%
+      filter(age < 5, is_np(parent_unit_id)) %>%
+      semi_join(cal_hh_np, by = 'hh_id') %>%
+      inner_join(
+        as_tibble(processed_nsece_hh$enrollment) %>%
+          select(hh_id, child_id, ecec_choice, ecec_hours_choice),
+        by = c('hh_id', 'child_id')
+      ) %>%
+      filter(!is.na(ecec_choice), ecec_choice != '', !is.na(ecec_hours_choice), ecec_hours_choice != '')
+
+    if (nrow(np_children) == 0) {
+      stop('No NSECE children under 5 w/o parent unit w/ a care category; cannot build no_parent_care_dist.')
+    }
+
+    if (!'cg_works' %in% names(np_children)) {
+      stop('NSECE children lack cg_works (caregiver work, 1a). Rerun NSECE processing.')
+    }
+    np_children <- np_children %>% mutate(cg_works = coalesce(as.integer(cg_works), 0L))
+
+    pooled <- np_children %>%
+      count(ecec_choice, ecec_hours_choice, wt = child_weight, name = 'w') %>%
+      mutate(share = w / sum(w)) %>%
+      select(-w)
+    n_by_cell <- np_children %>% count(cg_works, name = 'n')
+
+    shares <- map_dfr(0:1, function(k) {
+      if (sum(n_by_cell$n[n_by_cell$cg_works == k]) < 5) return(pooled %>% mutate(cg_works = k))
+      np_children %>%
+        filter(cg_works == k) %>%
+        count(ecec_choice, ecec_hours_choice, wt = child_weight, name = 'w') %>%
+        mutate(share = w / sum(w), cg_works = k) %>%
+        select(-w)
+    }) %>%
+      select(cg_works, ecec_choice, ecec_hours_choice, share)
+
+    # Shares sum to 1 within each cell
+    stopifnot(all(abs(tapply(shares$share, shares$cg_works, sum) - 1) < 1e-8))
+    cat('  No-parent children under 5 (NSECE, unweighted):', nrow(np_children),
+        '| caregiver works:', sum(np_children$cg_works == 1L), '| care distribution by caregiver work\n')
+    shares
+  }
+
+
+  # Sibling tie rate for caregiver units (Anna, 2026-11-23): two children under
+  # 5 in NSECE parent units share care type x hours far more often than
+  # independent age shares predict (79% vs 32%, 2019). rho = excess same-care
+  # rate, (obs - exp) / (1 - exp), pairs = two youngest per parent unit,
+  # pair weight = mean child weight. Caregiver joint = (1 - rho) s(a) s(b) +
+  # rho 1[a = b] s(a) -- keeps each child's distribution (archive npcg1123 npcg4).
+  # Calendar households only: 1a fills typical-week care per child, which
+  # cuts same care in those pairs from 72% to 29% (2024, archive twk.R).
+  sibling_tie_rate <- {
+    is_np <- function(x) is.na(x) | as.character(x) %in% c('', 'NA')
+    cal_hh <- as_tibble(processed_nsece_hh$households) %>%
+      filter(if ('calendar' %in% names(.)) calendar %in% 1L else TRUE) %>%
+      distinct(hh_id)
+    kids <- as_tibble(processed_nsece_hh$children) %>%
+      filter(age < 5, !is_np(parent_unit_id)) %>%
+      semi_join(cal_hh, by = 'hh_id') %>%
+      inner_join(as_tibble(processed_nsece_hh$enrollment) %>% select(hh_id, child_id, ecec_choice, ecec_hours_choice),
+                 by = c('hh_id', 'child_id')) %>%
+      filter(!is.na(ecec_choice), ecec_choice != '', !is.na(ecec_hours_choice), ecec_hours_choice != '') %>%
+      mutate(cls = paste(ecec_choice, ecec_hours_choice, sep = '_'))
+    age_sh <- kids %>% count(age, cls, wt = child_weight, name = 's') %>% group_by(age) %>% mutate(s = s / sum(s)) %>% ungroup()
+    pr <- kids %>%
+      arrange(hh_id, parent_unit_id, age, child_id) %>%
+      group_by(hh_id, parent_unit_id) %>%
+      filter(n() >= 2) %>%
+      summarise(age1 = age[1], age2 = age[2], cls1 = cls[1], cls2 = cls[2],
+                w = (child_weight[1] + child_weight[2]) / 2, .groups = 'drop')
+    if (nrow(pr) == 0) stop('No NSECE parent-unit sibling pairs under 5; cannot set sibling_tie_rate.')
+    ex <- pr %>%
+      select(age1, age2, w) %>%
+      mutate(i = row_number()) %>%
+      left_join(age_sh %>% rename(age1 = age, s1 = s), by = 'age1', relationship = 'many-to-many') %>%
+      left_join(age_sh %>% rename(age2 = age, cls2 = cls, s2 = s), by = c('age2', 'cls' = 'cls2')) %>%
+      group_by(i, w) %>%
+      summarise(e = sum(s1 * coalesce(s2, 0)), .groups = 'drop')
+    e <- weighted.mean(ex$e, ex$w)
+    o <- weighted.mean(pr$cls1 == pr$cls2, pr$w)
+    rho <- max(0, min(1, (o - e) / (1 - e)))
+    cat('  Sibling pairs (NSECE parent units, unweighted):', nrow(pr), '| same care', round(100 * o, 1),
+        '% vs', round(100 * e, 1), '% if independent | tie rate', round(rho, 3), '\n')
+    rho
   }
 
 
@@ -1199,14 +1478,12 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       # Two-parent models use caregiver and partner ages, not parent 1 and 2
       feature_sets <- list(
         one_child = list(
-          `0` = c('age', 'male', 'income_pctile', 'n_members', 'region'),
-          `1` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc'),
-          `2` = c('age', 'male', 'income_pctile', 'n_members', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc')
+          `1` = c('age', 'male', 'income_pctile', 'n_members', 'gp', 'region', 'p.age1', 'p.male1', 'employment_choice_pc'),
+          `2` = c('age', 'male', 'income_pctile', 'n_members', 'gp', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc')
         ),
         two_child = list(
-          `0` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'is_3plus'),
-          `1` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age1', 'p.male1', 'employment_choice_pc', 'is_3plus'),
-          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc', 'is_3plus')
+          `1` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'gp', 'region', 'p.age1', 'p.male1', 'employment_choice_pc', 'is_3plus'),
+          `2` = c('age_1', 'age_2', 'male_1', 'male_2', 'income_pctile', 'n_members', 'gp', 'region', 'p.age_pc', 'p.age_partner', 'employment_choice_pc', 'is_3plus')
         )
       )
 
@@ -1275,7 +1552,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     # Fit ECEC probabilities from RF predictions
     {
 
-      parent_keys <- c('0', '1', '2')
+      parent_keys <- c('1', '2')
       employment_states <- c('none', 'pt', 'ft')
 
       # Get counterfactual predictions for all employment states
@@ -1335,12 +1612,12 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
             ) %>%
             left_join(
               processed_acs_2019$households %>%
-                select(hh_id, income, n_members, region),
+                select(hh_id, income, n_members, region, gp),
               by = 'hh_id'
             ) %>%
             mutate(
               income_pctile = assign_income_pctile(income, acs_income_pctiles),
-              primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2),
+              primary_caregiver = get_primary_caregiver(p.hhm_id2, p.male1, p.male2, p.hours1, p.hours2),
               hours_pc = if_else(primary_caregiver == 1L, p.hours1, p.hours2),
               employment_choice_pc = derive_employment_choice(hours_pc),
               p.age_pc      = if_else(primary_caregiver == 1L, p.age1, p.age2),
@@ -1354,10 +1631,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
             map_dfr(parent_keys, function(parent_count) {
               model <- rf_models$one_child[[parent_count]]
 
-              if (parent_count == '0') {
-                data <- extra_children_features %>%
-                  filter(is.na(parent_unit_id))
-              } else if (parent_count == '1') {
+              if (parent_count == '1') {
                 data <- extra_children_features %>%
                   filter(!is.na(parent_unit_id), is.na(p.hhm_id2),
                          !is.na(p.male1), !is.na(p.age1), !is.na(region))
@@ -1371,13 +1645,9 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
                 return(tibble())
               }
 
-              if (parent_count == '0') {
-                predictions <- predict(model, data = data)$predictions
-              } else {
-                data_cf <- data %>%
-                  mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
-                predictions <- predict(model, data = data_cf)$predictions
-              }
+              data_cf <- data %>%
+                mutate(employment_choice_pc = factor(emp_state, levels = c('none', 'pt', 'ft')))
+              predictions <- predict(model, data = data_cf)$predictions
 
               as.data.frame(predictions) %>%
                 tibble() %>%
@@ -1412,6 +1682,54 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
 
           imputations_wide <- bind_rows(imputations_wide, extra_child_wide)
         }
+      }
+
+      # Caregiver units (caregiver_unit = 1): care from no-parent care distribution
+      # by caregiver work (observed hours > 0 -- caregiver's work held at
+      # observed), same in every employment state. Replaces forest
+      # predictions (see no_parent_care_dist). Two-child joint ties siblings'
+      # care at sibling_tie_rate: (1 - rho) s(a) s(b) + rho 1[a = b] s(a).
+      cg_units <- processed_acs_2019$parent_units %>%
+        filter(caregiver_unit %in% 1L) %>%
+        distinct(hh_id, parent_unit_id, .keep_all = TRUE) %>%
+        transmute(hh_id, parent_unit_id,
+                  cg_works = as.integer(derive_employment_choice(hours1) != 'none'))
+      if (nrow(cg_units) > 0) {
+        key   <- c('hh_id', 'parent_unit_id')
+        sh    <- no_parent_care_dist %>%
+          mutate(ecec_choice = as.character(ecec_choice), ecec_hours_choice = as.character(ecec_hours_choice))
+        cg_one <- imputations_wide %>%
+          semi_join(cg_units, by = key) %>%
+          distinct(hh_id, parent_unit_id, child_id) %>%
+          inner_join(cg_units, by = key) %>%
+          inner_join(sh, by = 'cg_works', relationship = 'many-to-many') %>%
+          transmute(hh_id, parent_unit_id, child_id, ecec_choice, ecec_hours_choice,
+                    p_enrollment.none = share, p_enrollment.pt = share, p_enrollment.ft = share)
+        imputations_wide <- imputations_wide %>%
+          anti_join(cg_units, by = key) %>%
+          bind_rows(cg_one)
+
+        pairs <- two_child_wide %>%
+          semi_join(cg_units, by = key) %>%
+          distinct(hh_id, parent_unit_id, child_id_1, child_id_2)
+        if (nrow(pairs) > 0) {
+          sh_k <- function(k) sh %>% rename_with(~ paste0(.x, '_', k), -cg_works)
+          cg_two <- pairs %>%
+            inner_join(cg_units, by = key) %>%
+            inner_join(sh_k(1), by = 'cg_works', relationship = 'many-to-many') %>%
+            inner_join(sh_k(2), by = 'cg_works', relationship = 'many-to-many') %>%
+            mutate(same = ecec_choice_1 == ecec_choice_2 & ecec_hours_choice_1 == ecec_hours_choice_2,
+                   p    = (1 - sibling_tie_rate) * share_1 * share_2 + sibling_tie_rate * same * share_1) %>%
+            transmute(hh_id, parent_unit_id, child_id_1, child_id_2,
+                      ecec_choice_1, ecec_hours_choice_1, ecec_choice_2, ecec_hours_choice_2,
+                      p_joint.none = p, p_joint.pt = p, p_joint.ft = p)
+          two_child_wide <- two_child_wide %>%
+            anti_join(cg_units, by = key) %>%
+            bind_rows(cg_two)
+        }
+        cat('  Caregiver units:', nrow(cg_units), '| caregiver works:', sum(cg_units$cg_works),
+            '| children under 5 given no-parent care distribution:',
+            n_distinct(paste(cg_one$hh_id, cg_one$child_id)), '\n')
       }
 
       # Determine who is in the universe
@@ -1499,7 +1817,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     acs_emp_state <- processed_acs_2019$parent_units %>%
       distinct(hh_id, parent_unit_id, hhm_id2, male1, male2, hours1, hours2) %>%
       mutate(
-        primary_caregiver = get_primary_caregiver(hhm_id2, male1, male2),
+        primary_caregiver = get_primary_caregiver(hhm_id2, male1, male2, hours1, hours2),
         hours_pc = if_else(primary_caregiver == 1L, hours1, hours2),
         emp_state = case_when(
           is.na(hours_pc) | hours_pc == 0 ~ 'none',
@@ -1645,7 +1963,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
     # Extract primary caregiver attributes
     caregiver_base <- parent_units %>%
       mutate(
-        primary_caregiver = get_primary_caregiver(hhm_id2, male1, male2)
+        primary_caregiver = get_primary_caregiver(hhm_id2, male1, male2, hours1, hours2)
       ) %>%
       mutate(
         hhm_id_pc          = if_else(primary_caregiver == 1, hhm_id1, hhm_id2),
@@ -1666,6 +1984,7 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
 
     # Calculate mean hours and weeks by employment status for counterfactuals
     mean_hours_weeks <- caregiver_base %>%
+      filter(!(caregiver_unit %in% 1L)) %>%
       group_by(employment_choice = employment_choice_observed) %>%
       summarise(
         mean_hours = weighted.mean(hours_pc, per_weight_pc, na.rm = TRUE),
@@ -1804,8 +2123,9 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
 
   employment_rf <- {
 
+    # Parents only -- caregiver units' work held at observed
     train_data <- processed_acs_2019$parent_units %>%
-      filter(p_employment == 1) %>%
+      filter(p_employment == 1, !(caregiver_unit %in% 1L)) %>%
       mutate(
         emp_observed = factor(employment_choice, levels = c('none', 'pt', 'ft')),
         per_weight_pc = if_else(primary_caregiver == 1, per_weight1, per_weight2)
@@ -1885,11 +2205,13 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
       )
   }
 
-  # Replace p_employment with RF probabilities
+  # Replace p_employment with RF probabilities; caregiver units keep
+  # observed state (probability 1), like fathers' work
   processed_acs_2019$parent_units <- processed_acs_2019$parent_units %>%
     left_join(emp_probs, by = c('hh_id', 'parent_unit_id')) %>%
     mutate(
       p_employment = case_when(
+        caregiver_unit %in% 1L      ~ as.numeric(employment_choice == employment_observed),
         employment_choice == 'none' ~ p_emp.none,
         employment_choice == 'pt' ~ p_emp.pt,
         employment_choice == 'ft' ~ p_emp.ft
@@ -2070,65 +2392,8 @@ run_acs_processing <- function(nsece_year = DEFAULT_NSECE_YEAR) {
   rm(acs_raw, acs_raw_for_spm, acs_sampled)
 
   #-------------------------------------------
-  # Care of children w/o parent unit (fixed demand)
-  #-------------------------------------------
-
-  # Children under 5 w/ no parent in household stay outside choice model
-  # (no parent to choose work, care). Their care held at baseline, added to
-  # market demand when prices clear (Anna, 2026-11-17; simulation side:
-  # compute_no_parent_demand()). Rule: NSECE care shares of no-parent
-  # children by single year of age, child weights; age w/ fewer than 5
-  # records takes all-age shares. Holdout test (cluster
-  # agr55/nsece_evidence/npcv1117, 10 folds x 50): market child-hours
-  # within 2% both years; 1b care forest +32% in 2024, donors matched on
-  # income or region -9% to -20%.
-  no_parent_care_shares <- {
-    is_np <- function(x) is.na(x) | as.character(x) %in% c('', 'NA')
-    np_children <- as_tibble(processed_nsece_hh$children) %>%
-      filter(age < 5, is_np(parent_unit_id)) %>%
-      inner_join(
-        as_tibble(processed_nsece_hh$enrollment) %>%
-          select(hh_id, child_id, ecec_choice, ecec_hours_choice),
-        by = c('hh_id', 'child_id')
-      ) %>%
-      filter(!is.na(ecec_choice), ecec_choice != '', !is.na(ecec_hours_choice), ecec_hours_choice != '')
-
-    if (nrow(np_children) == 0) {
-      stop('No NSECE children under 5 w/o parent unit w/ a care category; cannot build no_parent_care_shares.')
-    }
-
-    all_age <- np_children %>%
-      count(ecec_choice, ecec_hours_choice, wt = child_weight, name = 'w') %>%
-      mutate(share = w / sum(w)) %>%
-      select(-w)
-    n_by_age <- np_children %>% count(age, name = 'n')
-
-    shares <- map_dfr(0:4, function(a) {
-      if (sum(n_by_age$n[n_by_age$age == a]) < 5) return(all_age %>% mutate(age = a))
-      np_children %>%
-        filter(age == a) %>%
-        count(ecec_choice, ecec_hours_choice, wt = child_weight, name = 'w') %>%
-        mutate(share = w / sum(w), age = a) %>%
-        select(-w)
-    }) %>%
-      select(age, ecec_choice, ecec_hours_choice, share)
-
-    # Shares sum to 1 within each age
-    stopifnot(all(abs(tapply(shares$share, shares$age, sum) - 1) < 1e-8))
-    cat('  No-parent children under 5 (NSECE, unweighted):', nrow(np_children),
-        '| care shares by age written for fixed demand\n')
-    shares
-  }
-
-  #-------------------------------------------
   # Write ACS data to disk (file names carry the ACS year)
   #-------------------------------------------
-
-  fwrite(
-    no_parent_care_shares,
-    file.path(estimation_info$paths$data, paste0('no_parent_care_shares_', acs_year, '.csv')),
-    na = 'NA'
-  )
 
   c('households', 'household_members', 'parent_units', 'children', 'tax_units',
     'enrollment', 'enrollment_joint') %>%

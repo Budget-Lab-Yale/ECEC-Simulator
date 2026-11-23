@@ -5,7 +5,7 @@ roots:
   output: '/nfs/roberts/project/pi_nrs36/shared/model_data/ECEC-Simulator'
 
 dependencies:
-  NSECE: '/raw_data/NSECE/v1'
+  NSECE: '/raw_data/NSECE/v2'
   ACS: '/raw_data/ACS/v1/2023'
   ACS-2024: '/raw_data/ACS/v1/2024'
   Census-ACS-SPM: '/raw_data/Census-ACS-SPM/v1/2019'
