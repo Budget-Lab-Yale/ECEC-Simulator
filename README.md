@@ -16,14 +16,14 @@ ECEC-Simulator evaluates childcare policy proposals by:
 ## Quick Start
 
 ```bash
-# Basic run with a test scenario
-Rscript src/main.R --runscript speed_test
+# Basic run with a short test runscript
+Rscript src/main.R --runscript report_smoke
 
 # Reuse all processed data from a prior run
-Rscript src/main.R -r speed_test -C 202601151200
+Rscript src/main.R -r report_smoke -C 202601151200
 
 # Run with reduced sample for quick testing
-Rscript src/main.R -r speed_test -a 1
+Rscript src/main.R -r report_smoke -a 1 --sim-sample 1
 
 # See all options
 Rscript src/main.R --help
@@ -33,7 +33,7 @@ Rscript src/main.R --help
 
 | Argument | Short | Description |
 |----------|-------|-------------|
-| `--runscript` | `-r` | Runscript ID (required, e.g., `speed_test`) |
+| `--runscript` | `-r` | Runscript ID (required, e.g., `report_runs`) |
 | `--nsece-interface` | `-N` | Reuse NSECE data from prior run |
 | `--acs-interface` | `-A` | Reuse ACS data from prior run |
 | `--calibration-interface` | `-C` | Reuse all estimation data (NSECE + ACS + calibration) from prior run |
@@ -92,13 +92,12 @@ config/
 ├── demand/                   # Calibrated demand parameters (timestamped)
 └── supply/                   # Calibrated supply parameters (timestamped)
 
-tests/                        # testthat test suite
 slurm/                        # SLURM parallel execution scripts
 ```
 
 ## Model Flow
 
-1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment and prices (random forest), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`; see `docs/ecec_team_taxid_memo_2026-08-17.md`).
+1. **Processing** - Process NSECE (supply-side) and ACS (demand-side) microdata. Imputes earnings (Heckman selection), childcare enrollment and prices (random forest), employment (random forest), taxes (percentile-based donor matching), and SPM poverty units. Tax units use the Census Bureau's corrected April 2024 ACS-SPM `Tax_unit` identifiers (joined via a crosswalk; the legacy IPUMS `TAXID` splits nearly all married couples into separate tax units), with unit AGI reconstructed from deduplicated legacy fragments (`src/shared_functions/reconstruct_tax_unit_agi.R`).
 
 2. **Calibration** - Estimates CRRA demand parameters (beta, rho) by targeting empirical elasticities. Backs out household-level preference heterogeneity (alpha matrices) from observed/imputed choice probabilities.
 
@@ -168,7 +167,7 @@ means_tested,means_tested,baseline,baseline,baseline,none,none,2026:2055,5
 | `years` | Year range, colon-separated (e.g., `2026:2055`) |
 | `phase_in_years` | Optional linear ramp from 0% to 100% over N years |
 
-Not all columns are required. Simpler runscripts (e.g., `speed_test.csv`) can omit columns that have defaults.
+Not all columns are required. Runscripts can omit columns that have defaults (`report_runs.csv` omits `policy_transfer`).
 
 ## Output Structure
 

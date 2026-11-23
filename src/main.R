@@ -91,9 +91,7 @@ library(openxlsx)
 source('./src/misc/config.R')
 walk(
   .x = list.files('./src', pattern = '\\.R$', recursive = T),
-  .f = ~ if (!.x %in% c('main.R', 'misc/config.R', '4_output/report_figures.R',
-                        '4_output/report_figures_child_ubi.R',
-                        '4_output/report_figures_thresh85.R')) source(file.path('./src/', .x))
+  .f = ~ if (!.x %in% c('main.R', 'misc/config.R', '4_output/report_figures.R')) source(file.path('./src/', .x))
 )
 
 
