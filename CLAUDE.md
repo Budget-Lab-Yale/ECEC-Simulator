@@ -49,7 +49,8 @@ src/
 │   ├── 3d_accumulate_results.R        # accumulate_year_results() (all output aggregation)
 │   └── slurm.R                        # SLURM parallel execution handlers
 ├── 4_output/
-│   └── 4a_finalize_output.R          # finalize_simulation() (summaries, deltas, Excel)
+│   ├── 4a_finalize_output.R          # finalize_simulation() (summaries, deltas, Excel)
+│   └── report_figures.R              # Report tables and figures (run standalone)
 └── shared_functions/                   # One function per file (multi-caller utilities)
     ├── constants.R                    # Global constants (care hours, tax rates, optimizer, parent unit types)
     ├── get_choice_catalog.R           # Choice set definitions + catalog cache
@@ -63,6 +64,9 @@ src/
     ├── load_cdctc_policy.R            # CDCTC policy loader
     ├── load_demand_policy.R           # Demand policy loader
     ├── load_supply_policy.R           # Supply policy loader
+    ├── load_transfer_policy.R         # Transfer policy loader
+    ├── load_baseline_year_result.R    # Prior run's baseline year result (--baseline-interface)
+    ├── port_baseline_interface_files.R # Copies reused baseline outputs into the current run
     ├── add_simulation_variables.R     # Simulation context column management
     ├── prepare_year_context.R         # Year-level data preparation (shared by 3b + slurm)
     ├── get_hourly_wage_growth_factor.R          # Hourly wage growth projection
@@ -82,9 +86,9 @@ config/
 ├── demand/                   # Calibrated demand parameters (timestamped)
 └── supply/                   # Calibrated supply parameters (timestamped)
 
-tests/                        # testthat test suite
-cache/                        # Cached donor pools & ETRs
-docs/                         # Documentation & memos
+resources/                    # Projection inputs (employment, LFPR)
+slurm/                        # SLURM launch and phase scripts
+cache/                        # Cached donor pools & ETRs (not tracked)
 ```
 
 
@@ -130,9 +134,7 @@ Policies are pluggable R functions. See existing files for full signatures:
 
 ## Testing
 
-- Unit tests in `tests/` directory (testthat framework)
-- Run all tests: `Rscript tests/run_tests.R`
-- Diagnostic scripts prefixed with `analyze_`, `compare_`, `debug_`
+- No unit test suite yet -- verify changes with the 1% smoke run under Minimal Testing below
 
 
 ## Common Tasks
@@ -144,8 +146,8 @@ Policies are pluggable R functions. See existing files for full signatures:
 
 ### Running the Simulation
 ```bash
-Rscript src/main.R --runscript policy_bc_smoke
-Rscript src/main.R -r policy_bc_smoke -C 202601151200
+Rscript src/main.R --runscript report_smoke
+Rscript src/main.R -r report_smoke -C 202601151200
 ```
 
 ### Minimal Testing (Quick Verification)
@@ -153,13 +155,12 @@ When doing a quick smoke test to verify code changes, use a 1% sample:
 ```bash
 # Run with 1% ACS sample (rebuilds donor pools fresh)
 # NOTE: --sim-sample must accompany -a (sim_sample defaults to 100 and must be <= calib_sample)
-Rscript src/main.R -r policy_bc_smoke -a 1 --sim-sample 1
+Rscript src/main.R -r report_smoke -a 1 --sim-sample 1
 ```
-This runs the full policy_bc_smoke runscript with 1% of the ACS sample for fast verification.
+This runs the full report_smoke runscript with 1% of the ACS sample for fast verification.
 
 **IMPORTANT**: Never use `-d` (cached donors) or `-c` (cached ETRs) flags during testing after code changes. Cached files may be stale and cause confusing errors that have nothing to do with your changes. Always rebuild fresh during verification testing.
 
 ### Debugging Equilibrium Issues
 - Check `models/equilibrium/` output for solver diagnostics
 - Verify convergence: both optimizer code=0 AND residual gap < threshold
-- Use `tests/` scripts for isolated component testing

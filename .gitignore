@@ -8,6 +8,5 @@ nul
 cache/
 config/demand/
 config/supply/
-cache/price_models/price_qrf_models.rds
 slurm/scratch/
 slurm/logs/
